@@ -1,0 +1,16 @@
+[package]
+name = "embedded-bedrock"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = [
+    "bedrock",
+    "bedrock_build",
+    "bedrock_cli",
+    "cnt",
+    "cnt_macro",
+    "fw_registry",
+]
+
+[workspace.dependencies]

@@ -1,49 +1,42 @@
 # `embedded-bedrock`
 
 Bare metal firmware template, offering ruggedizing features, robust debugging, logging and a helper tool.
-
-## Ruggedizing
-
-* [ ] flip-link to detect stack overflow - https://github.com/knurling-rs/flip-link
-    - If you want to see what flip-link is up to, you can set these environment variables:
-        
-        > export RUSTC_LOG=rustc_codegen_ssa::back::link=info
-        export RUST_LOG=info
-        > 
-* [ ] stack probe to estimate stack usage - cortex-m-rt paint-stack feature
-* [ ] Periodic FLASH CRC checks
-* [ ] Enable and monitor RAM ECC
-* [ ] Periodic periphery config checks
-* [ ] Use watchdog
-* [ ] Use window watchdog
+Optional embassy, RTIC and hal crates support.
 
 ## Debug tool
-* [ ] diagnose?
-* [ ] Reset
 * [ ] Build, flash and upload binary to local registry (for later defmt decoding based on firmware SHA)
     * Link and run from RAM
+* [ ] Diagnose target state and common pitfalls
+* [ ] Reset
 * [ ] Halt/Go
 * [ ] Show build info from connected target
-* [ ] Connect to running target with defmt logging
+* [ ] Connect to running target with defmt logging, optionally fetching binary from registry
 * [ ] Display event counters
 * [ ] Attach with GDB
-* [ ] GPIO pin manipulation?
+* [ ] GPIO pin manipulation
     * [ ] Show current status of all pins
+    * [ ] Reconfigure/Set/Reset pins
 * [ ] bootloader - show state and usefull info
 * [ ] Show stack usage
+* [ ] Show watchdog information
+* [ ] Show RAM and FLASH ECC info
+* [ ] Check FLASH CRC
 * [ ] Show FLASH and RAM usage
 * [ ] Show voltage and core temperature?
 * [ ] Read and write memory
-* [ ] Show registers
+* [ ] Show registers with SVD decoding
     * [ ] Show where PC is pointing
 * [ ] Analyze HardFault
 * [ ] Read and display configuration from FLASH
 * [ ] ETM support?
-* [ ] Observe memory changes?
+* [ ] Observe memory changes at address (raw or at variable name)
 * [ ] Peripherals manipulations
     * [ ] Show what is enabled and basic configuration
     * [ ] Show clock configuration, calculate PLL frequencies
+* [ ] Show interrupt information (enabled, priorities, default handler or not, is in RAM)
 * [ ] Terminal to the firmware (if fw supports it)
+* [ ] Install tools (flip-link, probe-rs, binutils, etc)
+* [ ] embassy debug? CPU load
 
 ## Build infrastructure
 
@@ -56,6 +49,16 @@ Bare metal firmware template, offering ruggedizing features, robust debugging, l
     * [ ] Restore bootloader state the same way
 * [ ] Embed build information and provide a way to retrieve it
 * [ ] git hooks for checking and replacing Cargo path dependencies with git links
+
+## Ruggedizing
+
+* [ ] flip-link to detect stack overflow - https://github.com/knurling-rs/flip-link
+    - If you want to see what flip-link is up to, you can set these environment variables:
+        
+        > export RUSTC_LOG=rustc_codegen_ssa::back::link=info
+        export RUST_LOG=info
+        > 
+* [ ] stack probe to estimate stack usage - cortex-m-rt paint-stack feature
 
 ## Logging
 
@@ -115,6 +118,7 @@ Bare metal firmware template, offering ruggedizing features, robust debugging, l
 * [ ] Ask whether to use embassy
 * [ ] Ask whether to use RTIC
 * [ ] Ask whether to use stm32-xx-hal
+* [ ] Add TODO item if defmt buffer is small
 
 ## See also
 
