@@ -1,6 +1,82 @@
 [package]
-name = "bedrock_template"
+name = "{{project-name}}"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cortex-m-rt = "0.7"
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+
+{% if chip contains "stm32" -%}
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
+embassy-stm32 = { version = "0.2", features = ["defmt", "{{ chip }}", "unstable-pac", "exti", "time-driver-tim2" ]  }
+{% endif -%}
+
+{% if rust_target contains "thumbv6m" -%}
+portable-atomic = { version = "1.11", features = ["critical-section"] } # to make static_cell
+{% endif -%}
+
+{% if use_embassy %}
+embassy-executor = { version = "0.7", features = [
+    {% if use_nightly -%}
+    "nightly",
+    {% else -%}
+    "task-arena-size-65536", # not needed on nightly
+    {% endif -%}
+    "arch-cortex-m",
+    "executor-thread",
+    "executor-interrupt",
+    "defmt"
+] }
+embassy-time = { version = "0.4", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-sync = { version = "0.6", features = ["defmt"] }
+assign-resources = "0.5"
+{% endif -%}
+
+[build-dependencies]
+bedrock_build = { path = "../embedded-bedrock/bedrock_build" }
+
+# see for more info: https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
+# cargo build/run
+[profile.dev]
+codegen-units = 1
+debug = 2 # full debug info
+debug-assertions = true
+incremental = false
+opt-level = 3
+#opt-level = "s"
+overflow-checks = true
+
+# cargo test
+[profile.test]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 3
+#opt-level = "s"
+overflow-checks = true
+
+# cargo build/run --release
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = "z" # 3 - speed, s - size, z - even less size
+#opt-level = "s"
+overflow-checks = false
+
+# cargo test --release
+[profile.bench]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 3
+#opt-level = "s"
+overflow-checks = false
