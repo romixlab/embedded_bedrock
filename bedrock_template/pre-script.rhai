@@ -81,7 +81,7 @@ let chip = variable::prompt("Which MCU to use?", "STM32H725IG");
 chip.make_lower();
 if chip.starts_with("stm32") {
     chip.make_upper();
-    let series = chip[5];
+    let series = chip[5..=6];
 
     if !stm32_list.contains(chip[5..]) {
         show_similar_stm32_and_abort(chip, stm32_list);
@@ -92,16 +92,24 @@ if chip.starts_with("stm32") {
     if download_ok == "yes" {
         let mcu_info = download_stm32_info(chip);
         if type_of(mcu_info) == "()" {
-            print("\x1b[31mSomething went wrong with the download, proceeding with default values instead.")
+            print("\x1b[31mSomething went wrong with the download, proceeding with default values instead.");
+            generate_readme_md();
         } else {
             generate_memory_x(mcu_info.memory);
+            generate_readme_md_extended(mcu_info);
         }
     }
 
     variable::set("arch", "arm");
-    print(series);
     let rust_target = switch series {
-        'H' => "thumbv7em-none-eabihf",
+        "C0" | "F0" | "G0" | "L0" | "U0" => "thumbv6m-none-eabi",
+        "F1" | "F2" | "L1" | "WL" => "thumbv7m-none-eabi",
+        "F3" | "F7" | "H7" => "thumbv7em-none-eabihf",
+        "WB" if chip[7] != 'A' => "thumbv7em-none-eabihf",
+        "WB" if chip[7] == 'A' => "thumbv8m.main-none-eabihf",
+        "F4" | "G4" | "L4" => "thumbv7em-none-eabi",
+        "H5" | "L5" | "U5" => "thumbv8m.main-none-eabihf",
+
     };
     variable::set("rust_target", rust_target);
     variable::set("probe_chip", chip);
@@ -110,6 +118,7 @@ if chip.starts_with("stm32") {
     for key in target_properties.keys() {
         variable::set(key, target_properties.get(key));
     }
+    generate_readme_md();
 }
 generate_config_toml();
 
@@ -163,6 +172,7 @@ fn generate_memory_x(memories) {
         for i in 0..regions.len() {
             if regions[i].kind == "ram" {
                 regions[i].selected_ram = true;
+                regions[i].comment_out = true;
                 break;
             }
         }
@@ -174,6 +184,15 @@ fn generate_memory_x(memories) {
         }
     }
 
+    let out = [];
+    out += generate_linker_regions(regions);
+    out += generate_linker_sections(regions);
+    out += generate_linker_consts(regions);
+
+    file::write("memory.x", out);
+}
+
+fn generate_linker_regions(regions) {
     let out = ["MEMORY", "{", "  /* FLASH and RAM are mandatory memory regions */"];
     for region in regions {
         let origin = region.origin.to_hex();
@@ -186,7 +205,7 @@ fn generate_memory_x(memories) {
             `{region.length}`
         };
         out.push("");
-        out.push(`  /* ${region.name} */`);
+        out.push(`  /* ${region.name} (${region.kind}) */`);
         if region.name == "AXISRAM" {
             out.push("  /* TODO: Check whether AXISRAM size can be reconfigured vs ITCM (TCM_AXI_SHARED in ref. manual) */");
             out.push("  /* Using AXISRAM as main RAM to avoid potential DMA issues (vs DTCM for example), other configurations might be viable as well */");
@@ -203,13 +222,19 @@ fn generate_memory_x(memories) {
         }
     }
     out.push("}");
+    out
+}
 
+fn generate_linker_sections(regions) {
+    let out = [];
+    let count = 0;
     out.push("");
     out.push("SECTIONS {");
     for region in regions {
         if region.comment_out || region.selected_ram || region.kind == "flash" {
             continue
         }
+        count += 1;
         let name_lower = region.name;
         name_lower.make_lower();
         let align = if region.name == "AXISRAM" { 8 } else { 4 };
@@ -219,7 +244,12 @@ fn generate_memory_x(memories) {
         out.push(`  } > {region.name}`);
     }
     out.push("};");
+    if count > 0 { out } else { [] }
+}
 
+fn generate_linker_consts(regions) {
+    let out = [];
+    let count = 0;
     out.push("");
     out.push("/* Helper constants to init additional memory banks to zero (for example if using with StaticCell) */");
     out.push("/* TODO: Check whether RAM banks need to be explicitly enabled before use */");
@@ -233,8 +263,7 @@ fn generate_memory_x(memories) {
         out.push(`_${name_lower}_end = ORIGIN(${region.name}) + LENGTH(${region.name});`);
         out.push("");
     }
-
-    file::write("memory.x", out);
+    if count > 0 { out } else { [] }
 }
 
 fn generate_config_toml() {
@@ -250,7 +279,7 @@ fn generate_config_toml() {
     out += "";
 
     out += "[build]";
-    out += `target = ${rust_target}`;
+    out += `target = "${rust_target}"`;
     out += "";
 
     out += "[env]";
@@ -273,7 +302,6 @@ fn generate_config_toml() {
 
     out += "# Minimize build size";
     let build_core = variable::get("build_core");
-    print(type_of(build_core));
     let panic_immediate_abort = variable::get("panic_immediate_abort");
     let comment_out = if !build_core && !panic_immediate_abort { '#' } else { "" };
     out += `${comment_out}[unstable]`;
@@ -283,4 +311,48 @@ fn generate_config_toml() {
     out += `${comment_out}build-std-features = ["panic_immediate_abort"] # for even smaller size`;
 
     file::write(".cargo/config.toml", out);
+}
+
+fn generate_readme_md() {
+    let out = [];
+    out += readme_md_inner();
+    file::write("README.md", out);
+}
+
+fn generate_readme_md_extended(mcu_info) {
+    let out = [];
+    out += readme_md_inner();
+
+    out += "";
+    out += "## MCU Info";
+    out += `* Family: ${mcu_info.family}`;
+    out += `* Line: ${mcu_info.line}`;
+    out += `* Die: ${mcu_info.die}`;
+    out += `* Device ID: ${mcu_info.device_id}`;
+    out += "* Packages:";
+    for p in mcu_info.packages {
+        out += `    * ${p.name}: ${p["package"]} (${p.pins.len()} pins)`;
+    }
+
+    out += "";
+    out += "## Documentation";
+    for doc in mcu_info.docs {
+        out += `* [${doc.title} (${doc.type} / ${doc.name})](${doc.url})`;
+    }
+
+    file::write("README.md", out);
+}
+
+fn readme_md_inner() {
+    let out = [];
+    out += `# ${variable::get("project-name")}`;
+    out += "";
+
+    out += "## Environment setup"
+    out += "";
+
+    out += "## RAM linking";
+    out += "";
+
+    out
 }
