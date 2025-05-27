@@ -77,20 +77,20 @@ let manual_targets = #{
     },
 };
 
-let mcu = variable::prompt("Which MCU to use?", "STM32H725IG");
-mcu.make_lower();
-if mcu.starts_with("stm32") {
-    mcu.make_upper();
-    let series = mcu[5];
+let chip = variable::prompt("Which MCU to use?", "STM32H725IG");
+chip.make_lower();
+if chip.starts_with("stm32") {
+    chip.make_upper();
+    let series = chip[5];
 
-    if !stm32_list.contains(mcu[5..]) {
-        show_similar_stm32_and_abort(mcu, stm32_list);
+    if !stm32_list.contains(chip[5..]) {
+        show_similar_stm32_and_abort(chip, stm32_list);
     }
-    print("↓ Download " + mcu + " information from embassy-rs/stm32-data-generated repo using curl?");
+    print("↓ Download " + chip + " information from embassy-rs/stm32-data-generated repo using curl?");
     print("Decline if no internet or for other reasons, will use safe defaults then.");
     let download_ok = variable::prompt("Proceed with download?", "yes", ["no", "yes"]);
     if download_ok == "yes" {
-        let mcu_info = download_stm32_info(mcu);
+        let mcu_info = download_stm32_info(chip);
         if type_of(mcu_info) == "()" {
             print("\x1b[31mSomething went wrong with the download, proceeding with default values instead.")
         } else {
@@ -99,23 +99,29 @@ if mcu.starts_with("stm32") {
     }
 
     variable::set("arch", "arm");
-
+    print(series);
+    let rust_target = switch series {
+        'H' => "thumbv7em-none-eabihf",
+    };
+    variable::set("rust_target", rust_target);
+    variable::set("probe_chip", chip);
 } else {
     let target_properties = manual_targets.get(target);
     for key in target_properties.keys() {
         variable::set(key, target_properties.get(key));
     }
 }
+generate_config_toml();
 
-fn show_similar_stm32_and_abort(mcu, stm32_list) {
+fn show_similar_stm32_and_abort(chip, stm32_list) {
     let similar = [];
     let stop = false;
-    for i in 1..mcu.len() - 5 {
+    for i in 1..chip.len() - 5 {
         if stop {
             break;
         }
         for s in stm32_list {
-            if s.starts_with(mcu[5..-i]) {
+            if s.starts_with(chip[5..-i]) {
                 similar.push("STM32" + s);
                 stop = true;
             }
@@ -128,8 +134,8 @@ fn show_similar_stm32_and_abort(mcu, stm32_list) {
     }
 }
 
-fn download_stm32_info(mcu) {
-    let json_url = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data/chips/" + mcu + ".json";
+fn download_stm32_info(chip) {
+    let json_url = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data/chips/" + chip + ".json";
     let mcu_info = system::command("curl", ["-s", json_url]);
     if mcu_info.is_empty() {
         ()
@@ -229,4 +235,52 @@ fn generate_memory_x(memories) {
     }
 
     file::write("memory.x", out);
+}
+
+fn generate_config_toml() {
+    let out = [];
+    let rust_target = variable::get("rust_target");
+    out += `[target.${rust_target}]`;
+    let probe_chip = variable::get("probe_chip");
+    if probe_chip.contains("nrf9151") {
+        out += `runner = "probe-rs run --chip ${probe_chip} --allow-erase-all"`;
+    } else {
+        out += `runner = "probe-rs run --chip ${probe_chip}"`;
+    }
+    out += "";
+
+    out += "[build]";
+    out += `target = ${rust_target}`;
+    out += "";
+
+    out += "[env]";
+    let defmt_rtt_buffer_size = variable::get("defmt_rtt_buffer_size");
+    let comment = "avoid loosing output, e.g., during init when a lot of output is generated";
+    if defmt_rtt_buffer_size != "1024" {
+        out += `DEFMT_RTT_BUFFER_SIZE = "${defmt_rtt_buffer_size}" #${comment}`;
+    } else {
+        out += `#DEFMT_RTT_BUFFER_SIZE = "4096" #${comment}`;
+    }
+
+    let cnt_buffer_size_words = variable::get("cnt_buffer_size_words");
+    let comment = "number of counters available, u32 counter takes 1 word, u64 - 2 words";
+    if cnt_buffer_size_words != "64" {
+        out += `CNT_BUFFER_SIZE_WORDS = "${cnt_buffer_size_words}" #${comment}`;
+    } else {
+        out += `#CNT_BUFFER_SIZE_WORDS = "256" #${comment}`;
+    }
+    out += "";
+
+    out += "# Minimize build size";
+    let build_core = variable::get("build_core");
+    print(type_of(build_core));
+    let panic_immediate_abort = variable::get("panic_immediate_abort");
+    let comment_out = if !build_core && !panic_immediate_abort { '#' } else { "" };
+    out += `${comment_out}[unstable]`;
+    let comment_out = if !build_core { '#' } else { "" };
+    out += `${comment_out}build-std = ["core"]`;
+    let comment_out = if !panic_immediate_abort { '#' } else { "" };
+    out += `${comment_out}build-std-features = ["panic_immediate_abort"] # for even smaller size`;
+
+    file::write(".cargo/config.toml", out);
 }

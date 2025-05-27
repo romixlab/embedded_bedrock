@@ -60,6 +60,9 @@ Optional embassy, RTIC and hal crates support.
         > 
 * [ ] stack probe to estimate stack usage - cortex-m-rt paint-stack feature
 
+## Firmware template
+* [x] Load STM32 data from stm32-data-generated to generate memory.x and others
+
 ## Logging
 
 * [ ] defmt
@@ -122,4 +125,6 @@ Optional embassy, RTIC and hal crates support.
 
 ## See also
 
-- Hubris debugger: https://github.com/oxidecomputer/humility?tab=readme-ov-file#commands
+- Inspired by: [Hubris debugger](https://github.com/oxidecomputer/humility?tab=readme-ov-file#commands)
+- Borrowed some code from: [embassy-template](https://github.com/lulf/embassy-template/tree/main)
+- Borrowed some code from: [app-template](https://github.com/knurling-rs/app-template)
