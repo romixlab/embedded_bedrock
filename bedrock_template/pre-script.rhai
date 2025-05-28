@@ -439,3 +439,19 @@ fn readme_md_inner() {
 
     out
 }
+
+fn generate_rust_toolchain_toml() {
+    let out = [];
+    out += "[toolchain]";
+    if variable::get("use_nightly") {
+        print("Getting installed rustc nightly version to fix it in the rust-toolchain.toml");
+        let version = system::command("rustc", ["+nightly", "--version"]);
+        let date = version.split_rev(' ')[0][..-1];
+        out += `channel = "nightly-${date}"`;
+        out += `components = ["rustfmt", "rust-src"]`;
+    } else {
+        out += `components = ["rustfmt"]`;
+    }
+    out += `targets = ["${variable::get("rust_target")}"]`;
+    file::write("rust-toolchain.toml", out);
+}
