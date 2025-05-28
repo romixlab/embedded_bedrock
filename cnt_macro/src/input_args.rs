@@ -1,11 +1,11 @@
-use syn::{Expr, Ident, LitStr, Token, parse::Parse};
+use syn::{Expr, Ident, Token, parse::Parse};
 
 pub struct ExprAndNameArgs {
     pub expr: Expr,
     pub _comma: Token![,],
-    pub name: LitStr,
+    pub name: Ident,
     pub _colon: Token![:],
-    pub ty: Option<Ident>,
+    pub ty: Ident,
     // pub _comma2: Token![,],
     // pub expected: Option<Expr>,
 }

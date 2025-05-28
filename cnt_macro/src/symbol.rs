@@ -1,3 +1,4 @@
+use std::env;
 // Borrowed from defmt
 use std::fmt::Write;
 
@@ -21,26 +22,31 @@ struct Symbol<'a> {
 
     /// Symbol data for use by the host tooling. Interpretation depends on `tag`.
     data: &'a str,
+
+    /// Crate name obtained via CARGO_CRATE_NAME (added since a Cargo package can contain many crates).
+    crate_name: String,
 }
 
 impl<'a> Symbol<'a> {
     fn new(tag: &'a str, data: &'a str) -> Self {
         Self {
             // `CARGO_PKG_NAME` is set to the invoking package's name.
-            package: std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "<unknown>".to_string()),
+            package: env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "<unknown>".to_string()),
             disambiguator: crate::construct::crate_local_disambiguator(),
             tag: format!("{}", tag),
             data,
+            crate_name: env::var("CARGO_CRATE_NAME").unwrap_or_else(|_| "<unknown>".to_string()),
         }
     }
 
     fn mangle(&self) -> String {
         format!(
-            r#"{{"package":"{}","tag":"{}","data":"{}","disambiguator":"{}"}}"#,
+            r#"{{"package":"{}","tag":"{}","data":"{}","disambiguator":"{}","crate_name":"{}"}}"#,
             json_escape(&self.package),
             json_escape(&self.tag),
             json_escape(self.data),
             self.disambiguator,
+            json_escape(&self.crate_name),
         )
     }
 }

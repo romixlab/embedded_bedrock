@@ -4,7 +4,7 @@ use std::{
 };
 
 use proc_macro::Span;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{TokenStream as TokenStream2, TokenStream};
 use quote::quote;
 
 pub(crate) fn crate_local_disambiguator() -> u64 {
@@ -18,7 +18,12 @@ pub(crate) fn crate_local_disambiguator() -> u64 {
 /// returns (note the comma character for macos):
 ///   under macos: ".acc," + 16 character hex digest of symbol's hash
 ///   otherwise:   ".acc." + prefix + symbol
-pub(crate) fn linker_section(for_macos: bool, prefix: Option<&str>, symbol: &str) -> String {
+pub(crate) fn linker_section(
+    kind: CounterKind,
+    for_macos: bool,
+    prefix: Option<&str>,
+    symbol: &str,
+) -> String {
     let mut sub_section = if let Some(prefix) = prefix {
         format!(".{prefix}.{symbol}")
     } else {
@@ -29,14 +34,17 @@ pub(crate) fn linker_section(for_macos: bool, prefix: Option<&str>, symbol: &str
         sub_section = format!(",{:x}", hash(&sub_section));
     }
 
-    format!(".cnt{sub_section}")
+    let section = match kind {
+        CounterKind::RAM => "cnt_ram",
+        CounterKind::BKP => "cnt_bkp",
+    };
+    format!(".{section}{sub_section}")
 }
 
 #[derive(Copy, Clone)]
 pub enum CounterKind {
-    Error,
-    Warning,
-    Info,
+    RAM,
+    BKP,
 }
 
 // impl Into<&str> for CounterKind {
@@ -52,22 +60,21 @@ pub enum CounterKind {
 impl CounterKind {
     fn tag(&self) -> &'static str {
         match self {
-            CounterKind::Error => "cnt_err",
-            CounterKind::Warning => "cnt_warn",
-            CounterKind::Info => "cnt_info",
+            CounterKind::RAM => "cnt_ram",
+            CounterKind::BKP => "cnt_bkp",
         }
     }
 }
 
 pub(crate) fn static_variable(counter_kind: CounterKind, data: &str) -> TokenStream2 {
     let sym_name = crate::symbol::mangled(counter_kind.tag(), data);
-    let section = linker_section(false, None, &sym_name);
-    let section_for_macos = linker_section(true, None, &sym_name);
+    let section = linker_section(counter_kind, false, None, &sym_name);
+    let section_for_macos = linker_section(counter_kind, true, None, &sym_name);
 
     quote!({
-        #[cfg_attr(target_os = "macos", link_section = #section_for_macos)]
-        #[cfg_attr(not(target_os = "macos"), link_section = #section)]
-        #[export_name = #sym_name]
+        #[cfg_attr(target_os = "macos", unsafe(link_section = #section_for_macos))]
+        #[cfg_attr(not(target_os = "macos"), unsafe(link_section = #section))]
+        #[unsafe(export_name = #sym_name)]
         static CNT: u8 = 0;
         &CNT as *const u8 as usize
     })
