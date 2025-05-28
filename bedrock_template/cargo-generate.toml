@@ -10,6 +10,8 @@ use_nightly = { prompt = "Use nightly? (allows to decrease binary size and pre-c
 build_core = { prompt = "Try to minimize binary size (build core from source)?", default = false, type = "bool" }
 panic_immediate_abort = { prompt = "Try to minimize binary size further (panic_immediate_abort)?", default = false, type = "bool" }
 defmt_log = { prompt = "Adjust default defmt logging levels (e.g., debug,crate_a=trace)?", default = "debug", type = "string" }
-defmt_rtt_buffer_size = { prompt = "Increase defmt_rtt buffer size (can help avoid loosing output)?", default = "1024", type = "string" }
-cnt_buffer_size_words = { prompt = "Increase the size of the buffer used for counters (size in words, u32 counter = 1 word, u64 = 2 words)?", default = "64", type = "string" }
+defmt_rtt_disable_blocking = { prompt = "Disable defmt_rtt blocking mode completely?", default = false, type = "bool" }
+defmt_rtt_buffer_size = { prompt = "Increase defmt_rtt buffer size (can help avoid loosing output if using non-blocking mode)?", default = "1024", type = "string" }
+use_flip_link = { prompt = "Use flip-link for stack overflow detection?", default = true, type = "bool" }
 use_embassy = { prompt = "Use embassy?", default = true, type = "bool" }
+use_counters = { prompt = "Use counters? (cnt_if! macro)", default = true, type = "bool" }

@@ -9,5 +9,13 @@ fn main() {
     println!("cargo:rustc-link-search={}", out.display());
     println!("cargo:rerun-if-changed=memory.x");
 
+    {% if use_flip_link -%}
+    println!("cargo:rustc-linker=flip-link");
+    {% endif -%}
+    
+    {% if use_counters -%}
+    println!("cargo:rustc-link-arg=-Tcnt.x");
+    {% endif -%}
+
     bedrock_build::common();
 }
