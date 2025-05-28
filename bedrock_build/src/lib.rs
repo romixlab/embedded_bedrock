@@ -1,9 +1,9 @@
 use std::ffi::OsString;
-use std::{env, fs};
 use std::path::PathBuf;
+use std::{env, fs};
 
 pub fn common() {
-    println!("cargo:rustc-linker=flip-link");
+    println!("cargo:rerun-if-env-changed=RAM_LINK");
 
     let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());
     if env::var_os("RAM_LINK") == Some(OsString::from("1")) {
@@ -11,7 +11,7 @@ pub fn common() {
             out.join("link_ram.x"),
             include_bytes!("../link_ram_cortex_m.x"),
         )
-            .unwrap();
+        .unwrap();
         println!(
             "cargo::warning=⚠️ \x1b[1;33mUsing RAM linking, old code will be run from FLASH on power-cycle"
         );
@@ -21,10 +21,10 @@ pub fn common() {
     }
 
     println!("cargo:rustc-link-arg=-Tdefmt.x");
-    
+
     // This is needed if your flash or ram addresses are not aligned to 0x10000 in memory.x
     // See https://github.com/rust-embedded/cortex-m-quickstart/pull/95
     println!("cargo:rustc-link-arg=--nmagic");
-    
+
     println!("cargo:rerun-if-changed=../link_ram_cortex_m.x");
 }
