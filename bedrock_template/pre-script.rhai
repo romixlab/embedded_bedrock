@@ -79,6 +79,13 @@ let manual_targets = #{
 
 let chip = variable::prompt("Which MCU to use?", "STM32H725IG");
 chip.make_lower();
+variable::set("chip", chip);
+let counters_info = if variable::get("use_counters") {
+    prompt_counters_info(chip)
+} else {
+    ()
+};
+
 if chip.starts_with("stm32") {
     chip.make_upper();
     let series = chip[5..=6];
@@ -95,7 +102,7 @@ if chip.starts_with("stm32") {
             print("\x1b[31mSomething went wrong with the download, proceeding with default values instead.");
             generate_readme_md();
         } else {
-            generate_memory_x(mcu_info.memory);
+            generate_memory_x(mcu_info, counters_info);
             generate_readme_md_extended(mcu_info);
         }
     }
@@ -120,7 +127,8 @@ if chip.starts_with("stm32") {
     }
     generate_readme_md();
 }
-generate_config_toml();
+generate_config_toml(counters_info);
+generate_rust_toolchain_toml();
 
 fn show_similar_stm32_and_abort(chip, stm32_list) {
     let similar = [];
@@ -153,10 +161,19 @@ fn download_stm32_info(chip) {
     }
 }
 
-fn generate_memory_x(memories) {
+fn generate_memory_x(mcu_info, counters_info) {
     let regions = [];
-    for m in memories[0] {
-        regions.push(#{ origin: m.address, length: m.size, name: m.name, kind: m.kind, comment_out: false, selected_ram: false });
+    for m in mcu_info.memory[0] {
+        regions.push(#{
+            origin: m.address,
+            length: m.size,
+            name: m.name,
+            kind: m.kind,
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: "",
+            comment: ""
+        });
     }
 
     let ram_found = false;
@@ -184,6 +201,25 @@ fn generate_memory_x(memories) {
         }
     }
 
+    if counters_info.use_tamp {
+        let address = mcu_info.cores[0].peripherals.find(|p| p.name == "TAMP")?.address;
+        let address = if type_of(address) == "()" {
+            0xFFFF_FFFF
+        } else {
+            address + 0x100
+        };
+        regions.push(#{
+            origin: address,
+            length: counters_info.bkp_size,
+            name: "TAMP_BKP_REGS",
+            kind: "reg",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: ".cnt_bkp_buffer",
+            comment: "TODO: Check that this address is correct"
+        });
+    }
+
     let out = [];
     out += generate_linker_regions(regions);
     out += generate_linker_sections(regions);
@@ -197,18 +233,20 @@ fn generate_linker_regions(regions) {
     for region in regions {
         let origin = region.origin.to_hex();
         origin.make_upper();
-        origin.pad(8, '0');
         let length = if region.length % 1024 == 0 {
             let length_kb = region.length / 1024;
             `${length_kb}K`
         } else {
-            `{region.length}`
+            region.length
         };
         out.push("");
         out.push(`  /* ${region.name} (${region.kind}) */`);
         if region.name == "AXISRAM" {
             out.push("  /* TODO: Check whether AXISRAM size can be reconfigured vs ITCM (TCM_AXI_SHARED in ref. manual) */");
             out.push("  /* Using AXISRAM as main RAM to avoid potential DMA issues (vs DTCM for example), other configurations might be viable as well */");
+        }
+        if !region.comment.is_empty() {
+            out += `  /* ${region.comment} */`;
         }
         let region_def = `  ${region.name} : ORIGIN = 0x${origin}, LENGTH = ${length}`;
         if region.comment_out {
@@ -239,9 +277,13 @@ fn generate_linker_sections(regions) {
         name_lower.make_lower();
         let align = if region.name == "AXISRAM" { 8 } else { 4 };
         out.push(`  .${name_lower} (NOLOAD) : ALIGN(${align}) {`);
-        out.push(`    *(.${name_lower} .${name_lower}.*);`);
+        if region.collect_sections.is_empty() {
+            out.push(`    *(.${name_lower} .${name_lower}.*);`);
+        } else {
+            out.push(`    *(${region.collect_sections});`);
+        }
         out.push(`    . = ALIGN(${align});`);
-        out.push(`  } > {region.name}`);
+        out.push(`  } > ${region.name}`);
     }
     out.push("};");
     if count > 0 { out } else { [] }
@@ -266,7 +308,7 @@ fn generate_linker_consts(regions) {
     if count > 0 { out } else { [] }
 }
 
-fn generate_config_toml() {
+fn generate_config_toml(counters_info) {
     let out = [];
     let rust_target = variable::get("rust_target");
     out += `[target.${rust_target}]`;
@@ -283,22 +325,33 @@ fn generate_config_toml() {
     out += "";
 
     out += "[env]";
+    out += `DEFMT_LOG = "${variable::get("defmt_log")}" # By default, only error level messages are emitted`;
+
     let defmt_rtt_buffer_size = variable::get("defmt_rtt_buffer_size");
-    let comment = "avoid loosing output, e.g., during init when a lot of output is generated";
+    let comment = "avoid loosing output if non-blocking, e.g., during init when a lot of output is generated";
     if defmt_rtt_buffer_size != "1024" {
-        out += `DEFMT_RTT_BUFFER_SIZE = "${defmt_rtt_buffer_size}" #${comment}`;
+        out += `DEFMT_RTT_BUFFER_SIZE = "${defmt_rtt_buffer_size}" # ${comment}`;
     } else {
         out += `#DEFMT_RTT_BUFFER_SIZE = "4096" #${comment}`;
     }
 
-    let cnt_buffer_size_words = variable::get("cnt_buffer_size_words");
-    let comment = "number of counters available, u32 counter takes 1 word, u64 - 2 words";
-    if cnt_buffer_size_words != "64" {
-        out += `CNT_BUFFER_SIZE_WORDS = "${cnt_buffer_size_words}" #${comment}`;
-    } else {
-        out += `#CNT_BUFFER_SIZE_WORDS = "256" #${comment}`;
+    if variable::get("use_counters") {
+        let comment = "Size of the counters buffer in RAM (words, default is 64)";
+        if counters_info.ram_size != "64" {
+            out += `CNT_RAM_BUFFER_SIZE_WORDS = "${counters_info.ram_size}" # ${comment}`;
+        } else {
+            out += `#CNT_RAM_BUFFER_SIZE_WORDS = "64" #${comment}`;
+        }
+
+        let comment = "Size of the counters buffer in BKPRAM (words, default is 0)";
+        if counters_info.bkp_size != "0" {
+            let size_words = counters_info.bkp_size / 4;
+            out += `CNT_BKP_BUFFER_SIZE_WORDS = "${size_words}" # ${comment}`;
+        } else {
+            out += `#CNT_BKP_BUFFER_SIZE_WORDS = "64" #${comment}`;
+        }
+        out += "";
     }
-    out += "";
 
     out += "# Minimize build size";
     let build_core = variable::get("build_core");
@@ -311,6 +364,36 @@ fn generate_config_toml() {
     out += `${comment_out}build-std-features = ["panic_immediate_abort"] # for even smaller size`;
 
     file::write(".cargo/config.toml", out);
+}
+
+fn prompt_counters_info(chip) {
+    let ram_size = variable::prompt("Size of the counters buffer in RAM (words)", "64");
+
+    let bkp_size = 0;
+    let use_tamp = false;
+    let use_rtc = false;
+    let use_bkpram = false;
+
+    if chip.starts_with("stm32g0") {
+        use_tamp = variable::prompt("Use TAMP backup registers as non-volatile counters? (5 words)", "yes", ["yes", "no"]) == "yes";
+        if use_tamp {
+            bkp_size = 5 * 4;
+        }
+    } else if chip.starts_with("stm32h7") {
+        use_rtc = variable::prompt("Use RTC backup registers as non-volatile counters? (32 words)", "yes", ["yes", "no"]) == "yes";
+        if use_rtc {
+            bkp_size = 32 * 4;
+        } else {
+            bkp_size = variable::prompt("Size of the counters buffer in BKPRAM (words)", "0");
+            use_bkpram = true;
+        }
+    } else {
+        bkp_size = variable::prompt("Size of the counters buffer in BKPRAM (words)", "0");
+        use_bkpram = true;
+    }
+    variable::set("use_bkp_counters", bkp_size > 0);
+
+    #{ ram_size: ram_size, bkp_size: bkp_size, use_tamp: use_tamp, use_rtc: use_rtc, use_bkpram: use_bkpram }
 }
 
 fn generate_readme_md() {
@@ -348,7 +431,7 @@ fn readme_md_inner() {
     out += `# ${variable::get("project-name")}`;
     out += "";
 
-    out += "## Environment setup"
+    out += "## Environment setup";
     out += "";
 
     out += "## RAM linking";
