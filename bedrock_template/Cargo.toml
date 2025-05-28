@@ -6,7 +6,11 @@ edition = "2024"
 [dependencies]
 cortex-m-rt = "0.7"
 defmt = "1.0"
-defmt-rtt = "1.0"
+{% if defmt_rtt_disable_blocking %}
+defmt-rtt = { version = "1.0", features = ["disable-blocking-mode"] }
+{% else -%}
+defmt-rtt = "1.0" # consider disable-blocking-mode
+{% endif -%}
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 
 {% if chip contains "stm32" -%}
@@ -15,7 +19,7 @@ embassy-stm32 = { version = "0.2", features = ["defmt", "{{ chip }}", "unstable-
 {% endif -%}
 
 {% if rust_target contains "thumbv6m" -%}
-portable-atomic = { version = "1.11", features = ["critical-section"] } # to make static_cell
+portable-atomic = { version = "1.11", features = ["critical-section"] } # to make static_cell work
 {% endif -%}
 
 {% if use_embassy %}
@@ -34,6 +38,11 @@ embassy-time = { version = "0.4", features = ["defmt", "defmt-timestamp-uptime",
 embassy-sync = { version = "0.6", features = ["defmt"] }
 assign-resources = "0.5"
 {% endif -%}
+
+{% if use_counters %}
+cnt = { path = "../embedded-bedrock/cnt" }
+cnt_macro = { path = "../embedded-bedrock/cnt_macro" }
+{% endif %}
 
 [build-dependencies]
 bedrock_build = { path = "../embedded-bedrock/bedrock_build" }
