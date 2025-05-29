@@ -104,10 +104,12 @@ if chip.starts_with("stm32") {
             generate_memory_x(mcu_info, counters_info);
             generate_readme_md_extended(mcu_info);
             prompt_smps_configuration(mcu_info);
+            check_rcc_kind(mcu_info);
         }
     } else {
         generate_default_memory_x_stm32();
         generate_readme_md();
+        check_rcc_kind(());
     }
 
     variable::set("arch", "arm");
@@ -527,4 +529,14 @@ fn any_smps_pins(mcu_info) {
         }
     }
     false
+}
+
+fn check_rcc_kind(mcu_info) {
+    if type_of(mcu_info) == "()" {
+        variable::set("rcc_have_pwren", true);
+        return;
+    }
+    let rcc_version = mcu_info.cores[0].peripherals.find(|p| p.name == "RCC")?.registers.version;
+    let no_pwren = ["h7rs", "h7", "h7ab", "wle", "h7rm0433", "wb", "wl5", "h5", "h50"];
+    variable::set("rcc_have_pwren", !no_pwren.contains(rcc_version));
 }

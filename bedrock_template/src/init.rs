@@ -1,3 +1,4 @@
+/// Enable and zero additional RAM blocks (apart from system RAM, it is zeroed in startup code)
 pub(crate) fn init_ram() {
     {% if chip contains "stm32g0" and use_bkp_counters -%}
     enable_tamp_bkp_regs();
@@ -59,5 +60,30 @@ fn enable_rcc_bkp_regs() {
         w.set_rtcen(true);
     });
     cortex_m::asm::dsb();
+}
+{% endif -%}
+
+{% if use_rtc == false -%}
+/// Corrupted content of the RTC domain due to a missed power-on reset after this domain supply voltage drop.
+/// Leads to hard to debug gotchas (LSE enables by itself, PC13 / PC14 / PC15 and others set to output).
+/// The solution is to reset the backup domain when RTC is not used.
+/// See: http://efton.sk/STM32/gotcha/g133.html and http://efton.sk/STM32/gotcha/g62.html
+pub(crate) fn reset_bkp_domain() {
+    let rcc = embassy_stm32::pac::RCC;
+    let pwr = embassy_stm32::pac::PWR;
+
+    {% if rcc_have_pwren %}
+    rcc.apbenr1().modify(|w| w.set_pwren(true));
+    let _ = rcc.apbenr1().read();
+    {% endif -%}
+
+    pwr.cr1().modify(|w| w.set_dbp(true));
+    let mut cr1 = pwr.cr1().read(); // to ensure the write went through the synchronizer
+
+    rcc.bdcr().modify(|w| w.set_bdrst(true));
+    rcc.bdcr().modify(|w| w.set_bdrst(false));
+
+    cr1.set_dbp(false);
+    pwr.cr1().write_value(cr1);
 }
 {% endif -%}

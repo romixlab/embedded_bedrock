@@ -13,16 +13,16 @@ use panic_probe as _;
 use cortex_m_rt::exception;
 {% if use_counters and use_bkp_counters == false -%}
 use cnt_macro::cnt_if;
-{% endif %}
+{% endif -%}
 {% if use_counters and use_bkp_counters -%}
 use cnt_macro::{cnt_if, bkp_cnt_if};
-{% endif %}
+{% endif -%}
 {% if supply_config != "" -%}
 use embassy_stm32::rcc::SupplyConfig;
-{% endif %}
-{% if smps_supply_voltage == "" -%}
+{% endif -%}
+{% if smps_supply_voltage != "" -%}
 use embassy_stm32::rcc::SMPSSupplyVoltage;
-{% endif %}
+{% endif -%}
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -39,6 +39,9 @@ async fn main(_spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     {% endif -%}
     init::init_ram();
+    {% if use_rtc == false -%}
+    init::reset_bkp_domain();
+    {% endif -%}
     info!("RCC and RAM init done");
 
     {% if chip contains "stm32h7" -%}

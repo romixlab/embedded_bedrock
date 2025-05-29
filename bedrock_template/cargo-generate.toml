@@ -15,3 +15,4 @@ defmt_rtt_buffer_size = { prompt = "Increase defmt_rtt buffer size (can help avo
 use_flip_link = { prompt = "Use flip-link for stack overflow detection?", default = true, type = "bool" }
 use_embassy = { prompt = "Use embassy?", default = true, type = "bool" }
 use_counters = { prompt = "Use counters? (cnt_if! macro)", default = true, type = "bool" }
+use_rtc = { prompt = "Are you planning to use RTC?", default = false, type = "bool" }
