@@ -24,6 +24,14 @@ async fn main(_spawner: Spawner) {
     init_ram::init_ram();
     info!("{{project-name}} starting...");
 
+    {% if chip contains "stm32h7" -%}
+    let mut cp = cortex_m::Peripherals::take().unwrap();
+    cp.SCB.enable_icache();
+    // Enable D-Cache only after verifying that no coherency issues will arise when using DMAs
+    // DMAs write/read to/from SRAM while cache continue to hold old data, can use cache invalidate to solve this
+    // cp.SCB.enable_dcache(&mut cp.CPUID);
+    {% endif -%}
+
     let mut led = Output::new(p.PB14, Level::Low, Speed::Low);
 
     loop {
