@@ -219,6 +219,24 @@ fn generate_memory_x(mcu_info, counters_info) {
             comment: "TODO: Check that this address is correct"
         });
     }
+    if counters_info.use_rtc {
+        let address = mcu_info.cores[0].peripherals.find(|p| p.name == "RCC")?.address;
+        let address = if type_of(address) == "()" {
+            0xFFFF_FFFF
+        } else {
+            address + 0x50
+        };
+        regions.push(#{
+            origin: address,
+            length: counters_info.bkp_size,
+            name: "RCC_BKP_REGS",
+            kind: "reg",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: ".cnt_bkp_buffer",
+            comment: "TODO: Check that this address is correct"
+        });
+    }
 
     let out = [];
     out += generate_linker_regions(regions);

@@ -42,7 +42,7 @@ pub fn counters_bkp_buffer() -> &'static [u32] {
 }
 
 #[inline(always)]
-pub fn counters_bkp_buffer_mut() -> &'static mut [u32] {
+fn counters_bkp_buffer_mut() -> &'static mut [u32] {
     unsafe {
         core::slice::from_raw_parts_mut(
             &raw mut _CNT_BKP_BUFFER as *mut _ as *mut u32,

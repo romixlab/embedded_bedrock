@@ -4,7 +4,7 @@ use std::{
 };
 
 use proc_macro::Span;
-use proc_macro2::{TokenStream as TokenStream2, TokenStream};
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 
 pub(crate) fn crate_local_disambiguator() -> u64 {
