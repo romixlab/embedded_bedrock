@@ -14,7 +14,17 @@ use cnt_macro::cnt_if;
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
+    {% if supply_config != "" -%}
+    let mut config = Config::default();
+    {% if smps_supply_voltage == "" -%}
+    config.rcc.supply_config = SupplyConfig::{{ supply_config }};
+    {% else -%}
+    config.rcc.supply_config = SupplyConfig::{{ supply_config }}(SMPSSupplyVoltage::{{ smps_supply_voltage }});
+    {% endif -%}
+    let p = embassy_stm32::init(config);
+    {% else %}
     let p = embassy_stm32::init(Default::default());
+    {% endif -%}
     info!("Hello World!");
 
     let mut led = Output::new(p.PB14, Level::Low, Speed::Low);

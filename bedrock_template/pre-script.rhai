@@ -99,12 +99,15 @@ if chip.starts_with("stm32") {
     if download_ok == "yes" {
         let mcu_info = download_stm32_info(chip);
         if type_of(mcu_info) == "()" {
-            print("\x1b[31mSomething went wrong with the download, proceeding with default values instead.");
-            generate_readme_md();
+            abort("\x1b[31mSomething went wrong with the download.");
         } else {
             generate_memory_x(mcu_info, counters_info);
             generate_readme_md_extended(mcu_info);
+            prompt_smps_configuration(mcu_info);
         }
+    } else {
+        generate_default_memory_x_stm32();
+        generate_readme_md();
     }
 
     variable::set("arch", "arm");
@@ -116,7 +119,6 @@ if chip.starts_with("stm32") {
         "WB" if chip[7] == 'A' => "thumbv8m.main-none-eabihf",
         "F4" | "G4" | "L4" => "thumbv7em-none-eabi",
         "H5" | "L5" | "U5" => "thumbv8m.main-none-eabihf",
-
     };
     variable::set("rust_target", rust_target);
     variable::set("probe_chip", chip);
@@ -243,6 +245,30 @@ fn generate_memory_x(mcu_info, counters_info) {
     out += generate_linker_sections(regions);
     out += generate_linker_consts(regions);
 
+    file::write("memory.x", out);
+}
+
+fn generate_default_memory_x_stm32() {
+    let regions = [];
+    regions.push(#{
+        origin: 0x2000_0000,
+        length: 16_384,
+        name: "RAM",
+        kind: "ram",
+        comment_out: false,
+        selected_ram: true,
+        comment: "TODO: Check that this address and size are correct (they are likely not)"
+    });
+    regions.push(#{
+        origin: 0x0800_0000,
+        length: 16_384,
+        name: "FLASH",
+        kind: "flash",
+        comment_out: false,
+        selected_ram: true,
+        comment: "TODO: Check that this address and size are correct (the are likely not)"
+    });
+    out += generate_linker_regions(regions);
     file::write("memory.x", out);
 }
 
@@ -398,7 +424,7 @@ fn prompt_counters_info(chip) {
             bkp_size = 5 * 4;
         }
     } else if chip.starts_with("stm32h7") {
-        use_rtc = variable::prompt("Use RTC backup registers as non-volatile counters? (32 words)", "yes", ["yes", "no"]) == "yes";
+        use_rtc = variable::prompt("Use RTC backup registers as non-volatile counters? (32 words)", "no", ["yes", "no"]) == "yes";
         if use_rtc {
             bkp_size = 32 * 4;
         } else {
@@ -472,4 +498,33 @@ fn generate_rust_toolchain_toml() {
     }
     out += `targets = ["${variable::get("rust_target")}"]`;
     file::write("rust-toolchain.toml", out);
+}
+
+fn prompt_smps_configuration(mcu_info) {
+    if !any_smps_pins(mcu_info) {
+        return;
+    }
+    let supply_config = variable::prompt(
+        "\x1b[31mWARNING: Found SMPS pins, meaning that selected MCU likely contains a DC-DC supply that must be configured properly, consult schematics of your board and select the correct option",
+        "DirectSMPS",
+        ["Default", "LDO", "DirectSMPS", "SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass", "SMPSDisabledLDOBypass"]
+    );
+    variable::set("supply_config", supply_config);
+    if ["SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass"].contains(supply_config) {
+        let smps_supply_voltage = variable::prompt("Choose SMPS supply voltage", "1.8V", ["1.8V", "2.5V"]);
+        variable::set("smps_supply_voltage", smps_supply_voltage);
+    }
+}
+
+fn any_smps_pins(mcu_info) {
+    for p in mcu_info.packages {
+        for pin in p.pins {
+            for signal in pin.signals {
+                if signal.contains("SMPS") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
