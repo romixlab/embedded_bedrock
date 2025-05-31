@@ -1,0 +1,10 @@
+[package]
+name = "bedrock_build_info"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wire_weaver = { path = "../../wire_weaver/wire_weaver", features = ["tracing-extended"] }
+
+[dev-dependencies]
+hex-literal = "1"

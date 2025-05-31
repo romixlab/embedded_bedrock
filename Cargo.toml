@@ -7,6 +7,7 @@ edition = "2024"
 members = [
     "bedrock",
     "bedrock_build",
+    "bedrock_build_info",
     "bedrock_cli",
     "cnt",
     "cnt_macro",
