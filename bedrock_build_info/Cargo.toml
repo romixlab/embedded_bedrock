@@ -4,7 +4,18 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-wire_weaver = { path = "../../wire_weaver/wire_weaver", features = ["tracing-extended"] }
+wire_weaver = { path = "../../wire_weaver/wire_weaver", features = ["chrono", "std", "tracing-extended"] }
+tracing = "0.1"
+
+qdhex = "0.1"
 
 [dev-dependencies]
 hex-literal = "1"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[features]
+default = ["std", "tracing-extended"]
+std = []
+
+tracing-extended = []
+defmt-extended = []
