@@ -18,4 +18,11 @@ fn main() {
     {% endif -%}
 
     bedrock_build::common();
+
+    let info = build_info_build::build_script()
+        .collect_dependencies(build_info_build::DependencyDepth::Depth(0))
+        .build();
+    let info = bedrock_build::serialize_build_info(info);
+    let info_file_path = out.join("build_info.rs");
+    fs::write(info_file_path, info).unwrap();
 }

@@ -46,6 +46,7 @@ cnt_macro = { path = "../embedded-bedrock/cnt_macro" }
 
 [build-dependencies]
 bedrock_build = { path = "../embedded-bedrock/bedrock_build" }
+build-info-build = "0.0.40"
 
 # see for more info: https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
 # cargo build/run

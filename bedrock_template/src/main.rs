@@ -3,6 +3,7 @@
 #![feature(impl_trait_in_assoc_type)]
 
 mod init;
+mod build_info;
 
 use defmt::*;
 use defmt_rtt as _;
@@ -43,6 +44,8 @@ async fn main(_spawner: Spawner) {
     init::reset_bkp_domain();
     {% endif -%}
     info!("RCC and RAM init done");
+    _ = core::hint::black_box(build_info::compact()); // ensure compact build info is in FLASH
+    _ = core::hint::black_box(build_info::full()); // ensure full build info is in ELF
 
     {% if chip contains "stm32h7" -%}
     let mut cp = cortex_m::Peripherals::take().unwrap();
