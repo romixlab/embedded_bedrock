@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use wire_weaver::date_time::{DateTime, NaiveDate};
 use wire_weaver::derive_shrink_wrap;
 use wire_weaver::shrink_wrap::prelude::*;
@@ -122,6 +124,7 @@ pub struct VersionControl<'i> {
 //     }
 // }
 
+#[cfg(feature = "std")]
 impl BedrockBuildInfo<'_> {
     pub fn make_owned(&self) -> BedrockBuildInfoOwned {
         BedrockBuildInfoOwned {
@@ -137,6 +140,7 @@ impl BedrockBuildInfo<'_> {
 }
 
 impl CrateInfo<'_> {
+    #[cfg(feature = "std")]
     pub fn make_owned(&self) -> CrateInfoOwned {
         CrateInfoOwned {
             name: self.name.to_owned(),
@@ -161,6 +165,7 @@ impl CrateInfo<'_> {
 }
 
 impl TargetInfo<'_> {
+    #[cfg(feature = "std")]
     pub fn make_owned(&self) -> TargetInfoOwned {
         TargetInfoOwned {
             triple: self.triple.map(|t| t.to_string()),
@@ -170,6 +175,7 @@ impl TargetInfo<'_> {
 }
 
 impl CompilerInfo<'_> {
+    #[cfg(feature = "std")]
     pub fn make_owned(&self) -> CompilerInfoOwned {
         CompilerInfoOwned {
             version: self.version.make_owned(),
@@ -181,6 +187,7 @@ impl CompilerInfo<'_> {
 }
 
 impl VersionControl<'_> {
+    #[cfg(feature = "std")]
     pub fn make_owned(&self) -> VersionControlOwned {
         VersionControlOwned {
             dirty: self.dirty,
@@ -341,6 +348,6 @@ mod tests {
 
         let mut rd = BufReader::new(&BUILD_INFO_FULL[..]);
         let _build_info = BedrockBuildInfo::des_shrink_wrap(&mut rd).unwrap();
-        // println!("{:#?}", build_info);
+        println!("{:#?}", _build_info);
     }
 }
