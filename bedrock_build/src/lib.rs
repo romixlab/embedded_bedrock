@@ -2,7 +2,7 @@ mod build_info;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use bedrock_build_info::COMPACT_INFO_MAGIC;
+use bedrock_build_info::{COMPACT_INFO_MAGIC, build_info_crc};
 use build_info_common::BuildInfo;
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -39,10 +39,7 @@ pub fn serialize_build_info(info: BuildInfo) -> String {
     let (info_full, mut info_pruned) = build_info::shrink_wrap_build_info(info);
     let info_full = BASE64_STANDARD.encode(&info_full);
 
-    let crc = crc::Crc::<u32>::new(&crc::CRC_32_BZIP2);
-    let mut crc = crc.digest();
-    crc.update(&info_pruned);
-    let crc = crc.finalize().to_le_bytes();
+    let crc = build_info_crc(&info_pruned).to_le_bytes();
 
     let pruned_size =
         u16::try_from(info_pruned.len()).expect("Compact info should definitely fit into 65K");

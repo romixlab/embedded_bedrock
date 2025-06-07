@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+probe-rs = "0.29"
+#async-io = "2.4"
+bedrock_build_info = { path = "../bedrock_build_info" }
+wire_weaver = { path = "../../wire_weaver/wire_weaver", features = [] }

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 wire_weaver = { path = "../../wire_weaver/wire_weaver", default-features = false, features = [] }
+crc = { version = "3.3", optional = true }
 #tracing = { version = "0.1", optional = true }
 #qdhex = "0.1"
 
@@ -14,7 +15,7 @@ hex-literal = "1"
 
 [features]
 default = ["std", "tracing-extended"]
-std = ["wire_weaver/std", "wire_weaver/semver", "wire_weaver/chrono"]
+std = ["wire_weaver/std", "wire_weaver/semver", "wire_weaver/chrono", "dep:crc"]
 
 tracing-extended = []
 defmt-extended = []

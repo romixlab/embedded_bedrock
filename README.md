@@ -4,6 +4,7 @@ Bare metal firmware template, offering ruggedizing features, robust debugging, l
 Optional embassy, RTIC and hal crates support.
 
 ## Debug tool
+
 * [ ] Build, flash and upload binary to local registry (for later defmt decoding based on firmware SHA)
     * Link and run from RAM
 * [ ] Diagnose target state and common pitfalls
@@ -54,20 +55,43 @@ Optional embassy, RTIC and hal crates support.
 
 * [ ] flip-link to detect stack overflow - https://github.com/knurling-rs/flip-link
     - If you want to see what flip-link is up to, you can set these environment variables:
-        
-        > export RUSTC_LOG=rustc_codegen_ssa::back::link=info
-        export RUST_LOG=info
-        > 
+
+      > export RUSTC_LOG=rustc_codegen_ssa::back::link=info
+      export RUST_LOG=info
+
+>
+
 * [ ] stack probe to estimate stack usage - cortex-m-rt paint-stack feature
 
 ## Firmware template
+
 * [x] Load STM32 data from stm32-data-generated to generate memory.x and others
+    * [x] Generate memory.x
+    * [x] Check if package contains SMPS pins and ask for a correct configuration option
+    * [x] Generate README.md with links to all provided datasheets
+* [x] Ask whether RCC is used, and if it is not - reset RCC according to the quirk fix
+* [x] Generate rust-toolchain.toml file fixing the currently installed nightly version (if the nightly option is chosen)
+* [x] Enable more elaborate size optimizations (build_core, panic_immediate_abort)
+* [x] Configure defmt buffer size and disable blocking option if chosen to do so
+* [x] Setup counters and configure buffer sizes
+* [ ] Relocate vector table to SRAM
+
+### Other
+
+* [x] Depend on `portable-atomic = { version = "1.11", features = ["critical-section"] }` to make static_cell work on
+  targets with no atomics (e.g., Thumbv6m)
+* [ ] Add TODO items on git dependencies to remember to update them periodically or when crates version is released
+* [x] Ask whether to pin Rust version and whether to use nightly
+* [x] Ask whether to use embassy
+* [ ] Ask whether to use RTIC
+* [ ] Ask whether to use stm32-xx-hal
+* [ ] Add TODO item if defmt buffer is small
 
 ## Logging
 
-* [ ] defmt
+* [x] defmt
     * Explicitly set default buffer size and log level
-* [ ] counters
+* [x] counters
     - embed counters names?
     - more advanced counters (see Hubris debugger)?
 * [ ] defmt-brtt to use both RTT and ring buffer to retrieve logs
@@ -93,9 +117,10 @@ Optional embassy, RTIC and hal crates support.
 - cargo-xtask if Rust scripting as a cargo command is needed
 - cargo binutils - https://github.com/rust-embedded/cargo-binutils
     - List all symbols in an executable sorted by size (smallest first):
-    `cargo nm --release -- --print-size --size-sort`
+      `cargo nm --release -- --print-size --size-sort`
     - Convert to binary: `cargo objcopy --release -- -O binary app.bin`
     - Disassemble: `cargo objdump --release -- --disassemble --no-show-raw-insn`
+
 * [ ] Ozone script
 * [ ] GDB/LLDB start script
     - gdb dashboard
@@ -103,25 +128,20 @@ Optional embassy, RTIC and hal crates support.
 ## Size savings
 
 - Try various optimisations
-    
-    > opt-level = "z" # 3 - speed, s - size, z - even less size
-    > 
-- Use defmt
-- Build core from sources and/or avoid panic handling - https://doc.rust-lang.org/cargo/reference/unstable.html#build-std
-    
-    > [unstable]
-    build-std = ["core"]
-    #build-std-features = ["panic_immediate_abort"] # for even smaller size
-    > 
 
-## Other
-* [ ] Depend on `portable-atomic = { version = "1.11", features = ["critical-section"] }` to make static_cell work on targets with no atomics (e.g., Thumbv6m)
-* [ ] Add TODO items on git dependencies to remember to update them periodically or when crates version is released
-* [ ] Ask whether to pin Rust version and whether to use nightly
-* [ ] Ask whether to use embassy
-* [ ] Ask whether to use RTIC
-* [ ] Ask whether to use stm32-xx-hal
-* [ ] Add TODO item if defmt buffer is small
+  > opt-level = "z" # 3 - speed, s - size, z - even less size
+
+>
+
+- Use defmt
+- Build core from sources and/or avoid panic
+  handling - https://doc.rust-lang.org/cargo/reference/unstable.html#build-std
+
+  > [unstable]
+  build-std = ["core"]
+  #build-std-features = ["panic_immediate_abort"] # for even smaller size
+
+>
 
 ## See also
 

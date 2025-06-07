@@ -9,6 +9,14 @@ use wire_weaver::version::VersionOwned;
 
 pub const COMPACT_INFO_MAGIC: u32 = 0xB17D_14F0;
 
+#[cfg(feature = "std")]
+pub fn build_info_crc(bytes: &[u8]) -> u32 {
+    let crc = crc::Crc::<u32>::new(&crc::CRC_32_BZIP2);
+    let mut crc = crc.digest();
+    crc.update(bytes);
+    crc.finalize()
+}
+
 #[derive_shrink_wrap]
 #[derive(Debug, PartialEq, Eq)]
 #[shrink_wrap(no_alloc)]
