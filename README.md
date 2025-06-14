@@ -3,6 +3,11 @@
 Bare metal firmware template, offering ruggedizing features, robust debugging, logging and a helper tool.
 Optional embassy, RTIC and hal crates support.
 
+## Prerequisites
+
+* [probe-rs](https://probe.rs/docs/getting-started/installation/)
+* `cargo install flip-link`
+
 ## Debug tool
 
 * [ ] Build, flash and upload binary to local registry (for later defmt decoding based on firmware SHA)
@@ -17,7 +22,7 @@ Optional embassy, RTIC and hal crates support.
 * [ ] GPIO pin manipulation
     * [ ] Show current status of all pins
     * [ ] Reconfigure/Set/Reset pins
-* [ ] bootloader - show state and usefull info
+* [ ] bootloader - show state and useful info
 * [ ] Show stack usage
 * [ ] Show watchdog information
 * [ ] Show RAM and FLASH ECC info
@@ -65,6 +70,12 @@ Optional embassy, RTIC and hal crates support.
 
 ## Firmware template
 
+### Disclaimer
+
+Note that due to the sheer amount of microcontrollers out there it is next to impossible to cover all the edge cases, though
+for most of the STM32's and a few hand-coded MCUs from other vendors majority of functionality should work.
+Please generate a test project for example for STM32H725IG to evaluate the full capabilities of this template and decide whether you want to use or modify it for your needs.
+
 * [x] Load STM32 data from stm32-data-generated to generate memory.x and others
     * [x] Generate memory.x
     * [x] Check if package contains SMPS pins and ask for a correct configuration option
@@ -74,6 +85,9 @@ Optional embassy, RTIC and hal crates support.
 * [x] Enable more elaborate size optimizations (build_core, panic_immediate_abort)
 * [x] Configure defmt buffer size and disable blocking option if chosen to do so
 * [x] Setup counters and configure buffer sizes
+* [x] Generate SRAM blocks enable and zero code
+* [x] Generate bootloader project code and linker sections (if enabled)
+* [x] Reserve 1 FLASH page for permanent config and create a linker section (if enabled)
 * [ ] Relocate vector table to SRAM
 
 ### Other
@@ -109,7 +123,7 @@ Optional embassy, RTIC and hal crates support.
 * [ ] `#[quickcheck]` for random test input into function arguments
 * [ ] embedded hal mock?
 
-## Usefull tools
+## Useful tools
 
 - cargo bloat to analyze how big in code size are various functions
 - cargo size to check text and data sizes
@@ -127,7 +141,7 @@ Optional embassy, RTIC and hal crates support.
 
 ## Size savings
 
-- Try various optimisations
+- Try various optimizations
 
   > opt-level = "z" # 3 - speed, s - size, z - even less size
 

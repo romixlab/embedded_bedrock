@@ -4,10 +4,14 @@
 
 mod init;
 mod build_info;
+{% if have_init_ram -%}
+mod init_ram;
+{% endif -%}
 
 use defmt::*;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
+use embassy_stm32::Config;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_time::Timer;
 use panic_probe as _;
@@ -24,9 +28,19 @@ use embassy_stm32::rcc::SupplyConfig;
 {% if smps_supply_voltage != "" -%}
 use embassy_stm32::rcc::SMPSSupplyVoltage;
 {% endif -%}
+{% if use_bootloader -%}
+use embassy_boot_stm32::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
+use embassy_stm32::flash::{Flash, WRITE_SIZE};
+use embassy_sync::blocking_mutex::Mutex;
+// use embedded_storage::nor_flash::NorFlash;
+use core::cell::RefCell;
+{% endif %}
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
+    {% if have_init_ram -%}
+    init_ram::init_ram();
+    {% endif -%}
     info!("{{project-name}} starting...");
     {% if supply_config != "" -%}
     let mut config = Config::default();
@@ -39,7 +53,7 @@ async fn main(_spawner: Spawner) {
     {% else %}
     let p = embassy_stm32::init(Default::default());
     {% endif -%}
-    init::init_ram();
+    init::init();
     {% if use_rtc == false -%}
     init::reset_bkp_domain();
     {% endif -%}
@@ -54,6 +68,17 @@ async fn main(_spawner: Spawner) {
     // DMAs write/read to/from SRAM while cache continues to hold old data, can use cache invalidate to solve this
     // cp.SCB.enable_dcache(&mut cp.CPUID);
     {% endif -%}
+
+    {% if use_bootloader %}
+    let flash = Flash::new_blocking(p.FLASH);
+    let flash = Mutex::new(RefCell::new(flash));
+    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);
+    let mut magic = AlignedBuffer([0; WRITE_SIZE]);
+    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);
+    info!("updater state: {}", updater.get_state());
+    // TODO: consider calling mark_booted after ensuring a fw is actually working (e.g., run some tests)
+    updater.mark_booted().unwrap();
+    {% endif %}
 
     let mut led = Output::new(p.PB14, Level::Low, Speed::Low);
 

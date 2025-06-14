@@ -5,6 +5,7 @@
 use defmt::*;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
+use embassy_stm32::Config;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_time::Timer;
 use panic_probe as _;
@@ -39,7 +40,7 @@ async fn main(_spawner: Spawner) {
         Timer::after_millis(2000).await;
 
         {% if use_counters -%}
-        cnt_if!(true, blinks_count_after_reset);
+        cnt_if!(true, blinks_count_after_reset: u32);
         {% endif %}
     }
 }

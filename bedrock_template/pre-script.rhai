@@ -101,10 +101,10 @@ if chip.starts_with("stm32") {
         if type_of(mcu_info) == "()" {
             abort("\x1b[31mSomething went wrong with the download.");
         } else {
-            generate_memory_x(mcu_info, counters_info);
+            let rcc_version = check_rcc_kind(mcu_info);
+            generate_memory_x(mcu_info, counters_info, rcc_version);
             generate_readme_md_extended(mcu_info);
             prompt_smps_configuration(mcu_info);
-            check_rcc_kind(mcu_info);
         }
     } else {
         generate_default_memory_x_stm32();
@@ -165,19 +165,23 @@ fn download_stm32_info(chip) {
     }
 }
 
-fn generate_memory_x(mcu_info, counters_info) {
+fn generate_memory_x(mcu_info, counters_info, rcc_version) {
     let regions = [];
     for m in mcu_info.memory[0] {
-        regions.push(#{
-            origin: m.address,
-            length: m.size,
-            name: m.name,
-            kind: m.kind,
-            comment_out: false,
-            selected_ram: false,
-            collect_sections: "",
-            comment: ""
-        });
+        if m.kind == "flash" {
+            regions += partition_flash(m);
+        } else {
+            regions.push(#{
+                origin: m.address,
+                length: m.size,
+                name: m.name,
+                kind: m.kind,
+                comment_out: false,
+                selected_ram: false,
+                collect_sections: "",
+                comment: ""
+            });
+        }
     }
 
     let ram_found = false;
@@ -196,12 +200,6 @@ fn generate_memory_x(mcu_info, counters_info) {
                 regions[i].comment_out = true;
                 break;
             }
-        }
-    }
-    for i in 0..regions.len() {
-        if regions[i].kind == "flash" {
-            regions[i].name = "FLASH";
-            break;
         }
     }
 
@@ -248,6 +246,161 @@ fn generate_memory_x(mcu_info, counters_info) {
     out += generate_linker_consts(regions);
 
     file::write("memory.x", out);
+    create_init_ram(regions, rcc_version);
+
+    if variable::get("use_bootloader") {
+        // turn firmware linker sections into bootloader ones (swap bootloader and app sections and adjust offsets)
+
+        let bootloader_idx = regions.index_of(|r| r.name == "BOOTLOADER");
+        let flash_idx = regions.index_of(|r| r.name == "FLASH" && !r.comment_out);
+        regions[bootloader_idx].name = "FLASH";
+        regions[flash_idx].name = "BOOTLOADER_ACTIVE";
+
+        let remove_idx = [];
+        for i in 0..regions.len() {
+            let name = regions[i].name;
+            if name == "BOOTLOADER_STATE" || name == "BOOTLOADER_ACTIVE" || name == "BOOTLOADER_DFU" {
+                regions[i].shift = "- ORIGIN(FLASH)";
+            }
+            if regions[i].kind == "ram" && !regions[i].selected_ram {
+                remove_idx.push(i);
+            }
+            if regions[i].kind == "flash" && name == "CONFIG" {
+                remove_idx.push(i);
+            }
+        }
+        regions.retain(|r, i| !remove_idx.contains(i));
+
+        let out = [];
+        out += generate_linker_regions(regions);
+        out += generate_linker_sections(regions);
+        out += generate_linker_consts(regions);
+        file::write("bootloader/memory.x", out);
+    }
+}
+
+fn partition_flash(flash_info) {
+    let config_in_flash = variable::get("config_in_flash");
+    let use_bootloader = variable::get("use_bootloader");
+    let erase_size = flash_info.settings.erase_size;
+    let num_pages = flash_info.size / erase_size;
+
+    let regions = [#{
+        origin: flash_info.address,
+        length: flash_info.size,
+        name: "FLASH", // rename e.g., BANK_1 to FLASH
+        kind: "flash",
+        comment_out: false,
+        selected_ram: false,
+        collect_sections: "",
+        comment: ""
+    }];
+    if !config_in_flash && !use_bootloader {
+        return regions;
+    }
+
+    regions[0].comment_out = true;
+    regions[0].comment = "Full FLASH range, for reference, do not uncomment";
+
+    let origin = flash_info.address;
+    let pages_left = num_pages;
+    if use_bootloader {
+        regions += #{
+            origin: origin,
+            length: erase_size,
+            name: "BOOTLOADER",
+            kind: "flash",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: "",
+            comment: "Bootloader page, boot process starts here",
+        };
+        origin += erase_size;
+        pages_left -= 1;
+
+        regions += #{
+            origin: origin,
+            length: erase_size,
+            name: "BOOTLOADER_STATE",
+            kind: "flash",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: "",
+            comment: "Bootloader state",
+            shift: "- ORIGIN(BOOTLOADER)",
+        };
+        origin += erase_size;
+        pages_left -= 1;
+    }
+
+    let app_pages = if config_in_flash && use_bootloader {
+        (pages_left - 2) / 2
+    } else if use_bootloader {
+        (pages_left - 1) / 2
+    } else {
+        pages_left - 1
+    };
+
+    regions += #{
+        origin: origin,
+        length: erase_size * app_pages,
+        name: "FLASH",
+        kind: "flash",
+        comment_out: false,
+        selected_ram: false,
+        collect_sections: "",
+        comment: if use_bootloader { "Active application, bootloader jumps here" } else { "" }
+    };
+    origin += erase_size * app_pages;
+    pages_left -= app_pages;
+
+    if use_bootloader {
+        regions += #{
+            origin: origin,
+            length: erase_size * (app_pages + 1),
+            name: "BOOTLOADER_DFU",
+            kind: "flash",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: "",
+            comment: "New application to be swapped in or old application",
+            shift: "- ORIGIN(BOOTLOADER)",
+        };
+        origin += erase_size * (app_pages + 1);
+        pages_left -= app_pages + 1;
+    }
+
+    if config_in_flash {
+        regions += #{
+            origin: origin,
+            length: erase_size,
+            name: "CONFIG",
+            kind: "flash",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: "",
+            comment: "Persistent storage for application config",
+            shift: "- ORIGIN(BOOTLOADER)",
+        };
+        origin += erase_size;
+        pages_left -= 1;
+    }
+
+    if pages_left > 0 {
+        regions += #{
+            origin: origin,
+            length: erase_size * pages_left,
+            name: "FREE_FLASH",
+            kind: "flash",
+            comment_out: false,
+            selected_ram: false,
+            collect_sections: "",
+            comment: "Free space not used for anything, application config can go in here",
+            shift: "- ORIGIN(BOOTLOADER)",
+        };
+    }
+
+    regions
 }
 
 fn generate_default_memory_x_stm32() {
@@ -310,48 +463,61 @@ fn generate_linker_regions(regions) {
 }
 
 fn generate_linker_sections(regions) {
-    let out = [];
-    let count = 0;
-    out.push("");
-    out.push("SECTIONS {");
+    let out = [""];
+    out += "SECTIONS {";
+    let is_empty = true;
     for region in regions {
         if region.comment_out || region.selected_ram || region.kind == "flash" {
             continue
         }
-        count += 1;
         let name_lower = region.name;
         name_lower.make_lower();
         let align = if region.name == "AXISRAM" { 8 } else { 4 };
-        out.push(`  .${name_lower} (NOLOAD) : ALIGN(${align}) {`);
+        out += `  .${name_lower} (NOLOAD) : ALIGN(${align}) {`;
         if region.collect_sections.is_empty() {
-            out.push(`    *(.${name_lower} .${name_lower}.*);`);
+            out += `    *(.${name_lower} .${name_lower}.*);`;
         } else {
-            out.push(`    *(${region.collect_sections});`);
+            out += `    *(${region.collect_sections});`;
         }
-        out.push(`    . = ALIGN(${align});`);
-        out.push(`  } > ${region.name}`);
+        out += `    . = ALIGN(${align});`;
+        out += `  } > ${region.name}`;
+        is_empty = false;
     }
-    out.push("};");
-    if count > 0 { out } else { [] }
+    out += "};";
+    if is_empty { [] } else { out }
 }
 
 fn generate_linker_consts(regions) {
-    let out = [];
-    let count = 0;
-    out.push("");
-    out.push("/* Helper constants to init additional memory banks to zero (for example if using with StaticCell) */");
-    out.push("/* TODO: Check whether RAM banks need to be explicitly enabled before use */");
+    let out = [""];
+    let is_empty = true;
+
+    let comment = "/* Helper constants to ";
+    let has_ram_consts = regions.some(|r| !r.comment_out && !r.selected_ram && r.kind == "ram");
+    if has_ram_consts { comment += "init additional memory banks to zero (for example if using with StaticCell)"; }
+    if regions.some(|r| !r.comment_out && r.kind == "flash") { if has_ram_consts { comment += " or "; } comment += "access FLASH regions "}
+    comment += "*/";
+    out += comment;
+    if has_ram_consts {
+        out += "/* TODO: Check whether RAM banks need to be explicitly enabled before use */";
+    }
     for region in regions {
-        if region.comment_out || region.selected_ram || region.kind == "flash" {
+        if region.comment_out || region.selected_ram {
             continue
         }
         let name_lower = region.name;
         name_lower.make_lower();
-        out.push(`_${name_lower}_start = ORIGIN(${region.name});`);
-        out.push(`_${name_lower}_end = ORIGIN(${region.name}) + LENGTH(${region.name});`);
-        out.push("");
+        let shift = if type_of(region.shift) != "()" {
+            out += `/* NOTE: these values are not absolute, but shifted with '${region.shift} (to the beginning of FLASH)' */`;
+            ` ${region.shift}`
+        } else {
+            ""
+        }; 
+        out += `__${name_lower}_start = ORIGIN(${region.name})${shift};`;
+        out += `__${name_lower}_end = ORIGIN(${region.name}) + LENGTH(${region.name})${shift};`;
+        out += "";
+        is_empty = false;
     }
-    if count > 0 { out } else { [] }
+    if is_empty { [] } else { out }
 }
 
 fn generate_config_toml(counters_info) {
@@ -452,6 +618,10 @@ fn generate_readme_md_extended(mcu_info) {
     let out = [];
     out += readme_md_inner();
 
+    out += "## TODO";
+    out += "* Inspect all the generated files and TODO items in them";
+    out += "* Double check memory.x configuration";
+
     out += "";
     out += "## MCU Info";
     out += `* Family: ${mcu_info.family}`;
@@ -539,4 +709,103 @@ fn check_rcc_kind(mcu_info) {
     let rcc_version = mcu_info.cores[0].peripherals.find(|p| p.name == "RCC")?.registers.version;
     let no_pwren = ["h7rs", "h7", "h7ab", "wle", "h7rm0433", "wb", "wl5", "h5", "h50"];
     variable::set("rcc_have_pwren", !no_pwren.contains(rcc_version));
+    rcc_version
+}
+
+fn create_init_ram(regions, rcc_version) {
+    let sram_regions = regions.filter(|r| !r.comment_out && r.kind == "ram" && !r.selected_ram);
+    if !sram_regions.is_empty() {
+        variable::set("have_init_ram", true);
+    } else {
+        return;
+    }
+    let rcc_info = if type_of(rcc_version) != "()" && !sram_regions.is_empty() {
+        print("↓ Download RCC registers description from embassy-rs/stm32-data-generated repo using curl (needed to enable RAM regions)?");
+        print("Decline if no internet or for other reasons, will insert TODO items instead.");
+        let download_ok = variable::prompt("Proceed with download?", "yes", ["no", "yes"]);
+        if download_ok == "yes" {
+            let rcc_info = download_registers_info("rcc", rcc_version);
+            if type_of(rcc_info) == "()" {
+                abort("\x1b[31mSomething went wrong with the download.");
+            }
+            rcc_info
+        } else {
+            ()            
+        }
+    };
+    let sram_enable_bits = #{};
+    if type_of(rcc_info) != "()" {
+        for item in rcc_info["block/RCC"].items {
+            if item.name.contains("ENR") {
+                for field in rcc_info["fieldset/" + item.fieldset].fields {
+                    let field_name = field.name.to_lower();
+                    for r in sram_regions {
+                        if field_name.contains(r.name.to_lower()) {
+                            let reg_bit = #{ reg: item.fieldset.to_lower(), bit: field_name };
+                            if sram_enable_bits.contains(r.name) {
+                                sram_enable_bits[r.name] += reg_bit;
+                            } else {
+                                sram_enable_bits[r.name] = [reg_bit];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    print(sram_enable_bits);
+
+    let out = ["/// Enable and zero additional RAM blocks (apart from system RAM, it is zeroed in startup code)"];
+    out += "pub(crate) fn init_ram() {";
+    let zero_fns = [];
+    for r in regions {
+        if r.comment_out || r.kind != "ram" || r.selected_ram {
+            continue;
+        }
+        let name = r.name;
+        name.make_lower();
+        if type_of(sram_enable_bits[r.name]) == "()" {
+            zero_fns += gen_enable_and_zero_sram("zero", name, []);
+            out += `    zero_${name}();`;
+        } else {
+            zero_fns += gen_enable_and_zero_sram("enable_and_zero", name, sram_enable_bits[r.name]);
+            out += `    enable_and_zero_${name}();`;
+        }
+    }
+    out += "}";
+    out += zero_fns;
+
+    file::write("src/init_ram.rs", out);
+}
+
+fn download_registers_info(name, version) {
+    let json_url = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data/registers/" + name + "_" + version + ".json";
+    let reg_info = system::command("curl", ["-s", json_url]);
+    if reg_info.is_empty() {
+        ()
+    } else {
+        parse_json(reg_info)
+    }
+}
+
+fn gen_enable_and_zero_sram(fun_name, name, en_reg_bits) {
+    let out = [""];
+    out += `pub fn ${fun_name}_${name}() {`;
+    out += `    unsafe {`;
+    out += `        unsafe extern "C" {`;
+    out += `            static mut __${name}_start: u8;`;
+    out += `            static mut __${name}_end: u8;`;
+    out += `        }`;
+    if !en_reg_bits.is_empty() {
+        out += `        let rcc = embassy_stm32::pac::RCC;`;
+        out += `        // TODO: Check that this SRAM enable code is correct`;
+    }
+    for reg_bit in en_reg_bits {
+        out += `        rcc.${reg_bit.reg}().modify(|w| w.set_${reg_bit.bit}(true));`;
+    }
+    out += `        let count = &raw const __${name}_end as usize - &raw const __${name}_start as usize;`;
+    out += `        core::ptr::write_bytes(&raw mut __${name}_start, 0, count);`;
+    out += `    }`;
+    out += `}`;
+    out
 }

@@ -16,3 +16,5 @@ use_flip_link = { prompt = "Use flip-link for stack overflow detection?", defaul
 use_embassy = { prompt = "Use embassy?", default = true, type = "bool" }
 use_counters = { prompt = "Use counters? (cnt_if! macro)", default = true, type = "bool" }
 use_rtc = { prompt = "Are you planning to use RTC?", default = false, type = "bool" }
+config_in_flash = { prompt = "Reserve 1 FLASH page for configuration storage?", default = true, type = "bool" }
+use_bootloader = { prompt = "Use bootloader? FLASH will be divided among A, B, bootloader and its state partitions", default = true, type = "bool" }

@@ -76,6 +76,7 @@ name = "bedrock"
 version = "0.1.0"
 dependencies = [
  "bedrock_build_info",
+ "object",
  "probe-rs",
  "wire_weaver",
 ]
@@ -97,6 +98,8 @@ dependencies = [
  "crc",
  "hex-literal",
  "wire_weaver",
+ "ww_date_time",
+ "ww_version",
 ]
 
 [[package]]
@@ -1108,7 +1111,9 @@ version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
+ "flate2",
  "memchr",
+ "ruzstd",
 ]
 
 [[package]]
@@ -1446,6 +1451,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
+name = "ruzstd"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fad02996bfc73da3e301efe90b1837be9ed8f4a462b6ed410aa35d00381de89f"
+dependencies = [
+ "twox-hash",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1601,6 +1615,12 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "strsim"
@@ -1800,6 +1820,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9d12581f227e93f094d3af2ae690a574abb8a2b9b7a96e7cfe9647b2b617678"
 dependencies = [
  "once_cell",
+]
+
+[[package]]
+name = "twox-hash"
+version = "1.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
+dependencies = [
+ "cfg-if",
+ "static_assertions",
 ]
 
 [[package]]
@@ -2081,9 +2111,7 @@ dependencies = [
 name = "wire_weaver"
 version = "0.4.0"
 dependencies = [
- "chrono",
  "pathsearch",
- "semver",
  "shrink_wrap",
  "subprocess",
  "wire_weaver_core",
@@ -2126,6 +2154,22 @@ name = "writeable"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
+
+[[package]]
+name = "ww_date_time"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "wire_weaver",
+]
+
+[[package]]
+name = "ww_version"
+version = "0.1.0"
+dependencies = [
+ "semver",
+ "wire_weaver",
+]
 
 [[package]]
 name = "wyz"

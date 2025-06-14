@@ -1,7 +1,9 @@
 use bedrock_build_info::{BedrockBuildInfo, COMPACT_INFO_MAGIC, build_info_crc};
 use probe_rs::probe::WireProtocol;
 use probe_rs::{MemoryInterface, Permissions, Session, SessionConfig};
+use std::fmt::Debug;
 use std::ops::Deref;
+use std::path::Path;
 use wire_weaver::from_ww_bytes;
 
 struct FlashMemory {
@@ -45,6 +47,10 @@ impl FlashMemory {
 }
 
 fn main() -> Result<(), probe_rs::Error> {
+    bedrock::nm::nm_test(Path::new(
+        "/Users/roman/git/h7_test3/target/thumbv7em-none-eabihf/debug/h7_test3",
+    ));
+
     // Attach to a chip.
     let speed = Some(30_000);
     let protocol = Some(WireProtocol::Swd);

@@ -1,0 +1,63 @@
+[package]
+edition = "2024"
+name = "{{project-name}}_bootloader"
+version = "0.1.0"
+description = "Bootloader for {{project-name}}"
+
+[dependencies]
+defmt = { version = "1.0" } # not optional to make build info embedder work for now
+defmt-rtt = { version = "1.0", optional = true }
+
+cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
+embassy-stm32 = { version = "0.2", features = ["{{ chip }}"] }
+
+embassy-boot-stm32 = "0.3.0"
+embassy-sync = "0.6"
+cortex-m-rt = { version = "0.7" }
+embedded-storage = "0.3.1"
+embedded-storage-async = "0.4.0"
+cfg-if = "1.0.0"
+
+[build-dependencies]
+bedrock_build = { path = "../../embedded-bedrock/bedrock_build" }
+build-info-build = "0.0.40"
+
+[features]
+default = []
+defmt = [
+#    "dep:defmt",
+    "dep:defmt-rtt",
+    "embassy-boot-stm32/defmt",
+    "embassy-stm32/defmt",
+]
+
+[profile.dev]
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 'z'
+overflow-checks = true
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 'z'
+overflow-checks = false
+
+# do not optimize proc-macro crates = faster builds from scratch
+[profile.dev.build-override]
+codegen-units = 8
+debug = false
+debug-assertions = false
+opt-level = 0
+overflow-checks = false
+
+[profile.release.build-override]
+codegen-units = 8
+debug = false
+debug-assertions = false
+opt-level = 0
+overflow-checks = false

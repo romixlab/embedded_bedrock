@@ -1,5 +1,7 @@
-/// Enable and zero additional RAM blocks (apart from system RAM, it is zeroed in startup code)
-pub(crate) fn init_ram() {
+{% if use_bkp_counters -%}
+/// Enable backup counters
+{% endif -%}
+pub(crate) fn init() {
     {% if chip contains "stm32g0" and use_bkp_counters -%}
     enable_tamp_bkp_regs();
     {% endif -%}
