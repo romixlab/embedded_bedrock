@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use wire_weaver::date_time::{DateTime, NaiveDate};
 use wire_weaver::derive_shrink_wrap;
 use wire_weaver::shrink_wrap::prelude::*;
-use wire_weaver::version::Version;
+use ww_date_time::{DateTime, NaiveDate};
+use ww_version::Version;
 #[cfg(feature = "std")]
-use wire_weaver::version::VersionOwned;
+use ww_version::VersionOwned;
 
 pub const COMPACT_INFO_MAGIC: u32 = 0xB17D_14F0;
 
@@ -215,7 +215,7 @@ mod tests {
     // use tracing_subscriber::layer::SubscriberExt;
     // use tracing_subscriber::util::SubscriberInitExt;
     // use tracing_subscriber::{EnvFilter, fmt};
-    use wire_weaver::date_time::NaiveDate;
+    use ww_date_time::NaiveDate;
 
     #[test]
     fn v1_version_compatibility_not_broken() {
@@ -224,7 +224,7 @@ mod tests {
         //     .with(EnvFilter::new("trace"))
         //     .init();
         let build_info = BedrockBuildInfo {
-            timestamp: DateTime::from_ymd_hms_naive_opt(2025, 7, 13, 16, 20, 0, 0).unwrap(),
+            timestamp: DateTime::from_ymd_hms_utc_opt(2025, 7, 13, 16, 20, 0, 0).unwrap(),
             profile: Profile::Release,
             optimization_level: OptimizationLevel::O2,
             crate_info: CrateInfo {
@@ -248,7 +248,7 @@ mod tests {
                 dirty: true,
                 commit_id: None,
                 commit_short_id: Some("abc"),
-                commit_timestamp: DateTime::from_ymd_hms_naive_opt(2025, 7, 14, 16, 20, 0, 0)
+                commit_timestamp: DateTime::from_ymd_hms_utc_opt(2025, 7, 14, 16, 20, 0, 0)
                     .unwrap(),
                 branch: None,
                 tags: RefVec::new(),
@@ -356,6 +356,6 @@ mod tests {
 
         let mut rd = BufReader::new(&BUILD_INFO_FULL[..]);
         let _build_info = BedrockBuildInfo::des_shrink_wrap(&mut rd).unwrap();
-        println!("{:#?}", _build_info);
+        // println!("{:#?}", _build_info);
     }
 }
