@@ -1,10 +1,8 @@
 use bedrock_build_info::{BedrockBuildInfo, COMPACT_INFO_MAGIC, build_info_crc};
 use probe_rs::probe::WireProtocol;
-use probe_rs::{MemoryInterface, Permissions, Session, SessionConfig};
-use std::fmt::Debug;
-use std::ops::Deref;
+use probe_rs::{MemoryInterface, Session, SessionConfig};
 use std::path::Path;
-use wire_weaver::from_ww_bytes;
+use wire_weaver::prelude::DeserializeShrinkWrap;
 
 struct FlashMemory {
     bytes: Vec<u8>,
@@ -119,7 +117,7 @@ fn main() -> Result<(), probe_rs::Error> {
         let crc = build_info_crc(&data);
         if crc == expected_crc {
             println!("found build info! {data:02x?}");
-            let build_info: BedrockBuildInfo = from_ww_bytes(data).unwrap();
+            let build_info = BedrockBuildInfo::from_ww_bytes(data).unwrap();
             println!("{build_info:#?}");
             break;
         } else {

@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-wire_weaver = { path = "../../wire_weaver/wire_weaver", default-features = false, features = [] }
-ww_date_time = { path = "../../wire_weaver/ww_date_time", default-features = false, features = ["chrono"] }
-ww_version = { path = "../../wire_weaver/ww_version", default-features = false, features = ["semver"] }
+wire_weaver = { path = "../../wire_weaver/wire_weaver", default-features = false }
+ww_date_time = { path = "../../wire_weaver/ww_date_time", default-features = false, features = [] }
+ww_version = { path = "../../wire_weaver/ww_version", default-features = false }
 crc = { version = "3.3", optional = true }
 #tracing = { version = "0.1", optional = true }
 #qdhex = "0.1"
@@ -18,6 +18,8 @@ hex-literal = "1"
 [features]
 default = ["std", "tracing-extended"]
 std = ["wire_weaver/std", "dep:crc", "ww_date_time/std", "ww_version/std"]
+semver = ["ww_version/semver"]
+chrono = ["ww_date_time/chrono"]
 
 tracing-extended = []
 defmt-extended = []

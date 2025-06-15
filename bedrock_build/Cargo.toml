@@ -5,6 +5,6 @@ edition = "2024"
 
 [dependencies]
 build-info-common = "0.0.40"
-bedrock_build_info = { path = "../bedrock_build_info" }
+bedrock_build_info = { path = "../bedrock_build_info", features = ["chrono", "semver"]}
 shrink_wrap = { path = "../../wire_weaver/shrink_wrap" }
 base64 = "0.22"
