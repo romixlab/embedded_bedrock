@@ -98,6 +98,7 @@ dependencies = [
  "crc",
  "hex-literal",
  "wire_weaver",
+ "ww_client_server",
  "ww_date_time",
  "ww_version",
 ]
@@ -265,9 +266,9 @@ dependencies = [
 
 [[package]]
 name = "convert_case"
-version = "0.6.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+checksum = "baaaa0ecca5b51987b9423ccdc971514dd8b0bb7b4060b983d3664dad3f1f89f"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -2130,8 +2131,6 @@ dependencies = [
  "quote",
  "regex",
  "shrink_wrap",
- "strum",
- "strum_macros",
  "syn 2.0.101",
 ]
 
@@ -2154,6 +2153,14 @@ name = "writeable"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
+
+[[package]]
+name = "ww_client_server"
+version = "0.1.0"
+dependencies = [
+ "wire_weaver",
+ "ww_version",
+]
 
 [[package]]
 name = "ww_date_time"

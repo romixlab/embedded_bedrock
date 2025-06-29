@@ -7,6 +7,7 @@ edition = "2024"
 wire_weaver = { path = "../../wire_weaver/wire_weaver", default-features = false }
 ww_date_time = { path = "../../wire_weaver/ww_date_time", default-features = false, features = [] }
 ww_version = { path = "../../wire_weaver/ww_version", default-features = false }
+ww_client_server = { path = "../../wire_weaver/ww_client_server", default-features = false }
 crc = { version = "3.3", optional = true }
 #tracing = { version = "0.1", optional = true }
 #qdhex = "0.1"

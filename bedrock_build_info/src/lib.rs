@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod traits;
+
 use wire_weaver::derive_shrink_wrap;
 use wire_weaver::shrink_wrap::prelude::*;
 use ww_date_time::{DateTime, NaiveDate};
