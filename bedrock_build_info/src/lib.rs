@@ -110,11 +110,11 @@ pub enum CompilerChannel {
 #[owned = "std"]
 pub struct VersionControl<'i> {
     #[flag]
-    commit_id: bool,
+    branch: bool,
     #[flag]
     commit_short_id: bool,
     #[flag]
-    branch: bool,
+    commit_id: bool,
     pub dirty: bool,
     pub commit_id: Option<&'i str>,
     pub commit_short_id: Option<&'i str>,
@@ -358,6 +358,6 @@ mod tests {
 
         let mut rd = BufReader::new(&BUILD_INFO_FULL[..]);
         let _build_info = BedrockBuildInfo::des_shrink_wrap(&mut rd).unwrap();
-        // println!("{:#?}", _build_info);
+        println!("{:#?}", _build_info);
     }
 }
