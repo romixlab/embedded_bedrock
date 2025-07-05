@@ -12,12 +12,12 @@ use embassy_boot_stm32::*;
 use embassy_stm32::Config;
 use embassy_stm32::flash::{Flash, BANK1_REGION};
 use embassy_sync::blocking_mutex::Mutex;
-{% if supply_config != "" -%}
+{% if supply_config != "" %}
 use embassy_stm32::rcc::SupplyConfig;
 {% endif -%}
-{% if smps_supply_voltage != "" -%}
+{% if smps_supply_voltage != "" %}
 use embassy_stm32::rcc::SMPSSupplyVoltage;
-{% endif -%}
+{% endif %}
 
 #[entry]
 fn main() -> ! {

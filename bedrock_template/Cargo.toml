@@ -40,8 +40,8 @@ assign-resources = "0.5"
 {% endif -%}
 
 {% if use_counters %}
-cnt = { path = "../embedded-bedrock/cnt" }
-cnt_macro = { path = "../embedded-bedrock/cnt_macro" }
+cnt = { path = "../embedded_bedrock/cnt" }
+cnt_macro = { path = "../embedded_bedrock/cnt_macro" }
 {% endif -%}
 
 {% if use_bootloader %}
@@ -51,7 +51,7 @@ embedded-storage = "0.3.1"
 {% endif %}
 
 [build-dependencies]
-bedrock_build = { path = "../embedded-bedrock/bedrock_build" }
+bedrock_build = { path = "../embedded_bedrock/bedrock_build" }
 build-info-build = "0.0.40"
 
 # see for more info: https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html

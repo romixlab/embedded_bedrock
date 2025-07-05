@@ -51,7 +51,7 @@ async fn main(_spawner: Spawner) {
     {% endif -%}
     let p = embassy_stm32::init(config);
     {% else %}
-    let p = embassy_stm32::init(Default::default());
+    let p = embassy_stm32::init(Config::default());
     {% endif -%}
     init::init();
     {% if use_rtc == false -%}
@@ -61,7 +61,7 @@ async fn main(_spawner: Spawner) {
     _ = core::hint::black_box(build_info::compact()); // ensure compact build info is in FLASH
     _ = core::hint::black_box(build_info::full()); // ensure full build info is in ELF
 
-    {% if chip contains "stm32h7" -%}
+    {%- if chip contains "stm32h7" -%}
     let mut cp = cortex_m::Peripherals::take().unwrap();
     cp.SCB.enable_icache();
     // Enable D-Cache only after verifying that no coherency issues will arise, e.g., when using DMAs
@@ -78,7 +78,7 @@ async fn main(_spawner: Spawner) {
     info!("updater state: {}", updater.get_state());
     // TODO: consider calling mark_booted after ensuring a fw is actually working (e.g., run some tests)
     updater.mark_booted().unwrap();
-    {% endif %}
+    {% endif -%}
 
     let mut led = Output::new(p.PB14, Level::Low, Speed::Low);
 

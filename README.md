@@ -89,6 +89,7 @@ Please generate a test project for example for STM32H725IG to evaluate the full 
 * [x] Generate bootloader project code and linker sections (if enabled)
 * [x] Reserve 1 FLASH page for permanent config and create a linker section (if enabled)
 * [ ] Relocate vector table to SRAM
+* [x] Support dual bank FLASH devices with bootloader enabled - place DFU region into the second bank. 
 
 ### Other
 
@@ -108,6 +109,7 @@ Please generate a test project for example for STM32H725IG to evaluate the full 
 * [x] counters
     - embed counters names?
     - more advanced counters (see Hubris debugger)?
+    - use same mechanism for tracing (store time differences instead of counts)?
 * [ ] defmt-brtt to use both RTT and ring buffer to retrieve logs
 * [ ] Log into BKPSRAM and/or save to SD card
 * [ ] HardFault handler

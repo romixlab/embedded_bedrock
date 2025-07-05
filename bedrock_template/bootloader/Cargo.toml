@@ -19,7 +19,7 @@ embedded-storage-async = "0.4.0"
 cfg-if = "1.0.0"
 
 [build-dependencies]
-bedrock_build = { path = "../../embedded-bedrock/bedrock_build" }
+bedrock_build = { path = "../../embedded_bedrock/bedrock_build" }
 build-info-build = "0.0.40"
 
 [features]

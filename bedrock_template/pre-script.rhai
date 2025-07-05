@@ -167,9 +167,10 @@ fn download_stm32_info(chip) {
 
 fn generate_memory_x(mcu_info, counters_info, rcc_version) {
     let regions = [];
+    let flash_regions = [];
     for m in mcu_info.memory[0] {
         if m.kind == "flash" {
-            regions += partition_flash(m);
+            flash_regions += m;
         } else {
             regions.push(#{
                 origin: m.address,
@@ -183,6 +184,7 @@ fn generate_memory_x(mcu_info, counters_info, rcc_version) {
             });
         }
     }
+    regions += partition_flash(flash_regions);
 
     let ram_found = false;
     for i in 0..regions.len() {
@@ -279,10 +281,35 @@ fn generate_memory_x(mcu_info, counters_info, rcc_version) {
     }
 }
 
-fn partition_flash(flash_info) {
+fn partition_flash(flash_banks_info) {
+    print(flash_banks_info);
+
+    let flash_info = if flash_banks_info.len() == 1 {
+        #{
+            address: flash_banks_info[0].address,
+            size: flash_banks_info[0].size,
+            erase_size: flash_banks_info[0].settings.erase_size,
+            dual_bank: false
+        }
+    } else if flash_banks_info.len() == 2 {
+        if flash_banks_info[0].settings.erase_size != flash_banks_info[1].settings.erase_size {
+            abort("FLASH banks erase_size are not equal, this is not yet supported");
+        }
+        if flash_banks_info[1].address != flash_banks_info[0].address + flash_banks_info[0].size {
+            abort("FLASH banks are not consecutive, this is not yet supported");
+        }
+        #{
+            address: flash_banks_info[0].address,
+            size: flash_banks_info[0].size + flash_banks_info[1].size,
+            erase_size: flash_banks_info[0].settings.erase_size,
+            dual_bank: true
+        }
+    } else {
+        abort("More than 2 FLASH banks found, this is not yet supported");
+    };
     let config_in_flash = variable::get("config_in_flash");
     let use_bootloader = variable::get("use_bootloader");
-    let erase_size = flash_info.settings.erase_size;
+    let erase_size = flash_info.erase_size;
     let num_pages = flash_info.size / erase_size;
 
     let regions = [#{
@@ -301,13 +328,23 @@ fn partition_flash(flash_info) {
 
     regions[0].comment_out = true;
     regions[0].comment = "Full FLASH range, for reference, do not uncomment";
+    if flash_info.dual_bank {
+        regions[0].comment += " (NOTE: FLASH is dual bank)";
+    }
 
     let origin = flash_info.address;
     let pages_left = num_pages;
     if use_bootloader {
+        let min_bootloader_size = 12 * 1024;
+        let bootloader_pages = min_bootloader_size / erase_size;
+        let bootloader_pages = if bootloader_pages == 0 {
+            1
+        } else {
+            bootloader_pages
+        };
         regions += #{
             origin: origin,
-            length: erase_size,
+            length: bootloader_pages * erase_size,
             name: "BOOTLOADER",
             kind: "flash",
             comment_out: false,
@@ -315,7 +352,7 @@ fn partition_flash(flash_info) {
             collect_sections: "",
             comment: "Bootloader page, boot process starts here",
         };
-        origin += erase_size;
+        origin += bootloader_pages * erase_size;
         pages_left -= 1;
 
         regions += #{
@@ -337,8 +374,19 @@ fn partition_flash(flash_info) {
         (pages_left - 2) / 2
     } else if use_bootloader {
         (pages_left - 1) / 2
-    } else {
+    } else { // config_in_flash
         pages_left - 1
+    };
+
+    // align DFU region to the second bank if bootloader is in use
+    let dfu_comment = "";
+    let app_pages = if flash_info.dual_bank && use_bootloader {
+        let bank1_left = (flash_banks_info[1].address - origin) / erase_size;
+        pages_left -= (app_pages - bank1_left);
+        dfu_comment = ", NOTE: this region is aligned to the second bank";
+        bank1_left
+    } else {
+        app_pages
     };
 
     regions += #{
@@ -363,7 +411,7 @@ fn partition_flash(flash_info) {
             comment_out: false,
             selected_ram: false,
             collect_sections: "",
-            comment: "New application to be swapped in or old application",
+            comment: `New application to be swapped in or old application${dfu_comment}`,
             shift: "- ORIGIN(BOOTLOADER)",
         };
         origin += erase_size * (app_pages + 1);
@@ -392,7 +440,7 @@ fn partition_flash(flash_info) {
             length: erase_size * pages_left,
             name: "FREE_FLASH",
             kind: "flash",
-            comment_out: false,
+            comment_out: true,
             selected_ram: false,
             collect_sections: "",
             comment: "Free space not used for anything, application config can go in here",
@@ -587,7 +635,7 @@ fn prompt_counters_info(chip) {
     let use_bkpram = false;
 
     if chip.starts_with("stm32g0") {
-        use_tamp = variable::prompt("Use TAMP backup registers as non-volatile counters? (5 words)", "yes", ["yes", "no"]) == "yes";
+        use_tamp = variable::prompt("Use TAMP backup registers as non-volatile counters? (5 words)", "no", ["yes", "no"]) == "yes";
         if use_tamp {
             bkp_size = 5 * 4;
         }

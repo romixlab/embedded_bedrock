@@ -74,7 +74,7 @@ pub(crate) fn reset_bkp_domain() {
     let rcc = embassy_stm32::pac::RCC;
     let pwr = embassy_stm32::pac::PWR;
 
-    {% if rcc_have_pwren %}
+    {%- if rcc_have_pwren %}
     rcc.apbenr1().modify(|w| w.set_pwren(true));
     let _ = rcc.apbenr1().read();
     {% endif -%}
