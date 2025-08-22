@@ -61,7 +61,7 @@ async fn main(_spawner: Spawner) {
     _ = core::hint::black_box(build_info::compact()); // ensure compact build info is in FLASH
     _ = core::hint::black_box(build_info::full()); // ensure full build info is in ELF
 
-    {%- if chip contains "stm32h7" -%}
+    {% if chip contains "stm32h7" %}
     let mut cp = cortex_m::Peripherals::take().unwrap();
     cp.SCB.enable_icache();
     // Enable D-Cache only after verifying that no coherency issues will arise, e.g., when using DMAs
