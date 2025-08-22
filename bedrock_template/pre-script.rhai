@@ -428,7 +428,7 @@ fn partition_flash(flash_banks_info) {
             selected_ram: false,
             collect_sections: "",
             comment: "Persistent storage for application config",
-            shift: "- ORIGIN(BOOTLOADER)",
+            shift: if use_bootloader { "- ORIGIN(BOOTLOADER)" } else { "- ORIGIN(FLASH)" },
         };
         origin += erase_size;
         pages_left -= 1;
@@ -444,7 +444,7 @@ fn partition_flash(flash_banks_info) {
             selected_ram: false,
             collect_sections: "",
             comment: "Free space not used for anything, application config can go in here",
-            shift: "- ORIGIN(BOOTLOADER)",
+            shift: if use_bootloader { "- ORIGIN(BOOTLOADER)" } else { "- ORIGIN(FLASH)" },
         };
     }
 
