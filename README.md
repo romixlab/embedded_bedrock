@@ -80,7 +80,7 @@ Please generate a test project for example for STM32H725IG to evaluate the full 
     * [x] Generate memory.x
     * [x] Check if package contains SMPS pins and ask for a correct configuration option
     * [x] Generate README.md with links to all provided datasheets
-* [x] Ask whether RCC is used, and if it is not - reset RCC according to the quirk fix
+* [x] Ask whether RTC is used, and if it is not - reset RTC according to the quirk fix
 * [x] Generate rust-toolchain.toml file fixing the currently installed nightly version (if the nightly option is chosen)
 * [x] Enable more elaborate size optimizations (build_core, panic_immediate_abort)
 * [x] Configure defmt buffer size and disable blocking option if chosen to do so

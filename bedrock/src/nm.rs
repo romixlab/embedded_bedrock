@@ -32,14 +32,17 @@ pub fn nm_test(file_path: &Path) {
 
     let section_kinds = file.sections().map(|s| (s.index(), s.kind())).collect();
 
-    println!("Debugging symbols:");
-    for symbol in file.symbols() {
-        print_symbol(&symbol, &section_kinds);
-    }
-    println!();
+    println!(".text = {:08x?}", file.section_by_name(".text"));
 
-    println!("Dynamic symbols:");
-    for symbol in file.dynamic_symbols() {
+    let Some(counters_section) = file.section_by_name(".counters_ram") else {
+        return;
+    };
+    let counters_section_idx = counters_section.index();
+
+    for symbol in file.symbols() {
+        if symbol.section_index() != Some(counters_section_idx) {
+            continue;
+        }
         print_symbol(&symbol, &section_kinds);
     }
 }

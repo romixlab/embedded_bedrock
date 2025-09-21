@@ -46,7 +46,7 @@ impl FlashMemory {
 
 fn main() -> Result<(), probe_rs::Error> {
     bedrock::nm::nm_test(Path::new(
-        "/Users/roman/git/h7_test3/target/thumbv7em-none-eabihf/debug/h7_test3",
+        "/Users/roman/git/h7_test/target/thumbv7em-none-eabihf/debug/h7_test",
     ));
 
     // Attach to a chip.

@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
+{% if use_nightly %}
 #![feature(impl_trait_in_assoc_type)]
+{% endif %}
 
 mod init;
 mod build_info;
