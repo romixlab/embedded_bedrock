@@ -51,7 +51,7 @@ embedded-storage = "0.3.1"
 {% endif %}
 
 [build-dependencies]
-bedrock_build = { path = "../embedded_bedrock/bedrock_build" }
+bedrock_build = { path = "../embedded_bedrock/bedrock_build", features = ["flip-link"] }
 build-info-build = "0.0.40"
 
 # see for more info: https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
