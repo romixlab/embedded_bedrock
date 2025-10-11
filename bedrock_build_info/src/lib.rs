@@ -91,6 +91,7 @@ pub struct CompilerInfo<'i> {
     pub host_triple: Option<&'i str>,
     /// Compiler build time
     pub commit_date: Option<NaiveDate>,
+    pub flip_link: bool,
 }
 
 #[derive_shrink_wrap]
@@ -192,6 +193,7 @@ impl CompilerInfo<'_> {
             channel: self.channel,
             host_triple: self.host_triple.map(|t| t.to_string()),
             commit_date: self.commit_date,
+            flip_link: self.flip_link,
         }
     }
 }

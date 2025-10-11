@@ -20,6 +20,10 @@ pub fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
             channel: compiler_info(info.compiler.channel),
             host_triple: Some(info.compiler.host_triple),
             commit_date: info.compiler.commit_date.map(|date| date.into()),
+            #[cfg(feature = "flip-link")]
+            flip_link: true,
+            #[cfg(not(feature = "flip-link"))]
+            flip_link: false,
         },
         version_control: info.version_control.map(|v| {
             let build_info_common::VersionControl::Git(git) = v;

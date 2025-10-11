@@ -72,7 +72,7 @@ pub fn compact() -> &'static [u8] {{ core::hint::black_box(&COMPACT[10..]) }}
     
 /// Full build information, only saved to the firmware ELF file through defmt string interning.
 /// Ensure to either print it via defmt or use _ = core::hint::black_box(full()) to ensure it is saved in ELF.
-pub fn full() -> defmt::Str {{ defmt::intern!(\"{info_full}\") }}"
+pub fn full() -> defmt::Str {{ defmt::intern!(\"build_info:{info_full}\") }}"
     )
     // let info_full_len = info_full.len();
     // let info_pruned_len = info_pruned.len();
