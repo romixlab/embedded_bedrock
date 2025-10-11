@@ -585,7 +585,7 @@ fn generate_config_toml(counters_info) {
     out += "";
 
     out += "[env]";
-    out += `DEFMT_LOG = "${variable::get("defmt_log")}" # By default, only error level messages are emitted`;
+    out += `DEFMT_LOG = "${variable::get("defmt_log")},${variable::get("project-name")}=${variable::get("defmt_log")}" # By default, only error level messages are emitted`;
 
     let defmt_rtt_buffer_size = variable::get("defmt_rtt_buffer_size");
     let comment = "avoid loosing output if non-blocking, e.g., during init when a lot of output is generated";
