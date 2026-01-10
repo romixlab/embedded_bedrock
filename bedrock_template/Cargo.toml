@@ -15,7 +15,7 @@ panic-probe = { version = "1.0", features = ["print-defmt"] }
 
 {% if chip contains "stm32" -%}
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
-embassy-stm32 = { version = "0.2", features = ["defmt", "{{ chip }}", "unstable-pac", "exti", "time-driver-tim2" ]  }
+embassy-stm32 = { version = "0.4.0", features = ["defmt", "{{ chip }}", "unstable-pac", "exti", "time-driver-tim2" ]  }
 {% endif -%}
 
 {% if rust_target contains "thumbv6m" -%}
@@ -23,7 +23,7 @@ portable-atomic = { version = "1.11", features = ["critical-section"] } # to mak
 {% endif -%}
 
 {% if use_embassy %}
-embassy-executor = { version = "0.7", features = [
+embassy-executor = { version = "0.9.1", features = [
     {% if use_nightly -%}
     "nightly",
     {% else -%}
@@ -34,8 +34,8 @@ embassy-executor = { version = "0.7", features = [
     "executor-interrupt",
     "defmt"
 ] }
-embassy-time = { version = "0.4", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
-embassy-sync = { version = "0.6", features = ["defmt"] }
+embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
 assign-resources = "0.4"
 {% endif -%}
 
