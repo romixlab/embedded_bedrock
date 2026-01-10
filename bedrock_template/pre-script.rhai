@@ -83,7 +83,7 @@ variable::set("chip", chip);
 let counters_info = if variable::get("use_counters") {
     prompt_counters_info(chip)
 } else {
-    ()
+    #{ ram_size: 0, bkp_size: 0, use_tamp: false, use_rtc: false, use_bkpram: false }
 };
 
 if chip.starts_with("stm32") {
