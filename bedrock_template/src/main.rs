@@ -12,8 +12,6 @@ mod init_ram;
 
 use defmt::*;
 use defmt_rtt as _;
-use embassy_executor::Spawner;
-use embassy_stm32::Config;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_time::Timer;
 use panic_probe as _;
@@ -39,13 +37,13 @@ use core::cell::RefCell;
 {% endif %}
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(_spawner: embassy_executor::Spawner) {
     {% if have_init_ram -%}
     init_ram::init_ram();
     {% endif -%}
     info!("{{project-name}} starting...");
     {% if supply_config != "" -%}
-    let mut config = Config::default();
+    let mut config = embassy_stm32::Config::default();
     {% if smps_supply_voltage == "" -%}
     config.rcc.supply_config = SupplyConfig::{{ supply_config }};
     {% else -%}
@@ -53,7 +51,7 @@ async fn main(_spawner: Spawner) {
     {% endif -%}
     let p = embassy_stm32::init(config);
     {% else %}
-    let p = embassy_stm32::init(Config::default());
+    let p = embassy_stm32::init(embassy_stm32::Config::default());
     {% endif -%}
     init::init();
     {% if use_rtc == false -%}

@@ -4,8 +4,6 @@
 
 use defmt::*;
 use defmt_rtt as _;
-use embassy_executor::Spawner;
-use embassy_stm32::Config;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_time::Timer;
 use panic_probe as _;
@@ -14,9 +12,9 @@ use cnt_macro::cnt_if;
 {% endif %}
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(_spawner: embassy_executor::Spawner) {
     {% if supply_config != "" -%}
-    let mut config = Config::default();
+    let mut config = embassy_stm32::Config::default();
     {% if smps_supply_voltage == "" -%}
     config.rcc.supply_config = SupplyConfig::{{ supply_config }};
     {% else -%}
@@ -24,7 +22,7 @@ async fn main(_spawner: Spawner) {
     {% endif -%}
     let p = embassy_stm32::init(config);
     {% else %}
-    let p = embassy_stm32::init(Default::default());
+    let p = embassy_stm32::init(embassy_stm32::Config::default());
     {% endif -%}
     info!("Hello World!");
 
