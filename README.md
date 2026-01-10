@@ -46,9 +46,10 @@ Optional embassy, RTIC and hal crates support.
 
 ## Build infrastructure
 
-* [ ] RAM linking option
-* [ ] Embed firmware SHA for defmt lookup
 * [ ] Embed CRC for bootloader
+* [ ] Save build into to file and inject into ELF (no source modifications)
+* [ ] Embed FLASH SHA for quick comparisons and defmt lookup
+* [ ] RAM linking option
 * [ ] Bootloader support
 * [ ] Flash EEPROM emulation (with help from bootloader)
     * [ ] Use swap page to safeguard latest config on page erase, restore if power cut in bootloader
@@ -86,7 +87,7 @@ Please generate a test project for example for STM32H725IG to evaluate the full 
 * [x] Configure defmt buffer size and disable blocking option if chosen to do so
 * [x] Setup counters and configure buffer sizes
 * [x] Generate SRAM blocks enable and zero code
-* [x] Generate bootloader project code and linker sections (if enabled)
+* [x] Generate bootloader project code and linker sections (if enabled) TODO: do not generate if disabled
 * [x] Reserve 1 FLASH page for permanent config and create a linker section (if enabled)
 * [ ] Relocate vector table to SRAM
 * [x] Support dual bank FLASH devices with bootloader enabled - place DFU region into the second bank. 
