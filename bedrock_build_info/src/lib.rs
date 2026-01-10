@@ -2,8 +2,7 @@
 
 pub mod traits;
 
-use wire_weaver::{derive_shrink_wrap, ww_repr};
-use wire_weaver::shrink_wrap::prelude::*;
+use wire_weaver::prelude::*;
 use ww_date_time::{DateTime, NaiveDate};
 use ww_version::Version;
 #[cfg(feature = "std")]

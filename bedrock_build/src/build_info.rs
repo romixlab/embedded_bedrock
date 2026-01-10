@@ -5,7 +5,7 @@ use bedrock_build_info::{
 use build_info_common::BuildInfo;
 use shrink_wrap::prelude::*;
 
-fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
+pub fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
     let mut info = BedrockBuildInfoOwned {
         timestamp: info.timestamp.into(),
         profile: profile(info.profile),
