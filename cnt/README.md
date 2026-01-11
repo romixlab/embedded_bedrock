@@ -3,7 +3,7 @@
 ![Crates.io Version](https://img.shields.io/crates/v/cnt)
 
 <p align="center">
-<img src="https://github.com/romixlab/embedded_bedrock/blob/main/assets/logo.png?raw=true" alt="logo" width="256"/>
+<img src="https://github.com/romixlab/embedded_bedrock/blob/main/cnt/assets/logo.png?raw=true" alt="logo" width="256"/>
 </p>
 
 > When logging is not an option - count
