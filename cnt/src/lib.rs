@@ -1,6 +1,7 @@
 #![no_std]
 
 use crate::consts::{BKP_BUF_SIZE, RAM_BUF_SIZE};
+pub use cnt_macro::{cnt_if, bkp_cnt_if};
 
 mod consts;
 

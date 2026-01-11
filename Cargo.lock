@@ -252,6 +252,9 @@ dependencies = [
 [[package]]
 name = "cnt"
 version = "0.1.0"
+dependencies = [
+ "cnt_macro",
+]
 
 [[package]]
 name = "cnt_macro"
