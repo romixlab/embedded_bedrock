@@ -7,4 +7,4 @@ license = "MIT"
 repository = "https://github.com/romixlab/embedded_bedrock"
 
 [dependencies]
-cnt_macro = { path = "../cnt_macro" }
+cnt_macro = { version = "0.1.0", path = "../cnt_macro" }
