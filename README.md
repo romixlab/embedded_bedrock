@@ -43,6 +43,7 @@ Optional embassy, RTIC and hal crates support.
 * [ ] Terminal to the firmware (if fw supports it)
 * [ ] Install tools (flip-link, probe-rs, binutils, etc)
 * [ ] embassy debug? CPU load
+* Name - bmcli (bare-metal-cli)?
 
 ## Build infrastructure
 
@@ -103,19 +104,20 @@ Please generate a test project for example for STM32H725IG to evaluate the full 
 * [ ] Ask whether to use stm32-xx-hal
 * [ ] Add TODO item if defmt buffer is small
 
-## Logging
+## Logging & Counting
 
 * [x] defmt
     * Explicitly set default buffer size and log level
 * [x] counters
-    - embed counters names?
-    - more advanced counters (see Hubris debugger)?
-    - use same mechanism for tracing (store time differences instead of counts)?
+  - [ ] counter array
+  - embed counters names?
+  - more advanced counters (see Hubris debugger)?
+  - use same mechanism for tracing (store time differences instead of counts)?
 * [ ] defmt-brtt to use both RTT and ring buffer to retrieve logs
 * [ ] Log into BKPSRAM and/or save to SD card
 * [ ] HardFault handler
-    - Blink Morse code error (addr + maybe some flags)
-    - Optionally reboot after blinking out errors (default) or continue blinking
+  - Blink Morse code error (addr + maybe some flags)
+  - Optionally reboot after blinking out errors (default) or continue blinking
 * [ ] UsageFault, MemoryManagement, BusFault handler (to cause less confusion)
 * [ ] CSS handler
 

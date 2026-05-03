@@ -64,3 +64,10 @@ show all the counters present:
 ```shell
 arm-none-eabi-nm ./path/to/elf_fw | grep cnt_ram
 ```
+
+## Why there are no compile-time filters?
+
+Based on the assumption, that there won't be that many counters, it was decided to not implement compile-time filters for simplicity at the moment (info/warn/error/trace). For example, 100 `u32` counters consume only 400 bytes of RAM.
+
+Having filters would also require reprogramming a device in order to enable more levels, which might be undesirable.
+
