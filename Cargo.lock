@@ -87,7 +87,7 @@ dependencies = [
  "base64",
  "bedrock_build_info",
  "build-info-common",
- "shrink_wrap",
+ "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -98,7 +98,7 @@ dependencies = [
  "hex-literal",
  "wire_weaver",
  "ww_date_time",
- "ww_version",
+ "ww_version 0.1.1",
 ]
 
 [[package]]
@@ -1668,11 +1668,20 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "shrink_wrap"
 version = "0.1.2"
+dependencies = [
+ "paste",
+ "serde",
+ "shrink_wrap_derive 0.1.1",
+]
+
+[[package]]
+name = "shrink_wrap"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd4d5544e7fab749f6a633e1e2073315af03b4b36d5897d56a3fe8d8664ccaf5"
 dependencies = [
  "paste",
- "shrink_wrap_derive",
+ "shrink_wrap_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1687,6 +1696,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "shrink_wrap_core"
+version = "0.2.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sha2",
+ "syn",
+]
+
+[[package]]
+name = "shrink_wrap_derive"
+version = "0.1.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "shrink_wrap_core 0.2.0",
+ "syn",
+]
+
+[[package]]
 name = "shrink_wrap_derive"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1694,7 +1723,7 @@ checksum = "d3d17e8bba341ba3c0d78858d5e15678a442997f91400cae28ec491a0d8a90b0"
 dependencies = [
  "proc-macro2",
  "quote",
- "shrink_wrap_core",
+ "shrink_wrap_core 0.1.1",
  "syn",
 ]
 
@@ -2258,9 +2287,9 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "788df75c05aba70635a3bf573efa66ac9a0bc0eced82c7c557308a6ce57a6fd7"
 dependencies = [
- "shrink_wrap",
+ "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire_weaver_derive",
- "ww_version",
+ "ww_version 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2276,8 +2305,8 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "shrink_wrap",
- "shrink_wrap_core",
+ "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shrink_wrap_core 0.1.1",
  "syn",
  "ww_self",
 ]
@@ -2310,7 +2339,16 @@ name = "ww_date_time"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "shrink_wrap",
+ "shrink_wrap 0.1.2",
+]
+
+[[package]]
+name = "ww_global"
+version = "0.1.1"
+dependencies = [
+ "convert_case",
+ "serde_json",
+ "shrink_wrap 0.1.2",
 ]
 
 [[package]]
@@ -2319,7 +2357,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbc027857a8916640d0c8feac18d4f3b6b30aa5d9ad1f116ca5555320746b99c"
 dependencies = [
- "shrink_wrap",
+ "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2328,9 +2366,18 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "544ec475007aec57e6f04dedbf1b892e411c4acc58d6989922b0f739b58be13f"
 dependencies = [
- "shrink_wrap",
+ "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ww_numeric",
- "ww_version",
+ "ww_version 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "ww_version"
+version = "0.1.1"
+dependencies = [
+ "semver",
+ "shrink_wrap 0.1.2",
+ "ww_global",
 ]
 
 [[package]]
@@ -2340,7 +2387,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1003e2e70565a70a709b5d15b44b730451bc671e69b3ed39c79eec9bfc3178ca"
 dependencies = [
  "semver",
- "shrink_wrap",
+ "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

@@ -1,7 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod traits;
-
 use wire_weaver::prelude::*;
 use ww_date_time::{DateTime, NaiveDate};
 use ww_version::Version;
@@ -9,6 +7,18 @@ use ww_version::Version;
 use ww_version::VersionOwned;
 
 pub const COMPACT_INFO_MAGIC: u32 = 0xB17D_14F0;
+
+#[ww_trait]
+trait BuildInfo {
+    /// [BedrockBuildInfo](crate::BedrockBuildInfo) with some of the fields omitted to save FLASH space
+    fn compact() -> RefVec<'i, u8>;
+
+    /// Full [BedrockBuildInfo](crate::BedrockBuildInfo)
+    fn full() -> Option<RefVec<'i, u8>>;
+
+    /// SHA256? of a firmware binary, used to get ELF from the fw registry and decode defmt and counters
+    fn fw_sha() -> Option<RefVec<'i, u8>>; // TODO: use fixed array when supported?
+}
 
 #[cfg(feature = "std")]
 pub fn build_info_crc(bytes: &[u8]) -> u32 {
