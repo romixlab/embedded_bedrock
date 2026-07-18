@@ -169,7 +169,7 @@ fn generate_memory_x(mcu_info, counters_info, rcc_version) {
     let regions = [];
     let flash_regions = [];
     for m in mcu_info.memory[0] {
-        if m.kind == "flash" {
+        if m.kind == "flash" && !m.name.contains("OTP") {
             flash_regions += m;
         } else {
             regions.push(#{
@@ -559,7 +559,7 @@ fn generate_linker_consts(regions) {
             ` ${region.shift}`
         } else {
             ""
-        }; 
+        };
         out += `__${name_lower}_start = ORIGIN(${region.name})${shift};`;
         out += `__${name_lower}_end = ORIGIN(${region.name}) + LENGTH(${region.name})${shift};`;
         out += "";
@@ -778,7 +778,7 @@ fn create_init_ram(regions, rcc_version) {
             }
             rcc_info
         } else {
-            ()            
+            ()
         }
     };
     let sram_enable_bits = #{};
