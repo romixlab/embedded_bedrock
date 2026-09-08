@@ -9,7 +9,7 @@ members = [
     "bedrock_build",
     "bedrock_build_info",
     "bedrock_cli",
-    "cnt",
+    "cnt", "cnt_cli", "cnt_core",
     "cnt_macro",
     "fw_registry",
 ]
