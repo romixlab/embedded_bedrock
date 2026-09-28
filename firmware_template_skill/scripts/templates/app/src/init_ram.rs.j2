@@ -1,0 +1,35 @@
+{# extra = additional RAM Regions, sram_enable = {region name: [(rcc register, field)]} #}
+//! Enable (clock) and zero additional RAM banks. The startup code only zeroes .bss in the main RAM region;
+//! anything placed into other banks (e.g. `#[unsafe(link_section = ".sram1")] static ...`) must be zeroed here.
+//! Generated from stm32-data; verify enable bits against the reference manual.
+
+pub(crate) fn init_ram() {
+{% for r in extra %}
+    init_{{ r.name | lower }}();
+{% endfor %}
+}
+{% for r in extra %}
+  {% set name = r.name | lower %}
+  {% set bits = sram_enable.get(r.name, []) %}
+
+fn init_{{ name }}() {
+    unsafe {
+        unsafe extern "C" {
+            static mut __{{ name }}_start: u8;
+            static mut __{{ name }}_end: u8;
+        }
+  {% if bits and embassy_stm32 %}
+        let rcc = embassy_stm32::pac::RCC;
+    {% for reg, fld in bits %}
+        rcc.{{ reg }}().modify(|w| w.set_{{ fld }}(true));
+    {% endfor %}
+  {% elif bits %}
+        // TODO: enable clock: {{ bits | map("rcc_bit") | join(", ") }}
+  {% elif t.family == "stm32" %}
+        // {{ r.name }}: no RCC enable bit found, assumed always on
+  {% endif %}
+        let count = &raw const __{{ name }}_end as usize - &raw const __{{ name }}_start as usize;
+        core::ptr::write_bytes(&raw mut __{{ name }}_start, 0, count);
+    }
+}
+{% endfor %}

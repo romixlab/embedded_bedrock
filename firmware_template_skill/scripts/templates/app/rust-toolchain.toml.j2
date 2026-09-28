@@ -1,0 +1,17 @@
+[toolchain]
+{% if t.arch == "xtensa" %}
+channel = "esp" # install with: cargo install espup && espup install
+components = ["rustfmt", "rust-src"]
+{% else %}
+  {% if o.nightly or o.build_core or o.panic_immediate_abort %}
+channel = "{{ nightly_channel() }}"
+components = ["rustfmt", "rust-src"]
+  {% elif t.family == "esp" %}
+channel = "stable"
+components = ["rustfmt", "rust-src"]
+  {% else %}
+channel = "stable"
+components = ["rustfmt"]
+  {% endif %}
+targets = ["{{ t.rust_target }}"]
+{% endif %}

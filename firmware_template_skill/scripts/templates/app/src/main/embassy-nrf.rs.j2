@@ -1,0 +1,32 @@
+use embassy_nrf::gpio::{Level, Output, OutputDrive};
+use embassy_time::Timer;
+use cortex_m_rt::exception;
+{% if o.bootloader %}
+use core::cell::RefCell;
+use embassy_boot_nrf::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
+use embassy_nrf::nvmc::{Nvmc, PAGE_SIZE};
+use embassy_sync::blocking_mutex::Mutex;
+{% endif %}
+
+#[embassy_executor::main]
+async fn main(_spawner: embassy_executor::Spawner) {
+{% if have_init_ram %}
+    init_ram::init_ram();
+{% endif %}
+{% if o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}
+    {{ info }}("{{ o.name }} starting...");
+    let p = embassy_nrf::init(Default::default());
+{% if o.bootloader %}
+
+    let flash = Mutex::new(RefCell::new(Nvmc::new(p.NVMC)));
+    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);
+    let mut magic = AlignedBuffer([0; PAGE_SIZE]);
+    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);
+    // TODO: call mark_booted() only after self-test
+    updater.mark_booted().unwrap();
+{% endif %}
+
+    let mut led = Output::new(p.{{ o.led }}, Level::Low, OutputDrive::Standard);
+{% include "app/src/main/_embassy_loop.rs.j2" %}

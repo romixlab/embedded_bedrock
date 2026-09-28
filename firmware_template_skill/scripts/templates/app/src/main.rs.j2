@@ -1,0 +1,80 @@
+{# The framework/family specific part comes from main/<variant>.rs.j2 #}
+#![no_std]
+#![no_main]
+
+{% if o.build_info %}
+mod build_info;
+{% endif %}
+{% if have_init %}
+mod init;
+{% endif %}
+{% if have_init_ram %}
+mod init_ram;
+{% endif %}
+{% if o.build_info or have_init or have_init_ram %}
+
+{% endif %}
+{# --- logging / panic handler --- #}
+{% if o.log == "defmt" %}
+  {% if t.cortex_m %}
+use defmt::{info, error};
+  {% else %}
+use defmt::info;
+  {% endif %}
+  {% if t.family == "esp" %}
+use esp_println as _;
+  {% else %}
+use defmt_rtt as _;
+use panic_probe as _;
+  {% endif %}
+{% elif o.log == "rtt" %}
+use rtt_target::{rprintln, rtt_init_print};
+use panic_rtt_target as _;
+{% elif o.log == "esp-println" %}
+use log::info;
+{% elif t.family == "esp" %}
+use esp_backtrace as _;
+{% else %}
+use panic_halt as _;
+{% endif %}
+{% if t.family == "esp" and o.log in ("defmt", "esp-println") %}
+use esp_backtrace as _;
+{% endif %}
+{% if o.counters %}
+use cnt::cnt_if;{{ " // bkp_cnt_if! for counters in backup registers" if bkp_words else "" }}
+{% endif %}
+
+{% include "app/src/main/" ~ main_variant ~ ".rs.j2" %}
+{% if t.cortex_m %}
+
+#[exception]
+unsafe fn DefaultHandler(irqn: i16) {
+  {% if o.counters %}
+    cnt_if!(true, unhandled_exceptions: u32 += 1);
+    {% if bkp_words %}
+    cnt::bkp_cnt_if!(true, unhandled_exceptions_total: u32 += 1);
+    {% endif %}
+  {% endif %}
+  {% if o.log != "none" %}
+    {{ err }}("unhandled exception, IRQn = {}", irqn);
+  {% else %}
+    let _ = irqn;
+  {% endif %}
+}
+
+#[exception]
+unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
+  {% if bkp_words %}
+    cnt::bkp_cnt_if!(true, hard_faults: u32 += 1);
+  {% endif %}
+  {% if o.log == "defmt" %}
+    error!("HardFault {}", defmt::Debug2Format(ef));
+  {% elif o.log == "rtt" %}
+    rprintln!("HardFault {:?}", ef);
+  {% else %}
+    let _ = ef;
+  {% endif %}
+    // TODO: consider cortex_m::peripheral::SCB::sys_reset() in production
+    loop {}
+}
+{% endif %}

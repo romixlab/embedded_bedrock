@@ -1,10 +1,17 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["jinja2>=3.1"]
+# ///
 """
 bedrock_gen.py - standalone firmware project generator for embedded_bedrock.
 
-Python 3.9+, standard library only. Network access is only needed for STM32
-targets (chip/register JSON from embassy-rs/stm32-data-generated); results are
-cached under ~/.cache/bedrock_gen.
+Run with uv (dependencies are declared inline above): `uv run bedrock_gen.py ...`. Network access is only
+needed for STM32 targets (chip/register JSON from embassy-rs/stm32-data-generated); results are cached under
+~/.cache/bedrock_gen.
+
+Data tables live in data/*.toml, file contents in templates/ (Jinja2, see templates/README.md). This script
+resolves the chip, computes the memory layout and decides which files to render.
 
 Subcommands:
   new            generate a project
@@ -23,47 +30,32 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import jinja2
+
 STM32_DATA_BASE = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data"
 BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
 
-# Crate versions verified on crates.io (update here when bumping).
-V = {
-    "cortex-m": "0.7",
-    "cortex-m-rt": "0.7",
-    "defmt": "1.1",
-    "defmt-rtt": "1.3",
-    "panic-probe": "1.0",
-    "rtt-target": "0.6",
-    "panic-rtt-target": "0.2",
-    "panic-halt": "1.0",
-    "portable-atomic": "1.11",
-    "static_cell": "2.1",
-    "embassy-executor": "0.10.0",
-    "embassy-time": "0.5.1",
-    "embassy-sync": "0.8.0",
-    "embassy-stm32": "0.6.0",
-    "embassy-rp": "0.10.0",
-    "embassy-nrf": "0.11.0",
-    "embassy-boot-stm32": "0.8.0",
-    "embassy-boot-rp": "0.10.0",
-    "embassy-boot-nrf": "0.12.0",
-    "embedded-storage": "0.3.1",
-    "assign-resources": "0.5.0",
-    "cnt": "0.2",
-    "stm32-hal2": "2.1",
-    "esp-hal": "1.2.2",
-    "esp-rtos": "0.4.0",
-    "esp-println": "0.18.0",
-    "esp-backtrace": "0.20.0",
-    "esp-bootloader-esp-idf": "0.6.0",
-    "build-info-build": "0.0.46",
-}
+HERE = Path(__file__).resolve().parent
+
+
+def load_toml(name: str) -> dict:
+    with open(HERE / "data" / name, "rb") as f:
+        return tomllib.load(f)
+
+
+V: dict[str, str] = load_toml("versions.toml")    # crate versions
+BUILTIN: dict[str, dict] = load_toml("chips.toml")  # non-STM32 chips
+STM32 = load_toml("stm32.toml")
+STM32_HAL2_FEATURES: dict[str, str] = STM32["hal2"]["features"]
+STM32_HAL2_RT: dict[str, str] = STM32["hal2"]["rt"]
+
 
 # ----------------------------------------------------------------------------
 # Data model
@@ -94,6 +86,7 @@ class Target:
     stm32: dict = field(default_factory=dict)  # raw stm32-data json
     hal_feature: str = ""   # HAL crate feature for the chip (embassy-nrf needs e.g. nrf9160-s)
     runner_extra: str = ""  # extra probe-rs args
+    default_led: str = ""   # --led default
     notes: list[str] = field(default_factory=list)
 
     @property
@@ -105,74 +98,6 @@ class Target:
         return self.arch == "arm"
 
 
-# ----------------------------------------------------------------------------
-# Built-in non-STM32 targets
-# ----------------------------------------------------------------------------
-
-BUILTIN: dict[str, dict] = {
-    "rp2040": dict(display="RP2040", family="rp", arch="arm", rust_target="thumbv6m-none-eabi", probe_chip="RP2040",
-                   flash=0x10000000, flash_size=2048 * 1024, erase=4096, write=256, boot2=True, rp_variant="rp2040",
-                   rams=[("RAM", 0x20000000, 264 * 1024)]),
-    "rp2350": dict(display="RP2350", family="rp", arch="arm", rust_target="thumbv8m.main-none-eabihf", probe_chip="RP235x",
-                   flash=0x10000000, flash_size=4096 * 1024, erase=4096, write=256, rp_variant="rp235xa",
-                   rams=[("RAM", 0x20000000, 512 * 1024), ("SRAM8", 0x20080000, 4096), ("SRAM9", 0x20081000, 4096)]),
-    "rp2350b": dict(display="RP2350B", family="rp", arch="arm", rust_target="thumbv8m.main-none-eabihf", probe_chip="RP235x",
-                    flash=0x10000000, flash_size=4096 * 1024, erase=4096, write=256, rp_variant="rp235xb",
-                    rams=[("RAM", 0x20000000, 512 * 1024), ("SRAM8", 0x20080000, 4096), ("SRAM9", 0x20081000, 4096)]),
-    "rp2354": dict(display="RP2354", family="rp", arch="arm", rust_target="thumbv8m.main-none-eabihf", probe_chip="RP235x",
-                   flash=0x10000000, flash_size=2048 * 1024, erase=4096, write=256, rp_variant="rp235xa",
-                   rams=[("RAM", 0x20000000, 512 * 1024), ("SRAM8", 0x20080000, 4096), ("SRAM9", 0x20081000, 4096)]),
-    "nrf52832": dict(display="nRF52832", family="nrf", arch="arm", rust_target="thumbv7em-none-eabihf", probe_chip="nRF52832_xxAA",
-                     flash=0, flash_size=512 * 1024, erase=4096, write=4, rams=[("RAM", 0x20000000, 64 * 1024)]),
-    "nrf52833": dict(display="nRF52833", family="nrf", arch="arm", rust_target="thumbv7em-none-eabihf", probe_chip="nRF52833_xxAA",
-                     flash=0, flash_size=512 * 1024, erase=4096, write=4, rams=[("RAM", 0x20000000, 128 * 1024)]),
-    "nrf52840": dict(display="nRF52840", family="nrf", arch="arm", rust_target="thumbv7em-none-eabihf", probe_chip="nRF52840_xxAA",
-                     flash=0, flash_size=1024 * 1024, erase=4096, write=4, rams=[("RAM", 0x20000000, 256 * 1024)]),
-    "nrf9160": dict(display="nRF9160", family="nrf", arch="arm", rust_target="thumbv8m.main-none-eabihf", probe_chip="nRF9160_xxAA",
-                    hal_feature="nrf9160-s", flash=0, flash_size=1024 * 1024, erase=4096, write=4,
-                    rams=[("RAM", 0x20010000, 192 * 1024), ("IPC", 0x20000000, 64 * 1024)]),
-    "nrf9151": dict(display="nRF9151", family="nrf", arch="arm", rust_target="thumbv8m.main-none-eabihf", probe_chip="nRF9151_xxCA",
-                    hal_feature="nrf9151-s", flash=0, flash_size=1024 * 1024, erase=4096, write=4,
-                    rams=[("RAM", 0x20010000, 192 * 1024), ("IPC", 0x20000000, 64 * 1024)],
-                    runner_extra=" --allow-erase-all"),
-    # ESP: memory layout is handled by esp-hal's linkall.x, we only need target info.
-    "esp32": dict(display="ESP32", family="esp", arch="xtensa", rust_target="xtensa-esp32-none-elf", probe_chip="esp32"),
-    "esp32s2": dict(display="ESP32-S2", family="esp", arch="xtensa", rust_target="xtensa-esp32s2-none-elf", probe_chip="esp32s2"),
-    "esp32s3": dict(display="ESP32-S3", family="esp", arch="xtensa", rust_target="xtensa-esp32s3-none-elf", probe_chip="esp32s3"),
-    "esp32c2": dict(display="ESP32-C2", family="esp", arch="riscv", rust_target="riscv32imc-unknown-none-elf", probe_chip="esp32c2"),
-    "esp32c3": dict(display="ESP32-C3", family="esp", arch="riscv", rust_target="riscv32imc-unknown-none-elf", probe_chip="esp32c3"),
-    "esp32c5": dict(display="ESP32-C5", family="esp", arch="riscv", rust_target="riscv32imac-unknown-none-elf", probe_chip="esp32c5"),
-    "esp32c6": dict(display="ESP32-C6", family="esp", arch="riscv", rust_target="riscv32imac-unknown-none-elf", probe_chip="esp32c6"),
-    "esp32h2": dict(display="ESP32-H2", family="esp", arch="riscv", rust_target="riscv32imac-unknown-none-elf", probe_chip="esp32h2"),
-    "esp32p4": dict(display="ESP32-P4", family="esp", arch="riscv", rust_target="riscv32imafc-unknown-none-elf", probe_chip="esp32p4"),
-}
-
-ESP_LED = {"esp32": "GPIO2", "esp32s2": "GPIO15", "esp32s3": "GPIO48", "esp32c2": "GPIO8", "esp32c3": "GPIO8",
-           "esp32c5": "GPIO27", "esp32c6": "GPIO8", "esp32h2": "GPIO8", "esp32p4": "GPIO22"}
-
-# stm32-hal2 (David O'Connor) feature mapping. Key: first 4 chars after "STM32" lower-cased.
-STM32_HAL2_FEATURES = {
-    "c011": "c011", "c031": "c031", "c071": "c071",
-    "f301": "f301", "f302": "f302", "f303": "f303", "f373": "f373", "f334": "f3x4",
-    "f401": "f401", "f405": "f405", "f407": "f407", "f410": "f410", "f411": "f411", "f412": "f412", "f413": "f413",
-    "f427": "f427", "f429": "f429", "f446": "f446", "f469": "f469",
-    "g030": "g030", "g031": "g031", "g041": "g041", "g050": "g050", "g051": "g051", "g061": "g061", "g070": "g070",
-    "g071": "g071", "g081": "g081", "g0b0": "g0b0", "g0b1": "g0b1", "g0c1": "g0c1",
-    "g431": "g431", "g441": "g441", "g471": "g471", "g473": "g473", "g474": "g474", "g483": "g483", "g484": "g484",
-    "g491": "g491", "g4a1": "g4a1",
-    "h503": "h503", "h562": "h562", "h563": "h563", "h573": "h573",
-    "h723": "h735", "h725": "h735", "h730": "h735", "h733": "h735", "h735": "h735",
-    "h742": "h743", "h743": "h743", "h745": "h743", "h747": "h747cm7", "h750": "h743", "h753": "h753", "h755": "h753",
-    "h7a3": "h7b3", "h7b0": "h7b3", "h7b3": "h7b3",
-    "l412": "l412", "l422": "l412",
-    "l431": "l4x1", "l432": "l4x2", "l433": "l4x3", "l442": "l4x2", "l443": "l4x3",
-    "l451": "l4x1", "l452": "l4x2", "l462": "l4x2",
-    "l471": "l4x1", "l475": "l4x5", "l476": "l4x6", "l486": "l4x6", "l496": "l4x6", "l4a6": "l4x6",
-    "l552": "l552", "l562": "l562",
-    "wb55": "wb55", "wle5": "wle5", "wl55": "wle5",
-}
-STM32_HAL2_RT = {"C0": "c0rt", "F3": "f3rt", "F4": "f4rt", "G0": "g0rt", "G4": "g4rt", "H5": "h5rt", "H7": "h7rt",
-                 "L4": "l4rt", "L5": "l5rt", "WB": "wbrt", "WL": "wlrt"}
 
 
 def die(msg: str) -> None:
@@ -222,23 +147,11 @@ class Stm32Data:
 
 
 def stm32_rust_target(display: str) -> str:
-    series = display[5:7]
-    third = display[7] if len(display) > 7 else ""
-    table = {
-        "C0": "thumbv6m-none-eabi", "F0": "thumbv6m-none-eabi", "G0": "thumbv6m-none-eabi",
-        "L0": "thumbv6m-none-eabi", "U0": "thumbv6m-none-eabi",
-        "F1": "thumbv7m-none-eabi", "F2": "thumbv7m-none-eabi", "L1": "thumbv7m-none-eabi",
-        "F3": "thumbv7em-none-eabihf", "F7": "thumbv7em-none-eabihf", "H7": "thumbv7em-none-eabihf",
-        "F4": "thumbv7em-none-eabihf", "G4": "thumbv7em-none-eabihf", "L4": "thumbv7em-none-eabihf",
-        "WL": "thumbv7em-none-eabihf",
-        "H5": "thumbv8m.main-none-eabihf", "L5": "thumbv8m.main-none-eabihf", "U5": "thumbv8m.main-none-eabihf",
-        "U3": "thumbv8m.main-none-eabihf", "N6": "thumbv8m.main-none-eabihf",
-    }
-    if series == "WB":
-        return "thumbv8m.main-none-eabihf" if third == "A" else "thumbv7em-none-eabihf"
-    if series in table:
-        return table[series]
-    die(f"unknown STM32 series {series}, pass --rust-target explicitly")
+    table = STM32["rust_target"]
+    for key in (display[5:8], display[5:7]):  # e.g. WBA before WB
+        if key in table:
+            return table[key]
+    die(f"unknown STM32 series {display[5:7]}, pass --rust-target explicitly")
     return ""
 
 
@@ -273,7 +186,7 @@ def resolve_target(args) -> Target:
                 # eeprom and others are ignored for linking purposes
         t = Target(display=display, chip=display.lower(), family="stm32", arch="arm",
                    rust_target=args.rust_target or stm32_rust_target(display), probe_chip=display,
-                   memories=mems, stm32=info, hal_feature=display.lower())
+                   memories=mems, stm32=info, hal_feature=display.lower(), default_led=STM32["default_led"])
         return t
 
     if key not in BUILTIN:
@@ -281,16 +194,16 @@ def resolve_target(args) -> Target:
     b = BUILTIN[key]
     mems = []
     if "flash" in b:
-        fs = parse_size(args.flash_size) if args.flash_size else b["flash_size"]
-        mems.append(Mem("FLASH", "flash", b["flash"], fs, b["erase"], b["write"]))
-        for name, addr, size in b["rams"]:
-            if name == "RAM" and args.ram_size:
-                size = parse_size(args.ram_size)
-            mems.append(Mem(name, "ram", addr, size))
+        fl = b["flash"]
+        fs = parse_size(args.flash_size or fl["size"])
+        mems.append(Mem("FLASH", "flash", fl["address"], fs, parse_size(fl["erase"]), fl["write"]))
+        for r in b["rams"]:
+            size = parse_size(args.ram_size if r["name"] == "RAM" and args.ram_size else r["size"])
+            mems.append(Mem(r["name"], "ram", r["address"], size))
     t = Target(display=b["display"], chip=key, family=b["family"], arch=b["arch"],
                rust_target=args.rust_target or b["rust_target"], probe_chip=b["probe_chip"], memories=mems,
                boot2=b.get("boot2", False), rp_variant=b.get("rp_variant", ""),
-               hal_feature=b.get("hal_feature", key), runner_extra=b.get("runner_extra", ""))
+               hal_feature=b.get("hal_feature", key), runner_extra=b.get("runner_extra", ""), default_led=b["led"])
     return t
 
 
@@ -590,81 +503,60 @@ def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str
                 r.shift = shift
         regions = [r for r in regions if not (r.kind == "ram" and not r.is_main_ram) and r.kind != "reg" and r.name != "CONFIG"]
 
-    out = ["MEMORY", "{", "  /* FLASH and RAM are the regions cortex-m-rt / link.x expects */"]
-    for r in regions:
-        out.append("")
-        out.append(f"  /* {r.name} ({r.kind}){': ' + r.comment if r.comment else ''} */")
-        line = f"  {r.name} : ORIGIN = 0x{r.origin:08X}, LENGTH = {fmt_len(r.length)}"
-        out.append(f"  /* {line.strip()} */" if r.commented_out else line)
-        if r.is_main_ram and r.name != "RAM":
-            out.append(f"  RAM : ORIGIN = 0x{r.origin:08X}, LENGTH = {fmt_len(r.length)}")
-    out.append("}")
-
-    # sections for extra RAM banks and register-backed buffers
-    sec = []
-    for r in regions:
-        if r.commented_out or r.is_main_ram or r.kind == "flash":
-            continue
-        lname = r.name.lower()
-        collect = r.collect or f".{lname} .{lname}.*"
-        sec += [f"  .{lname} (NOLOAD) : ALIGN({r.align})", "  {", f"    *({collect});", f"    . = ALIGN({r.align});", f"  }} > {r.name}", ""]
-    if sec:
-        out += ["", "SECTIONS", "{"] + sec[:-1] + ["}"]
-
-    # helper constants
-    consts = []
-    for r in regions:
-        if r.commented_out or r.is_main_ram or not r.consts or (r.kind == "flash" and r.name == "FLASH"):
-            continue
-        lname = r.name.lower()
-        sh = f" {r.shift}" if r.shift else ""
-        if r.shift:
-            consts.append(f"/* {r.name}: offsets relative to the start of flash ({r.shift[2:]}), as embassy-boot / flash drivers expect */")
-        consts.append(f"__{lname}_start = ORIGIN({r.name}){sh};")
-        consts.append(f"__{lname}_end = ORIGIN({r.name}) + LENGTH({r.name}){sh};")
-        consts.append("")
-    if consts:
-        out += ["", "/* Helper symbols: additional RAM banks (see init_ram.rs), flash partitions */"] + consts[:-1]
-
-    if t.rp_variant and t.rp_variant != "rp2040":
-        out += ["", RP235X_SECTIONS.strip()]
-    return "\n".join(out) + "\n"
+    visible = [r for r in regions if not r.commented_out and not r.is_main_ram]
+    return render("app/memory.x.j2", t=t, regions=regions,
+                  sections=[r for r in visible if r.kind != "flash"],
+                  consts=[r for r in visible if r.consts and not (r.kind == "flash" and r.name == "FLASH")])
 
 
-RP235X_SECTIONS = r"""
-/* RP235x boot ROM metadata blocks (IMAGE_DEF); required for the ROM to start the image */
-SECTIONS {
-    .start_block : ALIGN(4)
-    {
-        __start_block_addr = .;
-        KEEP(*(.start_block));
-        KEEP(*(.boot_info));
-    } > FLASH
-} INSERT AFTER .vector_table;
+# ----------------------------------------------------------------------------
+# Template rendering
+# ----------------------------------------------------------------------------
 
-_stext = ADDR(.start_block) + SIZEOF(.start_block);
 
-SECTIONS {
-    .bi_entries : ALIGN(4)
-    {
-        __bi_entries_start = .;
-        KEEP(*(.bi_entries));
-        . = ALIGN(4);
-        __bi_entries_end = .;
-    } > FLASH
-} INSERT AFTER .text;
+def toml_list(items: list[str]) -> str:
+    return "[" + ", ".join(f'"{i}"' for i in items) + "]"
 
-SECTIONS {
-    .end_block : ALIGN(4)
-    {
-        __end_block_addr = .;
-        KEEP(*(.end_block));
-    } > FLASH
-} INSERT AFTER .uninit;
 
-PROVIDE(start_to_end = __end_block_addr - __start_block_addr);
-PROVIDE(end_to_start = __start_block_addr - __end_block_addr);
-"""
+def feats(*xs) -> list[str]:
+    """Feature list without the falsy entries, for the `cond and "feature"` idiom in templates."""
+    return [x for x in xs if x]
+
+
+def nightly_date() -> Optional[str]:
+    try:
+        v = subprocess.run(["rustc", "+nightly", "--version"], capture_output=True, text=True, timeout=20).stdout
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", v)
+        return m.group(1) if m else None
+    except Exception:
+        return None
+
+
+def nightly_channel() -> str:
+    date = nightly_date()
+    return f"nightly-{date}" if date else "nightly"
+
+
+JINJA = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(HERE / "templates"),
+    trim_blocks=True,
+    lstrip_blocks=True,
+    keep_trailing_newline=True,
+    undefined=jinja2.StrictUndefined,
+    autoescape=False,
+)
+JINJA.filters.update(
+    toml_list=toml_list,
+    hex=lambda n: f"0x{n:X}",
+    hex8=lambda n: f"0x{n:08X}",
+    fmt_len=fmt_len,
+    rcc_bit=lambda b: f"RCC.{b[0].upper()}.{b[1].upper()}",
+)
+JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, feats=feats, nightly_channel=nightly_channel)
+
+
+def render(template: str, **ctx) -> str:
+    return JINJA.get_template(template).render(**ctx)
 
 
 # ----------------------------------------------------------------------------
@@ -700,785 +592,85 @@ class Opts:
     regs: Optional[Stm32Regs] = None
 
 
-def toml_list(items: list[str]) -> str:
-    return "[" + ", ".join(f'"{i}"' for i in items) + "]"
+def log_macros(o: Opts) -> tuple[str, str]:
+    """(info, error) macro names used in the generated sources."""
+    return {"defmt": ("info!", "error!"), "rtt": ("rprintln!", "rprintln!"),
+            "esp-println": ("info!", "error!")}.get(o.log, ("// no logging: ", "// no logging: "))
 
 
-def gen_cargo_toml(t: Target, o: Opts, lay: Optional[Layout]) -> str:
-    dep: list[str] = []
-    d = V
-    defmt = o.log == "defmt"
-    f = lambda *xs: [x for x in xs if x]  # noqa: E731
-
-    if defmt:
-        dep.append(f'defmt = "{d["defmt"]}"')
-        if t.family != "esp":
-            dep.append(f'defmt-rtt = "{d["defmt-rtt"]}"' if o.rtt_buffer == 1024 else
-                       f'defmt-rtt = {{ version = "{d["defmt-rtt"]}" }} # buffer size via DEFMT_RTT_BUFFER_SIZE in .cargo/config.toml')
-            dep.append(f'panic-probe = {{ version = "{d["panic-probe"]}", features = ["print-defmt"] }}')
-    elif o.log == "rtt":
-        dep.append(f'rtt-target = "{d["rtt-target"]}"')
-        dep.append(f'panic-rtt-target = "{d["panic-rtt-target"]}"')
-    elif o.log == "none" and t.family != "esp":
-        dep.append(f'panic-halt = "{d["panic-halt"]}"')
-
-    if t.cortex_m:
-        cs = ["critical-section-single-core"] if t.family != "rp" else ["inline-asm"]
-        dep.append(f'cortex-m = {{ version = "{d["cortex-m"]}", features = {toml_list(cs)} }}')
-        dep.append(f'cortex-m-rt = "{d["cortex-m-rt"]}"')
-        if t.rust_target.startswith("thumbv6m") and o.framework == "embassy":
-            dep.append(f'portable-atomic = {{ version = "{d["portable-atomic"]}", features = ["critical-section"] }} # atomics for Cortex-M0(+)')
-
+def main_variant(t: Target, o: Opts) -> str:
+    """templates/app/src/main/<variant>.rs.j2"""
     if o.framework == "embassy":
-        if t.family == "stm32":
-            feats = f(defmt and "defmt", t.chip, "unstable-pac", "exti", "time", "time-driver-any", o.rtc and "chrono")
-            dep.append(f'embassy-stm32 = {{ version = "{d["embassy-stm32"]}", features = {toml_list(feats)} }}')
-        elif t.family == "rp":
-            feats = f(defmt and "defmt", t.rp_variant, "unstable-pac", "time-driver", "critical-section-impl",
-                      "executor-thread", "executor-interrupt", t.rp_variant != "rp2040" and "binary-info")
-            dep.append(f'embassy-rp = {{ version = "{d["embassy-rp"]}", features = {toml_list(feats)} }}')
-        elif t.family == "nrf":
-            feats = f(defmt and "defmt", t.hal_feature, "time-driver-rtc1", "gpiote", "unstable-pac", "time")
-            dep.append(f'embassy-nrf = {{ version = "{d["embassy-nrf"]}", features = {toml_list(feats)} }}')
-        elif t.family == "esp":
-            dep.append(f'esp-hal = {{ version = "{d["esp-hal"]}", features = {toml_list(f(t.chip, "unstable", defmt and "defmt"))} }}')
-            dep.append(f'esp-rtos = {{ version = "{d["esp-rtos"]}", features = {toml_list(f(t.chip, "embassy", defmt and "defmt"))} }}')
-        # embassy-executor 0.10: task pools are statically allocated on stable, no task-arena / nightly needed.
-        # embassy-rp provides its own executor (executor-thread/-interrupt features) and __pender.
-        arch_ex = t.cortex_m and t.family != "rp"
-        ex = f(arch_ex and "platform-cortex-m", arch_ex and "executor-thread", arch_ex and "executor-interrupt", defmt and "defmt")
-        dep.append(f'embassy-executor = {{ version = "{d["embassy-executor"]}", features = {toml_list(ex)} }}')
-        dep.append(f'embassy-time = {{ version = "{d["embassy-time"]}", features = {toml_list(f(defmt and "defmt", defmt and "defmt-timestamp-uptime"))} }}')
-        dep.append(f'embassy-sync = {{ version = "{d["embassy-sync"]}", features = {toml_list(f(defmt and "defmt"))} }}')
-        dep.append(f'static_cell = "{d["static_cell"]}"')
-        if t.cortex_m:
-            dep.append(f'assign-resources = "{d["assign-resources"]}"')
-    elif o.framework == "stm32-hal":
-        key = t.display[5:9].lower()
-        feat = STM32_HAL2_FEATURES.get(key)
-        rt = STM32_HAL2_RT.get(t.series)
-        if not feat or not rt:
-            die(f"stm32-hal2 has no feature for {t.display}; supported prefixes: {', '.join(sorted(STM32_HAL2_FEATURES))}")
-        dep.append(f'hal = {{ package = "stm32-hal2", version = "{d["stm32-hal2"]}", features = {toml_list(f(feat, rt, defmt and "defmt"))} }}')
-        dep.append('critical-section = "1.2"')
-    elif o.framework == "bare" and t.family == "esp":
-        dep.append(f'esp-hal = {{ version = "{d["esp-hal"]}", features = {toml_list(f(t.chip, "unstable", defmt and "defmt"))} }}')
-
-    if t.family == "esp":
-        dep.append(f'esp-bootloader-esp-idf = {{ version = "{d["esp-bootloader-esp-idf"]}", features = ["{t.chip}"] }}')
-        if o.log in ("defmt", "esp-println"):
-            pf = f(t.chip, defmt and "defmt-espflash", not defmt and "log-04")
-            dep.append(f'esp-println = {{ version = "{d["esp-println"]}", features = {toml_list(pf)} }}')
-            if not defmt:
-                dep.append('log = "0.4"')
-        bf = f(t.chip, "panic-handler", defmt and "defmt", not defmt and "println")
-        dep.append(f'esp-backtrace = {{ version = "{d["esp-backtrace"]}", features = {toml_list(bf)} }}')
-
-    if o.counters:
-        dep.append(f'cnt = "{d["cnt"]}"')
-    if o.bootloader:
-        dep.append(f'embassy-boot-{t.family} = {{ version = "{d["embassy-boot-" + t.family]}", features = {toml_list(f(defmt and "defmt"))} }}')
-        dep.append(f'embedded-storage = "{d["embedded-storage"]}"')
-        if o.framework != "embassy":
-            dep.append(f'embassy-sync = "{d["embassy-sync"]}"')
-
-    build_deps = []
-    if o.build_info:
-        bb = f'{{ git = "{BEDROCK_GIT}"' if o.bedrock == "git" else f'{{ path = "{o.bedrock}/bedrock_build"'
-        bb += f', features = ["flip-link"] }}' if o.flip_link and t.cortex_m else " }"
-        build_deps.append(f"bedrock_build = {bb}")
-        build_deps.append(f'build-info-build = "{d["build-info-build"]}"')
-
-    features = ""
-    return f"""[package]
-name = "{o.name}"
-version = "0.1.0"
-edition = "2024"
-
-# standalone crate: keeps an enclosing Cargo workspace from claiming it
-[workspace]
-
-[dependencies]
-{chr(10).join(dep)}
-
-[build-dependencies]
-{chr(10).join(build_deps) if build_deps else '# (none)'}
-{features}
-{PROFILES}"""
+        return f"embassy-{t.family}"
+    if o.framework == "stm32-hal":
+        return "stm32-hal"
+    return "bare-esp" if t.family == "esp" else "bare"
 
 
-PROFILES = """# See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
-[profile.dev]
-codegen-units = 1
-debug = 2
-debug-assertions = true
-incremental = false
-opt-level = 3           # embedded dev builds are usually unusable at opt-level 0
-overflow-checks = true
-
-[profile.release]
-codegen-units = 1
-debug = 2               # debug info does not end up in flash
-debug-assertions = false
-incremental = false
-lto = "fat"
-opt-level = "z"         # 3 = speed, s = size, z = smaller
-overflow-checks = false
-
-# Do not optimize build scripts / proc-macros: faster clean builds
-[profile.dev.build-override]
-codegen-units = 8
-debug = false
-debug-assertions = false
-opt-level = 0
-overflow-checks = false
-
-[profile.release.build-override]
-codegen-units = 8
-debug = false
-debug-assertions = false
-opt-level = 0
-overflow-checks = false
-"""
-
-
-def gen_build_rs(t: Target, o: Opts, bootloader: bool = False) -> str:
-    uses_fs = t.family != "esp" or o.build_info
-    lines = ["use std::{env, fs};" if uses_fs else "use std::env;", "use std::path::PathBuf;", "", "fn main() {",
-             '    let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());']
-    if t.family != "esp":
-        lines += ['    // Put memory.x on the linker search path (link.x from cortex-m-rt INCLUDEs it)',
-                  '    fs::write(out.join("memory.x"), include_bytes!("memory.x")).unwrap();',
-                  '    println!("cargo:rustc-link-search={}", out.display());',
-                  '    println!("cargo:rerun-if-changed=memory.x");', ""]
-    if t.cortex_m:
-        if o.flip_link and not bootloader:
-            lines += ['    // Stack overflow protection: https://github.com/knurling-rs/flip-link',
-                      '    println!("cargo:rustc-linker=flip-link");']
-        if o.build_info and not bootloader:
-            lines.append('    bedrock_build::common(); // -Tlink.x, -Tdefmt.x, --nmagic, optional RAM_LINK=1 support')
-        else:
-            lines += ['    println!("cargo:rustc-link-arg=--nmagic");', '    println!("cargo:rustc-link-arg=-Tlink.x");']
-            if t.rp_variant == "rp2040":
-                lines.append('    println!("cargo:rustc-link-arg=-Tlink-rp.x"); // .boot2 section (embassy-rp)')
-            if bootloader:
-                lines += ['    if env::var("CARGO_FEATURE_DEFMT").is_ok() {',
-                          '        println!("cargo:rustc-link-arg=-Tdefmt.x");', '    }']
-            elif o.log == "defmt":
-                lines.append('    println!("cargo:rustc-link-arg=-Tdefmt.x");')
-        if t.rp_variant == "rp2040" and o.build_info and not bootloader:
-            lines.append('    println!("cargo:rustc-link-arg=-Tlink-rp.x"); // .boot2 section (embassy-rp)')
-    else:  # esp
-        if o.log == "defmt":
-            lines.append('    println!("cargo:rustc-link-arg=-Tdefmt.x");')
-        if o.counters and not bootloader:
-            lines.append('    println!("cargo:rustc-link-arg=-Tcnt.x");')
-        lines += ['    // linkall.x must be the last linker script',
-                  '    println!("cargo:rustc-link-arg=-Tlinkall.x");']
-    if o.counters and not bootloader and t.family != "esp":
-        lines.append('    println!("cargo:rustc-link-arg=-Tcnt.x"); // counters index allocation (cnt crate)')
-    if o.build_info:
-        lines += ["", "    // Embed build information (see src/build_info.rs)",
-                  "    let info = build_info_build::build_script()",
-                  "        .collect_dependencies(build_info_build::DependencyDepth::Depth(0))",
-                  "        .build();",
-                  "    let info = bedrock_build::serialize_build_info(info);",
-                  '    fs::write(out.join("build_info.rs"), info).unwrap();']
-    else:
-        lines.append("    let _ = out;")
-    lines += ["}", ""]
-    return "\n".join(lines)
-
-
-def gen_config_toml(t: Target, o: Opts, lay: Optional[Layout]) -> str:
-    out = []
-    if t.family == "esp":
-        fmt = " --log-format defmt" if o.log == "defmt" else ""
-        runner = f'espflash flash --monitor --chip {t.chip}{fmt}'
-        out += [f"[target.{t.rust_target}]", f'runner = "{runner}"',
-                f'# runner = "probe-rs run --chip {t.probe_chip}" # alternative, needs rtt-target instead of esp-println',
-                "rustflags = [",
-                *(['  "-C", "link-arg=-nostartfiles",'] if t.arch == "xtensa" else ['  "-C", "force-frame-pointers", # needed for esp-backtrace']),
-                "]", ""]
-    else:
-        out += [f"[target.{t.rust_target}]", f'runner = "probe-rs run --chip {t.probe_chip}{t.runner_extra}"', ""]
-    out += ["[build]", f'target = "{t.rust_target}"', ""]
-    out += ["[env]"]
-    if o.log == "defmt":
-        out.append(f'DEFMT_LOG = "{o.defmt_log},{o.name.replace("-", "_")}={o.defmt_log}"')
-        if t.family != "esp":
-            out.append(f'DEFMT_RTT_BUFFER_SIZE = "{o.rtt_buffer}"' if o.rtt_buffer != 1024 else
-                       '# DEFMT_RTT_BUFFER_SIZE = "4096" # larger buffer avoids losing output in bursts (init)')
-    elif o.log == "esp-println":
-        out.append(f'ESP_LOG = "{o.defmt_log}"')
-    if o.counters:
-        out.append(f'CNT_RAM_BUFFER_SIZE_WORDS = "{o.ram_counters}"')
-        if lay and lay.bkp_words:
-            out.append(f'CNT_BKP_BUFFER_SIZE_WORDS = "{lay.bkp_words}" # must match BKP_REGS in memory.x')
-    out.append("")
-    unstable = []
-    if o.build_core or t.family == "esp":
-        unstable.append('build-std = ["core"]' + (" # smaller binaries; needs nightly + rust-src" if t.family != "esp" else ""))
-    if o.panic_immediate_abort:
-        unstable.append('build-std-features = ["panic_immediate_abort"]')
-    out.append("[unstable]" if unstable else "# [unstable]")
-    out += unstable or ['# build-std = ["core"]                              # smaller binaries (nightly + rust-src)',
-                        '# build-std-features = ["panic_immediate_abort"]   # even smaller, panics become aborts']
-    return "\n".join(out) + "\n"
-
-
-def gen_rust_toolchain(t: Target, o: Opts) -> str:
-    if t.arch == "xtensa":
-        return f'[toolchain]\nchannel = "esp" # install with: cargo install espup && espup install\ncomponents = ["rustfmt", "rust-src"]\n'
-    lines = ["[toolchain]"]
-    if o.nightly or o.build_core or o.panic_immediate_abort:
-        date = nightly_date()
-        lines.append(f'channel = "nightly-{date}"' if date else 'channel = "nightly"')
-        lines.append('components = ["rustfmt", "rust-src"]')
-    elif t.family == "esp":
-        lines += ['channel = "stable"', 'components = ["rustfmt", "rust-src"]']
-    else:
-        lines += ['channel = "stable"', 'components = ["rustfmt"]']
-    lines.append(f'targets = ["{t.rust_target}"]')
-    return "\n".join(lines) + "\n"
-
-
-def nightly_date() -> Optional[str]:
-    try:
-        v = subprocess.run(["rustc", "+nightly", "--version"], capture_output=True, text=True, timeout=20).stdout
-        m = re.search(r"(\d{4}-\d{2}-\d{2})", v)
-        return m.group(1) if m else None
-    except Exception:
-        return None
-
-
-# --- Rust sources ------------------------------------------------------------
-
-
-def log_prelude(t: Target, o: Opts) -> tuple[list[str], str, str]:
-    """returns (use lines, info macro, error macro)"""
-    if o.log == "defmt":
-        uses = ["use defmt::{info, error};" if t.cortex_m else "use defmt::info;"]
-        if t.family == "esp":
-            uses.append("use esp_println as _;")
-        else:
-            uses += ["use defmt_rtt as _;", "use panic_probe as _;"]
-        return uses, "info!", "error!"
-    if o.log == "rtt":
-        return ["use rtt_target::{rprintln, rtt_init_print};", "use panic_rtt_target as _;"], "rprintln!", "rprintln!"
-    if o.log == "esp-println":
-        return ["use log::info;"], "info!", "error!"
-    if t.family == "esp":
-        return ["use esp_backtrace as _;"], "// no logging: ", "// no logging: "
-    return ["use panic_halt as _;"], "// no logging: ", "// no logging: "
-
-
-def gen_main_rs(t: Target, o: Opts, lay: Optional[Layout], have_init_ram: bool, have_init: bool) -> str:
-    uses, info, err = log_prelude(t, o)
-    if t.family == "esp" and o.log in ("defmt", "esp-println"):
-        uses.append("use esp_backtrace as _;")
-    L = []
-    L += ["#![no_std]", "#![no_main]"]
-    L.append("")
-    mods = []
-    if o.build_info:
-        mods.append("mod build_info;")
-    if have_init:
-        mods.append("mod init;")
-    if have_init_ram:
-        mods.append("mod init_ram;")
-    L += mods + ([""] if mods else [])
-    L += uses
-    if o.counters:
-        L.append("use cnt::cnt_if;" + (" // bkp_cnt_if! for counters in backup registers" if lay and lay.bkp_words else ""))
-    L.append("")
-
-    led = o.led
-    body: list[str] = []
-    if o.framework == "embassy":
-        if t.family == "stm32":
-            L += ["use embassy_stm32::gpio::{Level, Output, Speed};", "use embassy_time::Timer;", "use cortex_m_rt::exception;"]
-            if o.supply_config:
-                L.append("use embassy_stm32::rcc::SupplyConfig;")
-                if o.smps_voltage:
-                    L.append("use embassy_stm32::rcc::SMPSSupplyVoltage;")
-            if o.bootloader:
-                L += ["use core::cell::RefCell;", "use embassy_boot_stm32::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};",
-                      "use embassy_stm32::flash::{Flash, WRITE_SIZE};", "use embassy_sync::blocking_mutex::Mutex;"]
-            L += ["", "#[embassy_executor::main]", "async fn main(_spawner: embassy_executor::Spawner) {"]
-            if have_init_ram:
-                body.append("    init_ram::init_ram(); // enable + zero additional SRAM banks before anything is placed there")
-            if o.log == "rtt":
-                body.append("    rtt_init_print!();")
-            body.append(f'    {info}("{o.name} starting...");')
-            body.append("    let mut config = embassy_stm32::Config::default();")
-            if o.supply_config:
-                sc = f"SupplyConfig::{o.supply_config}" + (f"(SMPSSupplyVoltage::{o.smps_voltage})" if o.smps_voltage else "")
-                body.append(f"    config.rcc.supply_config = {sc}; // from schematic: how VCORE is supplied")
-            body.append("    // TODO: configure config.rcc (clock tree) for your board")
-            body.append("    let p = embassy_stm32::init(config);")
-            if have_init:
-                body.append("    init::init();")
-            if t.series == "H7":
-                body += ["", "    let mut cp = cortex_m::Peripherals::take().unwrap();", "    cp.SCB.enable_icache();",
-                         "    // Enable D-cache only once DMA coherency is handled (cache clean/invalidate around DMA buffers)",
-                         "    // cp.SCB.enable_dcache(&mut cp.CPUID);"]
-            if o.bootloader:
-                body += ["", "    let flash = Mutex::new(RefCell::new(Flash::new_blocking(p.FLASH)));",
-                         "    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);",
-                         "    let mut magic = AlignedBuffer([0; WRITE_SIZE]);",
-                         "    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);",
-                         f'    {info}("bootloader state: {{:?}}", updater.get_state());' if o.log != "defmt" else
-                         f'    {info}("bootloader state: {{}}", updater.get_state());',
-                         "    // TODO: call mark_booted() only after self-test; otherwise the bootloader reverts on next reset",
-                         "    updater.mark_booted().unwrap();"]
-            body += ["", f"    let mut led = Output::new(p.{led}, Level::Low, Speed::Low);"]
-        elif t.family == "rp":
-            L += ["use embassy_rp::gpio::{Level, Output};", "use embassy_time::Timer;", "use cortex_m_rt::exception;"]
-            if o.bootloader:
-                L += ["use core::cell::RefCell;", "use embassy_boot_rp::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};",
-                      "use embassy_rp::flash::{Flash, WRITE_SIZE};", "use embassy_sync::blocking_mutex::Mutex;"]
-                fs = lay.regions[0].length if lay else 2 * 1024 * 1024
-                L.append(f"const FLASH_SIZE: usize = 0x{fs:X};")
-            if t.rp_variant != "rp2040":
-                L.append("// RP235x IMAGE_DEF block and boot2 (RP2040) are provided by embassy-rp (features imagedef-*/boot2-*)")
-            L += ["", "// embassy-rp ships its own executor (with multicore support), hence the explicit executor/entry",
-                  '#[embassy_executor::main(executor = "embassy_rp::executor::Executor", entry = "cortex_m_rt::entry")]',
-                  "async fn main(_spawner: embassy_executor::Spawner) {"]
-            if have_init_ram:
-                body.append("    init_ram::init_ram();")
-            if o.log == "rtt":
-                body.append("    rtt_init_print!();")
-            body += [f'    {info}("{o.name} starting...");', "    let p = embassy_rp::init(Default::default());"]
-            if o.bootloader:
-                body += ["", "    let flash = Mutex::new(RefCell::new(Flash::<_, embassy_rp::flash::Blocking, FLASH_SIZE>::new_blocking(p.FLASH)));",
-                         "    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);",
-                         "    let mut magic = AlignedBuffer([0; WRITE_SIZE]);",
-                         "    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);",
-                         "    // TODO: call mark_booted() only after self-test",
-                         "    updater.mark_booted().unwrap();"]
-            body += ["", f"    let mut led = Output::new(p.{led}, Level::Low);"]
-        elif t.family == "nrf":
-            L += ["use embassy_nrf::gpio::{Level, Output, OutputDrive};", "use embassy_time::Timer;", "use cortex_m_rt::exception;"]
-            if o.bootloader:
-                L += ["use core::cell::RefCell;", "use embassy_boot_nrf::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};",
-                      "use embassy_nrf::nvmc::{Nvmc, PAGE_SIZE};", "use embassy_sync::blocking_mutex::Mutex;"]
-            L += ["", "#[embassy_executor::main]", "async fn main(_spawner: embassy_executor::Spawner) {"]
-            if have_init_ram:
-                body.append("    init_ram::init_ram();")
-            if o.log == "rtt":
-                body.append("    rtt_init_print!();")
-            body += [f'    {info}("{o.name} starting...");', "    let p = embassy_nrf::init(Default::default());"]
-            if o.bootloader:
-                body += ["", "    let flash = Mutex::new(RefCell::new(Nvmc::new(p.NVMC)));",
-                         "    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);",
-                         "    let mut magic = AlignedBuffer([0; PAGE_SIZE]);",
-                         "    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);",
-                         "    // TODO: call mark_booted() only after self-test",
-                         "    updater.mark_booted().unwrap();"]
-            body += ["", f"    let mut led = Output::new(p.{led}, Level::Low, OutputDrive::Standard);"]
-        elif t.family == "esp":
-            L += ["use esp_hal::gpio::{Level, Output, OutputConfig};", "use esp_hal::timer::timg::TimerGroup;",
-                  "use esp_hal::clock::CpuClock;", "use embassy_time::Timer;", "",
-                  "// App descriptor required by the esp-idf 2nd stage bootloader",
-                  "esp_bootloader_esp_idf::esp_app_desc!();", "",
-                  "#[esp_rtos::main]", "async fn main(_spawner: embassy_executor::Spawner) -> ! {"]
-            if o.log == "esp-println":
-                body.append("    esp_println::logger::init_logger_from_env();")
-            body += ["    let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());",
-                     "    let peripherals = esp_hal::init(config);",
-                     "    let timg0 = TimerGroup::new(peripherals.TIMG0);",
-                     "    esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);",
-                     f'    {info}("{o.name} starting...");',
-                     f"    let mut led = Output::new(peripherals.{led}, Level::Low, OutputConfig::default());"]
-        if o.build_info:
-            body += ["", "    // Reference build info so it is retained in flash / ELF",
-                     "    _ = core::hint::black_box(build_info::compact());",
-                     "    _ = core::hint::black_box(build_info::full());"] if o.log == "defmt" else []
-        body += ["", f'    {info}("init done");', "    loop {", "        led.toggle();"]
-        if o.counters:
-            body.append("        cnt_if!(true, led_toggles: u32 += 1);")
-        body += ["        Timer::after_millis(1000).await;", "    }", "}"]
-    else:  # stm32-hal / bare, blocking
-        if o.framework == "stm32-hal":
-            L += ["use cortex_m_rt::{entry, exception};", "use hal::{clocks::Clocks, gpio::{Pin, PinMode, Port}};", "",
-                  "#[entry]", "fn main() -> ! {"]
-            if have_init_ram:
-                body.append("    init_ram::init_ram();")
-            if o.log == "rtt":
-                body.append("    rtt_init_print!();")
-            body += ["    let _dp = hal::pac::Peripherals::take().unwrap();",
-                     "    let clock_cfg = Clocks::default(); // TODO: configure for your board",
-                     "    clock_cfg.setup().unwrap();"]
-            if have_init:
-                body.append("    init::init();")
-            port, pin = re.fullmatch(r"P([A-Z])(\d+)", led).groups() if re.fullmatch(r"P([A-Z])(\d+)", led) else ("B", "14")
-            body.append(f"    let mut led = Pin::new(Port::{port}, {pin}, PinMode::Output);")
-            body += [f'    {info}("{o.name} starting...");']
-            if o.build_info:
-                body += ["    _ = core::hint::black_box(build_info::compact());", "    _ = core::hint::black_box(build_info::full());"] if o.log == "defmt" else []
-            body += ["    loop {", "        led.toggle();"]
-            if o.counters:
-                body.append("        cnt_if!(true, led_toggles: u32 += 1);")
-            body += ["        cortex_m::asm::delay(clock_cfg.sysclk() / 2); // TODO: use a timer", "    }", "}"]
-        elif t.family == "esp":
-            L += ["use esp_hal::main;", "use esp_hal::time::{Duration, Instant};", "", "esp_bootloader_esp_idf::esp_app_desc!();", "",
-                  "#[main]", "fn main() -> ! {"]
-            if o.log == "esp-println":
-                body.append("    esp_println::logger::init_logger_from_env();")
-            body += ["    let _peripherals = esp_hal::init(esp_hal::Config::default());",
-                     f'    {info}("{o.name} starting...");', "    loop {"]
-            if o.counters:
-                body.append("        cnt_if!(true, loop_iterations: u32 += 1);")
-            body += ["        let t = Instant::now();", "        while t.elapsed() < Duration::from_millis(1000) {}", "    }", "}"]
-        else:
-            L += ["use cortex_m_rt::{entry, exception};", "", "#[entry]", "fn main() -> ! {"]
-            if have_init_ram:
-                body.append("    init_ram::init_ram();")
-            if o.log == "rtt":
-                body.append("    rtt_init_print!();")
-            body += [f'    {info}("{o.name} starting...");',
-                     "    // TODO: add a PAC/HAL dependency and initialize peripherals"]
-            if o.build_info:
-                body += ["    _ = core::hint::black_box(build_info::compact());", "    _ = core::hint::black_box(build_info::full());"] if o.log == "defmt" else []
-            body += ["    loop {"]
-            if o.counters:
-                body.append("        cnt_if!(true, loop_iterations: u32 += 1);")
-            body += ["        cortex_m::asm::wfi();", "    }", "}"]
-    L += body
-
-    if t.cortex_m:
-        L += ["", "#[exception]", "unsafe fn DefaultHandler(irqn: i16) {"]
-        if o.counters:
-            L.append("    cnt_if!(true, unhandled_exceptions: u32 += 1);")
-            if lay and lay.bkp_words:
-                L.append("    cnt::bkp_cnt_if!(true, unhandled_exceptions_total: u32 += 1);")
-        L += [f'    {err}("unhandled exception, IRQn = {{}}", irqn);' if o.log not in ("none",) else "    let _ = irqn;",
-              "}", "", "#[exception]", "unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {"]
-        if lay and lay.bkp_words:
-            L.append("    cnt::bkp_cnt_if!(true, hard_faults: u32 += 1);")
-        if o.log == "defmt":
-            L.append('    error!("HardFault {}", defmt::Debug2Format(ef));')
-        elif o.log == "rtt":
-            L.append('    rprintln!("HardFault {:?}", ef);')
-        else:
-            L.append("    let _ = ef;")
-        L += ["    // TODO: consider cortex_m::peripheral::SCB::sys_reset() in production", "    loop {}", "}"]
-    return "\n".join(L) + "\n"
-
-
-def gen_init_rs(t: Target, o: Opts, lay: Layout) -> Optional[str]:
-    """STM32-specific init: backup-domain reset (when RTC unused) and backup register access for counters."""
-    if t.family != "stm32" or o.framework != "embassy":
-        return None
-    if not lay.bkp_words and o.rtc:
-        return None  # nothing to do
-    r = o.regs
-    L = ["//! Low level init that HALs do not cover. Generated from stm32-data; verify against the reference manual.", "",
-         "#[allow(unused_imports)]", "use embassy_stm32::pac;", "", "pub(crate) fn init() {"]
-    calls = []
-    if lay.bkp_words:
-        calls.append("    enable_backup_registers();")
-    elif not o.rtc:
-        calls.append("    reset_backup_domain();")
-    L += calls or ["    // nothing to do"]
-    L.append("}")
-
-    def pwr_clock_on():
-        return [f"    rcc.{r.pwr_enable[0]}().modify(|w| w.set_{r.pwr_enable[1]}(true));",
-                f"    let _ = rcc.{r.pwr_enable[0]}().read(); // make sure the enable went through"] if r and r.pwr_enable else \
-               ["    // PWR clock is always on for this family"]
-
-    dbp = r.pwr_dbp_reg if r and r.pwr_dbp_reg else None
-    bdcr = r.rcc_bdcr if r and r.rcc_bdcr else None
-    if not lay.bkp_words and not o.rtc:
-        L += ["", "/// Reset the backup (RTC) domain when the RTC is not used.",
-              "///",
-              "/// Contents of the backup domain survive resets but can be corrupted after a VBAT/VDD brown-out, leading to",
-              "/// hard to debug problems (LSE enabling itself, PC13/PC14/PC15 changing mode, ...).",
-              "/// See http://efton.sk/STM32/gotcha/g133.html and http://efton.sk/STM32/gotcha/g62.html",
-              "pub(crate) fn reset_backup_domain() {", "    let rcc = pac::RCC;", "    let pwr = pac::PWR;"]
-        L += pwr_clock_on()
-        if dbp and bdcr:
-            L += [f"    pwr.{dbp}().modify(|w| w.set_dbp(true));",
-                  f"    let mut saved = pwr.{dbp}().read(); // read back: write must pass the synchronizer first",
-                  f"    rcc.{bdcr}().modify(|w| w.set_bdrst(true));",
-                  f"    rcc.{bdcr}().modify(|w| w.set_bdrst(false));",
-                  "    saved.set_dbp(false);", f"    pwr.{dbp}().write_value(saved);"]
-        else:
-            L += ["    // TODO: set PWR.DBP, pulse RCC.BDCR.BDRST, clear DBP (register names not found in stm32-data)",
-                  "    let _ = (rcc, pwr);"]
-        L.append("}")
-    if lay.bkp_words:
-        pname = o.bkp[0] if o.bkp else "TAMP/RTC"
-        L += ["", f"/// Enable write access to {pname} backup registers used by `bkp_cnt_if!` counters.",
-              "/// Backup registers are only accessible with DBP set and (on most families) the RTC APB clock enabled.",
-              "/// NOTE: TAMP/RTC backup registers are reset by a backup domain reset, so do not call reset_backup_domain().",
-              "pub(crate) fn enable_backup_registers() {", "    let rcc = pac::RCC;", "    let pwr = pac::PWR;"]
-        L += pwr_clock_on()
-        if dbp:
-            L.append(f"    pwr.{dbp}().modify(|w| w.set_dbp(true));")
-        else:
-            L.append("    // TODO: set PWR.DBP")
-        if r and r.rtc_enable:
-            L.append(f"    rcc.{r.rtc_enable[0]}().modify(|w| w.set_{r.rtc_enable[1]}(true));")
-        if bdcr:
-            L += ["    // TODO: verify on your part whether RTCEN (with a clock source) is required for backup register writes",
-                  f"    // rcc.{bdcr}().modify(|w| {{ w.set_rtcsel(pac::rcc::vals::Rtcsel::LSI); w.set_rtcen(true); }});"]
-        L.append("}")
-    return "\n".join(L) + "\n"
-
-
-def gen_init_ram_rs(t: Target, o: Opts, lay: Layout) -> Optional[str]:
-    extra = [r for r in lay.regions if r.kind == "ram" and not r.is_main_ram and not r.commented_out]
-    if not extra or not t.cortex_m:
-        return None
-    embassy_stm32 = t.family == "stm32" and o.framework == "embassy"
-    L = ["//! Enable (clock) and zero additional RAM banks. The startup code only zeroes .bss in the main RAM region;",
-         "//! anything placed into other banks (e.g. `#[unsafe(link_section = \".sram1\")] static ...`) must be zeroed here.",
-         "//! Generated from stm32-data; verify enable bits against the reference manual.", "",
-         "pub(crate) fn init_ram() {"]
-    fns = []
-    for r in extra:
-        name = r.name.lower()
-        bits = o.regs.sram_enable.get(r.name, []) if o.regs else []
-        L.append(f"    init_{name}();")
-        body = ["    unsafe {", "        unsafe extern \"C\" {", f"            static mut __{name}_start: u8;",
-                f"            static mut __{name}_end: u8;", "        }"]
-        if bits:
-            if embassy_stm32:
-                body.append("        let rcc = embassy_stm32::pac::RCC;")
-                for reg, fld in bits:
-                    body.append(f"        rcc.{reg}().modify(|w| w.set_{fld}(true));")
-            else:
-                body.append("        // TODO: enable clock: " + ", ".join(f"RCC.{reg.upper()}.{fld.upper()}" for reg, fld in bits))
-        elif t.family == "stm32":
-            body.append(f"        // {r.name}: no RCC enable bit found, assumed always on")
-        body += [f"        let count = &raw const __{name}_end as usize - &raw const __{name}_start as usize;",
-                 f"        core::ptr::write_bytes(&raw mut __{name}_start, 0, count);", "    }"]
-        fns += ["", f"fn init_{name}() {{"] + body + ["}"]
-    L.append("}")
-    return "\n".join(L + fns) + "\n"
-
-
-def gen_bootloader(t: Target, o: Opts, lay: Layout) -> dict[str, str]:
-    files: dict[str, str] = {}
-    fam = t.family
-    defmt = o.log == "defmt"
-    hal = {"stm32": ("embassy-stm32", V["embassy-stm32"], t.chip),
-           "rp": ("embassy-rp", V["embassy-rp"], t.rp_variant),
-           "nrf": ("embassy-nrf", V["embassy-nrf"], t.hal_feature)}[fam]
-    hal = (hal[0], hal[1], [hal[2]])
-    deps = [f'{hal[0]} = {{ version = "{hal[1]}", features = {toml_list(hal[2])} }}',
-            f'embassy-boot-{fam} = "{V["embassy-boot-" + fam]}"',
-            f'embassy-sync = "{V["embassy-sync"]}"',
-            f'cortex-m = {{ version = "{V["cortex-m"]}", features = ["inline-asm", "critical-section-single-core"] }}',
-            f'cortex-m-rt = "{V["cortex-m-rt"]}"',
-            f'embedded-storage = "{V["embedded-storage"]}"',
-            f'defmt = {{ version = "{V["defmt"]}", optional = true }}',
-            f'defmt-rtt = {{ version = "{V["defmt-rtt"]}", optional = true }}']
-    if fam == "rp":
-        deps.append(f'embassy-time = "{V["embassy-time"]}"')
-    if o.build_info:
-        bb = f'{{ git = "{BEDROCK_GIT}" }}' if o.bedrock == "git" else f'{{ path = "../{o.bedrock}/bedrock_build" }}'
-        bdeps = [f"bedrock_build = {bb}", f'build-info-build = "{V["build-info-build"]}"']
-    else:
-        bdeps = []
-    files["bootloader/Cargo.toml"] = f"""[package]
-name = "{o.name}-bootloader"
-version = "0.1.0"
-edition = "2024"
-
-# standalone crate: keeps an enclosing Cargo workspace from claiming it
-[workspace]
-
-[dependencies]
-{chr(10).join(deps)}
-
-[build-dependencies]
-{chr(10).join(bdeps) if bdeps else '# (none)'}
-
-[features]
-default = []
-defmt = ["dep:defmt", "dep:defmt-rtt", "embassy-boot-{fam}/defmt", "{hal[0]}/defmt"]
-
-# The bootloader must fit into the BOOTLOADER region in both profiles, so dev is size-optimized too.
-[profile.dev]
-codegen-units = 1
-debug = 2
-debug-assertions = false
-lto = "fat"
-opt-level = "z"
-incremental = false
-overflow-checks = false
-
-[profile.release]
-codegen-units = 1
-debug = 2
-lto = "fat"
-opt-level = "z"
-incremental = false
-"""
-    files["bootloader/build.rs"] = gen_build_rs(t, o, bootloader=True)
-    files["bootloader/memory.x"] = render_memory_x(t, lay, for_bootloader=True)
-    files["bootloader/.cargo/config.toml"] = gen_config_toml(t, Opts(**{**vars(o), "counters": False, "log": "none", "build_core": False, "panic_immediate_abort": False}), None)
-    files["bootloader/rust-toolchain.toml"] = gen_rust_toolchain(t, o)
-    if o.build_info:
-        files["bootloader/src/build_info.rs"] = 'include!(concat!(env!("OUT_DIR"), "/build_info.rs"));\n'
-
-    if fam == "stm32":
-        init = ["    let mut config = embassy_stm32::Config::default();"]
-        if o.supply_config:
-            sc = f"embassy_stm32::rcc::SupplyConfig::{o.supply_config}" + (f"(embassy_stm32::rcc::SMPSSupplyVoltage::{o.smps_voltage})" if o.smps_voltage else "")
-            init.append(f"    config.rcc.supply_config = {sc};")
-        init += ["    let p = embassy_stm32::init(config);",
-                 "    let layout = Flash::new_blocking(p.FLASH).into_blocking_regions();",
-                 "    let flash = Mutex::new(RefCell::new(layout.bank1_region)); // TODO: dual-bank parts may need bank2 for DFU",
-                 "    let config = BootLoaderConfig::from_linkerfile_blocking(&flash, &flash, &flash);",
-                 "    let active_offset = config.active.offset();",
-                 f"    let bl = BootLoader::prepare::<_, _, _, {max(m.erase_size for m in t.memories if m.kind == 'flash')}>(config);",
-                 "    unsafe { bl.load(BANK1_REGION.base() + active_offset) }"]
-        uses = ["use embassy_boot_stm32::*;", "use embassy_stm32::flash::{BANK1_REGION, Flash};"]
-    elif fam == "rp":
-        init = ["    let p = embassy_rp::init(Default::default());",
-                "    let flash = WatchdogFlash::<FLASH_SIZE>::start(p.FLASH, p.WATCHDOG, Duration::from_secs(8));",
-                "    let flash = Mutex::new(RefCell::new(flash));",
-                "    let config = BootLoaderConfig::from_linkerfile_blocking(&flash, &flash, &flash);",
-                "    let active_offset = config.active.offset();",
-                "    let bl: BootLoader = BootLoader::prepare(config);",
-                "    unsafe { bl.load(embassy_rp::flash::FLASH_BASE as u32 + active_offset) }"]
-        uses = ["use embassy_boot_rp::*;", "use embassy_time::Duration;", f"const FLASH_SIZE: usize = 0x{lay.regions[0].length:X};"]
-    else:
-        init = ["    let p = embassy_nrf::init(Default::default());",
-                "    let mut wdt_config = wdt::Config::default();",
-                "    wdt_config.timeout_ticks = 32768 * 5;",
-                "    wdt_config.action_during_sleep = SleepConfig::Run;",
-                "    wdt_config.action_during_debug_halt = HaltConfig::Pause;",
-                "    let flash = WatchdogFlash::start(Nvmc::new(p.NVMC), p.WDT, wdt_config);",
-                "    let flash = Mutex::new(RefCell::new(flash));",
-                "    let config = BootLoaderConfig::from_linkerfile_blocking(&flash, &flash, &flash);",
-                "    let active_offset = config.active.offset();",
-                "    let bl: BootLoader = BootLoader::prepare(config);",
-                "    unsafe { bl.load(active_offset) }"]
-        uses = ["use embassy_boot_nrf::*;", "use embassy_nrf::nvmc::Nvmc;", "use embassy_nrf::wdt::{self, HaltConfig, SleepConfig};"]
-    bi = ["    _ = core::hint::black_box(build_info::compact());"] if o.build_info else []
-    files["bootloader/src/main.rs"] = f"""#![no_std]
-#![no_main]
-{"mod build_info;" if o.build_info else ""}
-use core::cell::RefCell;
-
-use cortex_m_rt::{{entry, exception}};
-#[cfg(feature = "defmt")]
-use defmt_rtt as _;
-{chr(10).join(uses)}
-use embassy_sync::blocking_mutex::Mutex;
-
-#[entry]
-fn main() -> ! {{
-    // Uncomment when debugging the bootloader with a debugger attached: accessing flash too early after
-    // boot can hard fault.
-    // for _ in 0..10_000_000 {{ cortex_m::asm::nop(); }}
-{chr(10).join(bi)}
-{chr(10).join(init)}
-}}
-
-#[unsafe(no_mangle)]
-#[cfg_attr(target_os = "none", unsafe(link_section = ".HardFault.user"))]
-unsafe extern "C" fn HardFault() {{
-    cortex_m::peripheral::SCB::sys_reset();
-}}
-
-#[exception]
-unsafe fn DefaultHandler(irqn: i16) -> ! {{
-    panic!("DefaultHandler #{{:?}}", irqn);
-}}
-
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {{
-    cortex_m::asm::udf();
-}}
-"""
-    files["bootloader/README.md"] = f"""# {o.name} bootloader
-
-[embassy-boot]({'https://docs.embassy.dev/embassy-boot/'}) A/B bootloader. Flash it once, then the application:
-
-```
-cd bootloader && cargo flash --release --chip {t.probe_chip}
-cd .. && cargo run --release
-```
-
-The MCU locks up after flashing only the bootloader (no valid application yet), that is expected.
-
-Partition layout is in `memory.x` (kept in sync with `../memory.x`). `--features defmt` enables RTT logging.
-"""
-    files["bootloader/.gitignore"] = "target/\n"
-    return files
-
-
-def gen_readme(t: Target, o: Opts, lay: Optional[Layout]) -> str:
-    L = [f"# {o.name}", "", f"Firmware for **{t.display}** ({t.rust_target}), framework: `{o.framework}`, logging: `{o.log}`.", "",
-         "## Toolchain", "", "```", f"rustup target add {t.rust_target}"]
-    if t.cortex_m:
-        L.append("cargo install probe-rs-tools --locked" + (" flip-link" if o.flip_link else ""))
-    elif t.arch == "xtensa":
-        L += ["cargo install espup espflash", "espup install && source ~/export-esp.sh"]
-    else:
-        L.append("cargo install espflash")
-    if o.counters:
-        L.append("cargo install cnt_cli   # read counters: cnt_cli target/<target>/debug/" + o.name + " tui")
-    L += ["```", "", "## Run", "", "```", "cargo run            # dev profile", "cargo run --release", "```", ""]
-    if t.cortex_m and o.build_info:
-        L += ["`RAM_LINK=1 cargo run` links and runs from RAM (flash content untouched; power-cycle restores the old firmware).", ""]
-    if lay:
-        L += ["## Memory layout", "", "See `memory.x`. Summary:", "", "| region | origin | size | |", "|---|---|---|---|"]
-        for r in lay.regions:
-            L.append(f"| {r.name}{' (ref)' if r.commented_out else ''} | 0x{r.origin:08X} | {fmt_len(r.length)} | {r.comment} |")
-        L.append("")
-    if o.bootloader:
-        L += ["## Bootloader", "", "See `bootloader/README.md`. Flash the bootloader first.", ""]
-    if t.family == "stm32" and t.stm32.get("family"):
-        i = t.stm32
-        L += ["## MCU", "", f"* Family: {i['family']}, line: {i['line']}, die: {i['die']}, device id: 0x{i['device_id']:X}",
-              "* Packages: " + ", ".join(f"{p['name']} ({p['package']}, {len(p['pins'])} pins)" for p in i["packages"]), "", "### Documentation", ""]
-        for doc in i.get("docs", []):
-            L.append(f"* [{doc['title']} ({doc['type']}, {doc['name']})]({doc['url']})")
-        L.append("")
-    L += ["## TODO after generation", "", "* Review every `TODO` in the sources and `memory.x`",
-          "* Configure the clock tree and pin assignments for your board"]
-    if o.supply_config:
-        L.append(f"* Verify `SupplyConfig::{o.supply_config}` against the schematic (wrong SMPS/LDO config can brick boards)")
-    for n in t.notes + (o.regs.notes if o.regs else []):
-        L.append(f"* {n}")
-    return "\n".join(L) + "\n"
+def hal2_features(t: Target) -> tuple[str, str]:
+    feat = STM32_HAL2_FEATURES.get(t.display[5:9].lower())
+    rt = STM32_HAL2_RT.get(t.series)
+    if not feat or not rt:
+        die(f"stm32-hal2 has no feature for {t.display}; supported prefixes: {', '.join(sorted(STM32_HAL2_FEATURES))}")
+    return feat, rt
 
 
 def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
+    r = o.regs
+    info, err = log_macros(o)
+    extra_rams = [x for x in lay.regions if x.kind == "ram" and not x.is_main_ram and not x.commented_out] if lay else []
+    have_init_ram = bool(extra_rams) and t.cortex_m
+    have_init = bool(lay) and t.family == "stm32" and o.framework == "embassy" and bool(lay.bkp_words or not o.rtc)
+    ctx = dict(t=t, o=o, lay=lay, bkp_words=lay.bkp_words if lay else 0, info=info, err=err,
+               have_init=have_init, have_init_ram=have_init_ram, main_variant=main_variant(t, o),
+               flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024)
+    if o.framework == "stm32-hal":
+        ctx["hal2_feature"], ctx["hal2_rt"] = hal2_features(t)
+        m = re.fullmatch(r"P([A-Z])(\d+)", o.led)
+        ctx["led_port"], ctx["led_pin"] = m.groups() if m else ("B", "14")
+
     files: dict[str, str] = {}
-    have_init_ram = False
-    have_init = False
     if lay:
         files["memory.x"] = render_memory_x(t, lay)
-        ir = gen_init_ram_rs(t, o, lay)
-        if ir:
-            files["src/init_ram.rs"] = ir
-            have_init_ram = True
-        ini = gen_init_rs(t, o, lay)
-        if ini:
-            files["src/init.rs"] = ini
-            have_init = True
-    files["Cargo.toml"] = gen_cargo_toml(t, o, lay)
-    files["build.rs"] = gen_build_rs(t, o)
-    files[".cargo/config.toml"] = gen_config_toml(t, o, lay)
-    files["rust-toolchain.toml"] = gen_rust_toolchain(t, o)
-    files["src/main.rs"] = gen_main_rs(t, o, lay, have_init_ram, have_init)
+    if have_init_ram:
+        files["src/init_ram.rs"] = render("app/src/init_ram.rs.j2", **ctx, extra=extra_rams,
+                                          sram_enable=r.sram_enable if r else {},
+                                          embassy_stm32=t.family == "stm32" and o.framework == "embassy")
+    if have_init:
+        files["src/init.rs"] = render("app/src/init.rs.j2", **ctx, r=r, dbp=r.pwr_dbp_reg if r else None,
+                                      bdcr=r.rcc_bdcr if r else None)
+    files["Cargo.toml"] = render("app/Cargo.toml.j2", **ctx)
+    files["build.rs"] = render("app/build.rs.j2", **ctx, bootloader=False)
+    files[".cargo/config.toml"] = render("app/cargo_config.toml.j2", **ctx)
+    files["rust-toolchain.toml"] = render("app/rust-toolchain.toml.j2", **ctx)
+    files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.build_info:
-        files["src/build_info.rs"] = ("//! Build information embedded by build.rs via bedrock_build.\n"
-                                      "//! `compact()` is a CRC'd blob stored in flash, `full()` is interned into defmt strings (ELF only).\n"
-                                      'include!(concat!(env!("OUT_DIR"), "/build_info.rs"));\n')
-    files[".gitignore"] = "target/\n"
-    files["README.md"] = gen_readme(t, o, lay)
+        files["src/build_info.rs"] = render("app/src/build_info.rs")
+    files[".gitignore"] = render("app/gitignore")
+    packages = ", ".join(f"{p['name']} ({p['package']}, {len(p['pins'])} pins)" for p in t.stm32.get("packages", []))
+    files["README.md"] = render("app/README.md.j2", **ctx, packages=packages, notes=t.notes + (r.notes if r else []))
     if o.bootloader and lay:
         files.update(gen_bootloader(t, o, lay))
+    return files
+
+
+def gen_bootloader(t: Target, o: Opts, lay: Layout) -> dict[str, str]:
+    ctx = dict(t=t, o=o, flash_size=lay.regions[0].length,
+               max_erase_size=max(m.erase_size for m in t.memories if m.kind == "flash"))
+    # no counters, logging or build-std in the bootloader's .cargo/config.toml
+    cfg_opts = Opts(**{**vars(o), "counters": False, "log": "none", "build_core": False, "panic_immediate_abort": False})
+    files = {
+        "bootloader/Cargo.toml": render("bootloader/Cargo.toml.j2", **ctx),
+        "bootloader/build.rs": render("app/build.rs.j2", **ctx, bootloader=True),
+        "bootloader/memory.x": render_memory_x(t, lay, for_bootloader=True),
+        "bootloader/.cargo/config.toml": render("app/cargo_config.toml.j2", t=t, o=cfg_opts, bkp_words=0),
+        "bootloader/rust-toolchain.toml": render("app/rust-toolchain.toml.j2", **ctx),
+    }
+    if o.build_info:
+        files["bootloader/src/build_info.rs"] = render("bootloader/src/build_info.rs")
+    files["bootloader/src/main.rs"] = render("bootloader/src/main.rs.j2", **ctx)
+    files["bootloader/README.md"] = render("bootloader/README.md.j2", **ctx)
+    files["bootloader/.gitignore"] = render("app/gitignore")
     return files
 
 
@@ -1488,19 +680,8 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
 
 
 def gen_hubris_memory(t: Target) -> str:
-    L = [f"# Hubris memory map for {t.display}, generated from stm32-data / built-in table.",
-         "# Place in chips/<family>/memory-<chip>.toml and reference via `memory = ...` in app.toml.",
-         "# Verify: Hubris requires regions to be power-of-two sized and aligned for MPU on ARMv7-M.", ""]
-    fl = [m for m in t.memories if m.kind == "flash"]
-    if fl:
-        L += ["[[flash]]", f"address = 0x{fl[0].address:08x}", f"size = {sum(m.size for m in fl)}", "read = true", "execute = true", ""]
-    for m in t.memories:
-        if m.kind != "ram":
-            continue
-        name = {"AXISRAM": "axi_sram", "RAM": "ram"}.get(m.name, m.name.lower())
-        L += [f"[[{name}]]", f"address = 0x{m.address:08x}", f"size = {m.size}", "read = true", "write = true",
-              "execute = false" if m.name != "ITCM" else "execute = true", ""]
-    return "\n".join(L)
+    return render("hubris/memory.toml.j2", t=t, flash=[m for m in t.memories if m.kind == "flash"],
+                  rams=[m for m in t.memories if m.kind == "ram"])
 
 
 # ----------------------------------------------------------------------------
@@ -1579,7 +760,7 @@ def cmd_new(args) -> None:
         die("--bkp-counters is STM32 only")
 
     lay = make_layout(t, args, regs)
-    led = args.led or {"stm32": "PB14", "rp": "PIN_25", "nrf": "P0_13", "esp": ESP_LED.get(t.chip, "GPIO8")}[t.family]
+    led = args.led or t.default_led
     o = Opts(name=name, framework=fw, log=log, bootloader=args.bootloader, config_page=args.config_page,
              counters=args.counters, ram_counters=args.ram_counters, bkp=regs.bkp if regs else None, bkp_mode=args.bkp_counters,
              flip_link=not args.no_flip_link, nightly=args.nightly, build_core=args.build_core,
@@ -1640,7 +821,7 @@ def cmd_memory_x(args) -> None:
 
 def cmd_hubris(args) -> None:
     t = resolve_target(args)
-    print(gen_hubris_memory(t))
+    print(gen_hubris_memory(t), end="")
 
 
 def cmd_list(_args) -> None:

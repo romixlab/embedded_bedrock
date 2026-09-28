@@ -1,0 +1,11 @@
+{#- Shared helpers. Import with: {% from "macros.j2" import dep, bedrock_build %} -#}
+
+{#- `name = { version = "<V[name]>", features = [...] }` (single line, no newline) -#}
+{% macro dep(name, features) -%}
+{{ name }} = { version = "{{ V[name] }}", features = {{ features | toml_list }} }
+{%- endmacro %}
+
+{#- Inline table for the bedrock_build dependency; `prefix` is prepended to a local --bedrock path -#}
+{% macro bedrock_build(bedrock, prefix="", flip_link=false) -%}
+{% if bedrock == "git" %}{ git = "{{ BEDROCK_GIT }}"{% else %}{ path = "{{ prefix }}{{ bedrock }}/bedrock_build"{% endif %}{{ ', features = ["flip-link"] }' if flip_link else " }" }}
+{%- endmacro %}

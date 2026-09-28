@@ -11,15 +11,16 @@ description: >
 
 # Firmware project template
 
-Everything is driven by one dependency-free Python script: `scripts/bedrock_gen.py` (Python ≥ 3.9,
-network only needed for STM32 parts, cached in `~/.cache/bedrock_gen`).
+Everything is driven by one Python script, `scripts/bedrock_gen.py`, run with [uv](https://docs.astral.sh/uv/)
+(Python ≥ 3.11 and Jinja2 are declared inline in the script and pinned in `bedrock_gen.py.lock`; uv installs
+them on first run). Network is only needed for STM32 parts, cached in `~/.cache/bedrock_gen`.
 
 ```
-python3 scripts/bedrock_gen.py list-chips
-python3 scripts/bedrock_gen.py chip-info  --chip STM32H725IG
-python3 scripts/bedrock_gen.py memory-x   --chip STM32G0B1RE --bootloader --config-page
-python3 scripts/bedrock_gen.py new <name> --chip <chip> [options]
-python3 scripts/bedrock_gen.py hubris-memory --chip STM32H743ZI
+uv run scripts/bedrock_gen.py list-chips
+uv run scripts/bedrock_gen.py chip-info  --chip STM32H725IG
+uv run scripts/bedrock_gen.py memory-x   --chip STM32G0B1RE --bootloader --config-page
+uv run scripts/bedrock_gen.py new <name> --chip <chip> [options]
+uv run scripts/bedrock_gen.py hubris-memory --chip STM32H743ZI
 ```
 
 Paths are relative to this skill directory; use the absolute path when invoking.
@@ -68,7 +69,10 @@ Details: `references/memory-layout.md` (partitioning rules, symbols, embassy-boo
 
 ## Maintaining the script
 
-- Crate versions live in the `V` dict at the top; verify against crates.io before bumping
+- Crate versions live in `scripts/data/versions.toml`; verify against crates.io before bumping
   (`curl -s https://crates.io/api/v1/crates/<name> -A x | jq .crate.max_stable_version`).
-- Non-STM32 chips are in `BUILTIN`; STM32 comes entirely from `embassy-rs/stm32-data-generated`.
+- Non-STM32 chips are in `scripts/data/chips.toml`; STM32 comes from `embassy-rs/stm32-data-generated`, plus
+  the rust target / stm32-hal2 feature tables in `scripts/data/stm32.toml`.
+- Generated file contents are Jinja2 templates in `scripts/templates/` (conventions in its `README.md`); the
+  script only resolves the chip, computes the memory layout and picks templates.
 - After changes, regenerate and build the matrix in `references/frameworks.md#tested-matrix`.

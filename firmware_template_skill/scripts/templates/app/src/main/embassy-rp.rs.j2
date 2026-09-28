@@ -1,0 +1,37 @@
+use embassy_rp::gpio::{Level, Output};
+use embassy_time::Timer;
+use cortex_m_rt::exception;
+{% if o.bootloader %}
+use core::cell::RefCell;
+use embassy_boot_rp::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
+use embassy_rp::flash::{Flash, WRITE_SIZE};
+use embassy_sync::blocking_mutex::Mutex;
+const FLASH_SIZE: usize = {{ flash_size | hex }};
+{% endif %}
+{% if t.rp_variant != "rp2040" %}
+// RP235x IMAGE_DEF block and boot2 (RP2040) are provided by embassy-rp (features imagedef-*/boot2-*)
+{% endif %}
+
+// embassy-rp ships its own executor (with multicore support), hence the explicit executor/entry
+#[embassy_executor::main(executor = "embassy_rp::executor::Executor", entry = "cortex_m_rt::entry")]
+async fn main(_spawner: embassy_executor::Spawner) {
+{% if have_init_ram %}
+    init_ram::init_ram();
+{% endif %}
+{% if o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}
+    {{ info }}("{{ o.name }} starting...");
+    let p = embassy_rp::init(Default::default());
+{% if o.bootloader %}
+
+    let flash = Mutex::new(RefCell::new(Flash::<_, embassy_rp::flash::Blocking, FLASH_SIZE>::new_blocking(p.FLASH)));
+    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);
+    let mut magic = AlignedBuffer([0; WRITE_SIZE]);
+    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);
+    // TODO: call mark_booted() only after self-test
+    updater.mark_booted().unwrap();
+{% endif %}
+
+    let mut led = Output::new(p.{{ o.led }}, Level::Low);
+{% include "app/src/main/_embassy_loop.rs.j2" %}

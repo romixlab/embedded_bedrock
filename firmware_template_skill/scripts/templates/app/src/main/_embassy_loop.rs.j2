@@ -1,0 +1,17 @@
+{# Common tail of the embassy main() bodies; `led` is an Output created by the caller. #}
+{% if o.build_info %}
+
+    // Reference build info so it is retained in flash / ELF
+    _ = core::hint::black_box(build_info::compact());
+    _ = core::hint::black_box(build_info::full());
+{% endif %}
+
+    {{ info }}("init done");
+    loop {
+        led.toggle();
+{% if o.counters %}
+        cnt_if!(true, led_toggles: u32 += 1);
+{% endif %}
+        Timer::after_millis(1000).await;
+    }
+}

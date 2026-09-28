@@ -1,0 +1,6 @@
+{% if r and r.pwr_enable %}
+    rcc.{{ r.pwr_enable[0] }}().modify(|w| w.set_{{ r.pwr_enable[1] }}(true));
+    let _ = rcc.{{ r.pwr_enable[0] }}().read(); // make sure the enable went through
+{% else %}
+    // PWR clock is always on for this family
+{% endif %}

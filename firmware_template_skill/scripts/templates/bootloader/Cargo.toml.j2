@@ -1,0 +1,51 @@
+{% from "macros.j2" import dep, bedrock_build %}
+{% set hal = "embassy-" ~ t.family %}
+[package]
+name = "{{ o.name }}-bootloader"
+version = "0.1.0"
+edition = "2024"
+
+# standalone crate: keeps an enclosing Cargo workspace from claiming it
+[workspace]
+
+[dependencies]
+{{ dep(hal, [t.rp_variant if t.family == "rp" else t.hal_feature]) }}
+embassy-boot-{{ t.family }} = "{{ V["embassy-boot-" ~ t.family] }}"
+embassy-sync = "{{ V["embassy-sync"] }}"
+{{ dep("cortex-m", ["inline-asm", "critical-section-single-core"]) }}
+cortex-m-rt = "{{ V["cortex-m-rt"] }}"
+embedded-storage = "{{ V["embedded-storage"] }}"
+defmt = { version = "{{ V["defmt"] }}", optional = true }
+defmt-rtt = { version = "{{ V["defmt-rtt"] }}", optional = true }
+{% if t.family == "rp" %}
+embassy-time = "{{ V["embassy-time"] }}"
+{% endif %}
+
+[build-dependencies]
+{% if o.build_info %}
+bedrock_build = {{ bedrock_build(o.bedrock, prefix="../") }}
+build-info-build = "{{ V["build-info-build"] }}"
+{% else %}
+# (none)
+{% endif %}
+
+[features]
+default = []
+defmt = ["dep:defmt", "dep:defmt-rtt", "embassy-boot-{{ t.family }}/defmt", "{{ hal }}/defmt"]
+
+# The bootloader must fit into the BOOTLOADER region in both profiles, so dev is size-optimized too.
+[profile.dev]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+lto = "fat"
+opt-level = "z"
+incremental = false
+overflow-checks = false
+
+[profile.release]
+codegen-units = 1
+debug = 2
+lto = "fat"
+opt-level = "z"
+incremental = false

@@ -1,0 +1,31 @@
+use cortex_m_rt::{entry, exception};
+use hal::{clocks::Clocks, gpio::{Pin, PinMode, Port}};
+
+#[entry]
+fn main() -> ! {
+{% if have_init_ram %}
+    init_ram::init_ram();
+{% endif %}
+{% if o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}
+    let _dp = hal::pac::Peripherals::take().unwrap();
+    let clock_cfg = Clocks::default(); // TODO: configure for your board
+    clock_cfg.setup().unwrap();
+{% if have_init %}
+    init::init();
+{% endif %}
+    let mut led = Pin::new(Port::{{ led_port }}, {{ led_pin }}, PinMode::Output);
+    {{ info }}("{{ o.name }} starting...");
+{% if o.build_info %}
+    _ = core::hint::black_box(build_info::compact());
+    _ = core::hint::black_box(build_info::full());
+{% endif %}
+    loop {
+        led.toggle();
+{% if o.counters %}
+        cnt_if!(true, led_toggles: u32 += 1);
+{% endif %}
+        cortex_m::asm::delay(clock_cfg.sysclk() / 2); // TODO: use a timer
+    }
+}

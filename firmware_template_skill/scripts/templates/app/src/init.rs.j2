@@ -1,0 +1,62 @@
+{# STM32 + embassy only. r = Stm32Regs (may be None), dbp/bdcr = PWR/RCC register names or None. #}
+//! Low level init that HALs do not cover. Generated from stm32-data; verify against the reference manual.
+
+#[allow(unused_imports)]
+use embassy_stm32::pac;
+
+pub(crate) fn init() {
+{% if bkp_words %}
+    enable_backup_registers();
+{% elif not o.rtc %}
+    reset_backup_domain();
+{% else %}
+    // nothing to do
+{% endif %}
+}
+{% if not bkp_words and not o.rtc %}
+
+/// Reset the backup (RTC) domain when the RTC is not used.
+///
+/// Contents of the backup domain survive resets but can be corrupted after a VBAT/VDD brown-out, leading to
+/// hard to debug problems (LSE enabling itself, PC13/PC14/PC15 changing mode, ...).
+/// See http://efton.sk/STM32/gotcha/g133.html and http://efton.sk/STM32/gotcha/g62.html
+pub(crate) fn reset_backup_domain() {
+    let rcc = pac::RCC;
+    let pwr = pac::PWR;
+{% include "app/src/_pwr_clock_on.rs.j2" %}
+  {% if dbp and bdcr %}
+    pwr.{{ dbp }}().modify(|w| w.set_dbp(true));
+    let mut saved = pwr.{{ dbp }}().read(); // read back: write must pass the synchronizer first
+    rcc.{{ bdcr }}().modify(|w| w.set_bdrst(true));
+    rcc.{{ bdcr }}().modify(|w| w.set_bdrst(false));
+    saved.set_dbp(false);
+    pwr.{{ dbp }}().write_value(saved);
+  {% else %}
+    // TODO: set PWR.DBP, pulse RCC.BDCR.BDRST, clear DBP (register names not found in stm32-data)
+    let _ = (rcc, pwr);
+  {% endif %}
+}
+{% endif %}
+{% if bkp_words %}
+
+/// Enable write access to {{ o.bkp[0] if o.bkp else "TAMP/RTC" }} backup registers used by `bkp_cnt_if!` counters.
+/// Backup registers are only accessible with DBP set and (on most families) the RTC APB clock enabled.
+/// NOTE: TAMP/RTC backup registers are reset by a backup domain reset, so do not call reset_backup_domain().
+pub(crate) fn enable_backup_registers() {
+    let rcc = pac::RCC;
+    let pwr = pac::PWR;
+{% include "app/src/_pwr_clock_on.rs.j2" %}
+  {% if dbp %}
+    pwr.{{ dbp }}().modify(|w| w.set_dbp(true));
+  {% else %}
+    // TODO: set PWR.DBP
+  {% endif %}
+  {% if r and r.rtc_enable %}
+    rcc.{{ r.rtc_enable[0] }}().modify(|w| w.set_{{ r.rtc_enable[1] }}(true));
+  {% endif %}
+  {% if bdcr %}
+    // TODO: verify on your part whether RTCEN (with a clock source) is required for backup register writes
+    // rcc.{{ bdcr }}().modify(|w| { w.set_rtcsel(pac::rcc::vals::Rtcsel::LSI); w.set_rtcen(true); });
+  {% endif %}
+}
+{% endif %}

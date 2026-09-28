@@ -1,0 +1,74 @@
+# {{ o.name }}
+
+Firmware for **{{ t.display }}** ({{ t.rust_target }}), framework: `{{ o.framework }}`, logging: `{{ o.log }}`.
+
+## Toolchain
+
+```
+rustup target add {{ t.rust_target }}
+{% if t.cortex_m %}
+cargo install probe-rs-tools --locked{{ " flip-link" if o.flip_link else "" }}
+{% elif t.arch == "xtensa" %}
+cargo install espup espflash
+espup install && source ~/export-esp.sh
+{% else %}
+cargo install espflash
+{% endif %}
+{% if o.counters %}
+cargo install cnt_cli   # read counters: cnt_cli target/<target>/debug/{{ o.name }} tui
+{% endif %}
+```
+
+## Run
+
+```
+cargo run            # dev profile
+cargo run --release
+```
+
+{% if t.cortex_m and o.build_info %}
+`RAM_LINK=1 cargo run` links and runs from RAM (flash content untouched; power-cycle restores the old firmware).
+
+{% endif %}
+{% if lay %}
+## Memory layout
+
+See `memory.x`. Summary:
+
+| region | origin | size | |
+|---|---|---|---|
+  {% for r in lay.regions %}
+| {{ r.name }}{{ " (ref)" if r.commented_out else "" }} | {{ r.origin | hex8 }} | {{ r.length | fmt_len }} | {{ r.comment }} |
+  {% endfor %}
+
+{% endif %}
+{% if o.bootloader %}
+## Bootloader
+
+See `bootloader/README.md`. Flash the bootloader first.
+
+{% endif %}
+{% if t.family == "stm32" and t.stm32.get("family") %}
+  {% set i = t.stm32 %}
+## MCU
+
+* Family: {{ i.family }}, line: {{ i.line }}, die: {{ i.die }}, device id: {{ "0x%X" % i.device_id }}
+* Packages: {{ packages }}
+
+### Documentation
+
+  {% for doc in i.get("docs", []) %}
+* [{{ doc.title }} ({{ doc.type }}, {{ doc.name }})]({{ doc.url }})
+  {% endfor %}
+
+{% endif %}
+## TODO after generation
+
+* Review every `TODO` in the sources and `memory.x`
+* Configure the clock tree and pin assignments for your board
+{% if o.supply_config %}
+* Verify `SupplyConfig::{{ o.supply_config }}` against the schematic (wrong SMPS/LDO config can brick boards)
+{% endif %}
+{% for n in notes %}
+* {{ n }}
+{% endfor %}

@@ -1,0 +1,23 @@
+use cortex_m_rt::{entry, exception};
+
+#[entry]
+fn main() -> ! {
+{% if have_init_ram %}
+    init_ram::init_ram();
+{% endif %}
+{% if o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}
+    {{ info }}("{{ o.name }} starting...");
+    // TODO: add a PAC/HAL dependency and initialize peripherals
+{% if o.build_info %}
+    _ = core::hint::black_box(build_info::compact());
+    _ = core::hint::black_box(build_info::full());
+{% endif %}
+    loop {
+{% if o.counters %}
+        cnt_if!(true, loop_iterations: u32 += 1);
+{% endif %}
+        cortex_m::asm::wfi();
+    }
+}

@@ -1,0 +1,127 @@
+{% from "macros.j2" import dep, bedrock_build %}
+{% set defmt = o.log == "defmt" %}
+[package]
+name = "{{ o.name }}"
+version = "0.1.0"
+edition = "2024"
+
+# standalone crate: keeps an enclosing Cargo workspace from claiming it
+[workspace]
+
+[dependencies]
+{# --- logging / panic handler --- #}
+{% if defmt %}
+defmt = "{{ V["defmt"] }}"
+  {% if t.family != "esp" %}
+    {% if o.rtt_buffer == 1024 %}
+defmt-rtt = "{{ V["defmt-rtt"] }}"
+    {% else %}
+defmt-rtt = { version = "{{ V["defmt-rtt"] }}" } # buffer size via DEFMT_RTT_BUFFER_SIZE in .cargo/config.toml
+    {% endif %}
+{{ dep("panic-probe", ["print-defmt"]) }}
+  {% endif %}
+{% elif o.log == "rtt" %}
+rtt-target = "{{ V["rtt-target"] }}"
+panic-rtt-target = "{{ V["panic-rtt-target"] }}"
+{% elif o.log == "none" and t.family != "esp" %}
+panic-halt = "{{ V["panic-halt"] }}"
+{% endif %}
+{# --- Cortex-M runtime --- #}
+{% if t.cortex_m %}
+{{ dep("cortex-m", ["inline-asm" if t.family == "rp" else "critical-section-single-core"]) }}
+cortex-m-rt = "{{ V["cortex-m-rt"] }}"
+  {% if t.rust_target.startswith("thumbv6m") and o.framework == "embassy" %}
+{{ dep("portable-atomic", ["critical-section"]) }} # atomics for Cortex-M0(+)
+  {% endif %}
+{% endif %}
+{# --- framework --- #}
+{% if o.framework == "embassy" %}
+  {% if t.family == "stm32" %}
+{{ dep("embassy-stm32", feats(defmt and "defmt", t.chip, "unstable-pac", "exti", "time", "time-driver-any", o.rtc and "chrono")) }}
+  {% elif t.family == "rp" %}
+{{ dep("embassy-rp", feats(defmt and "defmt", t.rp_variant, "unstable-pac", "time-driver", "critical-section-impl", "executor-thread", "executor-interrupt", t.rp_variant != "rp2040" and "binary-info")) }}
+  {% elif t.family == "nrf" %}
+{{ dep("embassy-nrf", feats(defmt and "defmt", t.hal_feature, "time-driver-rtc1", "gpiote", "unstable-pac", "time")) }}
+  {% elif t.family == "esp" %}
+{{ dep("esp-hal", feats(t.chip, "unstable", defmt and "defmt")) }}
+{{ dep("esp-rtos", feats(t.chip, "embassy", defmt and "defmt")) }}
+  {% endif %}
+  {# embassy-executor 0.10: task pools are statically allocated on stable, no task-arena / nightly needed.
+     embassy-rp provides its own executor (executor-thread/-interrupt features) and __pender. #}
+  {% set arch_ex = t.cortex_m and t.family != "rp" %}
+{{ dep("embassy-executor", feats(arch_ex and "platform-cortex-m", arch_ex and "executor-thread", arch_ex and "executor-interrupt", defmt and "defmt")) }}
+{{ dep("embassy-time", feats(defmt and "defmt", defmt and "defmt-timestamp-uptime")) }}
+{{ dep("embassy-sync", feats(defmt and "defmt")) }}
+static_cell = "{{ V["static_cell"] }}"
+  {% if t.cortex_m %}
+assign-resources = "{{ V["assign-resources"] }}"
+  {% endif %}
+{% elif o.framework == "stm32-hal" %}
+hal = { package = "stm32-hal2", version = "{{ V["stm32-hal2"] }}", features = {{ feats(hal2_feature, hal2_rt, defmt and "defmt") | toml_list }} }
+critical-section = "1.2"
+{% elif o.framework == "bare" and t.family == "esp" %}
+{{ dep("esp-hal", feats(t.chip, "unstable", defmt and "defmt")) }}
+{% endif %}
+{# --- ESP support crates --- #}
+{% if t.family == "esp" %}
+esp-bootloader-esp-idf = { version = "{{ V["esp-bootloader-esp-idf"] }}", features = ["{{ t.chip }}"] }
+  {% if o.log in ("defmt", "esp-println") %}
+{{ dep("esp-println", feats(t.chip, defmt and "defmt-espflash", not defmt and "log-04")) }}
+    {% if not defmt %}
+log = "0.4"
+    {% endif %}
+  {% endif %}
+{{ dep("esp-backtrace", feats(t.chip, "panic-handler", defmt and "defmt", not defmt and "println")) }}
+{% endif %}
+{# --- optional features --- #}
+{% if o.counters %}
+cnt = "{{ V["cnt"] }}"
+{% endif %}
+{% if o.bootloader %}
+{{ dep("embassy-boot-" ~ t.family, feats(defmt and "defmt")) }}
+embedded-storage = "{{ V["embedded-storage"] }}"
+  {% if o.framework != "embassy" %}
+embassy-sync = "{{ V["embassy-sync"] }}"
+  {% endif %}
+{% endif %}
+
+[build-dependencies]
+{% if o.build_info %}
+bedrock_build = {{ bedrock_build(o.bedrock, flip_link=o.flip_link and t.cortex_m) }}
+build-info-build = "{{ V["build-info-build"] }}"
+{% else %}
+# (none)
+{% endif %}
+
+# See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
+[profile.dev]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 3           # embedded dev builds are usually unusable at opt-level 0
+overflow-checks = true
+
+[profile.release]
+codegen-units = 1
+debug = 2               # debug info does not end up in flash
+debug-assertions = false
+incremental = false
+lto = "fat"
+opt-level = "z"         # 3 = speed, s = size, z = smaller
+overflow-checks = false
+
+# Do not optimize build scripts / proc-macros: faster clean builds
+[profile.dev.build-override]
+codegen-units = 8
+debug = false
+debug-assertions = false
+opt-level = 0
+overflow-checks = false
+
+[profile.release.build-override]
+codegen-units = 8
+debug = false
+debug-assertions = false
+opt-level = 0
+overflow-checks = false

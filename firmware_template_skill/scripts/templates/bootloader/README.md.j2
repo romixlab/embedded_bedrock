@@ -1,0 +1,12 @@
+# {{ o.name }} bootloader
+
+[embassy-boot](https://docs.embassy.dev/embassy-boot/) A/B bootloader. Flash it once, then the application:
+
+```
+cd bootloader && cargo flash --release --chip {{ t.probe_chip }}
+cd .. && cargo run --release
+```
+
+The MCU locks up after flashing only the bootloader (no valid application yet), that is expected.
+
+Partition layout is in `memory.x` (kept in sync with `../memory.x`). `--features defmt` enables RTT logging.

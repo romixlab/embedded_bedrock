@@ -1,0 +1,84 @@
+#![no_std]
+#![no_main]
+
+{% if o.build_info %}
+mod build_info;
+
+{% endif %}
+use core::cell::RefCell;
+
+use cortex_m_rt::{entry, exception};
+#[cfg(feature = "defmt")]
+use defmt_rtt as _;
+{% if t.family == "stm32" %}
+use embassy_boot_stm32::*;
+use embassy_stm32::flash::{BANK1_REGION, Flash};
+{% elif t.family == "rp" %}
+use embassy_boot_rp::*;
+use embassy_time::Duration;
+const FLASH_SIZE: usize = {{ flash_size | hex }};
+{% elif t.family == "nrf" %}
+use embassy_boot_nrf::*;
+use embassy_nrf::nvmc::Nvmc;
+use embassy_nrf::wdt::{self, HaltConfig, SleepConfig};
+{% endif %}
+use embassy_sync::blocking_mutex::Mutex;
+
+#[entry]
+fn main() -> ! {
+    // Uncomment when debugging the bootloader with a debugger attached: accessing flash too early after
+    // boot can hard fault.
+    // for _ in 0..10_000_000 { cortex_m::asm::nop(); }
+{% if o.build_info %}
+    _ = core::hint::black_box(build_info::compact());
+{% endif %}
+{% if t.family == "stm32" %}
+    let mut config = embassy_stm32::Config::default();
+  {% if o.supply_config %}
+    config.rcc.supply_config = embassy_stm32::rcc::SupplyConfig::{{ o.supply_config }}{{ "(embassy_stm32::rcc::SMPSSupplyVoltage::%s)" % o.smps_voltage if o.smps_voltage else "" }};
+  {% endif %}
+    let p = embassy_stm32::init(config);
+    let layout = Flash::new_blocking(p.FLASH).into_blocking_regions();
+    let flash = Mutex::new(RefCell::new(layout.bank1_region)); // TODO: dual-bank parts may need bank2 for DFU
+    let config = BootLoaderConfig::from_linkerfile_blocking(&flash, &flash, &flash);
+    let active_offset = config.active.offset();
+    let bl = BootLoader::prepare::<_, _, _, {{ max_erase_size }}>(config);
+    unsafe { bl.load(BANK1_REGION.base() + active_offset) }
+{% elif t.family == "rp" %}
+    let p = embassy_rp::init(Default::default());
+    let flash = WatchdogFlash::<FLASH_SIZE>::start(p.FLASH, p.WATCHDOG, Duration::from_secs(8));
+    let flash = Mutex::new(RefCell::new(flash));
+    let config = BootLoaderConfig::from_linkerfile_blocking(&flash, &flash, &flash);
+    let active_offset = config.active.offset();
+    let bl: BootLoader = BootLoader::prepare(config);
+    unsafe { bl.load(embassy_rp::flash::FLASH_BASE as u32 + active_offset) }
+{% elif t.family == "nrf" %}
+    let p = embassy_nrf::init(Default::default());
+    let mut wdt_config = wdt::Config::default();
+    wdt_config.timeout_ticks = 32768 * 5;
+    wdt_config.action_during_sleep = SleepConfig::Run;
+    wdt_config.action_during_debug_halt = HaltConfig::Pause;
+    let flash = WatchdogFlash::start(Nvmc::new(p.NVMC), p.WDT, wdt_config);
+    let flash = Mutex::new(RefCell::new(flash));
+    let config = BootLoaderConfig::from_linkerfile_blocking(&flash, &flash, &flash);
+    let active_offset = config.active.offset();
+    let bl: BootLoader = BootLoader::prepare(config);
+    unsafe { bl.load(active_offset) }
+{% endif %}
+}
+
+#[unsafe(no_mangle)]
+#[cfg_attr(target_os = "none", unsafe(link_section = ".HardFault.user"))]
+unsafe extern "C" fn HardFault() {
+    cortex_m::peripheral::SCB::sys_reset();
+}
+
+#[exception]
+unsafe fn DefaultHandler(irqn: i16) -> ! {
+    panic!("DefaultHandler #{:?}", irqn);
+}
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    cortex_m::asm::udf();
+}

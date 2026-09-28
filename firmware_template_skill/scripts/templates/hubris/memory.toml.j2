@@ -1,0 +1,21 @@
+# Hubris memory map for {{ t.display }}, generated from stm32-data / built-in table.
+# Place in chips/<family>/memory-<chip>.toml and reference via `memory = ...` in app.toml.
+# Verify: Hubris requires regions to be power-of-two sized and aligned for MPU on ARMv7-M.
+
+{% if flash %}
+[[flash]]
+address = {{ "0x%08x" % flash[0].address }}
+size = {{ flash | sum(attribute="size") }}
+read = true
+execute = true
+
+{% endif %}
+{% for m in rams %}
+[[{{ {"AXISRAM": "axi_sram", "RAM": "ram"}.get(m.name, m.name | lower) }}]]
+address = {{ "0x%08x" % m.address }}
+size = {{ m.size }}
+read = true
+write = true
+execute = {{ "true" if m.name == "ITCM" else "false" }}
+
+{% endfor %}

@@ -1,0 +1,20 @@
+use esp_hal::main;
+use esp_hal::time::{Duration, Instant};
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+#[main]
+fn main() -> ! {
+{% if o.log == "esp-println" %}
+    esp_println::logger::init_logger_from_env();
+{% endif %}
+    let _peripherals = esp_hal::init(esp_hal::Config::default());
+    {{ info }}("{{ o.name }} starting...");
+    loop {
+{% if o.counters %}
+        cnt_if!(true, loop_iterations: u32 += 1);
+{% endif %}
+        let t = Instant::now();
+        while t.elapsed() < Duration::from_millis(1000) {}
+    }
+}

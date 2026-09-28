@@ -1,0 +1,54 @@
+use embassy_stm32::gpio::{Level, Output, Speed};
+use embassy_time::Timer;
+use cortex_m_rt::exception;
+{% if o.supply_config %}
+use embassy_stm32::rcc::SupplyConfig;
+  {% if o.smps_voltage %}
+use embassy_stm32::rcc::SMPSSupplyVoltage;
+  {% endif %}
+{% endif %}
+{% if o.bootloader %}
+use core::cell::RefCell;
+use embassy_boot_stm32::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
+use embassy_stm32::flash::{Flash, WRITE_SIZE};
+use embassy_sync::blocking_mutex::Mutex;
+{% endif %}
+
+#[embassy_executor::main]
+async fn main(_spawner: embassy_executor::Spawner) {
+{% if have_init_ram %}
+    init_ram::init_ram(); // enable + zero additional SRAM banks before anything is placed there
+{% endif %}
+{% if o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}
+    {{ info }}("{{ o.name }} starting...");
+    let mut config = embassy_stm32::Config::default();
+{% if o.supply_config %}
+    config.rcc.supply_config = SupplyConfig::{{ o.supply_config }}{{ "(SMPSSupplyVoltage::%s)" % o.smps_voltage if o.smps_voltage else "" }}; // from schematic: how VCORE is supplied
+{% endif %}
+    // TODO: configure config.rcc (clock tree) for your board
+    let p = embassy_stm32::init(config);
+{% if have_init %}
+    init::init();
+{% endif %}
+{% if t.series == "H7" %}
+
+    let mut cp = cortex_m::Peripherals::take().unwrap();
+    cp.SCB.enable_icache();
+    // Enable D-cache only once DMA coherency is handled (cache clean/invalidate around DMA buffers)
+    // cp.SCB.enable_dcache(&mut cp.CPUID);
+{% endif %}
+{% if o.bootloader %}
+
+    let flash = Mutex::new(RefCell::new(Flash::new_blocking(p.FLASH)));
+    let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);
+    let mut magic = AlignedBuffer([0; WRITE_SIZE]);
+    let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);
+    {{ info }}("bootloader state: {{ "{}" if o.log == "defmt" else "{:?}" }}", updater.get_state());
+    // TODO: call mark_booted() only after self-test; otherwise the bootloader reverts on next reset
+    updater.mark_booted().unwrap();
+{% endif %}
+
+    let mut led = Output::new(p.{{ o.led }}, Level::Low, Speed::Low);
+{% include "app/src/main/_embassy_loop.rs.j2" %}

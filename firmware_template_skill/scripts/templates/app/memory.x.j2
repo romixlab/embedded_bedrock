@@ -1,0 +1,56 @@
+{# regions: all regions (some commented out), sections: extra RAM / register regions that get a NOLOAD
+   output section, consts: regions that get __<name>_start/__<name>_end helper symbols. #}
+MEMORY
+{
+  /* FLASH and RAM are the regions cortex-m-rt / link.x expects */
+{% for r in regions %}
+  {% set line = "%s : ORIGIN = %s, LENGTH = %s" % (r.name, r.origin | hex8, r.length | fmt_len) %}
+
+  /* {{ r.name }} ({{ r.kind }}){{ ": " ~ r.comment if r.comment else "" }} */
+  {% if r.commented_out %}
+  /* {{ line }} */
+  {% else %}
+  {{ line }}
+  {% endif %}
+  {% if r.is_main_ram and r.name != "RAM" %}
+  RAM : ORIGIN = {{ r.origin | hex8 }}, LENGTH = {{ r.length | fmt_len }}
+  {% endif %}
+{% endfor %}
+}
+{% if sections %}
+
+SECTIONS
+{
+  {% for r in sections %}
+    {% set lname = r.name | lower %}
+    {% if not loop.first %}
+
+    {% endif %}
+  .{{ lname }} (NOLOAD) : ALIGN({{ r.align }})
+  {
+    *({{ r.collect or ".%s .%s.*" % (lname, lname) }});
+    . = ALIGN({{ r.align }});
+  } > {{ r.name }}
+  {% endfor %}
+}
+{% endif %}
+{% if consts %}
+
+/* Helper symbols: additional RAM banks (see init_ram.rs), flash partitions */
+  {% for r in consts %}
+    {% set lname = r.name | lower %}
+    {% set sh = " " ~ r.shift if r.shift else "" %}
+    {% if not loop.first %}
+
+    {% endif %}
+    {% if r.shift %}
+/* {{ r.name }}: offsets relative to the start of flash ({{ r.shift[2:] }}), as embassy-boot / flash drivers expect */
+    {% endif %}
+__{{ lname }}_start = ORIGIN({{ r.name }}){{ sh }};
+__{{ lname }}_end = ORIGIN({{ r.name }}) + LENGTH({{ r.name }}){{ sh }};
+  {% endfor %}
+{% endif %}
+{% if t.rp_variant and t.rp_variant != "rp2040" %}
+
+{% include "linker/rp235x.x" %}
+{% endif %}

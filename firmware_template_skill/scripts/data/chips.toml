@@ -1,0 +1,201 @@
+# Built-in (non-STM32) chips. STM32 parts are looked up in embassy-rs/stm32-data-generated instead.
+#
+# Table key = --chip value (lower case, also the HAL feature unless hal_feature is set).
+# Sizes accept K/M suffixes. `led` is the default --led pin.
+# ESP chips have no flash/rams: esp-hal's linkall.x handles the memory layout.
+
+[rp2040]
+display = "RP2040"
+family = "rp"
+arch = "arm"
+rust_target = "thumbv6m-none-eabi"
+probe_chip = "RP2040"
+led = "PIN_25"
+rp_variant = "rp2040"
+boot2 = true  # second stage bootloader in the first 256 bytes of flash
+flash = { address = 0x10000000, size = "2M", erase = "4K", write = 256 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "264K" },
+]
+
+[rp2350]
+display = "RP2350"
+family = "rp"
+arch = "arm"
+rust_target = "thumbv8m.main-none-eabihf"
+probe_chip = "RP235x"
+led = "PIN_25"
+rp_variant = "rp235xa"
+flash = { address = 0x10000000, size = "4M", erase = "4K", write = 256 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "512K" },
+  { name = "SRAM8", address = 0x20080000, size = "4K" },
+  { name = "SRAM9", address = 0x20081000, size = "4K" },
+]
+
+[rp2350b]
+display = "RP2350B"
+family = "rp"
+arch = "arm"
+rust_target = "thumbv8m.main-none-eabihf"
+probe_chip = "RP235x"
+led = "PIN_25"
+rp_variant = "rp235xb"
+flash = { address = 0x10000000, size = "4M", erase = "4K", write = 256 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "512K" },
+  { name = "SRAM8", address = 0x20080000, size = "4K" },
+  { name = "SRAM9", address = 0x20081000, size = "4K" },
+]
+
+[rp2354]
+display = "RP2354"
+family = "rp"
+arch = "arm"
+rust_target = "thumbv8m.main-none-eabihf"
+probe_chip = "RP235x"
+led = "PIN_25"
+rp_variant = "rp235xa"
+flash = { address = 0x10000000, size = "2M", erase = "4K", write = 256 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "512K" },
+  { name = "SRAM8", address = 0x20080000, size = "4K" },
+  { name = "SRAM9", address = 0x20081000, size = "4K" },
+]
+
+[nrf52832]
+display = "nRF52832"
+family = "nrf"
+arch = "arm"
+rust_target = "thumbv7em-none-eabihf"
+probe_chip = "nRF52832_xxAA"
+led = "P0_13"
+flash = { address = 0x00000000, size = "512K", erase = "4K", write = 4 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "64K" },
+]
+
+[nrf52833]
+display = "nRF52833"
+family = "nrf"
+arch = "arm"
+rust_target = "thumbv7em-none-eabihf"
+probe_chip = "nRF52833_xxAA"
+led = "P0_13"
+flash = { address = 0x00000000, size = "512K", erase = "4K", write = 4 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "128K" },
+]
+
+[nrf52840]
+display = "nRF52840"
+family = "nrf"
+arch = "arm"
+rust_target = "thumbv7em-none-eabihf"
+probe_chip = "nRF52840_xxAA"
+led = "P0_13"
+flash = { address = 0x00000000, size = "1M", erase = "4K", write = 4 }
+rams = [
+  { name = "RAM", address = 0x20000000, size = "256K" },
+]
+
+[nrf9160]
+display = "nRF9160"
+family = "nrf"
+arch = "arm"
+rust_target = "thumbv8m.main-none-eabihf"
+probe_chip = "nRF9160_xxAA"
+hal_feature = "nrf9160-s"
+led = "P0_13"
+flash = { address = 0x00000000, size = "1M", erase = "4K", write = 4 }
+rams = [
+  { name = "RAM", address = 0x20010000, size = "192K" },
+  { name = "IPC", address = 0x20000000, size = "64K" },
+]
+
+[nrf9151]
+display = "nRF9151"
+family = "nrf"
+arch = "arm"
+rust_target = "thumbv8m.main-none-eabihf"
+probe_chip = "nRF9151_xxCA"
+hal_feature = "nrf9151-s"
+led = "P0_13"
+runner_extra = " --allow-erase-all"  # appended to the probe-rs runner
+flash = { address = 0x00000000, size = "1M", erase = "4K", write = 4 }
+rams = [
+  { name = "RAM", address = 0x20010000, size = "192K" },
+  { name = "IPC", address = 0x20000000, size = "64K" },
+]
+
+[esp32]
+display = "ESP32"
+family = "esp"
+arch = "xtensa"
+rust_target = "xtensa-esp32-none-elf"
+probe_chip = "esp32"
+led = "GPIO2"
+
+[esp32s2]
+display = "ESP32-S2"
+family = "esp"
+arch = "xtensa"
+rust_target = "xtensa-esp32s2-none-elf"
+probe_chip = "esp32s2"
+led = "GPIO15"
+
+[esp32s3]
+display = "ESP32-S3"
+family = "esp"
+arch = "xtensa"
+rust_target = "xtensa-esp32s3-none-elf"
+probe_chip = "esp32s3"
+led = "GPIO48"
+
+[esp32c2]
+display = "ESP32-C2"
+family = "esp"
+arch = "riscv"
+rust_target = "riscv32imc-unknown-none-elf"
+probe_chip = "esp32c2"
+led = "GPIO8"
+
+[esp32c3]
+display = "ESP32-C3"
+family = "esp"
+arch = "riscv"
+rust_target = "riscv32imc-unknown-none-elf"
+probe_chip = "esp32c3"
+led = "GPIO8"
+
+[esp32c5]
+display = "ESP32-C5"
+family = "esp"
+arch = "riscv"
+rust_target = "riscv32imac-unknown-none-elf"
+probe_chip = "esp32c5"
+led = "GPIO27"
+
+[esp32c6]
+display = "ESP32-C6"
+family = "esp"
+arch = "riscv"
+rust_target = "riscv32imac-unknown-none-elf"
+probe_chip = "esp32c6"
+led = "GPIO8"
+
+[esp32h2]
+display = "ESP32-H2"
+family = "esp"
+arch = "riscv"
+rust_target = "riscv32imac-unknown-none-elf"
+probe_chip = "esp32h2"
+led = "GPIO8"
+
+[esp32p4]
+display = "ESP32-P4"
+family = "esp"
+arch = "riscv"
+rust_target = "riscv32imafc-unknown-none-elf"
+probe_chip = "esp32p4"
+led = "GPIO22"
