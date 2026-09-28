@@ -2,7 +2,8 @@
 name: firmware-template
 description: >
   Generate and set up new bare-metal Rust firmware projects for microcontrollers (STM32, RP2040/RP2350,
-  nRF52/nRF91, ESP32) with embassy, stm32-hal2 or a bare cortex-m-rt skeleton; defmt/RTT logging,
+  nRF52/nRF91, ESP32) with embassy, stm32-hal2, the stm32-rs stm32XXxx-hal crates (stm32f4xx-hal, stm32h7xx-hal, ...)
+  or a bare cortex-m-rt skeleton; defmt/RTT logging,
   memory.x partitioning, embassy-boot A/B bootloader, config flash page, cnt event counters, backup-register
   counters, extra SRAM bank init, build-info embedding. Use when asked to create/scaffold/bootstrap an MCU
   project, produce a memory.x/linker layout, pick rust target/probe-rs chip for an MCU, set up an embassy-boot
@@ -29,7 +30,8 @@ Paths are relative to this skill directory; use the absolute path when invoking.
 
 1. **Collect requirements** from the user (ask only what is missing; defaults in brackets):
    - chip (`STM32xxxxxx` exact part w/o package suffix, `rp2040`, `rp2350`, `rp2350b`, `rp2354`, `nrf52832/33/40`, `nrf9160/51`, `esp32`, `esp32c3/c6/s3/...`)
-   - framework `--framework embassy|stm32-hal|bare` [embassy]
+   - framework `--framework embassy|stm32-hal|stm32xx-hal|bare` [embassy] (`stm32-hal` = stm32-hal2,
+     `stm32xx-hal` = the per-series stm32-rs crate: F0/F1/F3/F4/F7/G0/G4/H7/L0/L4)
    - logging `--log defmt|rtt|esp-println|none` [defmt]
    - bootloader `--bootloader` (embassy-boot, stm32/rp/nrf only), config page `--config-page`
    - counters `--counters` (+ `--bkp-counters auto|tamp|rtc` on STM32 for reset-surviving counters)
@@ -72,7 +74,7 @@ Details: `references/memory-layout.md` (partitioning rules, symbols, embassy-boo
 - Crate versions live in `scripts/data/versions.toml`; verify against crates.io before bumping
   (`curl -s https://crates.io/api/v1/crates/<name> -A x | jq .crate.max_stable_version`).
 - Non-STM32 chips are in `scripts/data/chips.toml`; STM32 comes from `embassy-rs/stm32-data-generated`, plus
-  the rust target / stm32-hal2 feature tables in `scripts/data/stm32.toml`.
+  the rust target / stm32-hal2 / stm32-rs HAL (`[xxhal.<series>]`) feature tables in `scripts/data/stm32.toml`.
 - Generated file contents are Jinja2 templates in `scripts/templates/` (conventions in its `README.md`); the
   script only resolves the chip, computes the memory layout and picks templates.
 - After changes, regenerate and build the matrix in `references/frameworks.md#tested-matrix`.

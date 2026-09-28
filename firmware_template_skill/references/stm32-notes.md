@@ -65,6 +65,11 @@ Generated main is blocking (`#[entry]`, `Clocks::default().setup()`, `Pin::new(P
 `init.rs`/backup-domain code is only generated for embassy (uses `embassy_stm32::pac`); with stm32-hal2 use
 `hal::pac` and port it by hand if needed. `init_ram.rs` is generated with TODO comments for the enable bits.
 
+## stm32-rs HALs (`--framework stm32xx-hal`)
+
+Crate and features from `[xxhal.<series>]` in `data/stm32.toml`, see `frameworks.md`. `chip-info` prints the selection.
+Like stm32-hal2: `init.rs` is embassy-only, `init_ram.rs` gets TODO comments for the SRAM enable bits.
+
 ## H7 caches
 
 `main.rs` enables I-cache; D-cache is left commented because DMA buffers in cached memory need explicit

@@ -55,6 +55,7 @@ BUILTIN: dict[str, dict] = load_toml("chips.toml")  # non-STM32 chips
 STM32 = load_toml("stm32.toml")
 STM32_HAL2_FEATURES: dict[str, str] = STM32["hal2"]["features"]
 STM32_HAL2_RT: dict[str, str] = STM32["hal2"]["rt"]
+STM32_XXHAL: dict[str, dict] = STM32["xxhal"]  # stm32-rs stm32XXxx-hal crates by series
 
 
 # ----------------------------------------------------------------------------
@@ -567,7 +568,7 @@ def render(template: str, **ctx) -> str:
 @dataclass
 class Opts:
     name: str
-    framework: str          # embassy | stm32-hal | bare
+    framework: str          # embassy | stm32-hal | stm32xx-hal | bare
     log: str                # defmt | rtt | esp-println | none
     bootloader: bool
     config_page: bool
@@ -602,8 +603,8 @@ def main_variant(t: Target, o: Opts) -> str:
     """templates/app/src/main/<variant>.rs.j2"""
     if o.framework == "embassy":
         return f"embassy-{t.family}"
-    if o.framework == "stm32-hal":
-        return "stm32-hal"
+    if o.framework in ("stm32-hal", "stm32xx-hal"):
+        return o.framework
     return "bare-esp" if t.family == "esp" else "bare"
 
 
@@ -613,6 +614,36 @@ def hal2_features(t: Target) -> tuple[str, str]:
     if not feat or not rt:
         die(f"stm32-hal2 has no feature for {t.display}; supported prefixes: {', '.join(sorted(STM32_HAL2_FEATURES))}")
     return feat, rt
+
+
+def xxhal_features(t: Target, defmt: bool) -> tuple[str, list[str]]:
+    """(crate, features) of the stm32-rs HAL for the part."""
+    h = STM32_XXHAL.get(t.series)
+    chips = h["chips"] if h else {}
+    key = t.display[5:9].lower()
+    if key not in chips:
+        if h:
+            die(f"{h['crate']} has no feature for {t.display}; supported: {', '.join('STM32' + k.upper() for k in chips)}")
+        die(f"no stm32-rs HAL for STM32{t.series}; supported series: {', '.join(STM32_XXHAL)}")
+    size = t.display[10:11].lower()
+    mcu = ""
+    if "mcus" in h:
+        pkgs = [p["name"] for p in t.stm32.get("packages", [])]
+        mcu = next((f"mcu-{p}" for p in pkgs if p in h["mcus"]), "")
+        if not mcu:
+            die(f"{h['crate']} knows none of the {t.display} packages ({', '.join(pkgs) or 'none; offline?'})")
+        t.notes.append(f"{h['crate']} feature `{mcu}` selects the package (GPIO set); change it if your part differs")
+    fs = [f.format(size=size, density=h.get("density", {}).get(size, ""), mcu=mcu) for f in chips[key]]
+    return h["crate"], feats(*fs, *h["features"], defmt and h.get("defmt") and "defmt")
+
+
+def xxhal_supply(o: Opts) -> str:
+    """stm32h7xx-hal Pwr builder call for --supply-config ("" = keep the reset configuration)."""
+    calls = {"Default": "", "LDO": ".ldo()", "DirectSMPS": ".smps()", "SMPSDisabledLDOBypass": ".bypass()",
+             "SMPSLDO": {"V1_8": ".smps_1v8_feeds_ldo()", "V2_5": ".smps_2v5_feeds_ldo()"}.get(o.smps_voltage)}
+    if calls.get(o.supply_config) is None:
+        die(f"stm32h7xx-hal has no equivalent of --supply-config {o.supply_config}; use --framework embassy or stm32-hal")
+    return calls[o.supply_config]
 
 
 def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
@@ -628,6 +659,13 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
         ctx["hal2_feature"], ctx["hal2_rt"] = hal2_features(t)
         m = re.fullmatch(r"P([A-Z])(\d+)", o.led)
         ctx["led_port"], ctx["led_pin"] = m.groups() if m else ("B", "14")
+    if o.framework == "stm32xx-hal":
+        ctx["xxhal_crate"], ctx["xxhal_features"] = xxhal_features(t, o.log == "defmt")
+        ctx["xxhal_supply"] = xxhal_supply(o) if o.supply_config else ""
+        m = re.fullmatch(r"P([A-Z])(\d+)", o.led)
+        if not m:
+            die(f"--led {o.led}: expected a pin like PB14")
+        ctx["led_port"], ctx["led_pin"] = m.groups()
 
     files: dict[str, str] = {}
     if lay:
@@ -731,8 +769,8 @@ def cmd_new(args) -> None:
         die("project name must be a valid cargo package name")
     t = resolve_target(args)
     fw = args.framework
-    if fw == "stm32-hal" and t.family != "stm32":
-        die("--framework stm32-hal is only for STM32")
+    if fw in ("stm32-hal", "stm32xx-hal") and t.family != "stm32":
+        die(f"--framework {fw} is only for STM32")
     if args.bootloader and t.family == "esp":
         die("ESP uses the esp-idf bootloader / OTA partitions; --bootloader is not applicable")
     if args.bootloader and fw != "embassy":
@@ -804,6 +842,8 @@ def cmd_chip_info(args) -> None:
               f"RTC={reg_version(t, 'RTC')} TAMP={reg_version(t, 'TAMP')} SMPS pins={smps_present(t)}")
         key = t.display[5:9].lower()
         print(f"  stm32-hal2 feature: {STM32_HAL2_FEATURES.get(key, '(none)')} / {STM32_HAL2_RT.get(t.series, '(none)')}")
+        xx = STM32_XXHAL.get(t.series, {})
+        print(f"  stm32-rs HAL: {xx['crate'] + ' ' + str(xx['chips'][key]) if key in xx.get('chips', {}) else '(none)'}")
         for d in t.stm32.get("docs", []):
             print(f"  doc: {d['type']}: {d['url']}")
 
@@ -839,7 +879,7 @@ def main(argv=None) -> None:
     add_common(p)
     add_layout(p)
     p.add_argument("--out", help="output directory (default: ./<name>)")
-    p.add_argument("--framework", choices=["embassy", "stm32-hal", "bare"], default="embassy")
+    p.add_argument("--framework", choices=["embassy", "stm32-hal", "stm32xx-hal", "bare"], default="embassy")
     p.add_argument("--log", choices=["defmt", "rtt", "esp-println", "none"], default="defmt")
     p.add_argument("--log-level", default="debug", help="DEFMT_LOG / ESP_LOG default level (default debug)")
     p.add_argument("--rtt-buffer", type=int, default=1024, help="DEFMT_RTT_BUFFER_SIZE (default 1024)")

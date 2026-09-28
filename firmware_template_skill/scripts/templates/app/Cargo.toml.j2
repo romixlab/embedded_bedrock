@@ -59,6 +59,8 @@ assign-resources = "{{ V["assign-resources"] }}"
 {% elif o.framework == "stm32-hal" %}
 hal = { package = "stm32-hal2", version = "{{ V["stm32-hal2"] }}", features = {{ feats(hal2_feature, hal2_rt, defmt and "defmt") | toml_list }} }
 critical-section = "1.2"
+{% elif o.framework == "stm32xx-hal" %}
+hal = { package = "{{ xxhal_crate }}", version = "{{ V[xxhal_crate] }}", features = {{ xxhal_features | toml_list }} }
 {% elif o.framework == "bare" and t.family == "esp" %}
 {{ dep("esp-hal", feats(t.chip, "unstable", defmt and "defmt")) }}
 {% endif %}

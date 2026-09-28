@@ -1,0 +1,102 @@
+{# stm32-rs stm32XXxx-hal crates: every series has its own RCC/GPIO API #}
+{% set s = t.series %}
+{% set port = led_port | lower %}
+{% set pin = "p" ~ port ~ led_pin %}
+use cortex_m_rt::{entry, exception};
+use hal::{pac, prelude::*};
+{% if s in ("F4", "G4", "L0") %}
+use hal::rcc::Config;
+{% endif %}
+{% if s == "G4" %}
+use hal::pwr::PwrExt;
+{% endif %}
+
+#[entry]
+fn main() -> ! {
+{% if have_init_ram %}
+    init_ram::init_ram();
+{% endif %}
+{% if o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}
+    let dp = pac::Peripherals::take().unwrap();
+    // TODO: configure the clock tree for your board (reset default: internal RC oscillator)
+{% if s == "F0" %}
+    let mut flash = dp.FLASH;
+    let mut rcc = dp.RCC.configure().freeze(&mut flash);
+    let sysclk = rcc.clocks.sysclk().0;
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc);
+    let mut led = cortex_m::interrupt::free(move |cs| gpio{{ port }}.{{ pin }}.into_push_pull_output(cs));
+{% elif s == "F1" %}
+    let mut rcc = dp.RCC.constrain();
+    let sysclk = rcc.clocks.sysclk().raw();
+    let mut gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output(&mut gpio{{ port }}.{{ "crl" if led_pin | int < 8 else "crh" }});
+{% elif s == "F3" %}
+    let mut flash = dp.FLASH.constrain();
+    let mut rcc = dp.RCC.constrain();
+    let clocks = rcc.cfgr.freeze(&mut flash.acr);
+    let sysclk = clocks.sysclk().0;
+    let mut gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc.ahb);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output(&mut gpio{{ port }}.moder, &mut gpio{{ port }}.otyper);
+{% elif s == "F4" %}
+    let mut rcc = dp.RCC.freeze(Config::hsi());
+    let sysclk = rcc.clocks.sysclk().raw();
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output();
+{% elif s == "F7" %}
+    let clocks = dp.RCC.constrain().cfgr.freeze();
+    let sysclk = clocks.sysclk().raw();
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split();
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output();
+{% elif s == "G0" %}
+    let mut rcc = dp.RCC.constrain();
+    let sysclk = rcc.clocks.sys_clk.raw();
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output();
+{% elif s == "G4" %}
+    let pwr = dp.PWR.constrain().freeze();
+    let mut rcc = dp.RCC.freeze(Config::hsi(), pwr);
+    let sysclk = rcc.clocks.sys_clk.raw();
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output();
+{% elif s == "H7" %}
+  {% if xxhal_supply %}
+    // must match the board's power supply wiring, see README.md
+  {% endif %}
+    let pwrcfg = dp.PWR.constrain(){{ xxhal_supply }}.freeze();
+    let ccdr = dp.RCC.constrain().freeze(pwrcfg, &dp.SYSCFG); // e.g. .sys_ck(400.MHz()) before freeze
+    let sysclk = ccdr.clocks.sys_ck().raw();
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split(ccdr.peripheral.GPIO{{ led_port }});
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output();
+{% elif s == "L0" %}
+    let mut rcc = dp.RCC.freeze(Config::hsi16());
+    let sysclk = rcc.clocks.sys_clk().0;
+    let gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output();
+{% elif s == "L4" %}
+    let mut flash = dp.FLASH.constrain();
+    let mut rcc = dp.RCC.constrain();
+    let mut pwr = dp.PWR.constrain(&mut rcc.apb1r1);
+    let clocks = rcc.cfgr.freeze(&mut flash.acr, &mut pwr);
+    let sysclk = clocks.sysclk().raw();
+    let mut gpio{{ port }} = dp.GPIO{{ led_port }}.split(&mut rcc.ahb2);
+    let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output(&mut gpio{{ port }}.moder, &mut gpio{{ port }}.otyper);
+{% endif %}
+    {{ info }}("{{ o.name }} starting...");
+{% if o.build_info %}
+    _ = core::hint::black_box(build_info::compact());
+    _ = core::hint::black_box(build_info::full());
+{% endif %}
+    loop {
+{% if s in ("F0", "F3", "G0", "L0") %}
+        led.toggle().ok(); // embedded-hal 0.2 ToggleableOutputPin
+{% else %}
+        led.toggle();
+{% endif %}
+{% if o.counters %}
+        cnt_if!(true, led_toggles: u32 += 1);
+{% endif %}
+        cortex_m::asm::delay(sysclk / 2); // TODO: use a timer
+    }
+}

@@ -4,7 +4,9 @@
 
 embassy-executor 0.10 · embassy-time 0.5.1 · embassy-sync 0.8 · embassy-stm32 0.6 · embassy-rp 0.10 · embassy-nrf 0.11 ·
 embassy-boot-{stm32 0.8, rp 0.10, nrf 0.12} (all on embassy-boot 0.7) · esp-hal 1.2 · esp-rtos 0.4 · esp-println 0.18 ·
-esp-backtrace 0.20 · esp-bootloader-esp-idf 0.6 · stm32-hal2 2.1 · cnt 0.2 · defmt 1.1 · defmt-rtt 1.3 · panic-probe 1.0 ·
+esp-backtrace 0.20 · esp-bootloader-esp-idf 0.6 · stm32-hal2 2.1 ·
+stm32-rs HALs: stm32f0xx 0.18 · stm32f1xx 0.11 · stm32f3xx 0.10 · stm32f4xx 0.23 · stm32f7xx 0.8 · stm32g0xx 0.2 ·
+stm32g4xx 0.1 · stm32h7xx 0.16 · stm32l0xx 0.10 · stm32l4xx 0.7.1 · cnt 0.2 · defmt 1.1 · defmt-rtt 1.3 · panic-probe 1.0 ·
 rtt-target 0.6 · cortex-m 0.7 · cortex-m-rt 0.7 · build-info-build 0.0.46.
 
 Pitfalls with older documentation / examples:
@@ -53,6 +55,18 @@ Default LED pins per chip in `ESP_LED`.
 See `stm32-notes.md`. Blocking `#[entry]` skeleton, `hal::pac`, no bootloader integration (embassy-boot still usable via
 `embedded-storage` traits, code must be added manually).
 
+### stm32-rs HALs (`--framework stm32xx-hal`)
+One crate per series (`stm32f0xx-hal` ... `stm32l4xx-hal`), renamed to `hal` in `Cargo.toml`; table `[xxhal.<series>]` in
+`data/stm32.toml` (chip key → features, placeholders `{size}`, `{density}`, `{mcu}`). Blocking `#[entry]` skeleton;
+RCC/GPIO setup differs per series (`app/src/main/stm32xx-hal.rs.j2`), all keep the reset clock (HSI) with a TODO.
+Quirks: F0/F3/G0/L0 are still on embedded-hal 0.2 (`toggle().ok()`, F0 pins need a `cortex_m::interrupt::free` cs);
+F1 needs `crl`/`crh`; F1 density (`medium`/`high`/`xl`) and F0/F3 size suffixes (`stm32f303xc`) come from the flash
+size code; L0 needs `mcu-<package>` (first stm32-data package the crate knows — check it) and `disable-linker-script`
+(we generate `memory.x`); H7: `--supply-config` maps to `Pwr::ldo()/smps()/bypass()/smps_{1v8,2v5}_feeds_ldo()`,
+`SMPSExternalLDO*` is not supported by the crate; revision-V features (`stm32h743v`), H745/H755/H757 use `stm32h747cm7`.
+`defmt` feature only on F1/F4/G4. Not covered: G0B1/G0C1/G05x/G06x, C0, H5, U5, WB, WL (use embassy or stm32-hal2).
+Several crates are stale (f0 2021, g0 2023, l0 2022, l4 2022); prefer embassy for new designs.
+
 ### bare (`--framework bare`)
 `cortex-m-rt` `#[entry]` + `wfi` loop (or `esp_hal::main` on ESP) — for adding a PAC/other HAL/RTIC by hand.
 All the infrastructure (memory.x, config, counters, logging, init_ram) is still generated.
@@ -97,6 +111,17 @@ new h7app  --chip STM32H725IG --bootloader --config-page --counters --bkp-counte
 new g0     --chip STM32G0B1RE --bootloader --config-page --counters --bkp-counters tamp                            (+bootloader, release)
 new g0hal  --chip STM32G0B1RE --framework stm32-hal --config-page --counters
 new h7hal  --chip STM32H725IG --framework stm32-hal --supply-config DirectSMPS --counters
+new xf0    --chip STM32F030C8 --framework stm32xx-hal --log rtt
+new xf1    --chip STM32F103C8 --framework stm32xx-hal --counters --led PC13
+new xf3    --chip STM32F303VC --framework stm32xx-hal --log none
+new xf4    --chip STM32F407VG --framework stm32xx-hal --counters --config-page
+new xf7    --chip STM32F767ZI --framework stm32xx-hal
+new xg0    --chip STM32G071RB --framework stm32xx-hal --counters
+new xg4    --chip STM32G474RE --framework stm32xx-hal
+new xh7    --chip STM32H743ZI --framework stm32xx-hal --counters
+new xh7s   --chip STM32H725IG --framework stm32xx-hal --supply-config DirectSMPS
+new xl0    --chip STM32L073RZ --framework stm32xx-hal
+new xl4    --chip STM32L476RG --framework stm32xx-hal --log rtt
 new f4bare --chip STM32F407VG --framework bare --log rtt
 new l4     --chip STM32L476RG --counters --log none
 new l4rtc  --chip STM32L476RG --rtc
