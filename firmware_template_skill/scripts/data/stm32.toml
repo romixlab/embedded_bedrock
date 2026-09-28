@@ -29,7 +29,7 @@ U3 = "thumbv8m.main-none-eabihf"
 U5 = "thumbv8m.main-none-eabihf"
 N6 = "thumbv8m.main-none-eabihf"
 
-# stm32-hal2 (--framework stm32-hal) chip feature. Key: the four characters after "STM32", lower case.
+# stm32-hal2 (--framework stm32-hal2) chip feature. Key: the four characters after "STM32", lower case.
 [hal2.features]
 c011 = "c011"
 c031 = "c031"

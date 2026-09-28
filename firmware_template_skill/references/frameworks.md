@@ -51,7 +51,7 @@ Softdevice layouts are not generated (adjust `FLASH`/`RAM` origin manually).
 Xtensa needs `source ~/export-esp.sh` and `-C link-arg=-nostartfiles`. `-Tlinkall.x` must be the last linker script.
 Default LED pins per chip in `ESP_LED`.
 
-### stm32-hal2 (`--framework stm32-hal`)
+### stm32-hal2 (`--framework stm32-hal2`)
 See `stm32-notes.md`. Blocking `#[entry]` skeleton, `hal::pac`, no bootloader integration (embassy-boot still usable via
 `embedded-storage` traits, code must be added manually).
 
@@ -109,8 +109,8 @@ Every entry below generates and `cargo build`s (dev and, where listed, release) 
 ```
 new h7app  --chip STM32H725IG --bootloader --config-page --counters --bkp-counters rtc --supply-config DirectSMPS  (+bootloader, release)
 new g0     --chip STM32G0B1RE --bootloader --config-page --counters --bkp-counters tamp                            (+bootloader, release)
-new g0hal  --chip STM32G0B1RE --framework stm32-hal --config-page --counters
-new h7hal  --chip STM32H725IG --framework stm32-hal --supply-config DirectSMPS --counters
+new g0hal  --chip STM32G0B1RE --framework stm32-hal2 --config-page --counters
+new h7hal  --chip STM32H725IG --framework stm32-hal2 --supply-config DirectSMPS --counters
 new xf0    --chip STM32F030C8 --framework stm32xx-hal --log rtt
 new xf1    --chip STM32F103C8 --framework stm32xx-hal --counters --led PC13
 new xf3    --chip STM32F303VC --framework stm32xx-hal --log none

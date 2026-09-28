@@ -57,7 +57,7 @@ With `--bkp-counters` the domain is **not** reset; write access is enabled inste
 `RTC.BKPnR` at `RTC + 0x50`, G0's are `TAMP.BKPnR` at `TAMP + 0x100`; the script reads the offsets from the register JSON. BKPSRAM (H7 4K backup SRAM) is not
 handled automatically.
 
-## stm32-hal2 (`--framework stm32-hal`)
+## stm32-hal2 (`--framework stm32-hal2`)
 
 Feature = 4-char device key (`g0b1`, `h735` for H723/725/730/733/735, `l4x6` for L476/486/496, ...) plus the runtime
 feature `<series>rt`. Table `STM32_HAL2_FEATURES` in the script; not every part is supported (no F0/F1/F2/F7/L0/L1/U5).

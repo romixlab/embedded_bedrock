@@ -30,7 +30,7 @@ Paths are relative to this skill directory; use the absolute path when invoking.
 
 1. **Collect requirements** from the user (ask only what is missing; defaults in brackets):
    - chip (`STM32xxxxxx` exact part w/o package suffix, `rp2040`, `rp2350`, `rp2350b`, `rp2354`, `nrf52832/33/40`, `nrf9160/51`, `esp32`, `esp32c3/c6/s3/...`)
-   - framework `--framework embassy|stm32-hal|stm32xx-hal|bare` [embassy] (`stm32-hal` = stm32-hal2,
+   - framework `--framework embassy|stm32-hal2|stm32xx-hal|bare` [embassy] (`stm32-hal2` = the stm32-hal2 crate,
      `stm32xx-hal` = the per-series stm32-rs crate: F0/F1/F3/F4/F7/G0/G4/H7/L0/L4)
    - logging `--log defmt|rtt|esp-println|none` [defmt]
    - bootloader `--bootloader` (embassy-boot, stm32/rp/nrf only), config page `--config-page`

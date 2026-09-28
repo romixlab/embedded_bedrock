@@ -568,7 +568,7 @@ def render(template: str, **ctx) -> str:
 @dataclass
 class Opts:
     name: str
-    framework: str          # embassy | stm32-hal | stm32xx-hal | bare
+    framework: str          # embassy | stm32-hal2 | stm32xx-hal | bare
     log: str                # defmt | rtt | esp-println | none
     bootloader: bool
     config_page: bool
@@ -603,7 +603,7 @@ def main_variant(t: Target, o: Opts) -> str:
     """templates/app/src/main/<variant>.rs.j2"""
     if o.framework == "embassy":
         return f"embassy-{t.family}"
-    if o.framework in ("stm32-hal", "stm32xx-hal"):
+    if o.framework in ("stm32-hal2", "stm32xx-hal"):
         return o.framework
     return "bare-esp" if t.family == "esp" else "bare"
 
@@ -642,7 +642,7 @@ def xxhal_supply(o: Opts) -> str:
     calls = {"Default": "", "LDO": ".ldo()", "DirectSMPS": ".smps()", "SMPSDisabledLDOBypass": ".bypass()",
              "SMPSLDO": {"V1_8": ".smps_1v8_feeds_ldo()", "V2_5": ".smps_2v5_feeds_ldo()"}.get(o.smps_voltage)}
     if calls.get(o.supply_config) is None:
-        die(f"stm32h7xx-hal has no equivalent of --supply-config {o.supply_config}; use --framework embassy or stm32-hal")
+        die(f"stm32h7xx-hal has no equivalent of --supply-config {o.supply_config}; use --framework embassy or stm32-hal2")
     return calls[o.supply_config]
 
 
@@ -655,7 +655,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
     ctx = dict(t=t, o=o, lay=lay, bkp_words=lay.bkp_words if lay else 0, info=info, err=err,
                have_init=have_init, have_init_ram=have_init_ram, main_variant=main_variant(t, o),
                flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024)
-    if o.framework == "stm32-hal":
+    if o.framework == "stm32-hal2":
         ctx["hal2_feature"], ctx["hal2_rt"] = hal2_features(t)
         m = re.fullmatch(r"P([A-Z])(\d+)", o.led)
         ctx["led_port"], ctx["led_pin"] = m.groups() if m else ("B", "14")
@@ -769,7 +769,7 @@ def cmd_new(args) -> None:
         die("project name must be a valid cargo package name")
     t = resolve_target(args)
     fw = args.framework
-    if fw in ("stm32-hal", "stm32xx-hal") and t.family != "stm32":
+    if fw in ("stm32-hal2", "stm32xx-hal") and t.family != "stm32":
         die(f"--framework {fw} is only for STM32")
     if args.bootloader and t.family == "esp":
         die("ESP uses the esp-idf bootloader / OTA partitions; --bootloader is not applicable")
@@ -879,7 +879,7 @@ def main(argv=None) -> None:
     add_common(p)
     add_layout(p)
     p.add_argument("--out", help="output directory (default: ./<name>)")
-    p.add_argument("--framework", choices=["embassy", "stm32-hal", "stm32xx-hal", "bare"], default="embassy")
+    p.add_argument("--framework", choices=["embassy", "stm32-hal2", "stm32xx-hal", "bare"], default="embassy")
     p.add_argument("--log", choices=["defmt", "rtt", "esp-println", "none"], default="defmt")
     p.add_argument("--log-level", default="debug", help="DEFMT_LOG / ESP_LOG default level (default debug)")
     p.add_argument("--rtt-buffer", type=int, default=1024, help="DEFMT_RTT_BUFFER_SIZE (default 1024)")

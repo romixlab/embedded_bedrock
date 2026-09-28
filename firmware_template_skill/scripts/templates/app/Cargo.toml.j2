@@ -56,7 +56,7 @@ static_cell = "{{ V["static_cell"] }}"
   {% if t.cortex_m %}
 assign-resources = "{{ V["assign-resources"] }}"
   {% endif %}
-{% elif o.framework == "stm32-hal" %}
+{% elif o.framework == "stm32-hal2" %}
 hal = { package = "stm32-hal2", version = "{{ V["stm32-hal2"] }}", features = {{ feats(hal2_feature, hal2_rt, defmt and "defmt") | toml_list }} }
 critical-section = "1.2"
 {% elif o.framework == "stm32xx-hal" %}
