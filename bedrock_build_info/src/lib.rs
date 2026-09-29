@@ -42,13 +42,13 @@ pub struct BedrockBuildInfo<'i> {
     pub version_control: Option<VersionControl<'i>>,
 }
 
-#[derive_shrink_wrap(borrowed, ww_repr = u2, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
+#[derive_shrink_wrap(borrowed, owned, ww_repr = u2, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum Profile {
     Release,
     Debug,
 }
 
-#[derive_shrink_wrap(borrowed, ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
+#[derive_shrink_wrap(borrowed, owned, ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum OptimizationLevel {
     O0,
     O1,
@@ -85,7 +85,7 @@ pub struct CompilerInfo<'i> {
     pub flip_link: bool,
 }
 
-#[derive_shrink_wrap(borrowed, ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
+#[derive_shrink_wrap(borrowed, owned, ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum CompilerChannel {
     Dev,
     Nightly,
@@ -267,9 +267,8 @@ mod tests {
 
         // check that owned representation matches as well
         let mut owned = build_info.make_owned();
-        let mut buf = [0u8; 256];
-        let mut wr = BufWriter::new(&mut buf);
-        owned.ser_shrink_wrap(&mut wr).unwrap();
+        let mut wr = BufWriterOwned::new();
+        owned.ser_shrink_wrap_owned(&mut wr).unwrap();
         let bytes_owned = wr.finish_and_take().unwrap();
         assert_eq!(bytes, bytes_owned);
 
@@ -288,9 +287,8 @@ mod tests {
             enabled_features: vec!["f4".into(), "f5".into(), "f6".into()],
             dependencies: vec![],
         });
-        let mut buf = [0u8; 256];
-        let mut wr = BufWriter::new(&mut buf);
-        owned.ser_shrink_wrap(&mut wr).unwrap();
+        let mut wr = BufWriterOwned::new();
+        owned.ser_shrink_wrap_owned(&mut wr).unwrap();
         let bytes_owned_multi_dep = wr.finish_and_take().unwrap();
         // println!(
         //     "{}: {bytes_owned_multi_dep:02X?}",
@@ -313,7 +311,7 @@ mod tests {
         assert_eq!(bytes_owned_multi_dep.len(), 95);
 
         let mut rd = BufReader::new(&bytes_owned_multi_dep);
-        let build_info_des = BedrockBuildInfoOwned::des_shrink_wrap(&mut rd).unwrap();
+        let build_info_des = BedrockBuildInfoOwned::des_shrink_wrap_owned(&mut rd).unwrap();
         assert_eq!(build_info_des, owned);
         // println!("{build_info_des:#?}");
     }

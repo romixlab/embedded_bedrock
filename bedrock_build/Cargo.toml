@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 build-info-common = "0.0.42"
 bedrock_build_info = { path = "../bedrock_build_info", features = ["chrono", "semver"] }
-shrink_wrap = "0.1.2"
 base64 = "0.22"
+wire_weaver = { workspace = true, features = ["std"] }
 
 [features]
 flip-link = []

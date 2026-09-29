@@ -87,7 +87,7 @@ dependencies = [
  "base64",
  "bedrock_build_info",
  "build-info-common",
- "shrink_wrap 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wire_weaver",
 ]
 
 [[package]]
@@ -1776,28 +1776,7 @@ dependencies = [
  "either",
  "paste",
  "serde",
- "shrink_wrap_derive 0.1.1",
-]
-
-[[package]]
-name = "shrink_wrap"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd4d5544e7fab749f6a633e1e2073315af03b4b36d5897d56a3fe8d8664ccaf5"
-dependencies = [
- "paste",
- "shrink_wrap_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "shrink_wrap_core"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e57377771bb843baa3ba7763c412de4f3ef1a8cb3101834dea8ffe85f88f57eb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.104",
+ "shrink_wrap_derive",
 ]
 
 [[package]]
@@ -1807,18 +1786,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.6",
-]
-
-[[package]]
-name = "shrink_wrap_derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3d17e8bba341ba3c0d78858d5e15678a442997f91400cae28ec491a0d8a90b0"
-dependencies = [
- "proc-macro2",
- "quote",
- "shrink_wrap_core",
- "syn 2.0.104",
 ]
 
 [[package]]
@@ -2453,7 +2420,7 @@ checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 name = "wire_weaver"
 version = "0.4.0"
 dependencies = [
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
  "wire_weaver_derive",
  "ww_version",
 ]
@@ -2476,7 +2443,7 @@ dependencies = [
  "ron",
  "semver",
  "sha2 0.11.0",
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
  "syn 3.0.6",
  "ww_numeric",
  "ww_self",
@@ -2509,7 +2476,7 @@ name = "ww_date_time"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
 ]
 
 [[package]]
@@ -2519,7 +2486,7 @@ dependencies = [
  "convert_case",
  "serde",
  "serde_json",
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
 ]
 
 [[package]]
@@ -2527,7 +2494,7 @@ name = "ww_numeric"
 version = "0.1.1"
 dependencies = [
  "serde",
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
 ]
 
 [[package]]
@@ -2536,7 +2503,7 @@ version = "0.1.1"
 dependencies = [
  "anyhow",
  "serde",
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
  "ww_numeric",
  "ww_version",
 ]
@@ -2548,7 +2515,7 @@ dependencies = [
  "hex",
  "semver",
  "serde",
- "shrink_wrap 0.1.2",
+ "shrink_wrap",
  "ww_global",
 ]
 

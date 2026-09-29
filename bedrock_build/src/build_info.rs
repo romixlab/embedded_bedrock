@@ -3,7 +3,7 @@ use bedrock_build_info::{
     Profile, TargetInfoOwned, VersionControlOwned,
 };
 use build_info_common::BuildInfo;
-use shrink_wrap::prelude::*;
+use wire_weaver::shrink_wrap::prelude::*;
 
 pub fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
     let mut info = BedrockBuildInfoOwned {
@@ -47,19 +47,16 @@ pub fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
         dep.authors = Vec::new();
     }
 
-    // let build_info_debug = format!("{:#?}", info);
-    let mut buf = [0u8; 16_384];
-    let mut wr = BufWriter::new(&mut buf);
-    info.ser_shrink_wrap(&mut wr).unwrap();
+    let mut wr = BufWriterOwned::new();
+    info.ser_shrink_wrap_owned(&mut wr).unwrap();
     let info_full = wr.finish_and_take().unwrap().to_vec();
 
     info.crate_info.dependencies = Vec::new();
     if let Some(vc) = &mut info.version_control {
         vc.commit_id = None;
     }
-    // let mut buf = [0u8; 16_384]; // TODO: remove
-    let mut wr = BufWriter::new(&mut buf);
-    info.ser_shrink_wrap(&mut wr).unwrap();
+    let mut wr = BufWriterOwned::new();
+    info.ser_shrink_wrap_owned(&mut wr).unwrap();
     let info_pruned = wr.finish_and_take().unwrap().to_vec();
 
     (info_full, info_pruned)
