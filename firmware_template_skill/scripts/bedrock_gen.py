@@ -315,6 +315,9 @@ def stm32_regs(t: Target, data: Stm32Data, extra_rams: list[Mem], want_bkp: str)
                     break
             if r.bkp:
                 break
+        if r.bkp and not t.rust_target.startswith("thumbv6m"):
+            r.notes.append("cnt updates counters with ldrex/strex on this core; check on hardware that bkp_cnt! "
+                           f"increments the {r.bkp[0]} backup registers (an exclusive store that never succeeds would hang)")
         if not r.bkp:
             r.notes.append(f"no BKPR register array found for --bkp-counters {want_bkp} (F1 BKP DRx are not contiguous and unsupported)")
     return r
@@ -342,7 +345,6 @@ class Region:
     comment: str = ""
     commented_out: bool = False    # emitted as a comment (for reference)
     is_main_ram: bool = False      # also emitted as RAM
-    collect: str = ""              # input sections to collect into this region (NOLOAD)
     shift: Optional[str] = None    # linker symbol expression to subtract for the __x_start/_end consts
     consts: bool = True            # emit __name_start/__name_end
     align: int = 4
@@ -478,14 +480,14 @@ def build_layout(t: Target, o) -> Layout:
     for m in rams:
         if m is main:
             continue
-        regions.append(Region(m.name, m.address, m.size, "ram", "", collect="", align=8 if m.name == "AXISRAM" else 4))
+        regions.append(Region(m.name, m.address, m.size, "ram", "", align=8 if m.name == "AXISRAM" else 4))
 
     # backup registers for counters
     bkp_words = 0
     if o.bkp:
         pname, addr, size = o.bkp
-        regions.append(Region("BKP_REGS", addr, size, "reg", f"{pname} backup registers, retained across resets (not power loss without VBAT)",
-                              collect=".bss._CNT_BKP_BUFFER .bss._CNT_BKP_BUFFER.*", consts=False))
+        regions.append(Region("BKP_REGS", addr, size, "reg", f"{pname} backup registers, retained across resets (not power loss without VBAT); "
+                              "cnt.x places the BKP counters here (CNT_BKP_MEMORY_REGION)", consts=False))
         bkp_words = size // 4
     return Layout(regions, app, main_r, bkp_words)
 
@@ -506,7 +508,7 @@ def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str
 
     visible = [r for r in regions if not r.commented_out and not r.is_main_ram]
     return render("app/memory.x.j2", t=t, regions=regions,
-                  sections=[r for r in visible if r.kind != "flash"],
+                  sections=[r for r in visible if r.kind == "ram"],
                   consts=[r for r in visible if r.consts and not (r.kind == "flash" and r.name == "FLASH")])
 
 
@@ -883,7 +885,7 @@ def main(argv=None) -> None:
     p.add_argument("--log", choices=["defmt", "rtt", "esp-println", "none"], default="defmt")
     p.add_argument("--log-level", default="debug", help="DEFMT_LOG / ESP_LOG default level (default debug)")
     p.add_argument("--rtt-buffer", type=int, default=1024, help="DEFMT_RTT_BUFFER_SIZE (default 1024)")
-    p.add_argument("--counters", action="store_true", help="add cnt crate (cnt_if! event counters)")
+    p.add_argument("--counters", action="store_true", help="add cnt crate (cnt! event counters)")
     p.add_argument("--ram-counters", type=int, default=64, help="RAM counters buffer size in words (default 64)")
     p.add_argument("--no-flip-link", action="store_true", help="do not use flip-link (stack overflow protection)")
     p.add_argument("--nightly", action="store_true", help="pin the installed nightly in rust-toolchain.toml")

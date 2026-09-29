@@ -39,7 +39,7 @@ pub(crate) fn reset_backup_domain() {
 {% endif %}
 {% if bkp_words %}
 
-/// Enable write access to {{ o.bkp[0] if o.bkp else "TAMP/RTC" }} backup registers used by `bkp_cnt_if!` counters.
+/// Enable write access to {{ o.bkp[0] if o.bkp else "TAMP/RTC" }} backup registers used by `bkp_cnt!` counters.
 /// Backup registers are only accessible with DBP set and (on most families) the RTC APB clock enabled.
 /// NOTE: TAMP/RTC backup registers are reset by a backup domain reset, so do not call reset_backup_domain().
 pub(crate) fn enable_backup_registers() {

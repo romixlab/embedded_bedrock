@@ -16,7 +16,7 @@ fn main() -> ! {
 {% endif %}
     loop {
 {% if o.counters %}
-        cnt_if!(true, loop_iterations: u32 += 1);
+        cnt!(loop_iterations: u32);
 {% endif %}
         cortex_m::asm::wfi();
     }

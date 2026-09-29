@@ -53,10 +53,12 @@ regions need not be 64K-aligned; `flip-link` moves the stack below `.bss/.data` 
 ## Backup-register counters (`BKP_REGS`)
 
 With `--bkp-counters tamp|rtc|auto` a pseudo memory region `BKP_REGS` is added at the `BKPR` register array
-of TAMP (G0/G4/H5/L5/U5/WB/WL) or RTC (F0/F2/F3/F4/F7/H7/L0/L1/L4). The `.bss._CNT_BKP_BUFFER` input section
-of the `cnt` crate is redirected there, and `CNT_BKP_BUFFER_SIZE_WORDS` in `.cargo/config.toml` is set to the
-number of registers (5 on G0, 32 on H7/L4/...). Startup code does not zero it, and it survives resets (with
+of TAMP (G0/G4/H5/L5/U5/WB/WL) or RTC (F0/F2/F3/F4/F7/H7/L0/L1/L4). memory.x only declares the region (no
+SECTIONS entry): `CNT_BKP_MEMORY_REGION = "BKP_REGS"` makes cnt.x place its NOLOAD `.cnt_bkp_buffer` there, and
+`CNT_BKP_BUFFER_SIZE_WORDS` in `.cargo/config.toml` is set to the number of registers (5 on G0, 32 on H7/L4/...). Startup code does not zero it, and it survives resets (with
 VBAT also power loss). The F1 `BKP` peripheral has non-contiguous 16-bit registers and is not supported.
+On cores with 32-bit atomics (not thumbv6m) cnt 0.4 updates counters with `ldrex`/`strex`, i.e. exclusive accesses to
+peripheral registers; verify on hardware that BKP counters increment (the generator prints a note).
 
 Write access needs `PWR.DBP=1` (+ PWR clock, + RTC APB clock on some parts) — `src/init.rs::enable_backup_registers()`
 does that from stm32-data register info; it purposely does **not** reset the backup domain in that case.

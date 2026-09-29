@@ -41,7 +41,7 @@ use panic_halt as _;
 use esp_backtrace as _;
 {% endif %}
 {% if o.counters %}
-use cnt::cnt_if;{{ " // bkp_cnt_if! for counters in backup registers" if bkp_words else "" }}
+use cnt::cnt;{{ " // cnt::bkp_cnt! for counters in backup registers" if bkp_words else "" }}
 {% endif %}
 
 {% include "app/src/main/" ~ main_variant ~ ".rs.j2" %}
@@ -50,9 +50,9 @@ use cnt::cnt_if;{{ " // bkp_cnt_if! for counters in backup registers" if bkp_wor
 #[exception]
 unsafe fn DefaultHandler(irqn: i16) {
   {% if o.counters %}
-    cnt_if!(true, unhandled_exceptions: u32 += 1);
+    cnt!(unhandled_exceptions: u32, warn);
     {% if bkp_words %}
-    cnt::bkp_cnt_if!(true, unhandled_exceptions_total: u32 += 1);
+    cnt::bkp_cnt!(unhandled_exceptions_total: u32, warn);
     {% endif %}
   {% endif %}
   {% if o.log != "none" %}
@@ -65,7 +65,7 @@ unsafe fn DefaultHandler(irqn: i16) {
 #[exception]
 unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
   {% if bkp_words %}
-    cnt::bkp_cnt_if!(true, hard_faults: u32 += 1);
+    cnt::bkp_cnt!(hard_faults: u32, error);
   {% endif %}
   {% if o.log == "defmt" %}
     error!("HardFault {}", defmt::Debug2Format(ef));

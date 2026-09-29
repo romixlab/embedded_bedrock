@@ -95,7 +95,7 @@ fn main() -> ! {
         led.toggle();
 {% endif %}
 {% if o.counters %}
-        cnt_if!(true, led_toggles: u32 += 1);
+        cnt!(led_toggles: u32);
 {% endif %}
         cortex_m::asm::delay(sysclk / 2); // TODO: use a timer
     }

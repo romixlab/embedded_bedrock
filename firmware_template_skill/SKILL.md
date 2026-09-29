@@ -34,7 +34,13 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      `stm32xx-hal` = the per-series stm32-rs crate: F0/F1/F3/F4/F7/G0/G4/H7/L0/L4)
    - logging `--log defmt|rtt|esp-println|none` [defmt]
    - bootloader `--bootloader` (embassy-boot, stm32/rp/nrf only), config page `--config-page`
-   - counters `--counters` (+ `--bkp-counters auto|tamp|rtc` on STM32 for reset-surviving counters)
+   - counters: **always ask these two questions**, one after the other, even when everything else is left at
+     defaults:
+     1. *Use `cnt` event counters?* → `--counters` (adds the `cnt` crate, `-Tcnt.x`, `CNT_RAM_BUFFER_SIZE_WORDS`,
+        `cnt!` in the main loop and `DefaultHandler`). `--ram-counters N` sets the RAM buffer size [64 words].
+     2. Only if yes: *Also use BKP counters that survive resets (backup registers)?* → `--bkp-counters auto`
+        (or `tamp`/`rtc` to force the peripheral). STM32 only (not F1); for other chips say it is not supported and
+        skip. BKP counters keep the backup domain from being reset at boot, see `references/stm32-notes.md`.
    - board LED pin `--led` (PB14 / PIN_25 / P0_13 / GPIO8 by default), RTC usage `--rtc`
    - STM32H7 with SMPS: `--supply-config <variant>` [+ `--smps-voltage V1_8|V2_5`] — the script **refuses** to
      generate without it; the value must come from the board schematic. Explain the options
@@ -67,7 +73,7 @@ memory table and MCU documentation links, and `bootloader/` (own crate, own `mem
 
 Details: `references/memory-layout.md` (partitioning rules, symbols, embassy-boot offsets),
 `references/stm32-notes.md` (SMPS, backup domain, TAMP/RTC registers, stm32-data JSON structure),
-`references/frameworks.md` (crate versions, per-family quirks, Hubris).
+`references/frameworks.md` (crate versions, per-family quirks, `cnt` counters, Hubris).
 
 ## Maintaining the script
 

@@ -1,4 +1,4 @@
-{# regions: all regions (some commented out), sections: extra RAM / register regions that get a NOLOAD
+{# regions: all regions (some commented out), sections: extra RAM regions that get a NOLOAD
    output section, consts: regions that get __<name>_start/__<name>_end helper symbols. #}
 MEMORY
 {
@@ -28,7 +28,7 @@ SECTIONS
     {% endif %}
   .{{ lname }} (NOLOAD) : ALIGN({{ r.align }})
   {
-    *({{ r.collect or ".%s .%s.*" % (lname, lname) }});
+    *(.{{ lname }} .{{ lname }}.*);
     . = ALIGN({{ r.align }});
   } > {{ r.name }}
   {% endfor %}

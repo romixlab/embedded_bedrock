@@ -15,7 +15,7 @@ espup install && source ~/export-esp.sh
 cargo install espflash
 {% endif %}
 {% if o.counters %}
-cargo install cnt_cli   # read counters: cnt_cli target/<target>/debug/{{ o.name }} tui
+cargo install cnt_cli   # provides `cnt`: {{ "cnt tui" if t.cortex_m else "cnt tui --chip " ~ t.probe_chip }} (TUI), cnt read, cnt reset
 {% endif %}
 ```
 

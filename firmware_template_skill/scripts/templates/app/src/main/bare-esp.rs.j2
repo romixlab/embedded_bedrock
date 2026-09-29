@@ -12,7 +12,7 @@ fn main() -> ! {
     {{ info }}("{{ o.name }} starting...");
     loop {
 {% if o.counters %}
-        cnt_if!(true, loop_iterations: u32 += 1);
+        cnt!(loop_iterations: u32);
 {% endif %}
         let t = Instant::now();
         while t.elapsed() < Duration::from_millis(1000) {}

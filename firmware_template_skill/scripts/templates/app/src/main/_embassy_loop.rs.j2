@@ -10,7 +10,7 @@
     loop {
         led.toggle();
 {% if o.counters %}
-        cnt_if!(true, led_toggles: u32 += 1);
+        cnt!(led_toggles: u32);
 {% endif %}
         Timer::after_millis(1000).await;
     }
