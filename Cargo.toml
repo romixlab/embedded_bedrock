@@ -9,9 +9,10 @@ members = [
     "bedrock_build",
     "bedrock_build_info",
     "bedrock_cli",
-    "cnt", "cnt_cli", "cnt_core",
-    "cnt_macro",
     "fw_registry",
 ]
 
 [workspace.dependencies]
+wire_weaver = { path = "../wire_weaver/wire_weaver", default-features = false }
+ww_date_time = { path = "../wire_weaver/ww_stdlib/ww_date_time", default-features = false }
+ww_version = { path = "../wire_weaver/ww_stdlib/ww_version", default-features = false }

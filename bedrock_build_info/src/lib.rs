@@ -28,10 +28,7 @@ pub fn build_info_crc(bytes: &[u8]) -> u32 {
     crc.finalize()
 }
 
-#[derive_shrink_wrap]
-#[derive(Debug, PartialEq, Eq)]
-#[shrink_wrap(no_alloc)]
-#[owned = "std"]
+#[derive_shrink_wrap(borrowed, owned, derive(Debug, PartialEq, Eq))]
 pub struct BedrockBuildInfo<'i> {
     /// Firmware build time
     pub timestamp: DateTime,
@@ -45,19 +42,13 @@ pub struct BedrockBuildInfo<'i> {
     pub version_control: Option<VersionControl<'i>>,
 }
 
-#[derive_shrink_wrap]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[ww_repr(u2)]
-#[sized]
+#[derive_shrink_wrap(ww_repr = u2, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum Profile {
     Release,
     Debug,
 }
 
-#[derive_shrink_wrap]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[ww_repr(u3)]
-#[sized]
+#[derive_shrink_wrap(ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum OptimizationLevel {
     O0,
     O1,
@@ -67,10 +58,7 @@ pub enum OptimizationLevel {
     Oz,
 }
 
-#[derive_shrink_wrap]
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[shrink_wrap(no_alloc)]
-#[owned = "std"]
+#[derive_shrink_wrap(borrowed, owned, derive(Debug, PartialEq, Eq, Clone))]
 pub struct CrateInfo<'i> {
     pub name: &'i str,
     pub version: Version<'i>,
@@ -79,10 +67,7 @@ pub struct CrateInfo<'i> {
     pub dependencies: RefVec<'i, CrateInfo<'i>>,
 }
 
-#[derive_shrink_wrap]
-#[derive(Debug, PartialEq, Eq)]
-#[shrink_wrap(no_alloc)]
-#[owned = "std"]
+#[derive_shrink_wrap(borrowed, owned, derive(Debug, PartialEq, Eq, Clone))]
 pub struct TargetInfo<'i> {
     #[flag]
     arch: bool,
@@ -90,10 +75,7 @@ pub struct TargetInfo<'i> {
     pub arch: Option<&'i str>,
 }
 
-#[derive_shrink_wrap]
-#[derive(Debug, PartialEq, Eq)]
-#[shrink_wrap(no_alloc)]
-#[owned = "std"]
+#[derive_shrink_wrap(borrowed, owned, derive(Debug, PartialEq, Eq, Clone))]
 pub struct CompilerInfo<'i> {
     pub version: Version<'i>,
     pub channel: CompilerChannel,
@@ -103,10 +85,7 @@ pub struct CompilerInfo<'i> {
     pub flip_link: bool,
 }
 
-#[derive_shrink_wrap]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[ww_repr(u3)]
-#[sized]
+#[derive_shrink_wrap(ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum CompilerChannel {
     Dev,
     Nightly,
@@ -114,10 +93,7 @@ pub enum CompilerChannel {
     Stable,
 }
 
-#[derive_shrink_wrap]
-#[derive(Debug, PartialEq, Eq)]
-#[shrink_wrap(no_alloc)]
-#[owned = "std"]
+#[derive_shrink_wrap(borrowed, owned, derive(Debug, PartialEq, Eq, Clone))]
 pub struct VersionControl<'i> {
     #[flag]
     branch: bool,
@@ -256,6 +232,7 @@ mod tests {
                 channel: CompilerChannel::Nightly,
                 host_triple: None,
                 commit_date: Some(NaiveDate::from_ymd_opt(2025, 5, 5).unwrap()),
+                flip_link: false,
             },
             version_control: Some(VersionControl {
                 dirty: true,
