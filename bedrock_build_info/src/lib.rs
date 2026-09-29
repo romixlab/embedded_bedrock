@@ -42,13 +42,13 @@ pub struct BedrockBuildInfo<'i> {
     pub version_control: Option<VersionControl<'i>>,
 }
 
-#[derive_shrink_wrap(ww_repr = u2, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
+#[derive_shrink_wrap(borrowed, ww_repr = u2, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum Profile {
     Release,
     Debug,
 }
 
-#[derive_shrink_wrap(ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
+#[derive_shrink_wrap(borrowed, ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum OptimizationLevel {
     O0,
     O1,
@@ -85,7 +85,7 @@ pub struct CompilerInfo<'i> {
     pub flip_link: bool,
 }
 
-#[derive_shrink_wrap(ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
+#[derive_shrink_wrap(borrowed, ww_repr = u3, sized, derive(Copy, Clone, Debug, PartialEq, Eq))]
 pub enum CompilerChannel {
     Dev,
     Nightly,
