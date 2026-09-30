@@ -33,8 +33,10 @@ ESP_LOG = "{{ o.defmt_log }}"
 {% if o.counters %}
 CNT_RAM_BUFFER_SIZE_WORDS = "{{ o.ram_counters }}"
   {% if bkp_words %}
-CNT_BKP_BUFFER_SIZE_WORDS = "{{ bkp_words }}" # must fit into BKP_REGS in memory.x
-CNT_BKP_MEMORY_REGION = "BKP_REGS" # cnt.x places the BKP buffer there
+CNT_BKP_BUFFER_SIZE_WORDS = "{{ bkp_words }}" # must fit into {{ bkp_region }} in memory.x
+    {% if bkp_region != CNT_BKP_DEFAULT_REGION %}
+CNT_BKP_MEMORY_REGION = "{{ bkp_region }}" # cnt.x places the BKP buffer there ({{ CNT_BKP_DEFAULT_REGION }} is the backup SRAM)
+    {% endif %}
   {% endif %}
 {% endif %}
 

@@ -52,6 +52,7 @@ BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
 FW_JSON = "bedrock_fw.json"
+CNT_BKP_DEFAULT_REGION = "BKPSRAM"  # cnt.x default for CNT_BKP_MEMORY_REGION
 FW_JSON_SCHEMA = 1
 # `new` arguments that are not answers about the firmware (not stored in / not restored from bedrock_fw.json)
 NON_ANSWERS = {"cmd", "func", "out", "force", "dry_run", "cache", "answers"}
@@ -368,6 +369,7 @@ class Layout:
     app_flash: Region
     main_ram: Region
     bkp_words: int = 0
+    bkp_region: str = CNT_BKP_DEFAULT_REGION
 
     def by_name(self, name: str) -> Region:
         return next(r for r in self.regions if r.name == name and not r.commented_out)
@@ -494,14 +496,18 @@ def build_layout(t: Target, o) -> Layout:
             continue
         regions.append(Region(m.name, m.address, m.size, "ram", "", align=8 if m.name == "AXISRAM" else 4))
 
-    # backup registers for counters
+    # backup registers for counters: named like cnt's default CNT_BKP_MEMORY_REGION, unless the chip has a real
+    # backup SRAM of that name (H7, H5), then BKP_REGS + CNT_BKP_MEMORY_REGION in .cargo/config.toml
     bkp_words = 0
+    bkp_region = CNT_BKP_DEFAULT_REGION
     if o.bkp:
         pname, addr, size = o.bkp
-        regions.append(Region("BKP_REGS", addr, size, "reg", f"{pname} backup registers, retained across resets (not power loss without VBAT); "
-                              "cnt.x places the BKP counters here (CNT_BKP_MEMORY_REGION)", consts=False))
+        if any(m.name == CNT_BKP_DEFAULT_REGION for m in t.memories):
+            bkp_region = "BKP_REGS"
+        regions.append(Region(bkp_region, addr, size, "reg", f"{pname} backup registers, retained across resets (not power loss without VBAT); "
+                              "cnt.x places the BKP counters here", consts=False))
         bkp_words = size // 4
-    return Layout(regions, app, main_r, bkp_words)
+    return Layout(regions, app, main_r, bkp_words, bkp_region)
 
 
 def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str:
@@ -667,6 +673,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
     have_init_ram = bool(extra_rams) and t.cortex_m
     have_init = bool(lay) and t.family == "stm32" and o.framework == "embassy" and bool(lay.bkp_words or not o.rtc)
     ctx = dict(t=t, o=o, lay=lay, bkp_words=lay.bkp_words if lay else 0, info=info, err=err,
+               bkp_region=lay.bkp_region if lay else CNT_BKP_DEFAULT_REGION, CNT_BKP_DEFAULT_REGION=CNT_BKP_DEFAULT_REGION,
                have_init=have_init, have_init_ram=have_init_ram, main_variant=main_variant(t, o),
                flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024)
     if o.framework == "stm32-hal2":

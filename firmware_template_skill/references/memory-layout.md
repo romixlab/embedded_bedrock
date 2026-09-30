@@ -33,7 +33,7 @@ Flash partition symbols are **offsets from the flash base** (`- ORIGIN(BOOTLOADE
 embassy flash drivers use offsets, not absolute addresses. nRF flash starts at 0, so no shift there.
 
 The bootloader `memory.x` is the same table with renames: `BOOTLOADER→FLASH`, app `FLASH→BOOTLOADER_ACTIVE`,
-extra RAM banks / `CONFIG` / `BKP_REGS` dropped. embassy-boot's `BootLoaderConfig::from_linkerfile_blocking`
+extra RAM banks / `CONFIG` / backup-register region dropped. embassy-boot's `BootLoaderConfig::from_linkerfile_blocking`
 reads `__bootloader_active_start/end`, `__bootloader_dfu_start/end`, `__bootloader_state_start/end`.
 
 ## RAM
@@ -50,11 +50,14 @@ RP2350 `SRAM8/9` are direct-mapped (non-striped) banks, useful for per-core stac
 Notes for manual edits: the cortex-m-rt `link.x` requires `FLASH` and `RAM`; `--nmagic` is passed so
 regions need not be 64K-aligned; `flip-link` moves the stack below `.bss/.data` for overflow detection.
 
-## Backup-register counters (`BKP_REGS`)
+## Backup-register counters (`BKPSRAM` / `BKP_REGS`)
 
-With `--bkp-counters tamp|rtc|auto` a pseudo memory region `BKP_REGS` is added at the `BKPR` register array
+With `--bkp-counters tamp|rtc|auto` a pseudo memory region is added at the `BKPR` register array
 of TAMP (G0/G4/H5/L5/U5/WB/WL) or RTC (F0/F2/F3/F4/F7/H7/L0/L1/L4). memory.x only declares the region (no
-SECTIONS entry): `CNT_BKP_MEMORY_REGION = "BKP_REGS"` makes cnt.x place its NOLOAD `.cnt_bkp_buffer` there, and
+SECTIONS entry); cnt.x places its NOLOAD `.cnt_bkp_buffer` there. The region is named `BKPSRAM`, cnt's default
+`CNT_BKP_MEMORY_REGION`, so no env is needed. Chips with a real backup SRAM (H7, H5, ... as listed by stm32-data) already have a
+`BKPSRAM` RAM region in stm32-data; there the register region is called `BKP_REGS` and `.cargo/config.toml` sets
+`CNT_BKP_MEMORY_REGION = "BKP_REGS"`. In both cases
 `CNT_BKP_BUFFER_SIZE_WORDS` in `.cargo/config.toml` is set to the number of registers (5 on G0, 32 on H7/L4/...). Startup code does not zero it, and it survives resets (with
 VBAT also power loss). The F1 `BKP` peripheral has non-contiguous 16-bit registers and is not supported.
 On cores with 32-bit atomics (not thumbv6m) cnt 0.4 updates counters with `ldrex`/`strex`, i.e. exclusive accesses to

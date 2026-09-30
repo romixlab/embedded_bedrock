@@ -8,6 +8,16 @@ Each entry: what changed, and **Upgrade notes** — how an existing firmware pic
 involved, what needs a hardware test. Add an entry (bump the version) for every change that alters generated output
 or options; purely internal refactors only need a line under the next version.
 
+## [0.4.1] - 2026-09-30
+
+- The backup-register region for `--bkp-counters` is named `BKPSRAM`, cnt's default `CNT_BKP_MEMORY_REGION`,
+  so `.cargo/config.toml` no longer sets `CNT_BKP_MEMORY_REGION`. On chips that already have a real `BKPSRAM` RAM
+  region (H7, H5, ... as listed by stm32-data) it stays `BKP_REGS` and the env var is still set.
+
+Upgrade notes: only for `bkp_counters != "none"` on chips without a backup SRAM (e.g. G0, G4, L4). Rename `BKP_REGS` to
+`BKPSRAM` in `memory.x` and drop `CNT_BKP_MEMORY_REGION` from `.cargo/config.toml`. Check with
+`readelf -SW <elf> | grep cnt_bkp` that `.cnt_bkp_buffer` is still at the backup-register address.
+
 ## [0.4.0] - 2026-09-30
 
 - `new` writes `bedrock_fw.json` (template repo/path/commit/version, all answers, upgrade history, rejected upgrades,
