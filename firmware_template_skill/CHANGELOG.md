@@ -8,6 +8,13 @@ Each entry: what changed, and **Upgrade notes** — how an existing firmware pic
 involved, what needs a hardware test. Add an entry (bump the version) for every change that alters generated output
 or options; purely internal refactors only need a line under the next version.
 
+## [0.4.2] - 2026-09-30
+
+- `build.rs`: `use` lines in rustfmt order, so `cargo fmt --check` passes on it.
+
+Upgrade notes: if `build.rs` is untouched, replace it; otherwise swap `use std::path::PathBuf;` above `use std::{env, fs};`
+(or just run `cargo fmt`). No functional change.
+
 ## [0.4.1] - 2026-09-30
 
 - The backup-register region for `--bkp-counters` is named `BKPSRAM`, cnt's default `CNT_BKP_MEMORY_REGION`,
