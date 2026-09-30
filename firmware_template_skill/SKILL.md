@@ -7,7 +7,8 @@ description: >
   memory.x partitioning, embassy-boot A/B bootloader, config flash page, cnt event counters, backup-register
   counters, extra SRAM bank init, build-info embedding. Use when asked to create/scaffold/bootstrap an MCU
   project, produce a memory.x/linker layout, pick rust target/probe-rs chip for an MCU, set up an embassy-boot
-  bootloader partition table, or produce a Hubris memory.toml for a chip.
+  bootloader partition table, or produce a Hubris memory.toml for a chip. Also use to upgrade an existing firmware
+  generated from this template (has bedrock_fw.json) to a newer template version.
 ---
 
 # Firmware project template
@@ -22,6 +23,9 @@ uv run scripts/bedrock_gen.py chip-info  --chip STM32H725IG
 uv run scripts/bedrock_gen.py memory-x   --chip STM32G0B1RE --bootloader --config-page
 uv run scripts/bedrock_gen.py new <name> --chip <chip> [options]
 uv run scripts/bedrock_gen.py hubris-memory --chip STM32H743ZI
+uv run scripts/bedrock_gen.py new --answers <fw>/bedrock_fw.json --out <tmp>   # regenerate with recorded answers
+uv run scripts/bedrock_gen.py check-answers <fw>/bedrock_fw.json             # options new since generation
+uv run scripts/bedrock_gen.py compare --current <fw> --new <tmp> [--base <tmp-old>] [--diff]
 ```
 
 Paths are relative to this skill directory; use the absolute path when invoking.
@@ -51,6 +55,19 @@ Paths are relative to this skill directory; use the absolute path when invoking.
    combinations compile out of the box; if a build fails, fix the generated project **and** the script.
 5. Point out `TODO` markers in the generated sources (clock tree, `mark_booted()` placement, SRAM enable
    bits, backup register write-access).
+6. Tell the user that `bedrock_fw.json` (template commit + all answers) and `AGENTS.md`/`CLAUDE.md` should be
+   committed: they let an agent upgrade the firmware to future template versions.
+
+## Upgrading an existing firmware
+
+A generated project contains `bedrock_fw.json` (`template.commit`/`version`, `answers`, `upgrades`, `rejected`,
+`nuances`) and an `AGENTS.md` with the full procedure — follow it (source: `scripts/templates/app/AGENTS.md.j2`).
+In short: `git log <template.commit>..HEAD -- firmware_template_skill` + `CHANGELOG.md` entries newer than
+`template.version` → `check-answers`, ask the user about new options → regenerate with `new --answers` into a temp
+dir (and the old commit into another via `git worktree`, as 3-way base) → `compare` + read the diffs, matching changes
+by meaning → report per logical upgrade, skipping `rejected` ones → apply **only after approval** → build → update
+`bedrock_fw.json` (new template commit, answers, `upgrades` entry, `rejected`, `nuances`).
+For firmware without `bedrock_fw.json` (pre-0.4.0) see the 0.4.0 upgrade notes in `CHANGELOG.md`.
 
 ## Options you should know
 
@@ -67,7 +84,8 @@ Paths are relative to this skill directory; use the absolute path when invoking.
 ## What gets generated
 
 `Cargo.toml`, `build.rs`, `.cargo/config.toml` (probe-rs/espflash runner, `DEFMT_LOG`, `CNT_*`), `rust-toolchain.toml`,
-`memory.x` (not for ESP), `src/main.rs`, optional `src/init.rs` (STM32 backup-domain reset / backup register enable),
+`memory.x` (not for ESP), `src/main.rs`, `bedrock_fw.json` (template origin + answers), `AGENTS.md` + `CLAUDE.md`
+(template upgrade instructions), optional `src/init.rs` (STM32 backup-domain reset / backup register enable),
 optional `src/init_ram.rs` (enable + zero extra SRAM banks, RCC bits looked up in stm32-data), `README.md` with
 memory table and MCU documentation links, and `bootloader/` (own crate, own `memory.x` with swapped region names).
 
@@ -84,3 +102,9 @@ Details: `references/memory-layout.md` (partitioning rules, symbols, embassy-boo
 - Generated file contents are Jinja2 templates in `scripts/templates/` (conventions in its `README.md`); the
   script only resolves the chip, computes the memory layout and picks templates.
 - After changes, regenerate and build the matrix in `references/frameworks.md#tested-matrix`.
+- Every change that alters generated output or options gets a `CHANGELOG.md` entry (bump the version) with
+  **Upgrade notes** for existing firmware: upgrading agents rely on it. Commit it, since `bedrock_fw.json` records
+  the commit hash (a dirty tree is flagged with `"dirty": true`).
+- New `new` options are picked up automatically as answers (everything except `NON_ANSWERS` in the script); give
+  them a sensible default and good `help`, `check-answers` shows it to users of older firmware. Renaming or removing
+  an option breaks `--answers` for existing firmware: describe the mapping in the changelog.

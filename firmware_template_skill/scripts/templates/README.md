@@ -14,7 +14,7 @@ Layout:
 
 | path | output |
 |---|---|
-| `app/` | application crate; `build.rs`, `cargo_config.toml`, `rust-toolchain.toml`, `memory.x` are shared with the bootloader |
+| `app/` | application crate; `build.rs`, `cargo_config.toml`, `rust-toolchain.toml`, `memory.x` are shared with the bootloader; `AGENTS.md.j2`/`CLAUDE.md` describe the template upgrade flow (`bedrock_fw.json` itself is written by `fw_json()` in the script) |
 | `app/src/main/` | one `main.rs` body per framework/family, included by `app/src/main.rs.j2` |
 | `bootloader/` | embassy-boot bootloader crate |
 | `linker/` | static linker script fragments |

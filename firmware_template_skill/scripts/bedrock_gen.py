@@ -19,12 +19,19 @@ Subcommands:
   memory-x       print only the memory.x that `new` would generate
   hubris-memory  print a Hubris-style memory.toml for the chip
   list-chips     list built-in (non-STM32) chips
+  check-answers  compare a firmware's bedrock_fw.json answers with the options this template version knows
+  compare        fuzzy (optionally 3-way) comparison of a firmware with a regenerated project, for upgrades
+
+`new` records the template git revision and all answers in <project>/bedrock_fw.json; `new --answers
+<project>/bedrock_fw.json --out <tmp>` regenerates the same project with this template version.
 
 Run with --help for details.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
+import difflib
 import json
 import os
 import re
@@ -43,6 +50,11 @@ STM32_DATA_BASE = "https://raw.githubusercontent.com/embassy-rs/stm32-data-gener
 BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
 
 HERE = Path(__file__).resolve().parent
+SKILL_DIR = HERE.parent
+FW_JSON = "bedrock_fw.json"
+FW_JSON_SCHEMA = 1
+# `new` arguments that are not answers about the firmware (not stored in / not restored from bedrock_fw.json)
+NON_ANSWERS = {"cmd", "func", "out", "force", "dry_run", "cache", "answers"}
 
 
 def load_toml(name: str) -> dict:
@@ -687,6 +699,8 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
     if o.build_info:
         files["src/build_info.rs"] = render("app/src/build_info.rs")
     files[".gitignore"] = render("app/gitignore")
+    files["AGENTS.md"] = render("app/AGENTS.md.j2", **ctx)
+    files["CLAUDE.md"] = render("app/CLAUDE.md")
     packages = ", ".join(f"{p['name']} ({p['package']}, {len(p['pins'])} pins)" for p in t.stm32.get("packages", []))
     files["README.md"] = render("app/README.md.j2", **ctx, packages=packages, notes=t.notes + (r.notes if r else []))
     if o.bootloader and lay:
@@ -725,12 +739,243 @@ def gen_hubris_memory(t: Target) -> str:
 
 
 # ----------------------------------------------------------------------------
+# Template origin, bedrock_fw.json and upgrade helpers
+# ----------------------------------------------------------------------------
+
+
+def _git(*a: str) -> Optional[str]:
+    try:
+        r = subprocess.run(["git", "-C", str(SKILL_DIR), *a], capture_output=True, text=True, timeout=20)
+    except Exception:
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def changelog_version() -> Optional[str]:
+    """Version of the newest CHANGELOG.md entry (`## [x.y.z] - date`)."""
+    try:
+        text = (SKILL_DIR / "CHANGELOG.md").read_text()
+    except OSError:
+        return None
+    m = re.search(r"^## \[([^\]]+)\]", text, re.M)
+    return m.group(1) if m else None
+
+
+def template_origin() -> dict:
+    """Where this template comes from: repo, sub-directory, commit (None when not a git checkout)."""
+    commit = _git("rev-parse", "HEAD")
+    o = {"repo": BEDROCK_GIT, "path": (_git("rev-parse", "--show-prefix") or "firmware_template_skill/").rstrip("/"),
+         "commit": commit, "commit_date": None, "dirty": None, "version": changelog_version()}
+    if commit:
+        o["commit_date"] = _git("show", "-s", "--format=%cI", "HEAD")
+        o["dirty"] = bool(_git("status", "--porcelain", "--", "."))
+    return o
+
+
+def answer_actions(p_new: argparse.ArgumentParser) -> dict[str, argparse.Action]:
+    return {a.dest: a for a in p_new._actions if a.dest not in NON_ANSWERS and a.dest != "help"}
+
+
+def answers_to_argv(p_new: argparse.ArgumentParser, answers: dict) -> list[str]:
+    """Shortest `new` command line reproducing the answers (options equal to the parser default are omitted)."""
+    argv: list[str] = []
+    orig = getattr(p_new, "orig_defaults", {})
+    for dest, a in answer_actions(p_new).items():
+        if dest not in answers:
+            continue
+        v = answers[dest]
+        if not a.option_strings:
+            argv.append(str(v))
+            continue
+        default = orig.get(dest, a.default)
+        if isinstance(a, argparse._StoreTrueAction):
+            if v:
+                argv.append(a.option_strings[0])
+        elif v is not None and v != default and str(v) != str(default):
+            argv += [a.option_strings[0], str(v)]
+    return argv
+
+
+def load_fw_json(path: str) -> dict:
+    p = Path(path)
+    if p.is_dir():
+        p = p / FW_JSON
+    try:
+        return json.loads(p.read_text())
+    except OSError as e:
+        die(f"cannot read {p}: {e}")
+    except json.JSONDecodeError as e:
+        die(f"{p} is not valid JSON: {e}")
+    return {}
+
+
+def fw_json(p_new: argparse.ArgumentParser, args, prev: Optional[dict]) -> str:
+    """bedrock_fw.json content. Firmware-specific history (upgrades, rejected, nuances, unknown keys) is carried
+    over from the previous file when regenerating with --answers."""
+    answers = {k: getattr(args, k) for k in answer_actions(p_new)}
+    d = dict(prev or {})
+    for k in ("about", "schema", "template", "generated", "command", "answers"):
+        d.pop(k, None)
+    out = {
+        "about": "Written by embedded_bedrock firmware_template_skill (bedrock_gen.py). Records the template revision and the "
+                 "answers this firmware was generated with, plus firmware-specific upgrade history. See AGENTS.md.",
+        "schema": FW_JSON_SCHEMA,
+        "template": template_origin(),
+        "generated": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "command": "bedrock_gen.py new " + " ".join(answers_to_argv(p_new, answers)),
+        "answers": answers,
+        "upgrades": d.pop("upgrades", []),
+        "rejected": d.pop("rejected", []),
+        "nuances": d.pop("nuances", []),
+        **d,
+    }
+    return json.dumps(out, indent=2) + "\n"
+
+
+def apply_answers(ap: argparse.ArgumentParser, p_new: argparse.ArgumentParser, argv) -> argparse.Namespace:
+    """Parse `new` args with the answers of --answers <bedrock_fw.json> as defaults (explicit flags still win)."""
+    args = ap.parse_args(argv)
+    if getattr(args, "cmd", None) != "new" or not args.answers:
+        return args
+    prev = load_fw_json(args.answers)
+    answers = prev.get("answers", {})
+    acts = answer_actions(p_new)
+    unknown = sorted(set(answers) - set(acts))
+    missing = sorted(set(acts) - set(answers))
+    if unknown:
+        warn(f"answers no longer known to this template (ignored): {', '.join(unknown)}")
+    if missing:
+        warn("new options not in the answers, using defaults: "
+             + ", ".join(f"{acts[k].option_strings[0] if acts[k].option_strings else k}={acts[k].default!r}" for k in missing)
+             + " (run check-answers and ask the user)")
+    p_new.orig_defaults = {k: a.default for k, a in acts.items()}  # for answers_to_argv
+    p_new.set_defaults(**{k: v for k, v in answers.items() if k in acts})
+    args = ap.parse_args(argv)
+    args.prev_fw = prev
+    return args
+
+
+def cmd_check_answers(args, p_new: argparse.ArgumentParser) -> None:
+    prev = load_fw_json(args.answers)
+    answers = prev.get("answers", {})
+    acts = answer_actions(p_new)
+    tpl = prev.get("template", {})
+    cur = template_origin()
+    print(f"firmware generated from {tpl.get('commit') or '?'} (version {tpl.get('version') or '?'}), "
+          f"this template is {cur['commit'] or '?'} (version {cur['version'] or '?'}{', dirty' if cur['dirty'] else ''})")
+    missing = [k for k in acts if k not in answers]
+    unknown = [k for k in answers if k not in acts]
+    for k in missing:
+        a = acts[k]
+        opt = a.option_strings[0] if a.option_strings else k
+        choices = f" choices={list(a.choices)}" if a.choices else ""
+        print(f"NEW      {opt:24} default={a.default!r}{choices}  {a.help or ''}")
+    for k in unknown:
+        print(f"REMOVED  {k:24} was {answers[k]!r}")
+    if not missing and not unknown:
+        print("answers match the options of this template version")
+    print("command: bedrock_gen.py new " + " ".join(answers_to_argv(p_new, {**{k: acts[k].default for k in missing}, **answers})))
+
+
+CMP_SKIP_DIRS = {"target", ".git", ".idea", ".vscode"}
+CMP_SKIP_FILES = {"Cargo.lock", FW_JSON}
+
+
+def read_tree(root: Optional[str]) -> Optional[dict[str, str]]:
+    if not root:
+        return None
+    base = Path(root)
+    if not base.is_dir():
+        die(f"{root} is not a directory")
+    files = {}
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = [d for d in dirnames if d not in CMP_SKIP_DIRS]
+        for fn in filenames:
+            if fn in CMP_SKIP_FILES:
+                continue
+            p = Path(dirpath) / fn
+            try:
+                files[str(p.relative_to(base))] = p.read_text(errors="replace")
+            except OSError:
+                pass
+    return files
+
+
+def _norm(s: str) -> list[str]:
+    """Whitespace/blank-line insensitive view of a file, for fuzzy equality."""
+    return [" ".join(line.split()) for line in s.splitlines() if line.strip()]
+
+
+def _same(a: Optional[str], b: Optional[str]) -> bool:
+    return a is not None and b is not None and _norm(a) == _norm(b)
+
+
+def _sim(a: str, b: str) -> int:
+    return round(100 * difflib.SequenceMatcher(None, _norm(a), _norm(b), autojunk=False).ratio())
+
+
+def cmd_compare(args) -> None:
+    """Classify files of --current (the firmware) against --new (regenerated with the new template), optionally using
+    --base (regenerated with the old template revision) to tell template changes from local modifications."""
+    cur, new, base = read_tree(args.current), read_tree(args.new), read_tree(args.base)
+    rows: list[tuple[str, str, str]] = []  # (status, path, detail)
+    for path in sorted(set(cur) | set(new) | set(base or {})):
+        c, n = cur.get(path), new.get(path)
+        b = base.get(path) if base is not None else None
+        if base is None:
+            if n is None:
+                rows.append(("local-only", path, "not produced by the template"))
+            elif c is None:
+                rows.append(("new-file", path, "template produces it, firmware lacks it"))
+            elif _same(c, n):
+                rows.append(("same", path, ""))
+            else:
+                rows.append(("differs", path, f"similarity {_sim(c, n)}%"))
+            continue
+        if b is None and n is None:
+            rows.append(("local-only", path, "not produced by the template"))
+        elif b is None:
+            rows.append(("added-upstream", path, "take" if c is None else f"exists locally, merge (similarity {_sim(c, n)}%)"))
+        elif n is None:
+            if c is None:
+                rows.append(("same", path, "removed upstream and locally"))
+            else:
+                rows.append(("removed-upstream", path, "delete (untouched locally)" if _same(c, b) else "locally modified, review"))
+        elif _same(b, n):
+            rows.append(("same" if _same(c, b) else "local-change", path, "" if _same(c, b) else "template unchanged, keep local"))
+        elif c is None:
+            rows.append(("deleted-locally", path, "template changed a file the firmware deleted, review"))
+        elif _same(c, n):
+            rows.append(("up-to-date", path, "firmware already has the new content"))
+        elif _same(c, b):
+            rows.append(("take-new", path, "template changed, untouched locally: can be replaced"))
+        else:
+            rows.append(("merge", path, f"template and firmware both changed (local vs new similarity {_sim(c, n)}%)"))
+    shown = [r for r in rows if args.all or r[0] not in ("same", "local-only", "local-change")]
+    w = max((len(r[1]) for r in shown), default=4)
+    for st, path, detail in shown:
+        print(f"{st:17} {path:{w}}  {detail}")
+    hidden = len(rows) - len(shown)
+    if hidden:
+        print(f"({hidden} unchanged / local-only files not shown, --all lists them)")
+    if args.diff:
+        # with --base show what the template changed (base -> new), otherwise how the firmware differs (current -> new)
+        old, old_name = (base, "base") if base is not None else (cur, "current")
+        for st, path, _ in shown:
+            if st in ("same", "local-only", "local-change", "up-to-date"):
+                continue
+            sys.stdout.writelines(difflib.unified_diff((old.get(path) or "").splitlines(True),
+                                                       (new.get(path) or "").splitlines(True),
+                                                       f"{old_name}/{path}", f"new/{path}"))
+
+
+# ----------------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------------
 
 
-def add_common(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--chip", required=True, help="e.g. STM32H725IG, STM32G0B1RE, rp2040, rp2350, nrf52840, esp32c3")
+def add_common(p: argparse.ArgumentParser, chip_required: bool = True) -> None:
+    p.add_argument("--chip", required=chip_required, help="e.g. STM32H725IG, STM32G0B1RE, rp2040, rp2350, nrf52840, esp32c3")
     p.add_argument("--cache", default=os.path.expanduser("~/.cache/bedrock_gen"), help="stm32-data cache dir")
     p.add_argument("--offline", action="store_true", help="never download; use cache or --flash-size/--ram-size")
     p.add_argument("--flash-size", help="override flash size (e.g. 2M, 512K); for RP boards or offline mode")
@@ -765,8 +1010,12 @@ def make_layout(t: Target, args, regs: Optional[Stm32Regs]) -> Optional[Layout]:
     return build_layout(t, O)
 
 
-def cmd_new(args) -> None:
+def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     name = args.name
+    if not name:
+        die("project name is required (positional, or from --answers)")
+    if not args.chip:
+        die("--chip is required (or --answers)")
     if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]*", name):
         die("project name must be a valid cargo package name")
     t = resolve_target(args)
@@ -812,6 +1061,12 @@ def cmd_new(args) -> None:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
     files = gen_project(t, o, lay)
+    files[FW_JSON] = fw_json(p_new, args, getattr(args, "prev_fw", None))
+    origin = template_origin()
+    if not origin["commit"]:
+        warn(f"template is not a git checkout; {FW_JSON} records version {origin['version']} but no commit hash")
+    elif origin["dirty"]:
+        warn(f"template has uncommitted changes; the commit recorded in {FW_JSON} does not reproduce this output exactly")
     out = Path(args.out or name)
     if out.exists() and any(out.iterdir()) and not args.force:
         die(f"{out} exists and is not empty (use --force)")
@@ -877,8 +1132,10 @@ def main(argv=None) -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("new", help="generate a project")
-    p.add_argument("name")
-    add_common(p)
+    p_new = p
+    p.add_argument("name", nargs="?", help="cargo package / directory name (taken from --answers when omitted)")
+    p.add_argument("--answers", help=f"<project>/{FW_JSON} of an existing firmware: reuse its answers (explicit flags override)")
+    add_common(p, chip_required=False)
     add_layout(p)
     p.add_argument("--out", help="output directory (default: ./<name>)")
     p.add_argument("--framework", choices=["embassy", "stm32-hal2", "stm32xx-hal", "bare"], default="embassy")
@@ -899,7 +1156,7 @@ def main(argv=None) -> None:
     p.add_argument("--build-info", action="store_true", help="embed build info via bedrock_build (needs a buildable embedded_bedrock, see --bedrock)")
     p.add_argument("--dry-run", action="store_true", help="list files and print memory.x without writing")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")
-    p.set_defaults(func=cmd_new)
+    p.set_defaults(func=lambda a: cmd_new(a, p_new))
 
     p = sub.add_parser("chip-info", help="show chip data")
     add_common(p)
@@ -919,7 +1176,19 @@ def main(argv=None) -> None:
     p = sub.add_parser("list-chips", help="list built-in chips")
     p.set_defaults(func=cmd_list)
 
-    args = ap.parse_args(argv)
+    p = sub.add_parser("check-answers", help=f"list options missing from / unknown to a firmware's {FW_JSON}")
+    p.add_argument("answers", help=f"path to {FW_JSON} (or the firmware directory)")
+    p.set_defaults(func=lambda a: cmd_check_answers(a, p_new))
+
+    p = sub.add_parser("compare", help="fuzzy-compare a firmware with a regenerated project (template upgrade)")
+    p.add_argument("--current", required=True, help="the firmware directory")
+    p.add_argument("--new", required=True, help="project regenerated with the new template (new --answers ...)")
+    p.add_argument("--base", help="project regenerated with the old template commit: enables 3-way classification")
+    p.add_argument("--all", action="store_true", help="also list unchanged and local-only files")
+    p.add_argument("--diff", action="store_true", help="print unified diffs (base->new for template changes, current->new otherwise)")
+    p.set_defaults(func=cmd_compare)
+
+    args = apply_answers(ap, p_new, argv)
     args.func(args)
 
 
