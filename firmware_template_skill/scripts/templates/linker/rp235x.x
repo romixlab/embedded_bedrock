@@ -8,7 +8,8 @@ SECTIONS {
     } > FLASH
 } INSERT AFTER .vector_table;
 
-_stext = ADDR(.start_block) + SIZEOF(.start_block);
+/* .text follows the boot block; 8-aligned because .text may contain 8-aligned input sections (lld warns otherwise) */
+_stext = ALIGN(ADDR(.start_block) + SIZEOF(.start_block), 8);
 
 SECTIONS {
     .bi_entries : ALIGN(4)

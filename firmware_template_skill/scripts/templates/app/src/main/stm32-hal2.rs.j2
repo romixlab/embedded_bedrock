@@ -1,5 +1,6 @@
 use cortex_m_rt::{entry, exception};
-use hal::{clocks::Clocks, gpio::{Pin, PinMode, Port}};
+use hal::clocks::Clocks;
+use hal::gpio::{Pin, PinMode, Port};
 
 #[entry]
 fn main() -> ! {

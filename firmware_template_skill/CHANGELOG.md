@@ -8,6 +8,20 @@ Each entry: what changed, and **Upgrade notes** — how an existing firmware pic
 involved, what needs a hardware test. Add an entry (bump the version) for every change that alters generated output
 or options; purely internal refactors only need a line under the next version.
 
+## [0.4.3] - 2026-09-30
+
+- Generated `.rs` files pass `cargo fmt --check`: `use` items are sorted like rustfmt does (`sort_uses()` in the
+  generator), the RP `#[embassy_executor::main(...)]` attribute and flash init are wrapped, the stm32-hal2 nested `use`
+  is split into two lines.
+- RP235x `memory.x`: `_stext` is 8-aligned (`ALIGN(..., 8)`), fixes the lld warning
+  `address of section .text is not a multiple of alignment (8)`.
+- `init_ram.rs`: the doc comment no longer says "generated from stm32-data" on RP/nRF; RP says the banks need no enable.
+- `build.rs`: no unused `out` / `let _ = out;` on ESP without build info.
+
+Upgrade notes: formatting only for `main.rs`/`build.rs` (running `cargo fmt` gives the same result). RP235x: change
+`_stext` in `memory.x` to `ALIGN(ADDR(.start_block) + SIZEOF(.start_block), 8)`, check with `readelf -SW` that
+`.text` follows `.start_block`, and boot once on hardware. `init_ram.rs`: comment only.
+
 ## [0.4.2] - 2026-09-30
 
 - `build.rs`: `use` lines in rustfmt order, so `cargo fmt --check` passes on it.

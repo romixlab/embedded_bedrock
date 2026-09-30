@@ -666,6 +666,66 @@ def xxhal_supply(o: Opts) -> str:
     return calls[o.supply_config]
 
 
+_USE_RE = re.compile(r"^use ([^;]*);(\s*//.*)?$")
+
+
+def _version_key(seg: str) -> tuple:
+    """rustfmt (style edition 2024) "version sorting" of one path segment: self first, globs last,
+    digit runs compared numerically, otherwise byte order."""
+    seg = seg.split(" as ")[0].strip()
+    if seg == "self":
+        return (0,)
+    if seg == "*":
+        return (3,)
+    if seg.startswith("{"):
+        return (2,)
+    return (1, tuple((0, int(x), "") if x.isdigit() else (1, 0, x) for x in re.findall(r"\d+|\D+", seg)))
+
+
+def _use_key(tree: str) -> list:
+    parts, depth, cur = [], 0, ""
+    for ch in tree:
+        depth += ch == "{"
+        depth -= ch == "}"
+        if ch == ":" and depth == 0:
+            cur += ch
+            if cur.endswith("::"):
+                parts.append(cur[:-2]); cur = ""
+            continue
+        cur += ch
+    parts.append(cur)
+    return [_version_key(x) for x in parts]
+
+
+def _sort_braces(tree: str) -> str:
+    """sort the items of a single-level {a, b} group"""
+    m = re.fullmatch(r"(.*::)\{([^{}]*)\}", tree)
+    if not m:
+        return tree
+    items = sorted((x.strip() for x in m[2].split(",") if x.strip()), key=_use_key)
+    return f"{m[1]}{{{', '.join(items)}}}"
+
+
+def sort_uses(src: str) -> str:
+    """Sort runs of consecutive single-line top-level `use` items like rustfmt does (reorder_imports), so that
+    generated sources pass `cargo fmt --check` no matter in which order the Jinja chunks emit them."""
+    lines, out, run = src.split("\n"), [], []
+
+    def flush():
+        run.sort(key=lambda m: _use_key(m[1]))
+        out.extend(f"use {_sort_braces(m[1])};{m[2] or ''}" for m in run)
+        run.clear()
+    for ln in lines:
+        m = _USE_RE.match(ln)
+        if m:
+            run.append(m)
+        else:
+            flush()
+            out.append(ln)
+    flush()
+    return "\n".join(out)
+
+
 def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
     r = o.regs
     info, err = log_macros(o)
@@ -1068,6 +1128,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
     files = gen_project(t, o, lay)
+    files = {k: sort_uses(v) if k.endswith(".rs") else v for k, v in files.items()}
     files[FW_JSON] = fw_json(p_new, args, getattr(args, "prev_fw", None))
     origin = template_origin()
     if not origin["commit"]:

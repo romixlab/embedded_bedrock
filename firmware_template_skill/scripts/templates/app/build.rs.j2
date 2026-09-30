@@ -1,15 +1,15 @@
 {# Shared by the application and the bootloader (bootloader=true). #}
-{# import order as rustfmt sorts it: `std::path` < `std::{...}`, but `std::env` < `std::path` #}
-{% if t.family != "esp" or o.build_info %}
+{# OUT_DIR is needed for memory.x (not on ESP) and build info; import order as rustfmt sorts it #}
+{% set need_out = t.family != "esp" or o.build_info %}
+{% if need_out %}
 use std::path::PathBuf;
 use std::{env, fs};
-{% else %}
-use std::env;
-use std::path::PathBuf;
-{% endif %}
 
+{% endif %}
 fn main() {
+{% if need_out %}
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+{% endif %}
 {% if t.family != "esp" %}
     // Put memory.x on the linker search path (link.x from cortex-m-rt INCLUDEs it)
     fs::write(out.join("memory.x"), include_bytes!("memory.x")).unwrap();
@@ -63,7 +63,5 @@ fn main() {
         .build();
     let info = bedrock_build::serialize_build_info(info);
     fs::write(out.join("build_info.rs"), info).unwrap();
-{% else %}
-    let _ = out;
 {% endif %}
 }

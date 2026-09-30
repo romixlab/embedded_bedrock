@@ -1,7 +1,18 @@
 {# extra = additional RAM Regions, sram_enable = {region name: [(rcc register, field)]} #}
+{% set first = extra[0].name | lower %}
+{% if t.family == "stm32" %}
 //! Enable (clock) and zero additional RAM banks. The startup code only zeroes .bss in the main RAM region;
-//! anything placed into other banks (e.g. `#[unsafe(link_section = ".sram1")] static ...`) must be zeroed here.
+//! anything placed into other banks (e.g. `#[unsafe(link_section = ".{{ first }}")] static ...`) must be zeroed here.
 //! Generated from stm32-data; verify enable bits against the reference manual.
+{% else %}
+//! Zero additional RAM banks ({{ extra | map(attribute="name") | join(", ") }}). The startup code only zeroes .bss in the main RAM region;
+//! anything placed into other banks (e.g. `#[unsafe(link_section = ".{{ first }}")] static ...`) must be zeroed here.
+  {% if t.family == "rp" %}
+//! On {{ "RP2040" if t.rp_variant == "rp2040" else "RP235x" }} all SRAM banks are powered and clocked out of reset, so no enable step is needed.
+  {% else %}
+//! Check the reference manual whether these banks need to be powered or clocked first.
+  {% endif %}
+{% endif %}
 
 pub(crate) fn init_ram() {
 {% for r in extra %}

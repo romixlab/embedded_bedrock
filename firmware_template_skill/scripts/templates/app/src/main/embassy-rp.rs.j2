@@ -13,7 +13,10 @@ const FLASH_SIZE: usize = {{ flash_size | hex }};
 {% endif %}
 
 // embassy-rp ships its own executor (with multicore support), hence the explicit executor/entry
-#[embassy_executor::main(executor = "embassy_rp::executor::Executor", entry = "cortex_m_rt::entry")]
+#[embassy_executor::main(
+    executor = "embassy_rp::executor::Executor",
+    entry = "cortex_m_rt::entry"
+)]
 async fn main(_spawner: embassy_executor::Spawner) {
 {% if have_init_ram %}
     init_ram::init_ram();
@@ -25,7 +28,8 @@ async fn main(_spawner: embassy_executor::Spawner) {
     let p = embassy_rp::init(Default::default());
 {% if o.bootloader %}
 
-    let flash = Mutex::new(RefCell::new(Flash::<_, embassy_rp::flash::Blocking, FLASH_SIZE>::new_blocking(p.FLASH)));
+    let flash = Flash::<_, embassy_rp::flash::Blocking, FLASH_SIZE>::new_blocking(p.FLASH);
+    let flash = Mutex::new(RefCell::new(flash));
     let config = FirmwareUpdaterConfig::from_linkerfile_blocking(&flash, &flash);
     let mut magic = AlignedBuffer([0; WRITE_SIZE]);
     let mut updater = BlockingFirmwareUpdater::new(config, &mut magic.0);
