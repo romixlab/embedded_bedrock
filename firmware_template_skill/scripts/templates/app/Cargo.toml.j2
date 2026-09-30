@@ -1,5 +1,6 @@
-{% from "macros.j2" import dep, bedrock_build %}
+{% from "macros.j2" import dep, bedrock_build, ww_dep %}
 {% set defmt = o.log == "defmt" %}
+{% set ww_rtt = o.ww and ww.rtt %}
 [package]
 name = "{{ o.name }}"
 version = "0.1.0"
@@ -13,7 +14,9 @@ edition = "2024"
 {% if defmt %}
 defmt = "{{ V["defmt"] }}"
   {% if t.family != "esp" %}
-    {% if o.rtt_buffer == 1024 %}
+    {% if ww_rtt %}
+{{ dep("rtt-target", ["defmt"]) }} # defmt shares RTT with WireWeaver, instead of defmt-rtt
+    {% elif o.rtt_buffer == 1024 %}
 defmt-rtt = "{{ V["defmt-rtt"] }}"
     {% else %}
 defmt-rtt = { version = "{{ V["defmt-rtt"] }}" } # buffer size via DEFMT_RTT_BUFFER_SIZE in .cargo/config.toml
@@ -25,6 +28,9 @@ rtt-target = "{{ V["rtt-target"] }}"
 panic-rtt-target = "{{ V["panic-rtt-target"] }}"
 {% elif o.log == "none" and t.family != "esp" %}
 panic-halt = "{{ V["panic-halt"] }}"
+  {% if ww_rtt %}
+rtt-target = "{{ V["rtt-target"] }}"
+  {% endif %}
 {% endif %}
 {# --- Cortex-M runtime --- #}
 {% if t.cortex_m %}
@@ -86,10 +92,21 @@ embedded-storage = "{{ V["embedded-storage"] }}"
 embassy-sync = "{{ V["embassy-sync"] }}"
   {% endif %}
 {% endif %}
+{% if o.ww %}
+# WireWeaver: API crate next to the firmware, served by src/ww.rs
+{{ ww.api }} = { path = "../{{ ww.api }}"{{ ', features = ["defmt"]' if defmt else "" }} }
+{{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
+{{ ww_dep("ww_client_server", "ww_stdlib/ww_client_server", o.ww_src, root, ", default-features = false") }}
+  {% if ww.usb %}
+{{ ww_dep("wire_weaver_usb_embassy", "mcu/wire_weaver_usb_embassy", o.ww_src, root) }}
+  {% else %}
+{{ ww_dep("ww_device", "ww_device", o.ww_src, root, ", features = " ~ (feats("rtt", "embassy-time", defmt and "defmt") | toml_list)) }}
+  {% endif %}
+{% endif %}
 
 [build-dependencies]
 {% if o.build_info %}
-bedrock_build = {{ bedrock_build(o.bedrock, flip_link=o.flip_link and t.cortex_m) }}
+bedrock_build = {{ bedrock_build(o.bedrock, prefix=root, flip_link=o.flip_link and t.cortex_m) }}
 build-info-build = "{{ V["build-info-build"] }}"
 {% else %}
 # (none)

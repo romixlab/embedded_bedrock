@@ -20,7 +20,7 @@ target = "{{ t.rust_target }}"
 [env]
 {% if o.log == "defmt" %}
 DEFMT_LOG = "{{ o.defmt_log }},{{ o.name | replace("-", "_") }}={{ o.defmt_log }}"
-  {% if t.family != "esp" %}
+  {% if t.family != "esp" and not (o.ww and o.ww_transport == "rtt") %}
     {% if o.rtt_buffer != 1024 %}
 DEFMT_RTT_BUFFER_SIZE = "{{ o.rtt_buffer }}"
     {% else %}

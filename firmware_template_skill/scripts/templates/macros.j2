@@ -7,5 +7,10 @@
 
 {#- Inline table for the bedrock_build dependency; `prefix` is prepended to a local --bedrock path -#}
 {% macro bedrock_build(bedrock, prefix="", flip_link=false) -%}
-{% if bedrock == "git" %}{ git = "{{ BEDROCK_GIT }}"{% else %}{ path = "{{ prefix }}{{ bedrock }}/bedrock_build"{% endif %}{{ ', features = ["flip-link"] }' if flip_link else " }" }}
+{% if bedrock == "git" %}{ git = "{{ BEDROCK_GIT }}"{% else %}{ path = "{{ "" if bedrock.startswith("/") else prefix }}{{ bedrock }}/bedrock_build"{% endif %}{{ ', features = ["flip-link"] }' if flip_link else " }" }}
+{%- endmacro %}
+
+{#- WireWeaver crate from git, or from a local checkout (--ww-src, relative to the output directory; `prefix` leads there) -#}
+{% macro ww_dep(name, subdir, src, prefix, extra="") -%}
+{{ name }} = { {% if src == "git" %}git = "{{ WW_GIT }}"{% else %}path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}"{% endif %}{{ extra }} }
 {%- endmacro %}

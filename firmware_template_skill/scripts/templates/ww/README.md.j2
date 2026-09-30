@@ -1,0 +1,41 @@
+# {{ o.name }}
+
+Firmware for **{{ t.display }}** with a [WireWeaver]({{ WW_GIT }}) device API served over
+{{ "USB" if ww.usb else "RTT (debug probe)" }}.
+
+| directory | |
+|---|---|
+| `{{ ww.api }}/` | `#![no_std]` API crate: the `{{ ww.trait }}` trait and its data types. Shared by the firmware and host-side clients |
+| `firmware/` | the firmware (see `firmware/README.md`); `src/ww.rs` implements the API{{ ", `bootloader/` inside" if o.bootloader else "" }} |
+
+Both are standalone crates, not a Cargo workspace: they build for different targets.
+
+## Build and run
+
+```
+cd firmware
+cargo run
+```
+
+## Talk to the device
+
+{% if ww.usb %}
+Connect the MCU's USB (VID:PID `c0de:cafe`). `ww list` shows it with its API name, `ww introspect` prints the API
+tree read from the device. `ww` is the WireWeaver CLI:
+`cargo install --git {{ WW_GIT }} wire_weaver_cli` (on Linux USB access needs a udev rule, see its `docs/cli.md`).
+{% else %}
+The API runs on RTT channels `ww_up` / `ww_down`, next to the log output. Stop `cargo run` (probe-rs) first: a
+probe can only be opened once, the firmware keeps running.
+{% endif %}
+
+A Rust host client is generated from `{{ ww.api }}` with
+`wire_weaver::ww_codegen!({{ ww.krate }} :: {{ ww.trait }} for MyClient, client = "std_client")`
+and the `wire_weaver_client` crate{{ " (feature `rtt`, `ClientConfig::rtt(<probe-rs chip>, None)`)" if ww.rtt else "" }}, see `examples/blinky` in
+the WireWeaver repository.
+
+## Changing the API
+
+1. Add methods / properties / streams to `{{ ww.trait }}` in `{{ ww.api }}/src/lib.rs` (see `docs/api/overview.md`
+   in the WireWeaver repository).
+2. Implement them on `ServerState` in `firmware/src/ww.rs`; the compiler lists what is missing.
+3. Bump the `{{ ww.api }}` version: the name + version identify the API to hosts.

@@ -8,6 +8,26 @@ Each entry: what changed, and **Upgrade notes** — how an existing firmware pic
 involved, what needs a hardware test. Add an entry (bump the version) for every change that alters generated output
 or options; purely internal refactors only need a line under the next version.
 
+## [0.5.0] - 2026-09-30
+
+- `--wire-weaver`: WireWeaver device API. The output directory becomes a project root with a `#![no_std]` API crate
+  (`--ww-api`, default `<name>_api`, blinky `led_on`/`led_off` trait) and the firmware in `firmware/`; `bedrock_fw.json`,
+  `AGENTS.md`, `CLAUDE.md` and a project `README.md` stay at the root. `firmware/src/ww.rs` implements the API on
+  `ServerState` (owns the LED) and runs the transport. Embassy on STM32 / RP / nRF only.
+- `--ww-transport usb` (default, needs `--log defmt`): embassy-usb driver + `wire_weaver_usb_embassy`. STM32 USB
+  peripheral, pins and interrupt come from stm32-data; HSI48 + CRS is set up as the 48 MHz USB clock when the part
+  has both, otherwise a TODO. RP2040/RP235x and nRF52833/52840 (`usb = true` in `chips.toml`).
+- `--ww-transport rtt`: `ww_device::rtt` on `rtt_init!` channels `ww_up`/`ww_down`; log output stays on up channel 0
+  (defmt through `rtt-target` instead of `defmt-rtt`, or rprintln's terminal), works with `--log none` too.
+- `--ww-src git|<path>`: WireWeaver crates from git (default) or a local checkout. `--bedrock <path>` is now relative
+  to the output directory (the same as before without `--wire-weaver`).
+
+Upgrade notes: new options `wire_weaver` (false), `ww_transport`, `ww_api`, `ww_src`; nothing changes for firmware
+that does not use them. Adding WireWeaver to an existing firmware is a restructuring (firmware moves into `firmware/`),
+do it only on request: generate a fresh project with the recorded answers + `--wire-weaver` and move the firmware's
+code over, or keep the layout and copy `src/ww.rs`, the `Cargo.toml` WireWeaver section and the API crate by hand.
+Test USB enumeration / RTT connection on hardware.
+
 ## [0.4.3] - 2026-09-30
 
 - Generated `.rs` files pass `cargo fmt --check`: `use` items are sorted like rustfmt does (`sort_uses()` in the

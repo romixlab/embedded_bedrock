@@ -7,6 +7,9 @@ use embassy_stm32::rcc::SupplyConfig;
 use embassy_stm32::rcc::SMPSSupplyVoltage;
   {% endif %}
 {% endif %}
+{% if o.ww and ww.usb and ww.stm32_usb.hsi48 %}
+use embassy_stm32::rcc::{Hsi48Config, mux};
+{% endif %}
 {% if o.bootloader %}
 use core::cell::RefCell;
 use embassy_boot_stm32::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
@@ -15,19 +18,29 @@ use embassy_sync::blocking_mutex::Mutex;
 {% endif %}
 
 #[embassy_executor::main]
-async fn main(_spawner: embassy_executor::Spawner) {
+async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner) {
 {% if have_init_ram %}
     init_ram::init_ram(); // enable + zero additional SRAM banks before anything is placed there
 {% endif %}
-{% if o.log == "rtt" %}
-    rtt_init_print!();
-{% endif %}
+{% include "app/src/main/_rtt_init.rs.j2" %}
     {{ info }}("{{ o.name }} starting...");
     let mut config = embassy_stm32::Config::default();
 {% if o.supply_config %}
     config.rcc.supply_config = SupplyConfig::{{ o.supply_config }}{{ "(SMPSSupplyVoltage::%s)" % o.smps_voltage if o.smps_voltage else "" }}; // from schematic: how VCORE is supplied
 {% endif %}
     // TODO: configure config.rcc (clock tree) for your board
+{% if o.ww and ww.usb %}
+  {% set u = ww.stm32_usb %}
+  {% if u.hsi48 %}
+    // USB clock: HSI48, trimmed by CRS from USB start-of-frame packets
+    config.rcc.hsi48 = Some(Hsi48Config {
+        sync_from_usb: true,
+    });
+    config.rcc.mux.{{ u.mux }} = mux::{{ u.mux_enum }}::HSI48;
+  {% else %}
+    // TODO: {{ u.periph }} needs an accurate 48 MHz clock (no HSI48 + CRS on this chip): HSE + PLL{{ ", config.rcc.mux." ~ u.mux if u.mux else "" }}
+  {% endif %}
+{% endif %}
     let p = embassy_stm32::init(config);
 {% if have_init %}
     init::init();
@@ -50,5 +63,5 @@ async fn main(_spawner: embassy_executor::Spawner) {
     updater.mark_booted().unwrap();
 {% endif %}
 
-    let mut led = Output::new(p.{{ o.led }}, Level::Low, Speed::Low);
+    let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::Low, Speed::Low);
 {% include "app/src/main/_embassy_loop.rs.j2" %}

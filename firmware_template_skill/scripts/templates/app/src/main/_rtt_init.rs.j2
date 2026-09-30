@@ -1,0 +1,35 @@
+{# RTT set-up at the top of main(): rtt-target's print channel, or all channels when WireWeaver runs over RTT #}
+{% if o.ww and ww.rtt %}
+    // RTT channels: {{ "log output, " if o.log != "none" else "" }}WireWeaver up (device -> host) and down (host -> device).
+    // The WireWeaver up channel must hold a whole message + framing, see ww::MAX_MESSAGE_LEN.
+    let channels = rtt_init! {
+        up: {
+  {% if o.log != "none" %}
+            0: {
+                size: {{ o.rtt_buffer }},
+                mode: NoBlockSkip,
+                name: "{{ "defmt" if o.log == "defmt" else "Terminal" }}"
+            }
+  {% endif %}
+            {{ ww.rtt_up }}: {
+                size: 2048,
+                mode: NoBlockSkip,
+                name: "ww_up"
+            }
+        }
+        down: {
+            0: {
+                size: 2048,
+                mode: NoBlockSkip,
+                name: "ww_down"
+            }
+        }
+    };
+  {% if o.log == "defmt" %}
+    rtt_target::set_defmt_channel(channels.up.0);
+  {% elif o.log == "rtt" %}
+    rtt_target::set_print_channel(channels.up.0);
+  {% endif %}
+{% elif o.log == "rtt" %}
+    rtt_init_print!();
+{% endif %}

@@ -17,13 +17,11 @@ const FLASH_SIZE: usize = {{ flash_size | hex }};
     executor = "embassy_rp::executor::Executor",
     entry = "cortex_m_rt::entry"
 )]
-async fn main(_spawner: embassy_executor::Spawner) {
+async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner) {
 {% if have_init_ram %}
     init_ram::init_ram();
 {% endif %}
-{% if o.log == "rtt" %}
-    rtt_init_print!();
-{% endif %}
+{% include "app/src/main/_rtt_init.rs.j2" %}
     {{ info }}("{{ o.name }} starting...");
     let p = embassy_rp::init(Default::default());
 {% if o.bootloader %}
@@ -37,5 +35,5 @@ async fn main(_spawner: embassy_executor::Spawner) {
     updater.mark_booted().unwrap();
 {% endif %}
 
-    let mut led = Output::new(p.{{ o.led }}, Level::Low);
+    let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::Low);
 {% include "app/src/main/_embassy_loop.rs.j2" %}

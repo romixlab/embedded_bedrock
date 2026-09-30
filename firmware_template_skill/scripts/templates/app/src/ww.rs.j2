@@ -1,0 +1,231 @@
+{# WireWeaver server (--wire-weaver): API implementation + transport tasks. `ww` = ww_context() in the script. #}
+{% set hal = "embassy_" ~ t.family %}
+{% set defmt = o.log == "defmt" %}
+//! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
+//! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}.
+//!
+//! To add a method, property or stream: declare it in the API trait, then implement it here, `ww_codegen!` below
+//! regenerates the dispatch code and the compiler lists what is missing. Extend [ServerState] with the peripherals
+//! and data the implementations need. See https://github.com/vhrdtech/wire_weaver (`docs/`, `examples_mcu/`).
+
+use {{ hal }}::gpio::Output;
+{% if ww.usb %}
+  {% if t.family == "stm32" %}
+use embassy_stm32::{Peri, bind_interrupts, peripherals, usb};
+  {% elif t.family == "rp" %}
+use embassy_rp::usb::{Driver, InterruptHandler};
+use embassy_rp::{Peri, bind_interrupts, peripherals};
+  {% elif t.family == "nrf" %}
+use embassy_nrf::usb::Driver;
+use embassy_nrf::usb::vbus_detect::HardwareVbusDetect;
+use embassy_nrf::{Peri, bind_interrupts, pac, peripherals, usb};
+  {% endif %}
+{% endif %}
+use embassy_executor::Spawner;
+{% if defmt %}
+use defmt::{info, unwrap};
+{% elif o.log == "rtt" %}
+use rtt_target::rprintln;
+{% endif %}
+{% if o.counters %}
+use cnt::cnt;
+{% endif %}
+use static_cell::StaticCell;
+use wire_weaver::prelude::*;
+use wire_weaver::{MessageSink, WireWeaverAsyncApiBackend};
+{% if ww.usb %}
+use wire_weaver_usb_embassy::{LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init};
+{% else %}
+use rtt_target::{DownChannel, UpChannel};
+use ww_device::rtt::{RttBuffers, RttConfig, RttServer, rtt_server};
+use ww_device::{EmbassyClock, LinkConfig};
+{% endif %}
+
+{% if ww.usb %}
+/// Longest WireWeaver message the device accepts and can reply with (reported to the host)
+{% else %}
+/// Longest WireWeaver message the device accepts and can reply with (reported to the host). The RTT up channel
+/// (`ww_up` in main.rs) must be at least `MAX_MESSAGE_LEN + 5` bytes, better twice that.
+{% endif %}
+const MAX_MESSAGE_LEN: usize = 1024;
+
+/// Everything the API implementation needs: peripherals, drivers, state.
+pub struct ServerState {
+    pub led: Output<'static>,
+}
+
+// Implementations of the {{ ww.trait }} methods. `method_model = "_=immediate"`: they return a result right away
+// (`RpcResult` can also defer the reply, see wire_weaver::RpcResult).
+impl ServerState {
+    async fn led_on(&mut self, _msg_tx: &mut impl MessageSink) -> RpcResult<()> {
+{% if o.log != "none" %}
+        {{ info }}("led on");
+{% endif %}
+{% if o.counters %}
+        cnt!(led_on_calls: u32);
+{% endif %}
+        self.led.set_high();
+        Ready(())
+    }
+
+    async fn led_off(&mut self, _msg_tx: &mut impl MessageSink) -> RpcResult<()> {
+{% if o.log != "none" %}
+        {{ info }}("led off");
+{% endif %}
+{% if o.counters %}
+        cnt!(led_off_calls: u32);
+{% endif %}
+        self.led.set_low();
+        Ready(())
+    }
+}
+
+mod server_impl {
+    // Re-parses the API trait and generates request dispatch + serdes for ServerState.
+    // To see the generated code, add: debug_to_file = "./target/ww_server.rs"
+    wire_weaver::ww_codegen!(
+        {{ ww.krate }} :: {{ ww.trait }} for super::ServerState,
+        server = true, no_alloc = true, use_async = true,
+        method_model = "_=immediate",
+        property_model = "_=get_set",
+        introspect = "with_docs",
+    );
+}
+
+impl WireWeaverAsyncApiBackend for ServerState {
+    async fn process_bytes<'a>(
+        &mut self,
+        msg_tx: &mut impl MessageSink,
+        data: &[u8],
+        scratch: &'a mut [u8],
+    ) -> Result<&'a [u8], shrink_wrap::Error> {
+        self.process_request_bytes(data, scratch, msg_tx).await
+    }
+
+    fn version(&self) -> FullVersion<'_> {
+        {{ ww.krate }}::{{ ww.gid }}
+    }
+}
+
+fn link_config() -> LinkConfig<'static> {
+    LinkConfig::new(
+        {{ ww.krate }}::{{ ww.gid }},
+        server_impl::api_hash(),
+        ww_client_server::COMPACT_VERSION,
+    )
+}
+{% if ww.usb %}
+
+  {% if t.family == "stm32" %}
+    {% set u = ww.stm32_usb %}
+bind_interrupts!(struct Irqs {
+    {{ u.irq }} => usb::InterruptHandler<peripherals::{{ u.periph }}>;
+});
+
+pub type UsbDriver = usb::Driver<'static, peripherals::{{ u.periph }}>;
+  {% elif t.family == "rp" %}
+bind_interrupts!(struct Irqs {
+    USBCTRL_IRQ => InterruptHandler<peripherals::USB>;
+});
+
+pub type UsbDriver = Driver<'static, peripherals::USB>;
+  {% elif t.family == "nrf" %}
+bind_interrupts!(struct Irqs {
+    USBD => usb::InterruptHandler<peripherals::USBD>;
+    CLOCK_POWER => usb::vbus_detect::InterruptHandler;
+});
+
+pub type UsbDriver = Driver<'static, HardwareVbusDetect>;
+  {% endif %}
+
+const MAX_USB_PACKET_LEN: usize = 64; // Full Speed
+static USB_BUFFERS: StaticCell<UsbBuffers<MAX_USB_PACKET_LEN, MAX_MESSAGE_LEN>> = StaticCell::new();
+  {% if t.family == "stm32" and u.otg %}
+static EP_OUT_BUFFER: StaticCell<[u8; 256]> = StaticCell::new();
+  {% endif %}
+
+  {% if t.family == "stm32" %}
+pub fn usb_driver(
+    usb: Peri<'static, peripherals::{{ u.periph }}>,
+    dp: Peri<'static, peripherals::{{ u.dp }}>,
+    dm: Peri<'static, peripherals::{{ u.dm }}>,
+) -> UsbDriver {
+    {% if u.otg %}
+    let mut config = usb::Config::default();
+    // TODO: true if VBUS is wired to the VBUS sense pin, lets the device detect unplugging
+    config.vbus_detection = false;
+    usb::Driver::new_fs(usb, Irqs, dp, dm, EP_OUT_BUFFER.init([0; 256]), config)
+    {% else %}
+    usb::Driver::new(usb, Irqs, dp, dm)
+    {% endif %}
+}
+  {% elif t.family == "rp" %}
+pub fn usb_driver(usb: Peri<'static, peripherals::USB>) -> UsbDriver {
+    Driver::new(usb, Irqs)
+}
+  {% elif t.family == "nrf" %}
+pub fn usb_driver(usbd: Peri<'static, peripherals::USBD>) -> UsbDriver {
+    // USB needs the external high frequency crystal
+    pac::CLOCK.tasks_hfclkstart().write_value(1);
+    while pac::CLOCK.events_hfclkstarted().read() != 1 {}
+    Driver::new(usbd, Irqs, HardwareVbusDetect::new(Irqs))
+}
+  {% endif %}
+
+pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
+    // server_impl::API_ID is reported in a USB string descriptor, `ww list` shows it without opening the device.
+    // A user label (e.g. loaded from flash) can be added with wire_weaver::api_id::with_label().
+    let (usb, server) = usb_init(
+        driver,
+        USB_BUFFERS.init(UsbBuffers::default()),
+        UsbTimings::fs_higher_speed(),
+        link_config(),
+        server_impl::API_ID,
+        |config| {
+            // VID:PID is c0de:cafe unless set here
+            config.product = Some("{{ o.name }}");
+  {% if t.family == "stm32" %}
+            config.serial_number = Some(embassy_stm32::uid::uid_hex());
+  {% endif %}
+        },
+    );
+    spawner.spawn(unwrap!(usb_task(usb)));
+    spawner.spawn(unwrap!(server_task(server, state)));
+}
+
+#[embassy_executor::task]
+async fn usb_task(mut usb: UsbDevice<'static, UsbDriver>) {
+    usb.run().await;
+}
+
+#[embassy_executor::task]
+async fn server_task(mut server: UsbServer<'static, UsbDriver>, mut state: ServerState) {
+    // Nothing else to wait for: the prepared loop. Use server.wait() / server.handle() to also react to other events.
+    server.run(&mut state).await;
+}
+{% else %}
+
+static RTT_BUFFERS: StaticCell<RttBuffers<MAX_MESSAGE_LEN>> = StaticCell::new();
+
+pub fn start(spawner: Spawner, up: UpChannel, down: DownChannel, state: ServerState) {
+    let server = rtt_server(
+        link_config(),
+        up,
+        down,
+        EmbassyClock,
+        RttConfig::default(),
+        RTT_BUFFERS.init(RttBuffers::new()),
+    );
+  {% if defmt %}
+    spawner.spawn(unwrap!(server_task(server, state)));
+  {% else %}
+    spawner.spawn(server_task(server, state).unwrap());
+  {% endif %}
+}
+
+#[embassy_executor::task]
+async fn server_task(mut server: RttServer<'static, EmbassyClock>, mut state: ServerState) {
+    // Nothing else to wait for: the prepared loop. Use server.wait() / server.handle() to also react to other events.
+    server.run(&mut state).await;
+}
+{% endif %}

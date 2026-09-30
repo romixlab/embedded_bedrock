@@ -1,7 +1,8 @@
 # Built-in (non-STM32) chips. STM32 parts are looked up in embassy-rs/stm32-data-generated instead.
 #
 # Table key = --chip value (lower case, also the HAL feature unless hal_feature is set).
-# Sizes accept K/M suffixes. `led` is the default --led pin.
+# Sizes accept K/M suffixes. `led` is the default --led pin. `usb = true`: has a USB device peripheral
+# supported by the embassy HAL (--wire-weaver --ww-transport usb).
 # ESP chips have no flash/rams: esp-hal's linkall.x handles the memory layout.
 
 [rp2040]
@@ -11,6 +12,7 @@ arch = "arm"
 rust_target = "thumbv6m-none-eabi"
 probe_chip = "RP2040"
 led = "PIN_25"
+usb = true  # USB device peripheral (--ww-transport usb)
 rp_variant = "rp2040"
 boot2 = true  # second stage bootloader in the first 256 bytes of flash
 flash = { address = 0x10000000, size = "2M", erase = "4K", write = 256 }
@@ -25,6 +27,7 @@ arch = "arm"
 rust_target = "thumbv8m.main-none-eabihf"
 probe_chip = "RP235x"
 led = "PIN_25"
+usb = true  # USB device peripheral (--ww-transport usb)
 rp_variant = "rp235xa"
 flash = { address = 0x10000000, size = "4M", erase = "4K", write = 256 }
 rams = [
@@ -40,6 +43,7 @@ arch = "arm"
 rust_target = "thumbv8m.main-none-eabihf"
 probe_chip = "RP235x"
 led = "PIN_25"
+usb = true  # USB device peripheral (--ww-transport usb)
 rp_variant = "rp235xb"
 flash = { address = 0x10000000, size = "4M", erase = "4K", write = 256 }
 rams = [
@@ -55,6 +59,7 @@ arch = "arm"
 rust_target = "thumbv8m.main-none-eabihf"
 probe_chip = "RP235x"
 led = "PIN_25"
+usb = true  # USB device peripheral (--ww-transport usb)
 rp_variant = "rp235xa"
 flash = { address = 0x10000000, size = "2M", erase = "4K", write = 256 }
 rams = [
@@ -82,6 +87,7 @@ arch = "arm"
 rust_target = "thumbv7em-none-eabihf"
 probe_chip = "nRF52833_xxAA"
 led = "P0_13"
+usb = true  # USB device peripheral (--ww-transport usb)
 flash = { address = 0x00000000, size = "512K", erase = "4K", write = 4 }
 rams = [
   { name = "RAM", address = 0x20000000, size = "128K" },
@@ -94,6 +100,7 @@ arch = "arm"
 rust_target = "thumbv7em-none-eabihf"
 probe_chip = "nRF52840_xxAA"
 led = "P0_13"
+usb = true  # USB device peripheral (--ww-transport usb)
 flash = { address = 0x00000000, size = "1M", erase = "4K", write = 4 }
 rams = [
   { name = "RAM", address = 0x20000000, size = "256K" },

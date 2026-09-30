@@ -1,4 +1,18 @@
-{# Common tail of the embassy main() bodies; `led` is an Output created by the caller. #}
+{# Common tail of the embassy main() bodies; `led` is an Output created by the caller, `p` the peripherals. #}
+{% if o.ww %}
+
+  {% if ww.usb %}
+    let driver = ww::usb_driver({{ ww.usb_args }});
+    ww::start(spawner, driver, ww::ServerState { led });
+  {% else %}
+    ww::start(
+        spawner,
+        channels.up.{{ ww.rtt_up }},
+        channels.down.0,
+        ww::ServerState { led },
+    );
+  {% endif %}
+{% endif %}
 {% if o.build_info %}
 
     // Reference build info so it is retained in flash / ELF
@@ -8,9 +22,16 @@
 
     {{ info }}("init done");
     loop {
+{% if o.ww %}
+        // the LED is switched over WireWeaver, see src/ww.rs
+  {% if o.counters %}
+        cnt!(loop_iterations: u32);
+  {% endif %}
+{% else %}
         led.toggle();
-{% if o.counters %}
+  {% if o.counters %}
         cnt!(led_toggles: u32);
+  {% endif %}
 {% endif %}
         Timer::after_millis(1000).await;
     }

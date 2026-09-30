@@ -23,7 +23,7 @@ embassy-time = "{{ V["embassy-time"] }}"
 
 [build-dependencies]
 {% if o.build_info %}
-bedrock_build = {{ bedrock_build(o.bedrock, prefix="../") }}
+bedrock_build = {{ bedrock_build(o.bedrock, prefix=root ~ "../") }}
 build-info-build = "{{ V["build-info-build"] }}"
 {% else %}
 # (none)

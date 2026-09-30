@@ -1,0 +1,18 @@
+{% from "macros.j2" import ww_dep %}
+[package]
+name = "{{ ww.api }}"
+version = "0.1.0"
+edition = "2024"
+description = "WireWeaver API of the {{ o.name }} firmware"
+
+# standalone crate: keeps an enclosing Cargo workspace from claiming it
+[workspace]
+
+[features]
+# owned (alloc) variants of the API types, for host-side users
+std = ["wire_weaver/std"]
+defmt = ["wire_weaver/defmt", "dep:defmt"]
+
+[dependencies]
+defmt = { version = "{{ V["defmt"] }}", optional = true }
+{{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, "../", ", default-features = false") }}

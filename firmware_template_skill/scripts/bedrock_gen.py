@@ -48,6 +48,8 @@ import jinja2
 
 STM32_DATA_BASE = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data"
 BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
+WW_GIT = "https://github.com/vhrdtech/wire_weaver"
+WW_FW_DIR = "firmware"  # with --wire-weaver the firmware goes into <out>/firmware, next to the API crate
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
@@ -101,6 +103,7 @@ class Target:
     hal_feature: str = ""   # HAL crate feature for the chip (embassy-nrf needs e.g. nrf9160-s)
     runner_extra: str = ""  # extra probe-rs args
     default_led: str = ""   # --led default
+    usb: bool = False       # has a USB device peripheral (non-STM32; STM32 is looked up in stm32-data)
     notes: list[str] = field(default_factory=list)
 
     @property
@@ -217,7 +220,8 @@ def resolve_target(args) -> Target:
     t = Target(display=b["display"], chip=key, family=b["family"], arch=b["arch"],
                rust_target=args.rust_target or b["rust_target"], probe_chip=b["probe_chip"], memories=mems,
                boot2=b.get("boot2", False), rp_variant=b.get("rp_variant", ""),
-               hal_feature=b.get("hal_feature", key), runner_extra=b.get("runner_extra", ""), default_led=b["led"])
+               hal_feature=b.get("hal_feature", key), runner_extra=b.get("runner_extra", ""), default_led=b["led"],
+               usb=b.get("usb", False))
     return t
 
 
@@ -342,6 +346,51 @@ def smps_present(t: Target) -> bool:
             if any("SMPS" in s for s in pin.get("signals", [])):
                 return True
     return False
+
+
+# USB device peripherals embassy-stm32 has a Driver for, in order of preference (FS PHY on DP/DM pins)
+STM32_USB_PERIPHS = ["USB", "USB_DRD_FS", "USB_OTG_FS", "USB_OTG_HS"]
+
+
+def stm32_usb(t: Target, data: Stm32Data) -> dict:
+    """USB device peripheral for WireWeaver over USB: embassy-stm32 driver flavour, interrupt, pins and how to get
+    its 48 MHz clock (HSI48 synced by CRS from USB SOF when the chip has both, otherwise left as a TODO)."""
+    if not t.stm32.get("cores"):
+        die("chip data unavailable (offline?), cannot find the USB peripheral for --ww-transport usb")
+    for name in STM32_USB_PERIPHS:
+        p = periph(t, name)
+        if not p or p.get("registers", {}).get("kind") not in ("usb", "otg"):
+            continue
+        pins: dict[str, str] = {}
+        for pin in p.get("pins", []):
+            if pin["signal"] in ("DP", "DM"):
+                pins.setdefault(pin["signal"], pin["pin"])
+        if len(pins) != 2:
+            continue  # e.g. OTG_HS with an external ULPI PHY only
+        irqs = {i["signal"]: i["interrupt"] for i in p.get("interrupts", [])}
+        irq = irqs.get("LP") or irqs.get("GLOBAL") or next(iter(irqs.values()), None)
+        if not irq:
+            continue
+        u = {"periph": name, "otg": p["registers"]["kind"] == "otg", "irq": irq, "dp": pins["DP"], "dm": pins["DM"],
+             "mux": None, "mux_enum": None, "hsi48": False}
+        kc = p.get("rcc", {}).get("kernel_clock")
+        if isinstance(kc, dict):
+            u["mux"] = kc["field"].lower()
+            regs = data.registers("rcc", reg_version(t, "RCC")) if reg_version(t, "RCC") else None
+            item = next((i for i in (regs or {}).get("block/RCC", {}).get("items", []) if i["name"] == kc["register"]), None)
+            fs = regs.get(f"fieldset/{item['fieldset']}") if item else None
+            fld = next((f for f in (fs or {}).get("fields", []) if f["name"] == kc["field"]), None)
+            enum = regs.get(f"enum/{fld['enum']}") if fld and "enum" in fld else None
+            if enum:
+                u["mux_enum"] = fld["enum"].capitalize()  # stm32-metapac naming: USBSEL -> Usbsel
+                # the RCC enum is shared by a whole series, CRS tells whether this part really has HSI48 (L476: no)
+                u["hsi48"] = periph(t, "CRS") is not None and any(v["name"] == "HSI48" for v in enum["variants"])
+        if not u["hsi48"]:
+            t.notes.append(f"{name} needs an accurate 48 MHz clock and {t.display} has no HSI48 + CRS: configure HSE + PLL "
+                           "for USB in main.rs (TODO there), it will not enumerate otherwise")
+        return u
+    die(f"{t.display} has no USB device peripheral with DP/DM pins; use --ww-transport rtt")
+    return {}
 
 
 # ----------------------------------------------------------------------------
@@ -573,7 +622,7 @@ JINJA.filters.update(
     fmt_len=fmt_len,
     rcc_bit=lambda b: f"RCC.{b[0].upper()}.{b[1].upper()}",
 )
-JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, feats=feats, nightly_channel=nightly_channel)
+JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, WW_GIT=WW_GIT, feats=feats, nightly_channel=nightly_channel)
 
 
 def render(template: str, **ctx) -> str:
@@ -610,6 +659,10 @@ class Opts:
     led: str
     bedrock: str            # "git" or a path
     build_info: bool
+    ww: bool = False        # WireWeaver API crate + server in the firmware
+    ww_transport: str = ""  # usb | rtt
+    ww_api: str = ""        # API crate name
+    ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
     regs: Optional[Stm32Regs] = None
 
 
@@ -726,7 +779,57 @@ def sort_uses(src: str) -> str:
     return "\n".join(out)
 
 
-def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
+def constant_case(s: str) -> str:
+    """convert_case 0.11 `Case::Constant` with its default boundaries, as #[ww_api_root] names the version const:
+    splits at _ - space, lower->Upper, acronyms (ABc -> A_Bc) and every letter/digit change (G0usb -> G_0_USB)."""
+    words = []
+    for chunk in re.split(r"[_\- ]+", s):
+        w = ""
+        for i, c in enumerate(chunk):
+            if w:
+                p, n = chunk[i - 1], chunk[i + 1] if i + 1 < len(chunk) else ""
+                if (p.islower() and c.isupper()) or (p.isdigit() != c.isdigit()) or (p.isupper() and c.isupper() and n.islower()):
+                    words.append(w)
+                    w = ""
+            w += c
+        if w:
+            words.append(w)
+    return "_".join(x.upper() for x in words)
+
+
+def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
+    """Names and transport details for the WireWeaver templates (`ww` in the template context)."""
+    parts = [x for x in re.split(r"[_-]", o.ww_api) if x]
+    ctx = {
+        "api": o.ww_api,
+        "krate": o.ww_api.replace("-", "_"),                           # crate name as a Rust path
+        "trait": "".join(x[:1].upper() + x[1:] for x in parts),        # blinky_api -> BlinkyApi
+        "gid": constant_case("".join(x[:1].upper() + x[1:] for x in parts) + "_FULL_GID"),  # made by #[ww_api_root]
+        "usb": o.ww_transport == "usb",
+        "rtt": o.ww_transport == "rtt",
+        "stm32_usb": usb,
+        # RTT: the log channel (defmt or rprintln) stays up channel 0, WireWeaver gets the next one
+        "rtt_up": 0 if o.log == "none" else 1,
+    }
+    if o.ww_transport == "usb":
+        ctx["usb_args"] = {"stm32": f"p.{usb['periph']}, p.{usb['dp']}, p.{usb['dm']}" if usb else "",
+                           "rp": "p.USB", "nrf": "p.USBD"}[t.family]
+    return ctx
+
+
+def ww_root_files(t: Target, o: Opts, ctx: dict) -> dict[str, str]:
+    """API crate and project README next to firmware/ (--wire-weaver)."""
+    a = o.ww_api
+    return {
+        f"{a}/Cargo.toml": render("ww/api/Cargo.toml.j2", **ctx),
+        f"{a}/src/lib.rs": render("ww/api/src/lib.rs.j2", **ctx),
+        "README.md": render("ww/README.md.j2", **ctx),
+        ".gitignore": render("app/gitignore"),
+    }
+
+
+def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] = None) -> dict[str, str]:
+    """Files relative to the output directory. With --wire-weaver the firmware is in firmware/, the API crate next to it."""
     r = o.regs
     info, err = log_macros(o)
     extra_rams = [x for x in lay.regions if x.kind == "ram" and not x.is_main_ram and not x.commented_out] if lay else []
@@ -735,7 +838,10 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
     ctx = dict(t=t, o=o, lay=lay, bkp_words=lay.bkp_words if lay else 0, info=info, err=err,
                bkp_region=lay.bkp_region if lay else CNT_BKP_DEFAULT_REGION, CNT_BKP_DEFAULT_REGION=CNT_BKP_DEFAULT_REGION,
                have_init=have_init, have_init_ram=have_init_ram, main_variant=main_variant(t, o),
-               flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024)
+               flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024,
+               ww=ww_context(t, o, usb) if o.ww else None,
+               # firmware crate -> output directory, for paths given relative to the latter (--bedrock, --ww-src)
+               root="../" if o.ww else "", fw_dir=f"{WW_FW_DIR}/" if o.ww else "")
     if o.framework == "stm32-hal2":
         ctx["hal2_feature"], ctx["hal2_rt"] = hal2_features(t)
         m = re.fullmatch(r"P([A-Z])(\d+)", o.led)
@@ -763,23 +869,30 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout]) -> dict[str, str]:
     files[".cargo/config.toml"] = render("app/cargo_config.toml.j2", **ctx)
     files["rust-toolchain.toml"] = render("app/rust-toolchain.toml.j2", **ctx)
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
+    if o.ww:
+        files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
     if o.build_info:
         files["src/build_info.rs"] = render("app/src/build_info.rs")
     files[".gitignore"] = render("app/gitignore")
-    files["AGENTS.md"] = render("app/AGENTS.md.j2", **ctx)
-    files["CLAUDE.md"] = render("app/CLAUDE.md")
     packages = ", ".join(f"{p['name']} ({p['package']}, {len(p['pins'])} pins)" for p in t.stm32.get("packages", []))
     files["README.md"] = render("app/README.md.j2", **ctx, packages=packages, notes=t.notes + (r.notes if r else []))
     if o.bootloader and lay:
-        files.update(gen_bootloader(t, o, lay))
+        files.update(gen_bootloader(t, o, lay, ctx["root"]))
+    if o.ww:
+        files = {f"{WW_FW_DIR}/{k}": v for k, v in files.items()}
+        files.update(ww_root_files(t, o, ctx))
+    # template upgrade instructions live next to bedrock_fw.json, in the output directory
+    files["AGENTS.md"] = render("app/AGENTS.md.j2", **ctx)
+    files["CLAUDE.md"] = render("app/CLAUDE.md")
     return files
 
 
-def gen_bootloader(t: Target, o: Opts, lay: Layout) -> dict[str, str]:
-    ctx = dict(t=t, o=o, flash_size=lay.regions[0].length,
+def gen_bootloader(t: Target, o: Opts, lay: Layout, root: str = "") -> dict[str, str]:
+    ctx = dict(t=t, o=o, flash_size=lay.regions[0].length, root=root,
                max_erase_size=max(m.erase_size for m in t.memories if m.kind == "flash"))
     # no counters, logging or build-std in the bootloader's .cargo/config.toml
-    cfg_opts = Opts(**{**vars(o), "counters": False, "log": "none", "build_core": False, "panic_immediate_abort": False})
+    cfg_opts = Opts(**{**vars(o), "counters": False, "log": "none", "build_core": False, "panic_immediate_abort": False,
+                       "ww": False})
     files = {
         "bootloader/Cargo.toml": render("bootloader/Cargo.toml.j2", **ctx),
         "bootloader/build.rs": render("app/build.rs.j2", **ctx, bootloader=True),
@@ -1123,11 +1236,30 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              panic_immediate_abort=args.panic_immediate_abort, defmt_log=args.log_level, rtt_buffer=args.rtt_buffer,
              rtc=args.rtc, supply_config=args.supply_config or "", smps_voltage=args.smps_voltage or "",
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
-             build_info=build_info, regs=regs)
+             build_info=build_info, ww=args.wire_weaver, regs=regs)
     if o.supply_config in ("SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass") and not o.smps_voltage:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
-    files = gen_project(t, o, lay)
+    usb = None
+    if o.ww:
+        o.ww_transport = args.ww_transport
+        o.ww_api = args.ww_api = args.ww_api or f"{name}_api"  # recorded resolved in bedrock_fw.json
+        o.ww_src = args.ww_src
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", o.ww_api) or o.ww_api == name.replace("-", "_"):
+            die(f"--ww-api {o.ww_api}: must be a snake_case crate name, different from the firmware's")
+        if fw != "embassy" or t.family not in ("stm32", "rp", "nrf"):
+            die("--wire-weaver needs --framework embassy on STM32, RP or nRF (the server runs on embassy-time)")
+        if o.ww_transport == "usb":
+            if log != "defmt":
+                die("--ww-transport usb needs --log defmt (wire_weaver_usb_embassy logs with defmt)")
+            if t.family == "stm32":
+                usb = stm32_usb(t, Stm32Data(Path(args.cache), args.offline))
+                if led in (usb["dp"], usb["dm"]):
+                    die(f"--led {led} is a USB pin ({usb['periph']} DP/DM), pass another --led")
+            elif not t.usb:
+                die(f"{t.display} has no USB device peripheral; use --ww-transport rtt")
+
+    files = gen_project(t, o, lay, usb)
     files = {k: sort_uses(v) if k.endswith(".rs") else v for k, v in files.items()}
     files[FW_JSON] = fw_json(p_new, args, getattr(args, "prev_fw", None))
     origin = template_origin()
@@ -1141,7 +1273,8 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     if args.dry_run:
         for k in sorted(files):
             print(k)
-        print(files["memory.x"] if "memory.x" in files else "")
+        mx = f"{WW_FW_DIR}/memory.x" if o.ww else "memory.x"
+        print(files.get(mx, ""))
         return
     for rel, content in files.items():
         p = out / rel
@@ -1150,7 +1283,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     print(f"generated {len(files)} files in {out}/")
     for n in t.notes + (regs.notes if regs else []):
         print(f"note: {n}")
-    print(f"next: cd {out} && cargo build")
+    print(f"next: cd {out / WW_FW_DIR if o.ww else out} && cargo build")
 
 
 def cmd_chip_info(args) -> None:
@@ -1220,8 +1353,16 @@ def main(argv=None) -> None:
     p.add_argument("--supply-config", help="STM32H7 SupplyConfig variant (required when the part has SMPS pins)")
     p.add_argument("--smps-voltage", choices=["V1_8", "V2_5"], help="SMPS output voltage for SMPS*LDO configs")
     p.add_argument("--led", help="LED pin name in HAL terms (default PB14 / PIN_25 / P0_13 / GPIO8)")
-    p.add_argument("--bedrock", default="git", help="'git' (default) or path to a local embedded_bedrock checkout, relative to the project")
+    p.add_argument("--bedrock", default="git", help="'git' (default) or path to a local embedded_bedrock checkout, relative to the output directory")
     p.add_argument("--build-info", action="store_true", help="embed build info via bedrock_build (needs a buildable embedded_bedrock, see --bedrock)")
+    p.add_argument("--wire-weaver", action="store_true",
+                   help="WireWeaver device API: output directory gets a no_std API crate (--ww-api) and the firmware in "
+                        f"{WW_FW_DIR}/, serving it over --ww-transport (embassy on stm32/rp/nrf)")
+    p.add_argument("--ww-transport", choices=["usb", "rtt"], default="usb",
+                   help="WireWeaver transport: usb (embassy-usb, needs --log defmt) or rtt (debug probe)")
+    p.add_argument("--ww-api", help="WireWeaver API crate name (default <name>_api)")
+    p.add_argument("--ww-src", default="git",
+                   help="'git' (default) or path to a local wire_weaver checkout, relative to the output directory")
     p.add_argument("--dry-run", action="store_true", help="list files and print memory.x without writing")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")
     p.set_defaults(func=lambda a: cmd_new(a, p_new))

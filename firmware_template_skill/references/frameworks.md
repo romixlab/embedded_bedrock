@@ -147,5 +147,24 @@ new nrf9160 --chip nrf9160 --counters --log rtt
 new espc3  --chip esp32c3 --counters            (embassy, defmt via esp-println)
 new espc3p --chip esp32c3 --log esp-println
 new espc3b --chip esp32c3 --framework bare --log esp-println
+new g0usb  --chip STM32G0B1RE --wire-weaver --counters                         (USB, HSI48)                  (+release)
+new g0rtt  --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --config-page     (+bootloader)
+new g0rttn --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log none
+new g0rttr --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log rtt --ww-api g0_dev
+new h725   --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bkp-counters rtc --bootloader (OTG_HS in FS mode, +bootloader)
+new h743   --chip STM32H743ZI --wire-weaver --led PE1                            (OTG_FS)
+new f411   --chip STM32F411CE --wire-weaver --led PC13                           (OTG_FS, no HSI48: clock TODO)
+new l476   --chip STM32L476RG --wire-weaver --led PA5                            (no CRS: clock TODO)
+new l073   --chip STM32L073RZ --wire-weaver --led PA5
+new f103   --chip STM32F103C8 --wire-weaver --led PC13                           (USB_LP_CAN1_RX0, no HSI48; release only, 64K flash)
+new rp2040 --chip rp2040 --wire-weaver --counters --bootloader                                            (+bootloader)
+new rp2350r --chip rp2350 --wire-weaver --ww-transport rtt --log rtt
+new nrf840 --chip nrf52840 --wire-weaver --counters
+new nrf9160r --chip nrf9160 --wire-weaver --ww-transport rtt
 ```
+
+WireWeaver entries are built against wire_weaver `master` from git; `--ww-src <checkout>` builds against a local tree.
+The USB set-up was also compiled for STM32G474RE (`USB_LP`, needs embassy-stm32 `single-bank`/`dual-bank`, which the
+template does not select yet), STM32U585AI (`OTG_FS`, `ICLKSEL`) and STM32H563ZI (`USB_DRD_FS`) after removing the
+H7-only `SupplyConfig` lines the SMPS check forces on U5/H5.
 Xtensa (esp32/s2/s3) generation is covered, compilation needs the `esp` toolchain and was not run.

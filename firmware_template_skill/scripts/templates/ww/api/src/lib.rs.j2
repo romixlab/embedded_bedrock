@@ -1,0 +1,18 @@
+//! WireWeaver API of the {{ o.name }} firmware (`../{{ ww.api }}`), served by `../firmware/src/ww.rs`.
+//!
+//! The crate name and version identify the API on the wire (`{{ ww.gid }}`), so bump the version with every
+//! change and follow the WireWeaver evolution rules to stay compatible with deployed devices and hosts:
+//! https://github.com/vhrdtech/wire_weaver/blob/master/docs/evolution/rules.md
+//! Data types used in the API go here too, with `#[derive_shrink_wrap]`.
+#![no_std]
+
+use wire_weaver::prelude::*;
+
+/// {{ o.name }} device
+#[ww_api_root]
+pub trait {{ ww.trait }} {
+    /// Turn the LED on
+    fn led_on();
+    /// Turn the LED off
+    fn led_off();
+}
