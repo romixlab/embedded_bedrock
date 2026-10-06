@@ -42,7 +42,12 @@ IDs per area (`TPL-4`, `DEV-2`, ...). It replaces the README checklists.
   [firmware_template_skill/SKILL.md](firmware_template_skill/SKILL.md) *Maintaining the script*.
 - [CHANGELOG.md](CHANGELOG.md) at the root covers the Rust crates: entries under `## [Unreleased]` with `### Added`,
   `### Changed`, `### Fixed`, `### Removed`, short and user-facing, with the feature ID in parentheses. Mark breaking
-  changes to the build-info format with **Breaking:** (deployed firmware carries it).
+  changes to the build-info format with **Breaking:** (deployed firmware carries it). A commit that bumps a crate
+  version moves the `[Unreleased]` entries under a new `## [x.y.z] - YYYY-MM-DD` heading, so every version has its
+  own section.
+
+Questions like "what's new" or "what changed since X" are answered from these changelogs, newest sections first
+(the user's version or date as the cutoff), with FEATURES.md for current status.
 
 Pure refactors and typo fixes don't need an entry. The tpm repo's `/sync-repos` reads both files to log progress,
 so a missing entry means work nobody sees.
