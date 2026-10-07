@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-07
+
 ### Added
 
 - AGENTS.md (repository rules), FEATURES.md (replaces the README checklists, includes the device contract) and this
