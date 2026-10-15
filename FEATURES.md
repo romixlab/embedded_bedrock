@@ -113,6 +113,10 @@ same. wire_weaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`,
 
 - ✅ **ROB-1 flip-link** stack overflow protection (template default).
 - ✅ **ROB-2 Fault handlers** with counters (`DefaultHandler`, `HardFault` with BKP counter).
+- 🧪 **ROB-11 Crash capture** (PLAT-7 for every bedrock firmware): `bedrock_crash` keeps a fault / panic record in
+  `.uninit` RAM across the reset (magic + CRC, never read after power loss), decodes the reset cause (STM32 `RCC_CSR` /
+  `RCC_RSR`, RP `CHIP_RESET` + `WATCHDOG.REASON`) and counts boots; record logic tested on the host. Open: a forced
+  HardFault on a Pico 2 and an H7 reported after reset and symbolized with the ELF.
 - 📋 **ROB-3 HardFault reporting**: blink the address and flags in Morse code, then reboot (default) or keep blinking;
   keep the reason for the next boot.
 - 📋 **ROB-4 UsageFault, MemManage, BusFault handlers** with clear messages.

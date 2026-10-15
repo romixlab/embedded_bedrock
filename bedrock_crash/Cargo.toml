@@ -1,0 +1,20 @@
+[package]
+name = "bedrock_crash"
+version = "0.1.0"
+edition = "2024"
+description = "Crash capture for bedrock firmware: fault / panic record in RAM kept across reset, reset cause, boot counter"
+license = "MIT OR Apache-2.0"
+
+# Self-contained on purpose (no workspace inheritance, no WireWeaver dependency): firmware takes this crate from
+# git while WireWeaver often comes from a local checkout; the firmware converts the record to
+# `ww_firmware_info::ResetRecord` itself.
+
+[features]
+# The record in `.uninit` RAM, fault / panic capture and reset (Cortex-M firmware). Off: record logic only (host tests)
+cortex-m = ["dep:cortex-m", "dep:cortex-m-rt"]
+defmt = ["dep:defmt"]
+
+[dependencies]
+cortex-m = { version = "0.7", optional = true }
+cortex-m-rt = { version = "0.7", optional = true }
+defmt = { version = "1.0", optional = true }
