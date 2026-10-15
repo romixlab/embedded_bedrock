@@ -56,11 +56,10 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   regenerates; `check-answers` lists new options; `compare` classifies files (take-new / merge / added / removed),
   3-way with a base. Generated `AGENTS.md` describes the report-first upgrade procedure.
 - ✅ **TPL-12 rustfmt-clean output**: generated `.rs` files pass `rustfmt --edition 2024 --check` (0.4.3).
+- ✅ **TPL-14 Template `ww.rs` on the current wire_weaver**: handlers take a request `Context`, `process_bytes` an
+  `EventWriter` and the `Medium` (fixed after 0.5.0; usb_io_fw and typec_dongle had adapted by hand).
 - 🐛 **TPL-13 USB clock TODO on parts without HSI48 / CRS**: F411, L476, F103 generate a WireWeaver USB project with a
   clock TODO instead of a working 48 MHz setup (tested matrix notes).
-- 🐛 **TPL-14 Template `ww.rs` behind wire_weaver**: generated servers use the old `MessageSink` signatures; firmwares
-  on the current wire_weaver checkout (request context for handlers, 3f1ccf8) had to adapt by hand (usb_io_fw,
-  typec_dongle).
 - 📋 **TPL-15 Relocate the vector table to SRAM**.
 - 📋 **TPL-16 RTIC** as a framework option.
 - 📋 **TPL-17 TODO notes in generated code**: on git dependencies (update periodically) and when the defmt buffer is
