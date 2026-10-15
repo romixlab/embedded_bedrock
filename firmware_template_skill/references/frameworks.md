@@ -196,6 +196,9 @@ new h7nocrash --chip STM32H725IG --supply-config DirectSMPS --no-crash-capture
 Crash capture is on in every Cortex-M entry, built with `--bedrock <embedded_bedrock checkout>`
 (`bedrock_crash` is not on crates.io).
 
+flip-link is on in every Cortex-M entry; check it in each ELF: `_stack_start` (`readelf -s`) equals the address of
+`.data` (`readelf -S`) and `_stack_end` is the start of `RAM`. Without flip-link `_stack_start` is the end of `RAM`.
+
 WireWeaver entries are built against wire_weaver `master` from git; `--ww-src <checkout>` builds against a local tree.
 The USB set-up was also compiled for STM32G474RE (`USB_LP`, needs embassy-stm32 `single-bank`/`dual-bank`, which the
 template does not select yet), STM32U585AI (`OTG_FS`, `ICLKSEL`) and STM32H563ZI (`USB_DRD_FS`) after removing the

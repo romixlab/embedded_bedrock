@@ -74,6 +74,9 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   it, then move it to *Dropped*.
 - 📋 **TPL-21 Hardware test matrix**: bootloader update cycle, config page, BKP counters across reset, WireWeaver USB
   enumeration, on at least one STM32, RP and nRF board.
+- 🐛 **TPL-23 `init_ram.rs` not rustfmt clean for long bank names**: `xf3` (F303VC), `xg4` (G474RE) and `xl4`
+  (L476RG) of the tested matrix fail `rustfmt --edition 2024 --check`: the `let count = ...` line for banks like
+  `CCMRAM_ICODE` is over 100 columns and rustfmt breaks it after `=`. Found 15 Oct 2026.
 
 ## Device contract (`DEV`)
 
@@ -114,7 +117,9 @@ same. wire_weaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`,
 
 ## Robustness (`ROB`)
 
-- 🐛 **ROB-1 flip-link** stack overflow protection (template default): not in effect, see ROB-12.
+- 🧪 **ROB-1 flip-link** stack overflow protection (template default, Cortex-M): `linker = "flip-link"` in
+  `.cargo/config.toml` (ROB-12). The stack sits below `.data` / `.bss`, checked in the ELFs of the tested matrix;
+  a deliberate overflow on a board not yet tried.
 - ✅ **ROB-2 Fault handlers** with counters (`DefaultHandler`, `HardFault` with BKP counter).
 - 🧪 **ROB-11 Crash capture** (PLAT-7 for every bedrock firmware): `bedrock_crash` keeps a fault / panic record in
   `.uninit` RAM across the reset (magic + CRC, never read after power loss), decodes the reset cause (STM32 `RCC_CSR` /
@@ -124,11 +129,13 @@ same. wire_weaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`,
   Pico 2 and an H7 reported after reset and symbolized with the ELF (no probe on the mesh yet); the RP235x
   `CHIP_RESET` after `SYSRESETREQ` (stale flags?) and H7 ECC RAM behaviour checked there too; nRF `RESETREAS` and
   RISC-V (`Fault::RiscV`) not done.
-- 🐛 **ROB-12 flip-link is never used**: the template's `build.rs` prints `cargo:rustc-linker=flip-link`, which is not
-  a build-script directive (Cargo ignores it), so generated firmware links with plain rust-lld and `.data` / `.bss`
-  sit at the start of RAM (seen on rp2350 and STM32G0B1RE builds, 15 Oct 2026). Fix: `linker = "flip-link"` under
-  `[target.<triple>]` in `.cargo/config.toml`; changes every firmware's RAM layout, so upgrade notes and a hardware
-  check go with it. ROB-1 is not really in effect until then.
+- ✅ **ROB-12 flip-link was never used**: the template's `build.rs` printed `cargo:rustc-linker=flip-link`, which is
+  not a build-script directive (Cargo ignored it), so generated firmware linked with plain rust-lld and `.data` /
+  `.bss` sat at the start of RAM. Fixed 15 Oct 2026: `linker = "flip-link"` under `[target.<triple>]` in
+  `.cargo/config.toml` (`templates/app/cargo_config.toml.j2`, application and bootloader). The extra-RAM sections in
+  `memory.x` lost their tail `. = ALIGN(n)` so an empty one is dropped: flip-link 0.1.12 counts an empty section at
+  the end of RAM (RP2350 `.sram8`) as used RAM and left a zero-size stack. Applied to usb_io_fw and typec_dongle.
+  The superseded `bedrock_template/` (TPL-20) still has the old line.
 - 📋 **ROB-3 HardFault reporting**: blink the address and flags in Morse code, then reboot (default) or keep blinking;
   keep the reason for the next boot.
 - 📋 **ROB-4 UsageFault, MemManage, BusFault handlers** with clear messages.

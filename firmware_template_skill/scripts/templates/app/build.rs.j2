@@ -18,10 +18,6 @@ fn main() {
 
 {% endif %}
 {% if t.cortex_m %}
-  {% if o.flip_link and not bootloader %}
-    // Stack overflow protection: https://github.com/knurling-rs/flip-link
-    println!("cargo:rustc-linker=flip-link");
-  {% endif %}
   {% if o.build_info and not bootloader %}
     bedrock_build::common(); // -Tlink.x, -Tdefmt.x, --nmagic, optional RAM_LINK=1 support
     {% if t.rp_variant == "rp2040" %}

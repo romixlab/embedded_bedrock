@@ -10,6 +10,20 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- flip-link is really used (ROB-12): `linker = "flip-link"` in `.cargo/config.toml` for Cortex-M targets (application
+  and bootloader) instead of `cargo:rustc-linker=flip-link` in `build.rs`, which is no build-script directive: Cargo
+  ignored it and every generated firmware linked with plain rust-lld, stack above `.data` / `.bss`. The NOLOAD
+  sections for extra RAM banks in `memory.x` no longer end with `. = ALIGN(n)`, so lld drops an empty one: flip-link
+  0.1.12 counted the empty `.sram8` at the end of RP2350 RAM as used RAM and left a zero-size stack.
+
+Upgrade notes: answer `no_flip_link` is unchanged. In `.cargo/config.toml` add `linker = "flip-link"` under
+`[target.<triple>]` (also in `bootloader/.cargo/config.toml`), delete the `cargo:rustc-linker` line and its comment
+from `build.rs`, and in `memory.x` drop `. = ALIGN(n);` from the extra-RAM sections (RP2350 `.sram8` / `.sram9`, STM32
+banks). Changes the RAM layout of every firmware: check `_stack_start` equals the start of `.data` and `_stack_end`
+the start of `RAM` (`readelf -s` / `-S`). Test on hardware: the firmware boots; a deliberate stack overflow (unbounded
+recursion) ends in a HardFault (or a core lockup when the fault frame can't be stacked) instead of corrupting
+`.data` / `.bss`. With crash capture the record may be missing after such an overflow when the core locked up.
+
 - Crash capture, on by default on Cortex-M (ROB-11, PLAT-7 for every firmware; `--no-crash-capture` leaves it out).
   New dependency `bedrock_crash` (from `--bedrock`, like `--build-info`). The `HardFault` handler saves registers,
   fault status, 32 stack words and the uptime into a record in `.uninit` RAM and resets instead of looping; a new

@@ -19,6 +19,8 @@ MEMORY
 }
 {% if sections %}
 
+/* No symbols or `. = ...` in these sections: lld then drops an empty one. flip-link (0.1.12) counts an empty section
+   right at the end of RAM as used RAM and would leave no room for the stack. */
 SECTIONS
 {
   {% for r in sections %}
@@ -29,7 +31,6 @@ SECTIONS
   .{{ lname }} (NOLOAD) : ALIGN({{ r.align }})
   {
     *(.{{ lname }} .{{ lname }}.*);
-    . = ALIGN({{ r.align }});
   } > {{ r.name }}
   {% endfor %}
 }

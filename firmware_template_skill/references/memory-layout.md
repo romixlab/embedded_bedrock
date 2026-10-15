@@ -48,7 +48,10 @@ Place data with `#[unsafe(link_section = ".sram2")] static mut BUF: [u8; N] = [0
 RP2350 `SRAM8/9` are direct-mapped (non-striped) banks, useful for per-core stacks.
 
 Notes for manual edits: the cortex-m-rt `link.x` requires `FLASH` and `RAM`; `--nmagic` is passed so
-regions need not be 64K-aligned; `flip-link` moves the stack below `.bss/.data` for overflow detection.
+regions need not be 64K-aligned; `flip-link` (the `linker` in `.cargo/config.toml`) moves the stack below
+`.bss/.data` for overflow detection. Leave the extra-RAM sections without symbols or `. = ...` lines: lld then drops an
+empty one, while flip-link 0.1.12 counts an empty section right at the end of `RAM` (RP2350 `.sram8`) as used RAM and
+leaves no room for the stack.
 
 ## Backup-register counters (`BKPSRAM` / `BKP_REGS`)
 
