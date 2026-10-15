@@ -12,9 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 ### Added
 
 - `bedrock_crash` 0.1.0: crash capture for Cortex-M firmware (ROB-11). A `HardFault` / panic handler saves cause,
-  uptime, registers and fault status, up to 32 stack words, a message and the build id into a 372-byte `.uninit`
+  uptime, registers and fault status, up to 32 stack words, a message and the build id into a 376-byte `.uninit`
   record with magic and CRC-32, then resets; `boot()` keeps it across resets (never reads RAM after power loss),
-  counts boots and gives a `Snapshot` for a `ww_firmware_info::LastReset` server; `clear()`, `reset_with(Updated)`.
+  counts boots (and the boots since the crash was saved, `Crash::boots_since`, 0 = the last reset was the crash) and
+  gives a `Snapshot` for a `ww_firmware_info::LastReset` server; `clear()`, `reset_with(Updated)`.
   Reset-cause decoding for STM32 (`RCC_CSR` / `RCC_RSR` flags) and RP2040 / RP235x (`CHIP_RESET`,
   `WATCHDOG.REASON`). No WireWeaver dependency.
 

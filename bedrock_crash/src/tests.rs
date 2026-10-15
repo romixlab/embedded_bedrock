@@ -102,12 +102,15 @@ fn fault_is_reported_after_reset_and_kept_until_clear() {
     assert_eq!(c.stack, &[0x0800_0000, 0x0800_0001, 0x0800_0002]);
     assert_eq!(c.message, "HardFault FORCED PRECISERR BFARVALID");
     assert_eq!(c.build_id, &ID);
+    assert_eq!(c.boots_since, 0);
 
-    // a later reset: its own cause, the older crash is still there
+    // a later reset: its own cause, the older crash is still there and one boot old
     assert_eq!(r.on_boot(Cause::Pin), Cause::Pin);
     let v = r.view();
     assert_eq!((v.cause, v.boot_count), (Cause::Pin, 3));
-    assert!(v.crash.is_some());
+    assert_eq!(v.crash.unwrap().boots_since, 1);
+    r.on_boot(Cause::Software);
+    assert_eq!(r.view().crash.unwrap().boots_since, 2);
 
     r.clear();
     let v = r.view();
@@ -266,5 +269,18 @@ fn fault_text() {
 #[test]
 fn layout_is_stable() {
     // 93 words; a change here needs a new MAGIC so old records are dropped
-    assert_eq!(size_of::<Record>(), 372);
+    assert_eq!(size_of::<Record>(), 376);
+}
+
+#[test]
+fn a_new_crash_restarts_the_age() {
+    let mut r = Record::empty();
+    r.on_boot(Cause::PowerOn);
+    fault(&mut r, None);
+    r.on_boot(Cause::Software);
+    r.on_boot(Cause::Pin);
+    assert_eq!(r.view().crash.unwrap().boots_since, 1);
+    fault(&mut r, None);
+    assert_eq!(r.on_boot(Cause::Software), Cause::Fault);
+    assert_eq!(r.view().crash.unwrap().boots_since, 0);
 }

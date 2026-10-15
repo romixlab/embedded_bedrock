@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `LastReset` reports the age of the crash (STD-27): `src/last_reset.rs` fills `ResetRecord::boots_since_crash` from
+  `bedrock_crash` (`Crash::boots_since`, 0 = the last reset was the crash). **Upgrade notes**: needs the wire_weaver
+  with STD-27 and `bedrock_crash` with record layout 2 (a record in RAM from the old layout is dropped, never
+  misread); add `boots_since_crash: crash.map_or(0, |c| c.boots_since)` to the `ResetRecord` in `record()`.
 - flip-link is really used (ROB-12): `linker = "flip-link"` in `.cargo/config.toml` for Cortex-M targets (application
   and bootloader) instead of `cargo:rustc-linker=flip-link` in `build.rs`, which is no build-script directive: Cargo
   ignored it and every generated firmware linked with plain rust-lld, stack above `.data` / `.bss`. The NOLOAD

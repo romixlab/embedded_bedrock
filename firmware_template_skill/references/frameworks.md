@@ -86,7 +86,7 @@ panic-probe / panic-rtt-target / panic-halt.
 
 ## Crash capture (default on Cortex-M, `--no-crash-capture`)
 
-`bedrock_crash` (embedded_bedrock, ROB-11) keeps a 372-byte record in cortex-m-rt's `.uninit` section: cause,
+`bedrock_crash` (embedded_bedrock, ROB-11) keeps a 376-byte record in cortex-m-rt's `.uninit` section: cause,
 uptime, Cortex-M registers with CFSR / HFSR / MMFAR / BFAR and `EXC_RETURN`, up to 32 stack words, a message (panic
 text with location, or the set fault status bits), the build id. The `HardFault` handler in `main.rs` (first
 statement `bedrock_crash::exc_return!()`) and the `#[panic_handler]` in `src/last_reset.rs` write it and reset

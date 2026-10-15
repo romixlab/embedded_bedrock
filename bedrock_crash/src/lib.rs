@@ -139,8 +139,8 @@ pub const MESSAGE_LEN: usize = 128;
 pub const BUILD_ID_LEN: usize = 32;
 const REGS_WORDS: usize = 9;
 
-/// "BCR" + layout version 1. A new layout changes the last byte, so an old record is dropped, never misread.
-const MAGIC: u32 = 0xB0C2_5201;
+/// "BCR" + layout version 2. A new layout changes the last byte, so an old record is dropped, never misread.
+const MAGIC: u32 = 0xB0C2_5202;
 
 /// The record as it lies in RAM. All fields are plain words or bytes, so any bit pattern is a valid value; validity
 /// is decided by [Record::is_valid] (magic, CRC, bounds).
@@ -168,6 +168,8 @@ pub struct Record {
     build_id: [u8; BUILD_ID_LEN],
     message_len: u32,
     message: [u8; MESSAGE_LEN],
+    /// Boots since the stored crash was saved: 0 when the last reset was the crash.
+    crash_age: u32,
     crc: u32,
 }
 
@@ -195,6 +197,7 @@ impl Record {
             build_id: [0; BUILD_ID_LEN],
             message_len: 0,
             message: [0; MESSAGE_LEN],
+            crash_age: 0,
             crc: 0,
         }
         .sealed()
@@ -239,6 +242,11 @@ impl Record {
         // a crash handler or `prepare_reset` reset the device: that cause beats what the register says
         // (Software, or stale flags on parts whose reset-cause register doesn't record SYSRESETREQ)
         let cause = self.pending_cause().unwrap_or(hw);
+        if self.pending == PENDING_CRASH {
+            self.crash_age = 0;
+        } else {
+            self.crash_age = self.crash_age.saturating_add(1);
+        }
         self.pending = 0;
         self.boot_count = self.boot_count.saturating_add(1);
         self.last_cause = cause as u32;
@@ -322,6 +330,7 @@ impl Record {
                 )
                 .unwrap_or(""),
                 build_id: &self.build_id[..(self.build_id_len as usize).min(BUILD_ID_LEN)],
+                boots_since: self.crash_age,
             }
         });
         View {
@@ -398,6 +407,8 @@ pub struct Crash<'a> {
     pub message: &'a str,
     /// Build id of the firmware that crashed, empty when it had none.
     pub build_id: &'a [u8],
+    /// Boots since the crash was saved: 0 when the last reset was the crash, 1 after one normal reset, and so on.
+    pub boots_since: u32,
 }
 
 /// An owned copy of the record taken at boot, for a `LastReset` server: reading it needs no access to the RAM area
