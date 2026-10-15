@@ -9,6 +9,7 @@ fn main() -> ! {
     rtt_init_print!();
 {% endif %}
     {{ info }}("{{ o.name }} starting...");
+{% include "app/src/main/_last_reset_boot.rs.j2" %}
     // TODO: add a PAC/HAL dependency and initialize peripherals
 {% if o.build_info %}
     _ = core::hint::black_box(build_info::compact());

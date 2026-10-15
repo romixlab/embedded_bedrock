@@ -24,6 +24,7 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
 {% endif %}
 {% include "app/src/main/_rtt_init.rs.j2" %}
     {{ info }}("{{ o.name }} starting...");
+{% include "app/src/main/_last_reset_boot.rs.j2" %}
     let mut config = embassy_stm32::Config::default();
 {% if o.supply_config %}
     config.rcc.supply_config = SupplyConfig::{{ o.supply_config }}{{ "(SMPSSupplyVoltage::%s)" % o.smps_voltage if o.smps_voltage else "" }}; // from schematic: how VCORE is supplied

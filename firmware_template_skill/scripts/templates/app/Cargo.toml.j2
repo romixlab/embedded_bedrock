@@ -1,4 +1,4 @@
-{% from "macros.j2" import dep, bedrock_build, ww_dep %}
+{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep %}
 {% set defmt = o.log == "defmt" %}
 {% set ww_rtt = o.ww and ww.rtt %}
 [package]
@@ -21,13 +21,19 @@ defmt-rtt = "{{ V["defmt-rtt"] }}"
     {% else %}
 defmt-rtt = { version = "{{ V["defmt-rtt"] }}" } # buffer size via DEFMT_RTT_BUFFER_SIZE in .cargo/config.toml
     {% endif %}
+    {% if not o.crash %}
 {{ dep("panic-probe", ["print-defmt"]) }}
+    {% endif %}
   {% endif %}
 {% elif o.log == "rtt" %}
 rtt-target = "{{ V["rtt-target"] }}"
+  {% if not o.crash %}
 panic-rtt-target = "{{ V["panic-rtt-target"] }}"
+  {% endif %}
 {% elif o.log == "none" and t.family != "esp" %}
+  {% if not o.crash %}
 panic-halt = "{{ V["panic-halt"] }}"
+  {% endif %}
   {% if ww_rtt %}
 rtt-target = "{{ V["rtt-target"] }}"
   {% endif %}
@@ -85,6 +91,10 @@ log = "0.4"
 {% if o.counters %}
 cnt = "{{ V["cnt"] }}"
 {% endif %}
+{% if o.crash %}
+# crash capture: HardFault / panic record kept across reset, reset cause (src/last_reset.rs); the panic handler
+{{ bedrock_dep("bedrock_crash", o.bedrock, root, ", features = " ~ (feats("cortex-m", defmt and "defmt") | toml_list)) }}
+{% endif %}
 {% if o.bootloader %}
 {{ dep("embassy-boot-" ~ t.family, feats(defmt and "defmt")) }}
 embedded-storage = "{{ V["embedded-storage"] }}"
@@ -97,6 +107,7 @@ embassy-sync = "{{ V["embassy-sync"] }}"
 {{ ww.api }} = { path = "../{{ ww.api }}"{{ ', features = ["defmt"]' if defmt else "" }} }
 {{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
 {{ ww_dep("ww_client_server", "ww_stdlib/ww_client_server", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
   {% if ww.usb %}
 {{ ww_dep("wire_weaver_usb_embassy", "mcu/wire_weaver_usb_embassy", o.ww_src, root) }}
   {% else %}
@@ -108,7 +119,11 @@ embassy-sync = "{{ V["embassy-sync"] }}"
 {% if o.build_info %}
 bedrock_build = {{ bedrock_build(o.bedrock, prefix=root, flip_link=o.flip_link and t.cortex_m) }}
 build-info-build = "{{ V["build-info-build"] }}"
-{% else %}
+{% endif %}
+{% if o.ww %}
+{{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ', features = ["build"]') }} # FirmwareInfo facts (build.rs)
+{% endif %}
+{% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
 

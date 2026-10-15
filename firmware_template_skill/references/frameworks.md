@@ -81,6 +81,34 @@ All the infrastructure (memory.x, config, counters, logging, init_ram) is still 
 | esp-println | esp-println `log-04`, log | `ESP_LOG` env, `init_logger_from_env()` |
 | none | panic-halt (or esp-backtrace) | |
 
+With crash capture (default on Cortex-M) the panic handler is the one in `src/last_reset.rs` instead of
+panic-probe / panic-rtt-target / panic-halt.
+
+## Crash capture (default on Cortex-M, `--no-crash-capture`)
+
+`bedrock_crash` (embedded_bedrock, ROB-11) keeps a 372-byte record in cortex-m-rt's `.uninit` section: cause,
+uptime, Cortex-M registers with CFSR / HFSR / MMFAR / BFAR and `EXC_RETURN`, up to 32 stack words, a message (panic
+text with location, or the set fault status bits), the build id. The `HardFault` handler in `main.rs` (first
+statement `bedrock_crash::exc_return!()`) and the `#[panic_handler]` in `src/last_reset.rs` write it and reset
+(`SCB::sys_reset`; a panic with a debugger attached faults instead, so `probe-rs run` stops as with panic-probe).
+`last_reset::boot()`, right after logging is set up in `main`, reads the reset cause, checks magic + CRC-32, counts
+the boot and logs `last reset: Fault, boot 2` plus the crash. After power-on / brown-out the record is not read
+(ECC RAM on H7). The crash stays until `clear()` or a power cycle.
+
+Reset cause: STM32 `RCC_CSR` (`RCC_RSR` on H5 / H7) read as a raw address with the bit numbers from stm32-data, so the
+same code serves every framework, cleared with `RMVF`; RP2040 / RP235x `CHIP_RESET` + `WATCHDOG.REASON` through
+embassy-rp's PAC; nRF, bare RP and ESP: `Undetermined` (TODO(ROB-11)). Uptime from `embassy_time` with embassy,
+otherwise none.
+
+`--wire-weaver` adds `firmware: ww_firmware_info::FirmwareInfo` and `last_reset: ww_firmware_info::LastReset` to the
+API root. `FirmwareInfo` is served from `<Root>Consts` (no handlers, API-36): `FIRMWARE_FIRMWARE =
+firmware_summary!()` (from `ww_firmware_info::build::emit()` in `build.rs`), `firmware_build_id()` (`const_model =
+"BUILD_ID=fn"`), `BUILD_RECORD` omitted; `LastReset` has three handlers on `ServerState::last_reset`.
+
+Every Cortex-M application links with `--build-id=sha1` (build.rs) and keeps `.note.gnu.build-id` in flash after
+`.rodata` (memory.x, symbols `__build_id_start` / `__build_id_end` for `ww_firmware_info::build_id()`); check with
+`readelf -n <elf>`. The bootloader doesn't.
+
 ## Counters (`cnt` crate)
 
 `cnt!(name: u32|u64 [ "unit" ] [+= expr] [, level [, group]])`, `cnt_if!(cond, <same>)`; `bkp_cnt!` /
@@ -161,7 +189,12 @@ new rp2040 --chip rp2040 --wire-weaver --counters --bootloader                  
 new rp2350r --chip rp2350 --wire-weaver --ww-transport rtt --log rtt
 new nrf840 --chip nrf52840 --wire-weaver --counters
 new nrf9160r --chip nrf9160 --wire-weaver --ww-transport rtt
+new p2nocrash --chip rp2350 --wire-weaver --no-crash-capture
+new h7nocrash --chip STM32H725IG --supply-config DirectSMPS --no-crash-capture
 ```
+
+Crash capture is on in every Cortex-M entry, built with `--bedrock <embedded_bedrock checkout>`
+(`bedrock_crash` is not on crates.io).
 
 WireWeaver entries are built against wire_weaver `master` from git; `--ww-src <checkout>` builds against a local tree.
 The USB set-up was also compiled for STM32G474RE (`USB_LP`, needs embassy-stm32 `single-bank`/`dual-bank`, which the

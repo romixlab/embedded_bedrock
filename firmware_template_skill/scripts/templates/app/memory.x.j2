@@ -54,3 +54,17 @@ __{{ lname }}_end = ORIGIN({{ r.name }}) + LENGTH({{ r.name }}){{ sh }};
 
 {% include "linker/rp235x.x" %}
 {% endif %}
+{% if build_id %}
+
+/* GNU build id (--build-id=sha1 in build.rs): the firmware's identity, a host finds the ELF by it. Kept in flash;
+   ww_firmware_info::build_id() reads it through the two symbols. */
+SECTIONS
+{
+  .note.gnu.build-id : ALIGN(4)
+  {
+    __build_id_start = .;
+    KEEP(*(.note.gnu.build-id))
+    __build_id_end = .;
+  } > FLASH
+} INSERT AFTER .rodata;
+{% endif %}

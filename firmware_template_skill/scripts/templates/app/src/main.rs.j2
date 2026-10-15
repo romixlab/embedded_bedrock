@@ -11,14 +11,19 @@ mod init;
 {% if have_init_ram %}
 mod init_ram;
 {% endif %}
+{% if o.crash %}
+mod last_reset;
+{% endif %}
 {% if o.ww %}
 mod ww;
 {% endif %}
-{% if o.build_info or have_init or have_init_ram or o.ww %}
+{% set ww_rtt = o.ww and ww.rtt %}
+{# `use` lines follow the mods (a panic crate, logging, cnt): else the blank line before the include separates them #}
+{% set have_uses = o.log != "none" or t.family == "esp" or not o.crash or ww_rtt or o.counters %}
+{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash) and have_uses %}
 
 {% endif %}
 {# --- logging / panic handler --- #}
-{% set ww_rtt = o.ww and ww.rtt %}
 {% if o.log == "defmt" %}
   {% if t.cortex_m %}
 use defmt::{info, error};
@@ -31,16 +36,20 @@ use esp_println as _;
     {% if not ww_rtt %}
 use defmt_rtt as _;
     {% endif %}
+    {% if not o.crash %}
 use panic_probe as _;
+    {% endif %}
   {% endif %}
 {% elif o.log == "rtt" %}
 use rtt_target::{rprintln, {{ "rtt_init" if ww_rtt else "rtt_init_print" }}};
+  {% if not o.crash %}
 use panic_rtt_target as _;
+  {% endif %}
 {% elif o.log == "esp-println" %}
 use log::info;
 {% elif t.family == "esp" %}
 use esp_backtrace as _;
-{% else %}
+{% elif not o.crash %}
 use panic_halt as _;
 {% endif %}
 {% if ww_rtt %}
@@ -77,6 +86,12 @@ unsafe fn DefaultHandler(irqn: i16) {
 
 #[exception]
 unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
+  {% if o.crash %}
+    let exc_return = bedrock_crash::exc_return!(); // first: lr still holds EXC_RETURN here
+    // Saved for the next boot (src/last_reset.rs{{ ", served as LastReset" if o.ww else "" }}). With `probe-rs run` the debugger
+    // stops at the fault before this handler runs.
+    unsafe { bedrock_crash::capture_fault(ef, exc_return, last_reset::uptime_ms()) };
+  {% endif %}
   {% if bkp_words %}
     cnt::bkp_cnt!(hard_faults: u32, error);
   {% endif %}
@@ -84,10 +99,14 @@ unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
     error!("HardFault {}", defmt::Debug2Format(ef));
   {% elif o.log == "rtt" %}
     rprintln!("HardFault {:?}", ef);
-  {% else %}
+  {% elif not o.crash %}
     let _ = ef;
   {% endif %}
+  {% if o.crash %}
+    bedrock_crash::reset()
+  {% else %}
     // TODO: consider cortex_m::peripheral::SCB::sys_reset() in production
     loop {}
+  {% endif %}
 }
 {% endif %}

@@ -272,6 +272,46 @@ def find_reg_with_field(regs: dict, block: str, fieldname: str) -> Optional[str]
     return None
 
 
+# bedrock_crash::stm32::ResetFlags field -> RCC reset flags with that meaning (they differ per family)
+RESET_FLAG_FIELDS = {
+    "power_on": ["PORRSTF", "PWRRSTF"],
+    "brownout": ["BORRSTF"],
+    "pin": ["PINRSTF", "PADRSTF"],
+    "independent_watchdog": ["IWDGRSTF", "WDGRSTF", "IWDG1RSTF"],
+    "window_watchdog": ["WWDGRSTF", "WWDG1RSTF"],
+    "software": ["SFTRSTF"],
+    "low_power": ["LPWRRSTF"],
+    "option_bytes": ["OBLRSTF"],
+    "firewall": ["FWRSTF"],
+}
+
+
+def reset_flags(regs: dict, rcc: Optional[dict], version: str) -> Optional[dict]:
+    """The RCC register holding the reset flags (CSR, or RSR on H5 / H7; the shared one on dual-core parts) for
+    crash capture: name, address, RMVF bit and {ResetFlags field: [(flag, bit)]}. Raw addresses, so the generated
+    code is the same for every framework."""
+    if not rcc or "address" not in rcc:
+        return None
+    items = [it for it in regs.get("block/RCC", {}).get("items", []) if not re.match(r"C\d_", it["name"])]
+    for it in items:
+        fs = regs.get(f"fieldset/{it.get('fieldset', '')}")
+        bits = {f["name"]: f["bit_offset"] for f in fs["fields"]} if fs else {}
+        if "SFTRSTF" not in bits or "RMVF" not in bits:
+            continue
+        names = {k: list(v) for k, v in RESET_FLAG_FIELDS.items()}
+        if not any(n in bits for n in names["power_on"]):
+            # L4, G4, U5, H5: BORRSTF is the power-on flag
+            names["power_on"], names["brownout"] = names["brownout"], []
+        fields = {k: [(n, bits[n]) for n in v if n in bits] for k, v in names.items()}
+        # `field: bit(a) || bit(b), // NAMES`, trailing comments aligned as rustfmt does
+        code = {k: f"{k}: {' || '.join(f'bit({b})' for _, b in v)}," for k, v in fields.items() if v}
+        width = max(len(c) for c in code.values())
+        lines = [f"{c.ljust(width)} // {', '.join(n for n, _ in fields[k])}" for k, c in code.items()]
+        return {"reg": it["name"], "address": rcc["address"] + it["byte_offset"], "rmvf": bits["RMVF"],
+                "version": version, "lines": lines, "complete": all(fields.values())}
+    return None
+
+
 @dataclass
 class Stm32Regs:
     """Everything the templates need to know about RCC/PWR/backup domain."""
@@ -281,6 +321,7 @@ class Stm32Regs:
     rtc_enable: Optional[tuple[str, str]] = None  # (rcc register, field) enabling RTC APB clock
     bkp: Optional[tuple[str, int, int]] = None    # (peripheral, address, size_bytes) of backup registers
     sram_enable: dict = field(default_factory=dict)  # region name -> [(rcc reg, field)]
+    reset_flags: Optional[dict] = None            # RCC reset-flag register for crash capture, see reset_flags()
     notes: list[str] = field(default_factory=list)
 
 
@@ -300,6 +341,7 @@ def stm32_regs(t: Target, data: Stm32Data, extra_rams: list[Mem], want_bkp: str)
     if rcc_regs:
         reg = find_reg_with_field(rcc_regs, "RCC", "BDRST")
         r.rcc_bdcr = reg.lower() if reg else None
+        r.reset_flags = reset_flags(rcc_regs, periph(t, "RCC"), reg_version(t, "RCC"))
         # SRAM enable bits for additional RAM regions
         for item in rcc_regs["block/RCC"]["items"]:
             if "ENR" not in item["name"] or "LP" in item["name"] or "SM" in item["name"]:
@@ -560,6 +602,7 @@ def build_layout(t: Target, o) -> Layout:
 
 
 def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str:
+    """memory.x of the application, or of the bootloader (`for_bootloader`, no build id note)."""
     regions = [Region(**vars(r)) for r in lay.regions]
     if for_bootloader:
         bl = next(r for r in regions if r.name == "BOOTLOADER")
@@ -574,7 +617,7 @@ def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str
         regions = [r for r in regions if not (r.kind == "ram" and not r.is_main_ram) and r.kind != "reg" and r.name != "CONFIG"]
 
     visible = [r for r in regions if not r.commented_out and not r.is_main_ram]
-    return render("app/memory.x.j2", t=t, regions=regions,
+    return render("app/memory.x.j2", t=t, regions=regions, build_id=t.cortex_m and not for_bootloader,
                   sections=[r for r in visible if r.kind == "ram"],
                   consts=[r for r in visible if r.consts and not (r.kind == "flash" and r.name == "FLASH")])
 
@@ -663,6 +706,7 @@ class Opts:
     ww_transport: str = ""  # usb | rtt
     ww_api: str = ""        # API crate name
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
+    crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
     regs: Optional[Stm32Regs] = None
 
 
@@ -871,6 +915,8 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
+    if o.crash:
+        files["src/last_reset.rs"] = render("app/src/last_reset.rs.j2", **ctx, rf=r.reset_flags if r else None)
     if o.build_info:
         files["src/build_info.rs"] = render("app/src/build_info.rs")
     files[".gitignore"] = render("app/gitignore")
@@ -1236,7 +1282,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              panic_immediate_abort=args.panic_immediate_abort, defmt_log=args.log_level, rtt_buffer=args.rtt_buffer,
              rtc=args.rtc, supply_config=args.supply_config or "", smps_voltage=args.smps_voltage or "",
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
-             build_info=build_info, ww=args.wire_weaver, regs=regs)
+             build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
     if o.supply_config in ("SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass") and not o.smps_voltage:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
@@ -1346,6 +1392,9 @@ def main(argv=None) -> None:
     p.add_argument("--counters", action="store_true", help="add cnt crate (cnt! event counters)")
     p.add_argument("--ram-counters", type=int, default=64, help="RAM counters buffer size in words (default 64)")
     p.add_argument("--no-flip-link", action="store_true", help="do not use flip-link (stack overflow protection)")
+    p.add_argument("--no-crash-capture", action="store_true",
+                   help="leave out crash capture (bedrock_crash: HardFault / panic record kept across reset, reset cause, "
+                        "boot counter, served as ww_firmware_info::LastReset with --wire-weaver); on by default on Cortex-M")
     p.add_argument("--nightly", action="store_true", help="pin the installed nightly in rust-toolchain.toml")
     p.add_argument("--build-core", action="store_true", help="build-std core (smaller binary, implies nightly)")
     p.add_argument("--panic-immediate-abort", action="store_true", help="build-std-features panic_immediate_abort (implies nightly)")

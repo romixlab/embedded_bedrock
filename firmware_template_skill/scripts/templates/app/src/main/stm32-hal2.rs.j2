@@ -18,6 +18,7 @@ fn main() -> ! {
 {% endif %}
     let mut led = Pin::new(Port::{{ led_port }}, {{ led_pin }}, PinMode::Output);
     {{ info }}("{{ o.name }} starting...");
+{% include "app/src/main/_last_reset_boot.rs.j2" %}
 {% if o.build_info %}
     _ = core::hint::black_box(build_info::compact());
     _ = core::hint::black_box(build_info::full());

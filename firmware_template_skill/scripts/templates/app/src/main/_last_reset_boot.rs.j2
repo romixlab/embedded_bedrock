@@ -1,0 +1,8 @@
+{# Crash capture boot step, right after logging is set up: `last_reset` goes to the WireWeaver server. #}
+{% if o.crash %}
+  {% if o.ww %}
+    let last_reset = last_reset::boot(); // reset cause and crash record (src/last_reset.rs), logged
+  {% else %}
+    last_reset::boot(); // reset cause and crash record (src/last_reset.rs), logged
+  {% endif %}
+{% endif %}

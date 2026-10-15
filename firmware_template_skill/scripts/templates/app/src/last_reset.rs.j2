@@ -1,0 +1,198 @@
+{# Crash capture (bedrock_crash, default on Cortex-M): reset cause, boot step, panic handler and, with --wire-weaver,
+   the LastReset record. `rf` = STM32 RCC reset-flag register from stm32-data (reset_flags() in the script). #}
+{% set defmt = o.log == "defmt" %}
+{% set embassy = o.framework == "embassy" %}
+{% set rp = t.family == "rp" and embassy %}
+//! Crash capture (bedrock_crash): the `HardFault` handler in main.rs and the panic handler below save a record
+//! (cause, uptime, registers, 32 stack words, message, build id) that survives the reset; [boot] reads it at the
+//! next start together with the reset cause.{{ " `ww.rs` serves it as `ww_firmware_info::LastReset`." if o.ww else "" }}
+//! The record lives in `.uninit` RAM: it survives resets, not power loss.
+
+use bedrock_crash::{Cause, Snapshot};
+{% if t.family == "stm32" and rf %}
+use bedrock_crash::stm32::ResetFlags;
+{% elif rp %}
+use bedrock_crash::rp::ResetFlags;
+{% endif %}
+{% if defmt %}
+use defmt::{error, info};
+{% elif o.log == "rtt" %}
+use rtt_target::rprintln;
+{% endif %}
+{% if o.ww %}
+use wire_weaver::prelude::{MaxLen, RefVec};
+use ww_firmware_info::{CortexMFault, Fault, ResetCause, ResetRecord, Second};
+{% endif %}
+
+/// Read the reset cause and the crash record, count the boot and log it. Call it once, early in main.
+pub fn boot() -> Snapshot {
+{% if o.log == "none" %}
+    bedrock_crash::boot(reset_cause(), build_id())
+{% else %}
+    let snapshot = bedrock_crash::boot(reset_cause(), build_id());
+    let v = snapshot.view();
+  {% if defmt %}
+    info!("last reset: {}, boot {}", v.cause, v.boot_count);
+    if let Some(c) = v.crash.filter(|c| c.cause == v.cause) {
+        let at = c.uptime_ms.unwrap_or(0);
+        error!("before it: {} at {} ms", c.message, at);
+        if let Some(regs) = c.regs {
+            error!("{}", regs);
+        }
+    }
+  {% else %}
+    rprintln!("last reset: {:?}, boot {}", v.cause, v.boot_count);
+    if let Some(c) = v.crash.filter(|c| c.cause == v.cause) {
+        let at = c.uptime_ms.unwrap_or(0);
+        rprintln!("before it: {} at {} ms", c.message, at);
+        if let Some(regs) = c.regs {
+            rprintln!("{:x?}", regs);
+        }
+    }
+  {% endif %}
+    snapshot
+{% endif %}
+}
+
+{% if t.family == "stm32" and rf %}
+/// The reset flags in RCC_{{ rf.reg }} (stm32-data `rcc_{{ rf.version }}`), cleared with RMVF so the next reset starts
+/// fresh.
+fn reset_cause() -> Cause {
+    const RCC_{{ rf.reg }}: *mut u32 = {{ rf.address | hex8 }} as *mut u32;
+    // SAFETY: an RCC register, read once at boot
+    let v = unsafe { RCC_{{ rf.reg }}.read_volatile() };
+    let bit = |n: u32| v & (1 << n) != 0;
+    let flags = ResetFlags {
+  {% for line in rf.lines %}
+        {{ line }}
+  {% endfor %}
+  {% if not rf.complete %}
+        ..ResetFlags::default()
+  {% endif %}
+    };
+    // SAFETY: sets RMVF, writes the other bits back unchanged
+    unsafe { RCC_{{ rf.reg }}.write_volatile(v | 1 << {{ rf.rmvf }}) };
+    flags.cause()
+}
+{% elif rp and t.rp_variant == "rp2040" %}
+/// `CHIP_RESET` and `WATCHDOG.REASON`. An Arm `SYSRESETREQ` (the crash handler's reset) sets neither; a crash is
+/// recognised from the record.
+fn reset_cause() -> Cause {
+    let c = embassy_rp::pac::VREG_AND_CHIP_RESET.chip_reset().read();
+    let w = embassy_rp::pac::WATCHDOG.reason().read();
+    ResetFlags {
+        power_on: c.had_por(),
+        run_pin: c.had_run(),
+        debugger: c.had_psm_restart(),
+        watchdog_force: w.force(),
+        watchdog_timer: w.timer(),
+        ..ResetFlags::default()
+    }
+    .cause()
+}
+{% elif rp %}
+/// `POWMAN.CHIP_RESET` and `WATCHDOG.REASON`. An Arm `SYSRESETREQ` (the crash handler's reset) sets neither; a
+/// crash is recognised from the record.
+fn reset_cause() -> Cause {
+    let c = embassy_rp::pac::POWMAN.chip_reset().read();
+    let w = embassy_rp::pac::WATCHDOG.reason().read();
+    ResetFlags {
+        power_on: c.had_por(),
+        brownout: c.had_bor(),
+        glitch: c.had_glitch_detect(),
+        run_pin: c.had_run_low(),
+        debugger: c.had_dp_reset_req() || c.had_rescue() || c.had_hzd_sys_reset_req(),
+        watchdog_force: w.force(),
+        watchdog_timer: w.timer()
+            || c.had_watchdog_reset_powman()
+            || c.had_watchdog_reset_powman_async()
+            || c.had_watchdog_reset_swcore()
+            || c.had_watchdog_reset_rsm(),
+    }
+    .cause()
+}
+{% else %}
+/// The cause of the last reset.
+fn reset_cause() -> Cause {
+    // TODO(ROB-11): read the chip's reset-cause register{{ " (POWER.RESETREAS)" if t.family == "nrf" else "" }}. Until then a crash is still
+    // recognised from the record, but the record is also read after a power-on (the CRC rejects the garbage).
+    Cause::Undetermined
+}
+{% endif %}
+
+/// Time since boot, saved with a crash; called from the fault and panic handlers.
+pub fn uptime_ms() -> Option<u64> {
+{% if embassy %}
+    Some(embassy_time::Instant::now().as_millis())
+{% else %}
+    None // TODO: read a running timer here to have the crash time in the record
+{% endif %}
+}
+
+/// Build id of this image, saved with a crash so the host finds the ELF that crashed.
+fn build_id() -> &'static [u8] {
+{% if o.ww %}
+    ww_firmware_info::build_id()
+{% else %}
+    &[] // ww_firmware_info::build_id() (feature build-id) reads it from flash, memory.x keeps the note
+{% endif %}
+}
+
+/// Saves the panic for the next boot, logs it and resets (with a debugger attached: stops, as panic-probe does).
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    bedrock_crash::capture_panic(info, uptime_ms());
+{% if defmt %}
+    error!("{}", defmt::Display2Format(info));
+{% elif o.log == "rtt" %}
+    rprintln!("{}", info);
+{% endif %}
+    bedrock_crash::panic_reset()
+}
+{% if o.ww %}
+
+/// The record as `LastReset::last_reset` reports it (src/ww.rs).
+pub fn record(snapshot: &Snapshot) -> ResetRecord<'_> {
+    let v = snapshot.view();
+    let crash = v.crash;
+    ResetRecord {
+        cause: ww_cause(v.cause),
+        build_id: MaxLen::new_unchecked(RefVec::new_bytes(crash.map_or(&[][..], |c| c.build_id))),
+        uptime: crash
+            .and_then(|c| c.uptime_ms)
+            .map(|ms| Second::milliseconds(ms as u32)),
+        fault: crash.and_then(|c| c.regs).map(|r| {
+            Fault::CortexM(CortexMFault {
+                pc: r.pc,
+                lr: r.lr,
+                xpsr: r.xpsr,
+                sp: r.sp,
+                cfsr: r.cfsr,
+                hfsr: r.hfsr,
+                mmfar: r.mmfar,
+                bfar: r.bfar,
+                exc_return: r.exc_return,
+            })
+        }),
+        stack: MaxLen::new_unchecked(RefVec::Slice {
+            slice: crash.map_or(&[][..], |c| c.stack),
+        }),
+        message: MaxLen::new_unchecked(crash.map_or("", |c| c.message)),
+    }
+}
+
+fn ww_cause(c: Cause) -> ResetCause {
+    match c {
+        Cause::PowerOn => ResetCause::PowerOn,
+        Cause::Brownout => ResetCause::Brownout,
+        Cause::Pin => ResetCause::Pin,
+        Cause::Watchdog => ResetCause::Watchdog,
+        Cause::Software => ResetCause::Software,
+        Cause::Lockup => ResetCause::Lockup,
+        Cause::Fault => ResetCause::Fault,
+        Cause::Panic => ResetCause::Panic,
+        Cause::Updated => ResetCause::Updated,
+        Cause::Undetermined => ResetCause::Undetermined,
+    }
+}
+{% endif %}

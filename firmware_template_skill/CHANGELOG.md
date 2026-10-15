@@ -10,6 +10,30 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Crash capture, on by default on Cortex-M (ROB-11, PLAT-7 for every firmware; `--no-crash-capture` leaves it out).
+  New dependency `bedrock_crash` (from `--bedrock`, like `--build-info`). The `HardFault` handler saves registers,
+  fault status, 32 stack words and the uptime into a record in `.uninit` RAM and resets instead of looping; a new
+  `#[panic_handler]` in `src/last_reset.rs` does the same for panics (replaces panic-probe / panic-rtt-target /
+  panic-halt; with a debugger attached it still stops like panic-probe). `last_reset::boot()` in `main` reads the
+  reset cause (STM32 `RCC_CSR` / `RCC_RSR` from stm32-data, any framework; RP `CHIP_RESET` + `WATCHDOG.REASON`;
+  nRF / ESP not yet), counts boots and logs the last crash.
+- GNU build id in every Cortex-M application: `--build-id=sha1` in `build.rs`, `.note.gnu.build-id` kept in flash by
+  a `SECTIONS` block at the end of `memory.x` (symbols `__build_id_start` / `__build_id_end`).
+- `--wire-weaver`: the API root gets `ww_impl!(firmware: ww_firmware_info::FirmwareInfo)` and, with crash capture,
+  `ww_impl!(last_reset: ww_firmware_info::LastReset)`. `ww.rs` serves `FirmwareInfo` from `<Root>Consts` (API-36:
+  `FIRMWARE_FIRMWARE = firmware_summary!()`, `firmware_build_id()` from flash, `BUILD_RECORD` omitted) and `LastReset`
+  from the boot snapshot; `build.rs` calls `ww_firmware_info::build::emit()`. `ServerState` gets `last_reset`.
+
+Upgrade notes: new option `crash_capture` (answer key `no_crash_capture`, default false = on). For an existing
+Cortex-M firmware: add the `memory.x` build-id block and the `--build-id=sha1` line in `build.rs` (check with
+`readelf -n`); add `bedrock_crash` to `Cargo.toml`, copy `src/last_reset.rs`, call `last_reset::boot()` right after
+logging is set up, replace the HardFault body and drop the panic crate. Firmware with its own RAM init (usb_io_fw's
+`init_ram.rs`) must leave cortex-m-rt's `.uninit` untouched, or give the record a region of its own. With
+`--wire-weaver`: the API crate gets `ww_firmware_info`, two `ww_impl!` lines (an API change: bump the API crate's
+version), the `Consts` impl and three `LastReset` handlers in `ww.rs`, `const_model` and `omit` in `ww_codegen!`.
+Test on hardware: force a HardFault (e.g. a read from `0xFFFF_FFF0`) and a panic, check `last reset: Fault` /
+`Panic` in the log after the reset and `LastReset` over WireWeaver, symbolize `pc` with the ELF.
+
 - `--wire-weaver`: `src/ww.rs` builds against current wire_weaver master again (TPL-14): handlers take
   `_cx: &mut Context<'_, impl EventOut>`, `process_bytes` takes an `EventWriter` and the transport `Medium` (`()`).
 

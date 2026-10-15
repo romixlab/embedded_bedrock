@@ -60,6 +60,9 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   `EventWriter` and the `Medium` (fixed after 0.5.0; usb_io_fw and typec_dongle had adapted by hand).
 - 🐛 **TPL-13 USB clock TODO on parts without HSI48 / CRS**: F411, L476, F103 generate a WireWeaver USB project with a
   clock TODO instead of a working 48 MHz setup (tested matrix notes).
+- 🐛 **TPL-22 Small output regressions** (seen in the 15 Oct 2026 matrix run): `rustfmt --check` fails for
+  stm32xx-hal F3 / L4 (`let mut led = gpiob.pb14.into_push_pull_output(..)` too long) and G4 (`init_ram.rs` `count`
+  line); embassy STM32 parts without SMPS or USB clock lines (G0, L4) warn `let mut config` doesn't need `mut`.
 - 📋 **TPL-15 Relocate the vector table to SRAM**.
 - 📋 **TPL-16 RTIC** as a framework option.
 - 📋 **TPL-17 TODO notes in generated code**: on git dependencies (update periodically) and when the defmt buffer is
@@ -79,7 +82,8 @@ same. wire_weaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`,
 `ww_log_bare_metal` trait crates to build on.
 
 - ✅ **DEV-1 Native USB interface** for the Rust API (WireWeaver over USB, TPL-10).
-- 📋 **DEV-2 `fw_info` trait**: firmware name, version, git SHA, build time, in generated firmware.
+- 🧪 **DEV-2 `fw_info` trait**: `--wire-weaver` firmware serves `ww_firmware_info::FirmwareInfo` (name, version, git
+  commit and dirty flag, build time, profile, GNU build id) from `<Root>Consts`; not tried against a host yet.
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).
@@ -110,12 +114,21 @@ same. wire_weaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`,
 
 ## Robustness (`ROB`)
 
-- ✅ **ROB-1 flip-link** stack overflow protection (template default).
+- 🐛 **ROB-1 flip-link** stack overflow protection (template default): not in effect, see ROB-12.
 - ✅ **ROB-2 Fault handlers** with counters (`DefaultHandler`, `HardFault` with BKP counter).
 - 🧪 **ROB-11 Crash capture** (PLAT-7 for every bedrock firmware): `bedrock_crash` keeps a fault / panic record in
   `.uninit` RAM across the reset (magic + CRC, never read after power loss), decodes the reset cause (STM32 `RCC_CSR` /
-  `RCC_RSR`, RP `CHIP_RESET` + `WATCHDOG.REASON`) and counts boots; record logic tested on the host. Open: a forced
-  HardFault on a Pico 2 and an H7 reported after reset and symbolized with the ELF.
+  `RCC_RSR`, RP `CHIP_RESET` + `WATCHDOG.REASON`) and counts boots; record logic tested on the host. Template: on by
+  default on Cortex-M (`--no-crash-capture`), HardFault / panic handlers, `src/last_reset.rs`, served as
+  `ww_firmware_info::LastReset` with `--wire-weaver`; builds for the tested matrix. Open: a forced HardFault on a
+  Pico 2 and an H7 reported after reset and symbolized with the ELF (no probe on the mesh yet); the RP235x
+  `CHIP_RESET` after `SYSRESETREQ` (stale flags?) and H7 ECC RAM behaviour checked there too; nRF `RESETREAS` and
+  RISC-V (`Fault::RiscV`) not done.
+- 🐛 **ROB-12 flip-link is never used**: the template's `build.rs` prints `cargo:rustc-linker=flip-link`, which is not
+  a build-script directive (Cargo ignores it), so generated firmware links with plain rust-lld and `.data` / `.bss`
+  sit at the start of RAM (seen on rp2350 and STM32G0B1RE builds, 15 Oct 2026). Fix: `linker = "flip-link"` under
+  `[target.<triple>]` in `.cargo/config.toml`; changes every firmware's RAM layout, so upgrade notes and a hardware
+  check go with it. ROB-1 is not really in effect until then.
 - 📋 **ROB-3 HardFault reporting**: blink the address and flags in Morse code, then reboot (default) or keep blinking;
   keep the reason for the next boot.
 - 📋 **ROB-4 UsageFault, MemManage, BusFault handlers** with clear messages.

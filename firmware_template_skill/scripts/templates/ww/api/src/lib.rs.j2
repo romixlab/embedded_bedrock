@@ -15,4 +15,11 @@ pub trait {{ ww.trait }} {
     fn led_on();
     /// Turn the LED off
     fn led_off();
+
+    /// Which firmware runs and its build id (the device contract)
+    ww_impl!(firmware: ww_firmware_info::FirmwareInfo);
+{% if o.crash %}
+    /// Why the device last reset, with the crash record after a fault or panic
+    ww_impl!(last_reset: ww_firmware_info::LastReset);
+{% endif %}
 }

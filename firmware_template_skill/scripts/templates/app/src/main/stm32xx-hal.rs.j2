@@ -84,6 +84,7 @@ fn main() -> ! {
     let mut led = gpio{{ port }}.{{ pin }}.into_push_pull_output(&mut gpio{{ port }}.moder, &mut gpio{{ port }}.otyper);
 {% endif %}
     {{ info }}("{{ o.name }} starting...");
+{% include "app/src/main/_last_reset_boot.rs.j2" %}
 {% if o.build_info %}
     _ = core::hint::black_box(build_info::compact());
     _ = core::hint::black_box(build_info::full());

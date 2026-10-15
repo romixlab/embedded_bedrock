@@ -44,6 +44,10 @@ fn main() {
   {% if o.counters and not bootloader %}
     println!("cargo:rustc-link-arg=-Tcnt.x"); // counters index allocation (cnt crate)
   {% endif %}
+  {% if not bootloader %}
+    // GNU build id: the firmware's identity (memory.x keeps it in flash), a host finds the ELF by it
+    println!("cargo:rustc-link-arg=--build-id=sha1");
+  {% endif %}
 {% else %}
   {# ESP #}
   {% if o.log == "defmt" %}
@@ -54,6 +58,11 @@ fn main() {
   {% endif %}
     // linkall.x must be the last linker script
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+{% endif %}
+{% if o.ww and not bootloader %}
+
+    // Name, version, git commit and build time for ww_firmware_info::firmware_summary!() (FirmwareInfo in src/ww.rs)
+    ww_firmware_info::build::emit();
 {% endif %}
 {% if o.build_info %}
 

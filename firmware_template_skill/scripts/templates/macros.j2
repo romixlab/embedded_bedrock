@@ -10,6 +10,11 @@
 {% if bedrock == "git" %}{ git = "{{ BEDROCK_GIT }}"{% else %}{ path = "{{ "" if bedrock.startswith("/") else prefix }}{{ bedrock }}/bedrock_build"{% endif %}{{ ', features = ["flip-link"] }' if flip_link else " }" }}
 {%- endmacro %}
 
+{#- A crate of embedded_bedrock from git, or from a local checkout (--bedrock, relative to the output directory) -#}
+{% macro bedrock_dep(name, bedrock, prefix="", extra="") -%}
+{{ name }} = { {% if bedrock == "git" %}git = "{{ BEDROCK_GIT }}"{% else %}path = "{{ "" if bedrock.startswith("/") else prefix }}{{ bedrock }}/{{ name }}"{% endif %}{{ extra }} }
+{%- endmacro %}
+
 {#- WireWeaver crate from git, or from a local checkout (--ww-src, relative to the output directory; `prefix` leads there) -#}
 {% macro ww_dep(name, subdir, src, prefix, extra="") -%}
 {{ name }} = { {% if src == "git" %}git = "{{ WW_GIT }}"{% else %}path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}"{% endif %}{{ extra }} }

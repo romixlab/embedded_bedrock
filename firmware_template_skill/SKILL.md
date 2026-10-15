@@ -56,6 +56,10 @@ Paths are relative to this skill directory; use the absolute path when invoking.
         the API on the wire.
      `--ww-src <path>` uses a local wire_weaver checkout (relative to the output directory) instead of git.
      With `--wire-weaver` the output directory is laid out differently, see *What gets generated*.
+   - crash capture is on by default on Cortex-M (`bedrock_crash`: the HardFault and panic handlers save a record
+     that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves
+     it as `ww_firmware_info::LastReset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /
+     panic-halt as before). It takes `bedrock_crash` from `--bedrock` like `--build-info` does.
    - board LED pin `--led` (PB14 / PIN_25 / P0_13 / GPIO8 by default), RTC usage `--rtc`
    - STM32H7 with SMPS: `--supply-config <variant>` [+ `--smps-voltage V1_8|V2_5`] — the script **refuses** to
      generate without it; the value must come from the board schematic. Explain the options

@@ -3,13 +3,13 @@
 
   {% if ww.usb %}
     let driver = ww::usb_driver({{ ww.usb_args }});
-    ww::start(spawner, driver, ww::ServerState { led });
+    ww::start(spawner, driver, ww::ServerState { {{ "led, last_reset" if o.crash else "led" }} });
   {% else %}
     ww::start(
         spawner,
         channels.up.{{ ww.rtt_up }},
         channels.down.0,
-        ww::ServerState { led },
+        ww::ServerState { {{ "led, last_reset" if o.crash else "led" }} },
     );
   {% endif %}
 {% endif %}

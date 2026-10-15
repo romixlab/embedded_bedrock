@@ -104,8 +104,8 @@ macro_rules! exc_return {
     }};
 }
 
-/// Save a `HardFault` (registers, fault status, up to 32 stack words, a short text) and reset. Keeps a crash
-/// already captured since boot (a panic that ended in a fault).
+/// Save a `HardFault` (registers, fault status, up to 32 stack words, a short text); then log it and call
+/// [reset]. Keeps a crash already captured since boot (a panic that ended in a fault).
 ///
 /// `exc_return` from [exc_return!], `uptime_ms` the time since boot when the firmware has a clock that can be
 /// read in a fault handler (`embassy_time::Instant::now().as_millis()`).
@@ -113,7 +113,7 @@ macro_rules! exc_return {
 /// # Safety
 ///
 /// Call it from the `HardFault` handler only, with the frame cortex-m-rt passes.
-pub unsafe fn capture_fault(ef: &ExceptionFrame, exc_return: u32, uptime_ms: Option<u64>) -> ! {
+pub unsafe fn capture_fault(ef: &ExceptionFrame, exc_return: u32, uptime_ms: Option<u64>) {
     let exc_return = if exc_return >> 24 == 0xFF {
         exc_return
     } else {
@@ -144,6 +144,10 @@ pub unsafe fn capture_fault(ef: &ExceptionFrame, exc_return: u32, uptime_ms: Opt
         describe_fault(w, cfsr, hfsr);
     });
     store(&r);
+}
+
+/// Reset after a fault (`SCB::sys_reset`); the next boot reports the saved crash.
+pub fn reset() -> ! {
     cortex_m::peripheral::SCB::sys_reset()
 }
 
