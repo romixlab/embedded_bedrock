@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: product names written WireWeaver and ShrinkWrap in prose
+
 ## [0.2.1] - 2026-10-16
 
 ### Added

@@ -44,12 +44,12 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   update cycle: see TPL-21.
 - ✅ **TPL-5 Settings store** (was: config page, one `CONFIG` sector): `--settings` reserves a `SETTINGS` region of
   `--settings-pages` erase pages at the end of flash, at the end of bank 2 on dual-bank parts (default 8 KiB, at least
-  2: 4 × 2 KiB on STM32G0B1), and generates `src/settings.rs`: a `ww_settings` store (wire_weaver STD-32) on
+  2: 4 × 2 KiB on STM32G0B1), and generates `src/settings.rs`: a `ww_settings` store (WireWeaver STD-32) on
   embassy-stm32's `Flash`, read through `ww_ecc_flash::EccSafeFlash` on G0 / H7 (SRV-19, NMI handler on G0) or
   `BlockingAsync` on parts without flash ECC, with one setting (`label`), writes once a change settles and an erase
   ahead after each write. `--wire-weaver` serves it as `label: ww_user_info::UserInfo`, written before the call
   answers. Builds for the tested matrix. On Donguru B153A (16 Oct 2026, `--ww-transport rtt` through a J-Link,
-  needs wire_weaver TR-13): label set over RTT, reloaded after a reset and after a power cut (USB unplugged). H7 and F4 built, not run. Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
+  needs WireWeaver TR-13): label set over RTT, reloaded after a reset and after a power cut (USB unplugged). H7 and F4 built, not run. Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
   region is reserved.
 - ✅ **TPL-6 Logging**: defmt (explicit buffer size and level, optional non-blocking), RTT, esp-println, none.
 - ✅ **TPL-7 Counters**: `cnt` RAM counters with `cnt!` in the main loop and `DefaultHandler`; backup-register
@@ -64,7 +64,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   regenerates; `check-answers` lists new options; `compare` classifies files (take-new / merge / added / removed),
   3-way with a base. Generated `AGENTS.md` describes the report-first upgrade procedure.
 - ✅ **TPL-12 rustfmt-clean output**: generated `.rs` files pass `rustfmt --edition 2024 --check` (0.4.3).
-- ✅ **TPL-14 Template `ww.rs` on the current wire_weaver**: handlers take a request `Context`, `process_bytes` an
+- ✅ **TPL-14 Template `ww.rs` on the current WireWeaver**: handlers take a request `Context`, `process_bytes` an
   `EventWriter` and the `Medium` (fixed after 0.5.0; usb_io_fw and typec_dongle had adapted by hand).
 - 🐛 **TPL-13 USB clock TODO on parts without HSI48 / CRS**: F411, L476, F103 generate a WireWeaver USB project with a
   clock TODO instead of a working 48 MHz setup (tested matrix notes).
@@ -88,7 +88,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
 - 📋 **TPL-25 Settings store on RP and nRF** (and the HAL frameworks): `ww_settings` on embassy-rp's flash (XIP
   stalls during an erase, run from RAM or accept it) and embassy-nrf's NVMC; region only so far.
 - 📋 **TPL-26 Settings store on other ECC flash** (G4, L4, L5, U5, WB, WL, H5, C0, U0): needs an `EccSafeFlash`
-  family in wire_weaver's `ww_ecc_flash` first (`FLASH_ECCR` address and NMI flow per family); region only so far.
+  family in WireWeaver's `ww_ecc_flash` first (`FLASH_ECCR` address and NMI flow per family); region only so far.
 - 🐛 **TPL-23 `init_ram.rs` not rustfmt clean for long bank names**: `xf3` (F303VC), `xg4` (G474RE) and `xl4`
   (L476RG) of the tested matrix fail `rustfmt --edition 2024 --check`: the `let count = ...` line for banks like
   `CCMRAM_ICODE` is over 100 columns and rustfmt breaks it after `=`. Found 15 Oct 2026.
@@ -96,7 +96,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
 ## Device contract (`DEV`)
 
 What every device built on bedrock should offer, so host tools (RockFace, IOWeaver, CLIs) can treat all boards the
-same. wire_weaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, `ww_dfu`, `ww_counters` and
+same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, `ww_dfu`, `ww_counters` and
 `ww_log_bare_metal` trait crates to build on.
 
 - ✅ **DEV-1 Native USB interface** for the Rust API (WireWeaver over USB, TPL-10).

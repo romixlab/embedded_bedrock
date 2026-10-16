@@ -61,7 +61,7 @@ Paths are relative to this skill directory; use the absolute path when invoking.
         `rtt` (through the debug probe, no extra hardware, works next to defmt/rtt logging).
      3. *Name of the API crate?* → `--ww-api <name>` [`<project>_api`], snake_case. Its name + version identify
         the API on the wire.
-     `--ww-src <path>` uses a local wire_weaver checkout (relative to the output directory) instead of git.
+     `--ww-src <path>` uses a local WireWeaver checkout (relative to the output directory) instead of git.
      With `--wire-weaver` the output directory is laid out differently, see *What gets generated*.
    - crash capture is on by default on Cortex-M (`bedrock_crash`: the HardFault and panic handlers save a record
      that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves

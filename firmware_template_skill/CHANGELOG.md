@@ -10,6 +10,8 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Docs: product names written WireWeaver and ShrinkWrap in prose.
+
 - Settings store (TPL-5): `--settings` replaces `--config-page`. The `SETTINGS` region (was `CONFIG`, one sector)
   is `--settings-pages` erase pages at the end of flash, which is the end of bank 2 on dual-bank parts so an erase
   doesn't stall code in bank 1; the default is enough pages for 8 KiB and at least 2 (`ww_settings` compacts into the
@@ -36,18 +38,18 @@ by hand is not migrated: read it out before flashing, or keep its own region. In
 the `__config_start` / `__config_end` symbols to `SETTINGS` / `__settings_*`. Copy `src/settings.rs`, add `mod
 settings;`, the `ww_settings` and `ww_ecc_flash` (G0 / H7, feature `stm32g0` / `stm32h7`) or `embassy-embedded-hal`
 dependencies, the NMI handler on G0, and `SettingsStore::load(p.FLASH)` in `main`; a firmware that already owns
-`FLASH` elsewhere passes it through. Needs wire_weaver with STD-32 (`ww_settings`) and SRV-19 (`mcu/ww_ecc_flash`,
+`FLASH` elsewhere passes it through. Needs WireWeaver with STD-32 (`ww_settings`) and SRV-19 (`mcu/ww_ecc_flash`,
 2ed478f). With `--wire-weaver`: `ww_user_info` (and `ww_error`, `embassy-futures`) in the firmware, `ww_user_info` in
 the API crate with its `std` / `defmt` features, the `label` line in the API trait (an API change: bump the API
 crate's version), `LABEL_CAPABILITIES` in the `Consts` impl, the two `label_name` handlers, `"label.notes"` in
 `omit`, and the server task's `select` loop (or call `persist_if_due()` from the firmware's own loop). A firmware
 with its own settings API (Donguru `device.settings`, API-19) keeps its own fields in `DeviceSettings` at new slots.
-`--ww-transport rtt` firmware (with or without settings) needs wire_weaver with TR-13: since TR-12 the RTT server
+`--ww-transport rtt` firmware (with or without settings) needs WireWeaver with TR-13: since TR-12 the RTT server
 panicked on its first request. Test on hardware: set the label (`ww` over USB), cut the power, check it after the boot; and cut the power while a
 write runs (a loop of label writes), the device still boots and has the old or the new label.
 
 - `LastReset` reports the age of the crash (STD-27): `src/last_reset.rs` fills `ResetRecord::boots_since_crash` from
-  `bedrock_crash` (`Crash::boots_since`, 0 = the last reset was the crash). **Upgrade notes**: needs the wire_weaver
+  `bedrock_crash` (`Crash::boots_since`, 0 = the last reset was the crash). **Upgrade notes**: needs the WireWeaver
   with STD-27 and `bedrock_crash` with record layout 2 (a record in RAM from the old layout is dropped, never
   misread); add `boots_since_crash: crash.map_or(0, |c| c.boots_since)` to the `ResetRecord` in `record()`.
 - flip-link is really used (ROB-12): `linker = "flip-link"` in `.cargo/config.toml` for Cortex-M targets (application
@@ -88,7 +90,7 @@ version), the `Consts` impl and three `LastReset` handlers in `ww.rs`, `const_mo
 Test on hardware: force a HardFault (e.g. a read from `0xFFFF_FFF0`) and a panic, check `last reset: Fault` /
 `Panic` in the log after the reset and `LastReset` over WireWeaver, symbolize `pc` with the ELF.
 
-- `--wire-weaver`: `src/ww.rs` builds against current wire_weaver master again (TPL-14): handlers take
+- `--wire-weaver`: `src/ww.rs` builds against current WireWeaver master again (TPL-14): handlers take
   `_cx: &mut Context<'_, impl EventOut>`, `process_bytes` takes an `EventWriter` and the transport `Medium` (`()`).
 
 Upgrade notes: firmware generated with 0.5.0 that hasn't adapted yet: change each handler's
