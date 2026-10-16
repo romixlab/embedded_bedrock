@@ -42,14 +42,14 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   `hubris-memory` (Hubris `memory.toml`).
 - ✅ **TPL-4 Bootloader**: embassy-boot A/B layout and a `bootloader/` crate (STM32, RP, nRF). Hardware test of an
   update cycle: see TPL-21.
-- 🧪 **TPL-5 Settings store** (was: config page, one `CONFIG` sector): `--settings` reserves a `SETTINGS` region of
+- ✅ **TPL-5 Settings store** (was: config page, one `CONFIG` sector): `--settings` reserves a `SETTINGS` region of
   `--settings-pages` erase pages at the end of flash, at the end of bank 2 on dual-bank parts (default 8 KiB, at least
   2: 4 × 2 KiB on STM32G0B1), and generates `src/settings.rs`: a `ww_settings` store (wire_weaver STD-32) on
   embassy-stm32's `Flash`, read through `ww_ecc_flash::EccSafeFlash` on G0 / H7 (SRV-19, NMI handler on G0) or
   `BlockingAsync` on parts without flash ECC, with one setting (`label`), writes once a change settles and an erase
   ahead after each write. `--wire-weaver` serves it as `label: ww_user_info::UserInfo`, written before the call
   answers. Builds for the tested matrix. On Donguru B153A (16 Oct 2026, `--ww-transport rtt` through a J-Link,
-  needs wire_weaver TR-13): label set over RTT and reloaded after a reset; open: the same across a power cut. Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
+  needs wire_weaver TR-13): label set over RTT, reloaded after a reset and after a power cut (USB unplugged). H7 and F4 built, not run. Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
   region is reserved.
 - ✅ **TPL-6 Logging**: defmt (explicit buffer size and level, optional non-blocking), RTT, esp-println, none.
 - ✅ **TPL-7 Counters**: `cnt` RAM counters with `cnt!` in the main loop and `DefaultHandler`; backup-register
