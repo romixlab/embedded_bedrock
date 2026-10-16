@@ -48,8 +48,8 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   embassy-stm32's `Flash`, read through `ww_ecc_flash::EccSafeFlash` on G0 / H7 (SRV-19, NMI handler on G0) or
   `BlockingAsync` on parts without flash ECC, with one setting (`label`), writes once a change settles and an erase
   ahead after each write. `--wire-weaver` serves it as `label: ww_user_info::UserInfo`, written before the call
-  answers. Builds for the tested matrix; open: a setting stored and reloaded across a power cut on a board
-  (Donguru B153A). Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
+  answers. Builds for the tested matrix. On Donguru B153A (16 Oct 2026, `--ww-transport rtt` through a J-Link,
+  needs wire_weaver TR-13): label set over RTT and reloaded after a reset; open: the same across a power cut. Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
   region is reserved.
 - ✅ **TPL-6 Logging**: defmt (explicit buffer size and level, optional non-blocking), RTT, esp-println, none.
 - ✅ **TPL-7 Counters**: `cnt` RAM counters with `cnt!` in the main loop and `DefaultHandler`; backup-register

@@ -42,7 +42,8 @@ the API crate with its `std` / `defmt` features, the `label` line in the API tra
 crate's version), `LABEL_CAPABILITIES` in the `Consts` impl, the two `label_name` handlers, `"label.notes"` in
 `omit`, and the server task's `select` loop (or call `persist_if_due()` from the firmware's own loop). A firmware
 with its own settings API (Donguru `device.settings`, API-19) keeps its own fields in `DeviceSettings` at new slots.
-Test on hardware: set the label (`ww` over USB), cut the power, check it after the boot; and cut the power while a
+`--ww-transport rtt` firmware (with or without settings) needs wire_weaver with TR-13: since TR-12 the RTT server
+panicked on its first request. Test on hardware: set the label (`ww` over USB), cut the power, check it after the boot; and cut the power while a
 write runs (a loop of label writes), the device still boots and has the old or the new label.
 
 - `LastReset` reports the age of the crash (STD-27): `src/last_reset.rs` fills `ResetRecord::boots_since_crash` from
