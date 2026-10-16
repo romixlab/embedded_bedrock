@@ -10,11 +10,15 @@ description = "WireWeaver API of the {{ o.name }} firmware"
 
 [features]
 # owned (alloc) variants of the API types, for host-side users
-std = ["wire_weaver/std", "ww_firmware_info/std"]
-defmt = ["wire_weaver/defmt", "ww_firmware_info/defmt", "dep:defmt"]
+std = ["wire_weaver/std", "ww_firmware_info/std"{{ ', "ww_user_info/std"' if o.settings else "" }}]
+defmt = ["wire_weaver/defmt", "ww_firmware_info/defmt"{{ ', "ww_user_info/defmt"' if o.settings else "" }}, "dep:defmt"]
 
 [dependencies]
 defmt = { version = "{{ V["defmt"] }}", optional = true }
 {{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, "../", ", default-features = false") }}
 # FirmwareInfo, LastReset (the device contract); `std` reads every architecture's fault record
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, "../", ', default-features = false, features = ["cortex-m"]') }}
+{% if o.settings %}
+# UserInfo: the unit's name, kept in the firmware's settings store
+{{ ww_dep("ww_user_info", "ww_stdlib/ww_user_info", o.ww_src, "../", ", default-features = false") }}
+{% endif %}

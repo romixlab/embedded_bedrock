@@ -22,4 +22,8 @@ pub trait {{ ww.trait }} {
     /// Why the device last reset, with the crash record after a fault or panic
     ww_impl!(last_reset: ww_firmware_info::LastReset);
 {% endif %}
+{% if o.settings %}
+    /// Name the user gives this unit, kept in flash
+    ww_impl!(label: ww_user_info::UserInfo);
+{% endif %}
 }

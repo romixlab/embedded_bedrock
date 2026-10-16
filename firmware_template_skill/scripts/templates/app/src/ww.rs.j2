@@ -37,6 +37,13 @@ use ww_firmware_info::{BUILD_ID_MAX_LEN, FirmwareSummary};
 {% if o.crash %}
 use ww_firmware_info::ResetRecord;
 {% endif %}
+{% if o.settings %}
+use embassy_futures::select::{Either, select};
+use embassy_time::Timer;
+use ww_error::CommonError;
+use ww_settings::shrink_wrap::ArrayString;
+use ww_user_info::{MAX_NAME_LEN, UserInfoCaps, UserInfoError};
+{% endif %}
 {% if ww.usb %}
 use wire_weaver_usb_embassy::{LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init};
 {% else %}
@@ -59,6 +66,10 @@ pub struct ServerState {
 {% if o.crash %}
     /// Reset cause and crash record read at boot (src/last_reset.rs)
     pub last_reset: bedrock_crash::Snapshot,
+{% endif %}
+{% if o.settings %}
+    /// Settings in flash (src/settings.rs)
+    pub settings: crate::settings::SettingsStore,
 {% endif %}
 }
 
@@ -94,6 +105,15 @@ impl ServerState {
 impl server_impl::{{ ww.trait }}Consts for ServerState {
     // name, version, git commit, build time and profile, from build.rs (ww_firmware_info::build::emit())
     const FIRMWARE_FIRMWARE: FirmwareSummary<'static> = ww_firmware_info::firmware_summary!();
+{% if o.settings %}
+
+    // ww_user_info::UserInfo (`label`): the name is kept in flash, there is no room for notes (`omit` below)
+    const LABEL_CAPABILITIES: UserInfoCaps = UserInfoCaps {
+        name_max: MAX_NAME_LEN as u16,
+        notes_max: 0,
+        persistent: true,
+    };
+{% endif %}
 
     // GNU build id, kept in flash by memory.x: a host finds this firmware's ELF by it (known at link time: a `fn`,
     // `const_model` below)
@@ -125,6 +145,43 @@ impl ServerState {
     }
 }
 {% endif %}
+{% if o.settings %}
+
+// ww_user_info::UserInfo (`label`): the name a user gives this unit. A write is in flash before the call answers,
+// and the flash is written only when the name changed.
+impl ServerState {
+    async fn set_label_name(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        value: MaxLen<&'_ str, MAX_NAME_LEN>,
+    ) -> SetResult<UserInfoError<'_>> {
+        let Ok(label) = ArrayString::try_from(*value) else {
+            return SetError(UserInfoError::TooLong {
+                max: MAX_NAME_LEN as u16,
+            });
+        };
+        self.settings.set(|s| s.label = label);
+        match self.settings.persist().await {
+            Ok(()) => Set,
+            Err(_e) => {
+  {% if defmt %}
+                defmt::error!("label not saved: {}", defmt::Debug2Format(&_e));
+  {% elif o.log == "rtt" %}
+                rprintln!("label not saved: {:?}", _e);
+  {% endif %}
+                SetError(UserInfoError::Common(CommonError::Fault { code: 1 }))
+            }
+        }
+    }
+
+    async fn get_label_name(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+    ) -> GetResult<MaxLen<&'_ str, MAX_NAME_LEN>, UserInfoError<'_>> {
+        Value(MaxLen::new_unchecked(self.settings.get().label.as_str()))
+    }
+}
+{% endif %}
 
 mod server_impl {
     // Re-parses the API trait and generates request dispatch + serdes for ServerState.
@@ -136,7 +193,7 @@ mod server_impl {
         property_model = "_=get_set",
         introspect = "with_docs",
         const_model = "BUILD_ID=fn",
-        omit = ["firmware.BUILD_RECORD"],
+        omit = [{{ feats('"firmware.BUILD_RECORD"', o.settings and '"label.notes"') | join(", ") }}],
     );
 }
 
@@ -251,8 +308,20 @@ async fn usb_task(mut usb: UsbDevice<'static, UsbDriver>) {
 
 #[embassy_executor::task]
 async fn server_task(mut server: UsbServer<'static, UsbDriver>, mut state: ServerState) {
+{% if o.settings %}
+    loop {
+        // also while no host is connected: a change made just before it left still reaches the flash
+        match select(server.wait(), Timer::at(state.settings.due_at())).await {
+            Either::First(ready) => {
+                server.handle(ready, &mut state).await;
+            }
+            Either::Second(()) => state.settings.persist_if_due().await,
+        }
+    }
+{% else %}
     // Nothing else to wait for: the prepared loop. Use server.wait() / server.handle() to also react to other events.
     server.run(&mut state).await;
+{% endif %}
 }
 {% else %}
 
@@ -276,7 +345,19 @@ pub fn start(spawner: Spawner, up: UpChannel, down: DownChannel, state: ServerSt
 
 #[embassy_executor::task]
 async fn server_task(mut server: RttServer<'static, EmbassyClock>, mut state: ServerState) {
+{% if o.settings %}
+    loop {
+        // also while no host is connected: a change made just before it left still reaches the flash
+        match select(server.wait(), Timer::at(state.settings.due_at())).await {
+            Either::First(ready) => {
+                server.handle(ready, &mut state).await;
+            }
+            Either::Second(()) => state.settings.persist_if_due().await,
+        }
+    }
+{% else %}
     // Nothing else to wait for: the prepared loop. Use server.wait() / server.handle() to also react to other events.
     server.run(&mut state).await;
+{% endif %}
 }
 {% endif %}

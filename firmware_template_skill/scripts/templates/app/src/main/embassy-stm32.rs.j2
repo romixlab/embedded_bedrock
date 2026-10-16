@@ -63,6 +63,15 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
     // TODO: call mark_booted() only after self-test; otherwise the bootloader reverts on next reset
     updater.mark_booted().unwrap();
 {% endif %}
+{% if o.settings %}
+
+    let {{ "" if o.ww else "mut " }}settings = settings::SettingsStore::load(p.FLASH).await;
+  {% if o.log == "defmt" %}
+    info!("label: {}", settings.get().label);
+  {% elif o.log == "rtt" %}
+    rprintln!("label: {}", settings.get().label);
+  {% endif %}
+{% endif %}
 
     let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::Low, Speed::Low);
 {% include "app/src/main/_embassy_loop.rs.j2" %}

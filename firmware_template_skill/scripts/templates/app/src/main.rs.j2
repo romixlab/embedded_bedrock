@@ -14,13 +14,16 @@ mod init_ram;
 {% if o.crash %}
 mod last_reset;
 {% endif %}
+{% if o.settings %}
+mod settings;
+{% endif %}
 {% if o.ww %}
 mod ww;
 {% endif %}
 {% set ww_rtt = o.ww and ww.rtt %}
 {# `use` lines follow the mods (a panic crate, logging, cnt): else the blank line before the include separates them #}
 {% set have_uses = o.log != "none" or t.family == "esp" or not o.crash or ww_rtt or o.counters %}
-{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash) and have_uses %}
+{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings) and have_uses %}
 
 {% endif %}
 {# --- logging / panic handler --- #}
@@ -84,6 +87,18 @@ unsafe fn DefaultHandler(irqn: i16) {
   {% endif %}
 }
 
+{% if o.settings_flash == "g0" %}
+#[exception]
+unsafe fn NonMaskableInt() {
+    // a flash word with an ECC error, read by the settings store (a power cut while it was written): it reads as
+    // zeros, the store skips it
+    if ww_ecc_flash::on_nmi() {
+        return;
+    }
+    panic!("NMI: not a flash ECC error of a settings read");
+}
+
+{% endif %}
 #[exception]
 unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
   {% if o.crash %}

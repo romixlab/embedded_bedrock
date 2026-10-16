@@ -58,6 +58,8 @@ CNT_BKP_DEFAULT_REGION = "BKPSRAM"  # cnt.x default for CNT_BKP_MEMORY_REGION
 FW_JSON_SCHEMA = 1
 # `new` arguments that are not answers about the firmware (not stored in / not restored from bedrock_fw.json)
 NON_ANSWERS = {"cmd", "func", "out", "force", "dry_run", "cache", "answers"}
+# answers renamed by a template version: old key -> new key, the value carries over (template CHANGELOG has the why)
+RENAMED_ANSWERS = {"config_page": "settings"}
 
 
 def load_toml(name: str) -> dict:
@@ -490,13 +492,13 @@ def flash_sectors(t: Target) -> tuple[list[tuple[int, int]], Optional[int], int]
 
 
 def build_layout(t: Target, o) -> Layout:
-    """o: options namespace with bootloader, config_page, min_bootloader, main_ram, bkp (Stm32Regs|None)"""
+    """o: options namespace with bootloader, settings_pages (0 = none), min_bootloader, main_ram, bkp (Stm32Regs|None)"""
     regions: list[Region] = []
     sectors, bank2, _ = flash_sectors(t)
     flash_base = sectors[0][0]
     flash_size = sum(s for _, s in sectors)
     full = Region("FLASH", flash_base, flash_size, "flash", "Full FLASH range, for reference only",
-                  commented_out=(o.bootloader or o.config_page), consts=False)
+                  commented_out=(o.bootloader or o.settings_pages > 0), consts=False)
     if bank2:
         full.comment += f" (dual bank, BANK_2 starts at 0x{bank2:X})"
     regions.append(full)
@@ -520,13 +522,13 @@ def build_layout(t: Target, o) -> Layout:
     if t.boot2:
         regions.append(Region("BOOT2", flash_base, 0x100, "flash", "RP2040 second stage bootloader (provided by embassy-rp/rp2040-boot2)", consts=False))
 
-    if o.bootloader or o.config_page:
+    if o.bootloader or o.settings_pages:
         if o.bootloader:
             org, ln = take(sectors_for(parse_size(o.min_bootloader)))
             regions.append(Region("BOOTLOADER", org + boot2_len, ln - boot2_len, "flash", "Bootloader, boot process starts here"))
             org, ln = take(1)
             regions.append(Region("BOOTLOADER_STATE", org, ln, "flash", "embassy-boot state (swap progress, magic)", shift=shift))
-        tail = 1 if o.config_page else 0
+        tail = o.settings_pages
         avail = sectors[: len(sectors) - tail] if tail else sectors
         if not avail:
             die("flash too small for requested layout")
@@ -554,9 +556,10 @@ def build_layout(t: Target, o) -> Layout:
             org, ln = take(len(avail))
             app = Region("FLASH", org + boot2_len, ln - boot2_len, "flash", "Application")
             regions.append(app)
-        if o.config_page:
-            org, ln = take(1)
-            regions.append(Region("CONFIG", org, ln, "flash", "Persistent application configuration (one erase sector)", shift=shift))
+        if o.settings_pages:
+            org, ln = take(o.settings_pages)
+            where = " (the end of BANK_2: erases don't stall code running from bank 1)" if bank2 and org >= bank2 else ""
+            regions.append(Region("SETTINGS", org, ln, "flash", f"ww_settings store, {o.settings_pages} erase pages{where}", shift=shift))
         if sectors:
             org, ln = take(len(sectors))
             regions.append(Region("FREE_FLASH", org, ln, "flash", "Unused", commented_out=True, shift=shift))
@@ -612,9 +615,9 @@ def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str
         # embassy-boot wants offsets relative to the flash base; in the bootloader the base region is called FLASH
         shift = f"- ORIGIN({'BOOT2' if t.boot2 else 'FLASH'})" if lay.regions[0].origin != 0 else None
         for r in regions:
-            if r.name in ("BOOTLOADER_STATE", "BOOTLOADER_ACTIVE", "BOOTLOADER_DFU", "CONFIG", "FREE_FLASH"):
+            if r.name in ("BOOTLOADER_STATE", "BOOTLOADER_ACTIVE", "BOOTLOADER_DFU", "SETTINGS", "FREE_FLASH"):
                 r.shift = shift
-        regions = [r for r in regions if not (r.kind == "ram" and not r.is_main_ram) and r.kind != "reg" and r.name != "CONFIG"]
+        regions = [r for r in regions if not (r.kind == "ram" and not r.is_main_ram) and r.kind != "reg" and r.name != "SETTINGS"]
 
     visible = [r for r in regions if not r.commented_out and not r.is_main_ram]
     return render("app/memory.x.j2", t=t, regions=regions, build_id=t.cortex_m and not for_bootloader,
@@ -683,7 +686,7 @@ class Opts:
     framework: str          # embassy | stm32-hal2 | stm32xx-hal | bare
     log: str                # defmt | rtt | esp-println | none
     bootloader: bool
-    config_page: bool
+    settings: bool
     counters: bool
     ram_counters: int
     bkp: Optional[tuple[str, int, int]]
@@ -707,6 +710,7 @@ class Opts:
     ww_api: str = ""        # API crate name
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
     crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
+    settings_flash: str = ""  # --settings: "g0" / "h7" (ww_ecc_flash family), "plain" (flash without ECC)
     regs: Optional[Stm32Regs] = None
 
 
@@ -915,6 +919,8 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
+    if o.settings:
+        files["src/settings.rs"] = render("app/src/settings.rs.j2", **ctx)
     if o.crash:
         files["src/last_reset.rs"] = render("app/src/last_reset.rs.j2", **ctx, rf=r.reset_flags if r else None)
     if o.build_info:
@@ -1058,13 +1064,26 @@ def fw_json(p_new: argparse.ArgumentParser, args, prev: Optional[dict]) -> str:
     return json.dumps(out, indent=2) + "\n"
 
 
+def renamed_answers(answers: dict, note: bool = False) -> dict:
+    """The answers with RENAMED_ANSWERS keys under their new name (an explicit new key wins)."""
+    out = dict(answers)
+    for old, new in RENAMED_ANSWERS.items():
+        if old in out:
+            v = out.pop(old)
+            if new not in out:
+                out[new] = v
+                if note:
+                    warn(f"answer {old} is now {new} (value {v!r} kept)")
+    return out
+
+
 def apply_answers(ap: argparse.ArgumentParser, p_new: argparse.ArgumentParser, argv) -> argparse.Namespace:
     """Parse `new` args with the answers of --answers <bedrock_fw.json> as defaults (explicit flags still win)."""
     args = ap.parse_args(argv)
     if getattr(args, "cmd", None) != "new" or not args.answers:
         return args
     prev = load_fw_json(args.answers)
-    answers = prev.get("answers", {})
+    answers = renamed_answers(prev.get("answers", {}), note=True)
     acts = answer_actions(p_new)
     unknown = sorted(set(answers) - set(acts))
     missing = sorted(set(acts) - set(answers))
@@ -1084,6 +1103,10 @@ def apply_answers(ap: argparse.ArgumentParser, p_new: argparse.ArgumentParser, a
 def cmd_check_answers(args, p_new: argparse.ArgumentParser) -> None:
     prev = load_fw_json(args.answers)
     answers = prev.get("answers", {})
+    for old, new in RENAMED_ANSWERS.items():
+        if old in answers and new not in answers:
+            print(f"RENAMED  {old:24} -> {new} (value {answers[old]!r} kept)")
+    answers = renamed_answers(answers)
     acts = answer_actions(p_new)
     tpl = prev.get("template", {})
     cur = template_origin()
@@ -1212,7 +1235,11 @@ def add_common(p: argparse.ArgumentParser, chip_required: bool = True) -> None:
 
 def add_layout(p: argparse.ArgumentParser) -> None:
     p.add_argument("--bootloader", action="store_true", help="embassy-boot A/B layout + bootloader/ crate (stm32, rp, nrf)")
-    p.add_argument("--config-page", action="store_true", help="reserve one erase sector (CONFIG) for persistent settings")
+    p.add_argument("--settings", action="store_true",
+                   help="settings store (ww_settings) in a SETTINGS flash region at the end of flash, at the end of bank 2 "
+                        "on dual-bank parts; replaces --config-page")
+    p.add_argument("--settings-pages", type=int, default=0,
+                   help="erase pages of the SETTINGS region (at least 2; default: enough for 8 KiB, at least 2)")
     p.add_argument("--min-bootloader", default="24K", help="minimum bootloader size, rounded up to erase sectors (default 24K)")
     p.add_argument("--main-ram", help="name of the RAM region to use as main RAM (default: AXISRAM/RAM/SRAM or largest)")
     p.add_argument("--bkp-counters", choices=["none", "auto", "tamp", "rtc"], default="none",
@@ -1223,13 +1250,53 @@ def cmd_common_target(args) -> Target:
     return resolve_target(args)
 
 
+SETTINGS_MIN_BYTES = 8 * 1024
+# STM32 series whose flash has no ECC: embassy-stm32's Flash serves ww_settings as it is
+STM32_FLASH_NO_ECC = {"F0", "F1", "F2", "F3", "F4", "F7"}
+
+
+def settings_flash(t: Target, fw: str) -> str:
+    """Flash driver of the settings store: "g0" / "h7" (ww_ecc_flash's family feature) or "plain"."""
+    if fw != "embassy" or t.family != "stm32":
+        die("--settings needs --framework embassy on STM32 (embassy-stm32's Flash under ww_settings); "
+            "RP / nRF: TPL-25")
+    if t.series in ("G0", "H7"):
+        return t.series.lower()
+    if t.series in STM32_FLASH_NO_ECC:
+        return "plain"
+    die(f"--settings: STM32{t.series} flash has ECC and ww_ecc_flash supports only G0 and H7 so far: a word whose "
+        f"write a power cut interrupted would fault on every boot (TPL-26)")
+
+
+def settings_pages(t: Target, args) -> int:
+    """Erase pages of the SETTINGS region (0 without --settings): --settings-pages, else enough last pages for
+    SETTINGS_MIN_BYTES, at least 2 (ww_settings::Store needs a page to compact into)."""
+    if not args.settings:
+        if args.settings_pages:
+            die("--settings-pages needs --settings")
+        return 0
+    if t.family == "esp":
+        die("--settings: ESP keeps settings in an esp-idf NVS partition, not supported here")
+    sectors, _, _ = flash_sectors(t)
+    if args.settings_pages:
+        if args.settings_pages < 2:
+            die("--settings-pages: at least 2 (ww_settings compacts into the next page before erasing one)")
+        return args.settings_pages
+    n, acc = 0, 0
+    for _, size in reversed(sectors):
+        if n >= 2 and acc >= SETTINGS_MIN_BYTES:
+            break
+        n, acc = n + 1, acc + size
+    return n
+
+
 def make_layout(t: Target, args, regs: Optional[Stm32Regs]) -> Optional[Layout]:
     if t.family == "esp":
         return None
 
     class O:  # noqa
         bootloader = args.bootloader
-        config_page = args.config_page
+        settings_pages = settings_pages(t, args)
         min_bootloader = args.min_bootloader
         main_ram = args.main_ram
         bkp = regs.bkp if regs else None
@@ -1276,7 +1343,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
 
     lay = make_layout(t, args, regs)
     led = args.led or t.default_led
-    o = Opts(name=name, framework=fw, log=log, bootloader=args.bootloader, config_page=args.config_page,
+    o = Opts(name=name, framework=fw, log=log, bootloader=args.bootloader, settings=args.settings,
              counters=args.counters, ram_counters=args.ram_counters, bkp=regs.bkp if regs else None, bkp_mode=args.bkp_counters,
              flip_link=not args.no_flip_link, nightly=args.nightly, build_core=args.build_core,
              panic_immediate_abort=args.panic_immediate_abort, defmt_log=args.log_level, rtt_buffer=args.rtt_buffer,
@@ -1285,6 +1352,12 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
     if o.supply_config in ("SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass") and not o.smps_voltage:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
+
+    if o.settings:
+        o.settings_flash = settings_flash(t, fw)
+        if o.bootloader:
+            die("--settings with --bootloader: both need the FLASH peripheral, not wired together yet (TPL-24)")
+        o.ww_src = args.ww_src  # ww_settings comes from wire_weaver
 
     usb = None
     if o.ww:
