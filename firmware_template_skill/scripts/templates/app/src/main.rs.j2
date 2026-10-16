@@ -14,7 +14,7 @@ mod init_ram;
 {% if o.crash %}
 mod last_reset;
 {% endif %}
-{% if o.settings %}
+{% if o.settings_flash %}
 mod settings;
 {% endif %}
 {% if o.ww %}
@@ -23,7 +23,7 @@ mod ww;
 {% set ww_rtt = o.ww and ww.rtt %}
 {# `use` lines follow the mods (a panic crate, logging, cnt): else the blank line before the include separates them #}
 {% set have_uses = o.log != "none" or t.family == "esp" or not o.crash or ww_rtt or o.counters %}
-{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings) and have_uses %}
+{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings_flash) and have_uses %}
 
 {% endif %}
 {# --- logging / panic handler --- #}

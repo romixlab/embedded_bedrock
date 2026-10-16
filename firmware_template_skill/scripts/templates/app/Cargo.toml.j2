@@ -95,7 +95,7 @@ cnt = "{{ V["cnt"] }}"
 # crash capture: HardFault / panic record kept across reset, reset cause (src/last_reset.rs); the panic handler
 {{ bedrock_dep("bedrock_crash", o.bedrock, root, ", features = " ~ (feats("cortex-m", defmt and "defmt") | toml_list)) }}
 {% endif %}
-{% if o.settings %}
+{% if o.settings_flash %}
 # settings store in the SETTINGS flash region (src/settings.rs)
 {{ ww_dep("ww_settings", "ww_settings/ww_settings", o.ww_src, root, (', features = ["defmt"]' if defmt else "")) }}
   {% if o.settings_flash in ("g0", "h7") %}
@@ -121,7 +121,7 @@ embassy-sync = "{{ V["embassy-sync"] }}"
 {{ ww.api }} = { path = "../{{ ww.api }}"{{ ', features = ["defmt"]' if defmt else "" }} }
 {{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
 {{ ww_dep("ww_client_server", "ww_stdlib/ww_client_server", o.ww_src, root, ", default-features = false") }}
-  {% if o.settings %}
+  {% if o.settings_flash %}
 embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/ww.rs)
   {% endif %}
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}

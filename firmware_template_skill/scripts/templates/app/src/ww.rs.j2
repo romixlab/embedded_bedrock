@@ -37,7 +37,7 @@ use ww_firmware_info::{BUILD_ID_MAX_LEN, FirmwareSummary};
 {% if o.crash %}
 use ww_firmware_info::ResetRecord;
 {% endif %}
-{% if o.settings %}
+{% if o.settings_flash %}
 use embassy_futures::select::{Either, select};
 use embassy_time::Timer;
 use ww_error::CommonError;
@@ -67,7 +67,7 @@ pub struct ServerState {
     /// Reset cause and crash record read at boot (src/last_reset.rs)
     pub last_reset: bedrock_crash::Snapshot,
 {% endif %}
-{% if o.settings %}
+{% if o.settings_flash %}
     /// Settings in flash (src/settings.rs)
     pub settings: crate::settings::SettingsStore,
 {% endif %}
@@ -105,7 +105,7 @@ impl ServerState {
 impl server_impl::{{ ww.trait }}Consts for ServerState {
     // name, version, git commit, build time and profile, from build.rs (ww_firmware_info::build::emit())
     const FIRMWARE_FIRMWARE: FirmwareSummary<'static> = ww_firmware_info::firmware_summary!();
-{% if o.settings %}
+{% if o.settings_flash %}
 
     // ww_user_info::UserInfo (`label`): the name is kept in flash, there is no room for notes (`omit` below)
     const LABEL_CAPABILITIES: UserInfoCaps = UserInfoCaps {
@@ -145,7 +145,7 @@ impl ServerState {
     }
 }
 {% endif %}
-{% if o.settings %}
+{% if o.settings_flash %}
 
 // ww_user_info::UserInfo (`label`): the name a user gives this unit. A write is in flash before the call answers,
 // and the flash is written only when the name changed.
@@ -193,7 +193,7 @@ mod server_impl {
         property_model = "_=get_set",
         introspect = "with_docs",
         const_model = "BUILD_ID=fn",
-        omit = [{{ feats('"firmware.BUILD_RECORD"', o.settings and '"label.notes"') | join(", ") }}],
+        omit = [{{ feats('"firmware.BUILD_RECORD"', o.settings_flash and '"label.notes"') | join(", ") }}],
     );
 }
 
@@ -308,7 +308,7 @@ async fn usb_task(mut usb: UsbDevice<'static, UsbDriver>) {
 
 #[embassy_executor::task]
 async fn server_task(mut server: UsbServer<'static, UsbDriver>, mut state: ServerState) {
-{% if o.settings %}
+{% if o.settings_flash %}
     loop {
         // also while no host is connected: a change made just before it left still reaches the flash
         match select(server.wait(), Timer::at(state.settings.due_at())).await {
@@ -345,7 +345,7 @@ pub fn start(spawner: Spawner, up: UpChannel, down: DownChannel, state: ServerSt
 
 #[embassy_executor::task]
 async fn server_task(mut server: RttServer<'static, EmbassyClock>, mut state: ServerState) {
-{% if o.settings %}
+{% if o.settings_flash %}
     loop {
         // also while no host is connected: a change made just before it left still reaches the flash
         match select(server.wait(), Timer::at(state.settings.due_at())).await {

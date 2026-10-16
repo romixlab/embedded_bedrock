@@ -15,14 +15,20 @@ Order from flash base:
 | `BOOTLOADER` | `--min-bootloader` (24K) rounded up to whole sectors | `--bootloader` |
 | `BOOTLOADER_STATE` | 1 sector | `--bootloader` |
 | `FLASH` (application) | largest A such that DFU ≥ A + one sector | always |
-| `BOOTLOADER_DFU` | rest minus CONFIG | `--bootloader` |
-| `CONFIG` | 1 sector (the last one) | `--config-page` |
+| `BOOTLOADER_DFU` | rest minus SETTINGS | `--bootloader` |
+| `SETTINGS` | the last `--settings-pages` sectors (default: 8 KiB, at least 2) | `--settings` |
 | `FREE_FLASH` | leftover (commented out) | never with current algorithm, kept for manual edits |
 
 Dual-bank STM32 (`BANK_2` present): if it does not cost application space, DFU is aligned to the start
 of bank 2 (allows bank-swap-less updates while executing from bank 1).
 
-Without `--bootloader`/`--config-page` the whole flash is `FLASH` (minus BOOT2 on rp2040).
+`SETTINGS` sits at the end of the flash, so on a dual-bank part it is the end of bank 2: a page erase there doesn't
+stall code running from bank 1 (STM32G0B1 512K: 4 × 2 KiB at `0x0807_E000`). `ww_settings` needs at least 2 pages
+(it compacts into the next page before erasing one); the default takes the last sectors until there are 2 and
+8 KiB, which on parts with 128 KiB sectors (F4, H7) means 256 KiB: the generator prints a note pointing to the
+alternatives (the small F4 sectors at the start, external NOR).
+
+Without `--bootloader`/`--settings` the whole flash is `FLASH` (minus BOOT2 on rp2040).
 
 ## Symbols
 
@@ -33,7 +39,7 @@ Flash partition symbols are **offsets from the flash base** (`- ORIGIN(BOOTLOADE
 embassy flash drivers use offsets, not absolute addresses. nRF flash starts at 0, so no shift there.
 
 The bootloader `memory.x` is the same table with renames: `BOOTLOADER→FLASH`, app `FLASH→BOOTLOADER_ACTIVE`,
-extra RAM banks / `CONFIG` / backup-register region dropped. embassy-boot's `BootLoaderConfig::from_linkerfile_blocking`
+extra RAM banks / `SETTINGS` / backup-register region dropped. embassy-boot's `BootLoaderConfig::from_linkerfile_blocking`
 reads `__bootloader_active_start/end`, `__bootloader_dfu_start/end`, `__bootloader_state_start/end`.
 
 ## RAM
@@ -72,5 +78,5 @@ does that from stm32-data register info; it purposely does **not** reset the bac
 ## ESP32
 
 No `memory.x`: esp-hal ships `linkall.x` (must be the last `-T` argument) and the esp-idf bootloader partition
-table governs OTA. `--bootloader`/`--config-page` are rejected for ESP. Use `esp-storage` + the esp-idf
+table governs OTA. `--bootloader`/`--settings` are rejected for ESP. Use `esp-storage` + the esp-idf
 partition table for persistent data.

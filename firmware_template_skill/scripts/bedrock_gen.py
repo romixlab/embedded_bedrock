@@ -710,7 +710,7 @@ class Opts:
     ww_api: str = ""        # API crate name
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
     crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
-    settings_flash: str = ""  # --settings: "g0" / "h7" (ww_ecc_flash family), "plain" (flash without ECC)
+    settings_flash: str = ""  # --settings code: "g0" / "h7" (ww_ecc_flash family), "plain" (no ECC), "" none
     regs: Optional[Stm32Regs] = None
 
 
@@ -919,7 +919,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
-    if o.settings:
+    if o.settings_flash:
         files["src/settings.rs"] = render("app/src/settings.rs.j2", **ctx)
     if o.crash:
         files["src/last_reset.rs"] = render("app/src/last_reset.rs.j2", **ctx, rf=r.reset_flags if r else None)
@@ -1255,17 +1255,21 @@ SETTINGS_MIN_BYTES = 8 * 1024
 STM32_FLASH_NO_ECC = {"F0", "F1", "F2", "F3", "F4", "F7"}
 
 
-def settings_flash(t: Target, fw: str) -> str:
-    """Flash driver of the settings store: "g0" / "h7" (ww_ecc_flash's family feature) or "plain"."""
+def settings_flash(t: Target, fw: str, bootloader: bool) -> str:
+    """Flash driver of the settings store: "g0" / "h7" (ww_ecc_flash's family feature) or "plain"; "" where the
+    store isn't wired up yet (the SETTINGS region is still reserved)."""
+    why = None
     if fw != "embassy" or t.family != "stm32":
-        die("--settings needs --framework embassy on STM32 (embassy-stm32's Flash under ww_settings); "
-            "RP / nRF: TPL-25")
-    if t.series in ("G0", "H7"):
-        return t.series.lower()
-    if t.series in STM32_FLASH_NO_ECC:
-        return "plain"
-    die(f"--settings: STM32{t.series} flash has ECC and ww_ecc_flash supports only G0 and H7 so far: a word whose "
-        f"write a power cut interrupted would fault on every boot (TPL-26)")
+        why = "src/settings.rs is generated for --framework embassy on STM32 so far (TPL-25)"
+    elif bootloader:
+        why = "the bootloader's updater and the settings store both need the FLASH peripheral, not shared yet (TPL-24)"
+    elif t.series not in ("G0", "H7") and t.series not in STM32_FLASH_NO_ECC:
+        why = (f"STM32{t.series} flash has ECC and ww_ecc_flash supports only G0 and H7 so far: with a plain driver a "
+               f"word whose write a power cut interrupted would fault on every boot (TPL-26)")
+    if why:
+        warn(f"--settings: SETTINGS region reserved, no settings code: {why}")
+        return ""
+    return t.series.lower() if t.series in ("G0", "H7") else "plain"
 
 
 def settings_pages(t: Target, args) -> int:
@@ -1287,6 +1291,10 @@ def settings_pages(t: Target, args) -> int:
         if n >= 2 and acc >= SETTINGS_MIN_BYTES:
             break
         n, acc = n + 1, acc + size
+    if acc > 4 * SETTINGS_MIN_BYTES:
+        t.notes.append(f"SETTINGS takes the last {n} erase sectors ({fmt_len(acc)}) and each erase stalls flash for "
+                       f"up to seconds on a single bank: see 'Parts with big sectors' in wire_weaver's "
+                       f"docs/api/settings.md for the small sectors at the start of an F4, the other bank or external NOR")
     return n
 
 
@@ -1354,9 +1362,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
     if o.settings:
-        o.settings_flash = settings_flash(t, fw)
-        if o.bootloader:
-            die("--settings with --bootloader: both need the FLASH peripheral, not wired together yet (TPL-24)")
+        o.settings_flash = settings_flash(t, fw, o.bootloader)
         o.ww_src = args.ww_src  # ww_settings comes from wire_weaver
 
     usb = None

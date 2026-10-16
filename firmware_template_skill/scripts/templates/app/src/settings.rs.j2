@@ -178,13 +178,18 @@ impl SettingsStore {
 
     /// Erases the page the next compaction moves to, if it needs it, so a later write doesn't erase.
     async fn erase_ahead(&mut self) {
-        if let Err(_e) = self.store.maintain().await {
-{% if o.log == "defmt" %}
-            error!("settings erase ahead failed: {}", Debug2Format(&_e));
-{% elif o.log == "rtt" %}
-            rprintln!("settings erase ahead failed: {:?}", _e);
-{% endif %}
+{% if o.log == "none" %}
+        // a failed erase is done by the next write instead
+        let _ = self.store.maintain().await;
+{% else %}
+        if let Err(e) = self.store.maintain().await {
+  {% if o.log == "defmt" %}
+            error!("settings erase ahead failed: {}", Debug2Format(&e));
+  {% else %}
+            rprintln!("settings erase ahead failed: {:?}", e);
+  {% endif %}
         }
+{% endif %}
     }
 }
 

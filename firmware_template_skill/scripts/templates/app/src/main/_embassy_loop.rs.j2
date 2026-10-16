@@ -1,8 +1,8 @@
 {# Common tail of the embassy main() bodies; `led` is an Output created by the caller, `p` the peripherals. #}
 {% if o.ww %}
-  {% set fields = feats("led", o.crash and "last_reset", o.settings and "settings") %}
+  {% set fields = feats("led", o.crash and "last_reset", o.settings_flash and "settings") %}
 
-  {% if o.settings %}
+  {% if o.settings_flash %}
     let state = ww::ServerState {
     {% for f in fields %}
         {{ f }},
@@ -15,6 +15,8 @@
   {% if ww.usb %}
     let driver = ww::usb_driver({{ ww.usb_args }});
     ww::start(spawner, driver, {{ state }});
+  {% elif o.settings_flash %}
+    ww::start(spawner, channels.up.{{ ww.rtt_up }}, channels.down.0, state);
   {% else %}
     ww::start(
         spawner,
@@ -33,7 +35,7 @@
 
     {{ info }}("init done");
     loop {
-{% if o.settings and not o.ww %}
+{% if o.settings_flash and not o.ww %}
         settings.persist_if_due().await; // changes made with settings.set(..) are written once they settle
 {% endif %}
 {% if o.ww %}

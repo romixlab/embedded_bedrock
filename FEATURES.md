@@ -42,7 +42,15 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   `hubris-memory` (Hubris `memory.toml`).
 - ✅ **TPL-4 Bootloader**: embassy-boot A/B layout and a `bootloader/` crate (STM32, RP, nRF). Hardware test of an
   update cycle: see TPL-21.
-- ✅ **TPL-5 Config page**: one erase sector reserved as `CONFIG` for persistent settings.
+- 🧪 **TPL-5 Settings store** (was: config page, one `CONFIG` sector): `--settings` reserves a `SETTINGS` region of
+  `--settings-pages` erase pages at the end of flash, at the end of bank 2 on dual-bank parts (default 8 KiB, at least
+  2: 4 × 2 KiB on STM32G0B1), and generates `src/settings.rs`: a `ww_settings` store (wire_weaver STD-32) on
+  embassy-stm32's `Flash`, read through `ww_ecc_flash::EccSafeFlash` on G0 / H7 (SRV-19, NMI handler on G0) or
+  `BlockingAsync` on parts without flash ECC, with one setting (`label`), writes once a change settles and an erase
+  ahead after each write. `--wire-weaver` serves it as `label: ww_user_info::UserInfo`, written before the call
+  answers. Builds for the tested matrix; open: a setting stored and reloaded across a power cut on a board
+  (Donguru B153A). Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
+  region is reserved.
 - ✅ **TPL-6 Logging**: defmt (explicit buffer size and level, optional non-blocking), RTT, esp-println, none.
 - ✅ **TPL-7 Counters**: `cnt` RAM counters with `cnt!` in the main loop and `DefaultHandler`; backup-register
   counters that survive resets on STM32 (TAMP or RTC, not F1).
@@ -72,8 +80,15 @@ The generator in `firmware_template_skill/` (template 0.5.0).
 - 📋 **TPL-19 Ozone and GDB / LLDB start scripts** in generated projects.
 - 🔍 **TPL-20 Old cargo-generate template** (`bedrock_template/`): superseded by the skill; check nothing still uses
   it, then move it to *Dropped*.
-- 📋 **TPL-21 Hardware test matrix**: bootloader update cycle, config page, BKP counters across reset, WireWeaver USB
+- 📋 **TPL-21 Hardware test matrix**: bootloader update cycle, settings stored across a power cut, BKP counters across reset, WireWeaver USB
   enumeration, on at least one STM32, RP and nRF board.
+- 📋 **TPL-24 Settings store with `--bootloader`**: the embassy-boot updater in `main` and `src/settings.rs` both
+  take the `FLASH` peripheral; share one `Flash` (blocking mutex, as the updater already uses) and generate the
+  settings code for bootloader layouts too. Until then `--settings --bootloader` reserves the region only.
+- 📋 **TPL-25 Settings store on RP and nRF** (and the HAL frameworks): `ww_settings` on embassy-rp's flash (XIP
+  stalls during an erase, run from RAM or accept it) and embassy-nrf's NVMC; region only so far.
+- 📋 **TPL-26 Settings store on other ECC flash** (G4, L4, L5, U5, WB, WL, H5, C0, U0): needs an `EccSafeFlash`
+  family in wire_weaver's `ww_ecc_flash` first (`FLASH_ECCR` address and NMI flow per family); region only so far.
 - 🐛 **TPL-23 `init_ram.rs` not rustfmt clean for long bank names**: `xf3` (F303VC), `xg4` (G474RE) and `xl4`
   (L476RG) of the tested matrix fail `rustfmt --edition 2024 --check`: the `let count = ...` line for banks like
   `CCMRAM_ICODE` is over 100 columns and rustfmt breaks it after `=`. Found 15 Oct 2026.

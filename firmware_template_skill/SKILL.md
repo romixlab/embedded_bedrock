@@ -4,7 +4,7 @@ description: >
   Generate and set up new bare-metal Rust firmware projects for microcontrollers (STM32, RP2040/RP2350,
   nRF52/nRF91, ESP32) with embassy, stm32-hal2, the stm32-rs stm32XXxx-hal crates (stm32f4xx-hal, stm32h7xx-hal, ...)
   or a bare cortex-m-rt skeleton; defmt/RTT logging, WireWeaver device API (no_std API crate + server over USB or RTT),
-  memory.x partitioning, embassy-boot A/B bootloader, config flash page, cnt event counters, backup-register
+  memory.x partitioning, embassy-boot A/B bootloader, settings store in flash (ww_settings), cnt event counters, backup-register
   counters, extra SRAM bank init, build-info embedding. Use when asked to create/scaffold/bootstrap an MCU
   project, produce a memory.x/linker layout, pick rust target/probe-rs chip for an MCU, set up an embassy-boot
   bootloader partition table, or produce a Hubris memory.toml for a chip. Also use to upgrade an existing firmware
@@ -20,7 +20,7 @@ them on first run). Network is only needed for STM32 parts, cached in `~/.cache/
 ```
 uv run scripts/bedrock_gen.py list-chips
 uv run scripts/bedrock_gen.py chip-info  --chip STM32H725IG
-uv run scripts/bedrock_gen.py memory-x   --chip STM32G0B1RE --bootloader --config-page
+uv run scripts/bedrock_gen.py memory-x   --chip STM32G0B1RE --bootloader --settings
 uv run scripts/bedrock_gen.py new <name> --chip <chip> [options]
 uv run scripts/bedrock_gen.py hubris-memory --chip STM32H743ZI
 uv run scripts/bedrock_gen.py new --answers <fw>/bedrock_fw.json --out <tmp>   # regenerate with recorded answers
@@ -37,7 +37,14 @@ Paths are relative to this skill directory; use the absolute path when invoking.
    - framework `--framework embassy|stm32-hal2|stm32xx-hal|bare` [embassy] (`stm32-hal2` = the stm32-hal2 crate,
      `stm32xx-hal` = the per-series stm32-rs crate: F0/F1/F3/F4/F7/G0/G4/H7/L0/L4)
    - logging `--log defmt|rtt|esp-println|none` [defmt]
-   - bootloader `--bootloader` (embassy-boot, stm32/rp/nrf only), config page `--config-page`
+   - bootloader `--bootloader` (embassy-boot, stm32/rp/nrf only)
+   - settings `--settings` [`--settings-pages N`]: a `SETTINGS` region at the end of flash (end of bank 2 on
+     dual-bank parts; default 8 KiB, at least 2 erase pages) and `src/settings.rs`, a `ww_settings` store on
+     embassy-stm32's `Flash` (`ww_ecc_flash::EccSafeFlash` on G0 / H7 so a power cut can't leave a word that faults
+     every boot) with one setting, `label`; with `--wire-weaver` served as `label: ww_user_info::UserInfo`. The code
+     is generated for `--framework embassy` on STM32 G0 / H7 and parts without flash ECC (F0-F4, F7), without
+     `--bootloader`; elsewhere only the region is reserved and the script says why. Replaces `--config-page`
+     (answer `config_page` is read as `settings`).
    - counters: **always ask these two questions**, one after the other, even when everything else is left at
      defaults:
      1. *Use `cnt` event counters?* → `--counters` (adds the `cnt` crate, `-Tcnt.x`, `CNT_RAM_BUFFER_SIZE_WORDS`,
@@ -103,7 +110,10 @@ For firmware without `bedrock_fw.json` (pre-0.4.0) see the 0.4.0 upgrade notes i
 `memory.x` (not for ESP), `src/main.rs`, `bedrock_fw.json` (template origin + answers), `AGENTS.md` + `CLAUDE.md`
 (template upgrade instructions), optional `src/init.rs` (STM32 backup-domain reset / backup register enable),
 optional `src/init_ram.rs` (enable + zero extra SRAM banks, RCC bits looked up in stm32-data), `README.md` with
-memory table and MCU documentation links, and `bootloader/` (own crate, own `memory.x` with swapped region names).
+memory table and MCU documentation links, `bootloader/` (own crate, own `memory.x` with swapped region names), and
+with `--settings` `src/settings.rs` (`DeviceSettings` with `#[derive(ww_settings::Settings)]`, `SettingsStore`:
+`load` at boot, `set` + `persist_if_due` for writes once a change settles, `persist` for a write before answering;
+on G0 an NMI handler in `main.rs` that hands flash ECC errors to `ww_ecc_flash::on_nmi()`).
 
 With `--wire-weaver` the output directory is a project root holding two standalone crates (not a workspace, they
 build for different targets):

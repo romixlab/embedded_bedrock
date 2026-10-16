@@ -150,14 +150,14 @@ Hubris only supports ARMv6-M/7-M/8-M (STM32F3/F4/G0/H7, LPC55) and needs power-o
 Every entry below generates and `cargo build`s (dev and, where listed, release) with the versions above:
 
 ```
-new h7app  --chip STM32H725IG --bootloader --config-page --counters --bkp-counters rtc --supply-config DirectSMPS  (+bootloader, release)
-new g0     --chip STM32G0B1RE --bootloader --config-page --counters --bkp-counters tamp                            (+bootloader, release)
-new g0hal  --chip STM32G0B1RE --framework stm32-hal2 --config-page --counters
+new h7app  --chip STM32H725IG --bootloader --settings --counters --bkp-counters rtc --supply-config DirectSMPS  (+bootloader, release)
+new g0     --chip STM32G0B1RE --bootloader --settings --counters --bkp-counters tamp                            (+bootloader, release)
+new g0hal  --chip STM32G0B1RE --framework stm32-hal2 --settings --counters
 new h7hal  --chip STM32H725IG --framework stm32-hal2 --supply-config DirectSMPS --counters
 new xf0    --chip STM32F030C8 --framework stm32xx-hal --log rtt
 new xf1    --chip STM32F103C8 --framework stm32xx-hal --counters --led PC13
 new xf3    --chip STM32F303VC --framework stm32xx-hal --log none
-new xf4    --chip STM32F407VG --framework stm32xx-hal --counters --config-page
+new xf4    --chip STM32F407VG --framework stm32xx-hal --counters --settings
 new xf7    --chip STM32F767ZI --framework stm32xx-hal
 new xg0    --chip STM32G071RB --framework stm32xx-hal --counters
 new xg4    --chip STM32G474RE --framework stm32xx-hal
@@ -168,7 +168,7 @@ new xl4    --chip STM32L476RG --framework stm32xx-hal --log rtt
 new f4bare --chip STM32F407VG --framework bare --log rtt
 new l4     --chip STM32L476RG --counters --log none
 new l4rtc  --chip STM32L476RG --rtc
-new rp2040 --chip rp2040 --bootloader --config-page --counters                                                     (+bootloader, release)
+new rp2040 --chip rp2040 --bootloader --settings --counters                                                     (+bootloader, release)
 new rp2350 --chip rp2350 --bootloader                                                                              (+bootloader)
 new nrf    --chip nrf52840 --bootloader --counters                                                                 (+bootloader)
 new nrf9160 --chip nrf9160 --counters --log rtt
@@ -176,7 +176,7 @@ new espc3  --chip esp32c3 --counters            (embassy, defmt via esp-println)
 new espc3p --chip esp32c3 --log esp-println
 new espc3b --chip esp32c3 --framework bare --log esp-println
 new g0usb  --chip STM32G0B1RE --wire-weaver --counters                         (USB, HSI48)                  (+release)
-new g0rtt  --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --config-page     (+bootloader)
+new g0rtt  --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings     (+bootloader)
 new g0rttn --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log none
 new g0rttr --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log rtt --ww-api g0_dev
 new h725   --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bkp-counters rtc --bootloader (OTG_HS in FS mode, +bootloader)
@@ -191,6 +191,15 @@ new nrf840 --chip nrf52840 --wire-weaver --counters
 new nrf9160r --chip nrf9160 --wire-weaver --ww-transport rtt
 new p2nocrash --chip rp2350 --wire-weaver --no-crash-capture
 new h7nocrash --chip STM32H725IG --supply-config DirectSMPS --no-crash-capture
+new g0set  --chip STM32G0B1CE --settings --bkp-counters auto --counters --led PF1 --wire-weaver  (Donguru-like: EccSafeFlash, label over USB, +release)
+new g0setrtt --chip STM32G0B1RE --settings --wire-weaver --ww-transport rtt --log rtt
+new g0setn --chip STM32G0B1RE --settings --log none                           (settings in the main loop)
+new g0setd --chip STM32G0B1RE --settings --counters
+new h743set --chip STM32H743ZI --settings --wire-weaver --led PE1           (EccSafeFlash stm32h7, bank 2)
+new h725set --chip STM32H725IG --settings --supply-config DirectSMPS --counters (single bank, 2 x 128K)
+new f411set --chip STM32F411CE --settings --log rtt --led PC13              (no ECC: BlockingAsync)
+new f411setw --chip STM32F411CE --settings --wire-weaver --led PC13
+new l4set  --chip STM32L476RG --settings --counters --log none               (ECC, no ww_ecc_flash family: region only)
 ```
 
 Crash capture is on in every Cortex-M entry, built with `--bedrock <embedded_bedrock checkout>`

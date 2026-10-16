@@ -10,6 +10,41 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Settings store (TPL-5): `--settings` replaces `--config-page`. The `SETTINGS` region (was `CONFIG`, one sector)
+  is `--settings-pages` erase pages at the end of flash, which is the end of bank 2 on dual-bank parts so an erase
+  doesn't stall code in bank 1; the default is enough pages for 8 KiB and at least 2 (`ww_settings` compacts into the
+  next page before erasing one): 4 × 2 KiB on STM32G0B1, 2 × 128 KiB on F4 / H7 (with a note on the alternatives).
+  For `--framework embassy` on STM32 G0 / H7 and parts without flash ECC (F0-F4, F7), without `--bootloader`, it also
+  generates `src/settings.rs`: `DeviceSettings` (`#[derive(ww_settings::Settings)]`, one field `label`) and
+  `SettingsStore` (`load` at boot, `set` + `persist_if_due` for writes once a change settles, `persist` for a write
+  before answering, erase ahead after each write) on embassy-stm32's blocking `Flash`, read through
+  `ww_ecc_flash::EccSafeFlash` on G0 / H7 so a word whose write a power cut interrupted reads as zeros instead of
+  faulting every boot (G0: a `NonMaskableInt` handler in `main.rs` calls `ww_ecc_flash::on_nmi()` first), through
+  embassy-embedded-hal's `BlockingAsync` elsewhere. `main` loads it after `embassy_stm32::init` and logs the label;
+  without `--wire-weaver` the main loop calls `persist_if_due()`. With `--wire-weaver` the API root gets
+  `ww_impl!(label: ww_user_info::UserInfo)` (name kept in flash, written before the call answers; `notes` omitted),
+  `ServerState` gets `settings`, and the server task selects between the link and the settings' due time instead of
+  `server.run()`. Other targets (RP, nRF, HAL frameworks, other ECC families, `--bootloader`) get the region only,
+  with a warning naming TPL-24 / TPL-25 / TPL-26.
+
+Upgrade notes: answer `config_page` is now `settings` (read as such from an old `bedrock_fw.json`, `check-answers`
+prints `RENAMED`), new answer `settings_pages` (default 0 = automatic). The region moves and grows: `CONFIG` (the last
+sector) becomes `SETTINGS` (the last N sectors), so `FLASH` shrinks (STM32G0B1 512K: `CONFIG` 2K at `0x0807_F800`,
+`FLASH` 510K → `SETTINGS` 8K at `0x0807_E000`, `FLASH` 504K); check that the image still fits, and on dual-bank parts
+that the code stays in bank 1 (below `BANK_2`) if erases must not stall it. Anything the firmware kept in `CONFIG`
+by hand is not migrated: read it out before flashing, or keep its own region. In `memory.x` rename the region and
+the `__config_start` / `__config_end` symbols to `SETTINGS` / `__settings_*`. Copy `src/settings.rs`, add `mod
+settings;`, the `ww_settings` and `ww_ecc_flash` (G0 / H7, feature `stm32g0` / `stm32h7`) or `embassy-embedded-hal`
+dependencies, the NMI handler on G0, and `SettingsStore::load(p.FLASH)` in `main`; a firmware that already owns
+`FLASH` elsewhere passes it through. Needs wire_weaver with STD-32 (`ww_settings`) and SRV-19 (`mcu/ww_ecc_flash`,
+2ed478f). With `--wire-weaver`: `ww_user_info` (and `ww_error`, `embassy-futures`) in the firmware, `ww_user_info` in
+the API crate with its `std` / `defmt` features, the `label` line in the API trait (an API change: bump the API
+crate's version), `LABEL_CAPABILITIES` in the `Consts` impl, the two `label_name` handlers, `"label.notes"` in
+`omit`, and the server task's `select` loop (or call `persist_if_due()` from the firmware's own loop). A firmware
+with its own settings API (Donguru `device.settings`, API-19) keeps its own fields in `DeviceSettings` at new slots.
+Test on hardware: set the label (`ww` over USB), cut the power, check it after the boot; and cut the power while a
+write runs (a loop of label writes), the device still boots and has the old or the new label.
+
 - `LastReset` reports the age of the crash (STD-27): `src/last_reset.rs` fills `ResetRecord::boots_since_crash` from
   `bedrock_crash` (`Crash::boots_since`, 0 = the last reset was the crash). **Upgrade notes**: needs the wire_weaver
   with STD-27 and `bedrock_crash` with record layout 2 (a record in RAM from the old layout is dropped, never
