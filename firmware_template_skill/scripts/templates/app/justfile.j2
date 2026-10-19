@@ -1,0 +1,4 @@
+# Flash over PICOBOOT (BOOTSEL), no probe/picotool/elf2uf2: hold BOOTSEL and reset first, then run this; SERIAL waits for it to reappear and come back
+flash-bootsel serial="":
+    cargo build --release
+    ww bootsel flash target/{{ t.rust_target }}/release/{{ o.name }} {{ '{{' }} if serial == "" { "" } else { "--wait 10 --follow -s " + serial } {{ '}}' }}

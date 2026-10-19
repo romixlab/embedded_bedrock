@@ -10,6 +10,16 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `just flash-bootsel [SERIAL]` for RP targets (TPL-27): a generated `justfile` with one recipe — build release,
+  then `ww bootsel flash` (wire_weaver CLT-21) writes the ELF straight through PICOBOOT in the RP2040/RP2350 boot
+  ROM (BOOTSEL mode), no probe, picotool, elf2uf2 or objcopy step; `SERIAL` waits for the device to (re)appear and
+  come back. Lands at the project root for a plain firmware, inside `firmware/` with `--wire-weaver`. probe-rs
+  stays the default `cargo run`/`cargo build` runner. `references/frameworks.md`'s RP2040/RP235x alternative-runner
+  line and both generated `README.md`s mention it.
+
+  Upgrade notes: regenerating (or a template upgrade) adds `justfile` for existing RP firmwares; nothing else
+  changes, no answer involved.
+
 - Docs: product names written WireWeaver and ShrinkWrap in prose.
 
 - Settings store (TPL-5): `--settings` replaces `--config-page`. The `SETTINGS` region (was `CONFIG`, one sector)

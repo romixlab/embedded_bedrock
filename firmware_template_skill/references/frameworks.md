@@ -35,7 +35,9 @@ and the `BOOT2` region; embassy-rp provides boot2 (`boot2-w25q080` default) and 
 (`imagedef-secure-exe` default) — the `.start_block/.bi_entries/.end_block` sections are appended to `memory.x`.
 Flash size defaults to 2M (rp2040/rp2354) / 4M (rp2350); override with `--flash-size`.
 Bootloader uses `WatchdogFlash::<FLASH_SIZE>` (8 s) and `embassy_rp::flash::FLASH_BASE`.
-probe-rs chips: `RP2040`, `RP235x`. Alternative runners: `picotool load -u -v -x -t elf`, `elf2uf2-rs -d`.
+probe-rs chips: `RP2040`, `RP235x`. Alternative runner: `ww bootsel flash` (wire_weaver CLT-21, over PICOBOOT in
+the RP2040/RP2350 boot ROM, BOOTSEL mode, no probe) — takes the ELF straight, no `picotool`/`elf2uf2-rs` step; the
+template's `just flash-bootsel` recipe wraps it.
 
 ### nRF52 / nRF91 (embassy)
 `embassy-nrf` features `nrf52840` / `nrf9160-s` / `nrf9151-s` (secure), `time-driver-rtc1`, `gpiote`, `unstable-pac`, `time`.

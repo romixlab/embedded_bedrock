@@ -30,6 +30,11 @@ cargo run --release
 `RAM_LINK=1 cargo run` links and runs from RAM (flash content untouched; power-cycle restores the old firmware).
 
 {% endif %}
+{% if t.family == "rp" %}
+Without a probe free: hold BOOTSEL and reset, then `just flash-bootsel [SERIAL]` writes the ELF straight through
+PICOBOOT (`cargo install --git {{ WW_GIT }} wire_weaver_cli` for `ww`), no picotool/elf2uf2/objcopy step.
+
+{% endif %}
 {% if lay %}
 ## Memory layout
 

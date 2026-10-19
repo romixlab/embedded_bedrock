@@ -916,6 +916,8 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     files["build.rs"] = render("app/build.rs.j2", **ctx, bootloader=False)
     files[".cargo/config.toml"] = render("app/cargo_config.toml.j2", **ctx)
     files["rust-toolchain.toml"] = render("app/rust-toolchain.toml.j2", **ctx)
+    if t.family == "rp":
+        files["justfile"] = render("app/justfile.j2", **ctx)
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
