@@ -45,7 +45,13 @@ use ww_settings::shrink_wrap::ArrayString;
 use ww_user_info::{MAX_NAME_LEN, UserInfoCaps, UserInfoError};
 {% endif %}
 {% if ww.usb %}
+  {% if t.family == "stm32" and o.embassy == "main" and ww.stm32_usb and ww.stm32_usb.double_buffer %}
+use wire_weaver_usb_embassy::{
+    LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init_with_endpoints,
+};
+  {% else %}
 use wire_weaver_usb_embassy::{LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init};
+  {% endif %}
 {% else %}
 use rtt_target::{DownChannel, UpChannel};
 use ww_device::rtt::{RttBuffers, RttConfig, RttServer, rtt_server};
@@ -262,7 +268,13 @@ pub fn usb_driver(
     let mut config = usb::Config::default();
     // TODO: true if VBUS is wired to the VBUS sense pin, lets the device detect unplugging
     config.vbus_detection = false;
+      {% if o.embassy == "main" %}
+    usb::Driver::new_fs(usb, dp, dm, Irqs, EP_OUT_BUFFER.init([0; 256]), config)
+      {% else %}
     usb::Driver::new_fs(usb, Irqs, dp, dm, EP_OUT_BUFFER.init([0; 256]), config)
+      {% endif %}
+    {% elif o.embassy == "main" %}
+    usb::Driver::new(usb, dp, dm, Irqs)
     {% else %}
     usb::Driver::new(usb, Irqs, dp, dm)
     {% endif %}
@@ -283,7 +295,12 @@ pub fn usb_driver(usbd: Peri<'static, peripherals::USBD>) -> UsbDriver {
 pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
     // server_impl::API_ID is reported in a USB string descriptor, `ww list` shows it without opening the device.
     // A user label (e.g. loaded from flash) can be added with wire_weaver::api_id::with_label().
-    let (usb, server) = usb_init(
+{% set db = t.family == "stm32" and o.embassy == "main" and u.double_buffer %}
+  {% if db %}
+    // Double-buffered bulk endpoints (embassy-rs/embassy#7275): {{ u.periph }} takes the next packet while the last one
+    // is processed instead of making the host retry, ~2x the throughput behind a USB hub (Donguru FW-24).
+  {% endif %}
+    let (usb, server) = {{ "usb_init_with_endpoints" if db else "usb_init" }}(
         driver,
         USB_BUFFERS.init(UsbBuffers::default()),
         UsbTimings::fs_higher_speed(),
@@ -296,6 +313,14 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
             config.serial_number = Some(embassy_stm32::uid::uid_hex());
   {% endif %}
         },
+  {% if db %}
+        |alt| {
+            (
+                alt.endpoint_bulk_out_double_buffered(None, MAX_USB_PACKET_LEN as u16),
+                alt.endpoint_bulk_in_double_buffered(None, MAX_USB_PACKET_LEN as u16),
+            )
+        },
+  {% endif %}
     );
     spawner.spawn(unwrap!(usb_task(usb)));
     spawner.spawn(unwrap!(server_task(server, state)));

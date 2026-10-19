@@ -20,7 +20,8 @@ MEMORY
 {% if sections %}
 
 /* No symbols or `. = ...` in these sections: lld then drops an empty one. flip-link (0.1.12) counts an empty section
-   right at the end of RAM as used RAM and would leave no room for the stack. */
+   right at the end of RAM as used RAM and would leave no room for the stack (fix in knurling-rs/flip-link#142, not
+   released yet). */
 SECTIONS
 {
   {% for r in sections %}
@@ -68,4 +69,11 @@ SECTIONS
     __build_id_end = .;
   } > FLASH
 } INSERT AFTER .rodata;
+{% endif %}
+{% if es0548_bank2 %}
+
+/* ES0548 2.2.10 (STM32G0B1/G0C1 errata, every silicon revision): a code prefetch can fail on a branch or call into
+   the other flash bank and run wrong instructions. Flash prefetch is on (src/main.rs), so all code stays in bank 1.
+   When this fails: turn prefetch off in src/main.rs and delete this ASSERT, or make the code smaller (opt-level "s"). */
+ASSERT(__etext <= {{ es0548_bank2 | hex8 }}, "code reaches flash bank 2 with prefetch on (ES0548 2.2.10): see memory.x");
 {% endif %}

@@ -49,6 +49,7 @@ import jinja2
 STM32_DATA_BASE = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data"
 BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
 WW_GIT = "https://github.com/vhrdtech/wire_weaver"
+EMBASSY_GIT = "https://github.com/embassy-rs/embassy"
 WW_FW_DIR = "firmware"  # with --wire-weaver the firmware goes into <out>/firmware, next to the API crate
 
 HERE = Path(__file__).resolve().parent
@@ -416,7 +417,9 @@ def stm32_usb(t: Target, data: Stm32Data) -> dict:
         if not irq:
             continue
         u = {"periph": name, "otg": p["registers"]["kind"] == "otg", "irq": irq, "dp": pins["DP"], "dm": pins["DM"],
-             "mux": None, "mux_enum": None, "hsi48": False}
+             "mux": None, "mux_enum": None, "hsi48": False,
+             # embassy main double-buffers bulk endpoints on USB v1 (F1, F3, L1) and v4 (C0, G0, H5, U0, U3, U5)
+             "double_buffer": p["registers"]["kind"] == "usb" and p["registers"]["version"] in ("v1", "v4")}
         kc = p.get("rcc", {}).get("kernel_clock")
         if isinstance(kc, dict):
             u["mux"] = kc["field"].lower()
@@ -604,8 +607,32 @@ def build_layout(t: Target, o) -> Layout:
     return Layout(regions, app, main_r, bkp_words, bkp_region)
 
 
-def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str:
-    """memory.x of the application, or of the bootloader (`for_bootloader`, no build id note)."""
+def errata_note(t: Target) -> str:
+    """Where the chip's errata are: read them for the silicon revision on the board before relying on a peripheral,
+    clock, flash, DMA, low-power or boot feature (references/errata.md)."""
+    if t.family == "stm32":
+        url = next((d["url"] for d in (t.stm32 or {}).get("docs", []) if d.get("type") == "errata_sheet"), None)
+        where = url or "the device errata sheet (ESxxxx) on the part's st.com page"
+        return (f"errata: read {where} for your silicon revision (DBGMCU_IDCODE REV_ID), and "
+                f"http://www.efton.sk/STM32/gotcha/ (references/errata.md)")
+    where = {"rp": "the 'Errata' appendix of the RP2040 / RP2350 datasheet (RP2040-Ex, RP2350-Ex)",
+             "nrf": "Nordic's errata for the IC revision (docs.nordicsemi.com, the chip's 'Errata' document)",
+             "esp": "Espressif's 'SoC Errata' for the chip and its revision (documentation.espressif.com)"}
+    return f"errata: read {where.get(t.family, 'the chip errata')} (references/errata.md)"
+
+
+def es0548_bank2(t: Target) -> Optional[int]:
+    """Bank 2 base of a dual-bank STM32G0B1 / G0C1, None elsewhere. ES0548 2.2.10: on these a code prefetch can fail on
+    a branch or call across the flash banks (no fix in any revision), so with prefetch on all code stays in bank 1."""
+    if t.family != "stm32" or not re.match(r"STM32G0[BC]1", t.display):
+        return None
+    b2 = next((m for m in t.memories if m.kind == "flash" and m.name == "BANK_2"), None)
+    return b2.address if b2 else None
+
+
+def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False, prefetch: bool = False) -> str:
+    """memory.x of the application, or of the bootloader (`for_bootloader`, no build id note). `prefetch`: the
+    application turns flash prefetch on (ES0548 check on dual-bank G0B1 / G0C1)."""
     regions = [Region(**vars(r)) for r in lay.regions]
     if for_bootloader:
         bl = next(r for r in regions if r.name == "BOOTLOADER")
@@ -621,6 +648,7 @@ def render_memory_x(t: Target, lay: Layout, for_bootloader: bool = False) -> str
 
     visible = [r for r in regions if not r.commented_out and not r.is_main_ram]
     return render("app/memory.x.j2", t=t, regions=regions, build_id=t.cortex_m and not for_bootloader,
+                  es0548_bank2=es0548_bank2(t) if prefetch and not for_bootloader else None,
                   sections=[r for r in visible if r.kind == "ram"],
                   consts=[r for r in visible if r.consts and not (r.kind == "flash" and r.name == "FLASH")])
 
@@ -668,7 +696,22 @@ JINJA.filters.update(
     fmt_len=fmt_len,
     rcc_bit=lambda b: f"RCC.{b[0].upper()}.{b[1].upper()}",
 )
-JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, WW_GIT=WW_GIT, feats=feats, nightly_channel=nightly_channel)
+JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, WW_GIT=WW_GIT, EMBASSY_GIT=EMBASSY_GIT, feats=feats, nightly_channel=nightly_channel)
+
+
+def embassy_crates(o: "Opts", bootloader_crate: bool = False) -> list[str]:
+    """The embassy crates a generated STM32 crate pulls in, for its [patch.crates-io] block (--embassy main): only those,
+    as cargo warns about every patch the crate graph doesn't use."""
+    crates = ["embassy-stm32", "embassy-usb-driver", "embassy-usb-synopsys-otg", "embassy-hal-internal",
+              "embassy-embedded-hal", "embassy-sync", "embassy-time", "embassy-time-driver", "embassy-futures"]
+    if not bootloader_crate:
+        crates += ["embassy-time-queue-utils", "embassy-executor", "embassy-executor-macros",
+                   "embassy-executor-timer-queue"]
+        if o.ww and o.ww_transport == "usb":
+            crates += ["embassy-usb", "embassy-net-driver-channel"]
+    if o.bootloader:
+        crates += ["embassy-boot", "embassy-boot-stm32"]
+    return crates
 
 
 def render(template: str, **ctx) -> str:
@@ -711,6 +754,7 @@ class Opts:
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
     crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
     settings_flash: str = ""  # --settings code: "g0" / "h7" (ww_ecc_flash family), "plain" (no ECC), "" none
+    embassy: str = "release"  # embassy crates: "release" (crates.io) or "main" (upstream git at EMBASSY_MAIN_REV)
     regs: Optional[Stm32Regs] = None
 
 
@@ -808,21 +852,34 @@ def _sort_braces(tree: str) -> str:
 
 
 def sort_uses(src: str) -> str:
-    """Sort runs of consecutive single-line top-level `use` items like rustfmt does (reorder_imports), so that
-    generated sources pass `cargo fmt --check` no matter in which order the Jinja chunks emit them."""
-    lines, out, run = src.split("\n"), [], []
+    """Sort runs of consecutive top-level `use` items like rustfmt does (reorder_imports), so that generated sources
+    pass `cargo fmt --check` no matter in which order the Jinja chunks emit them. A `use` written over several lines
+    (`use a::{` ... `};`, as rustfmt wraps a long one) moves as one item and keeps its lines."""
+    lines, out, run = src.split("\n"), [], []  # run: (sort key, output lines)
 
     def flush():
-        run.sort(key=lambda m: _use_key(m[1]))
-        out.extend(f"use {_sort_braces(m[1])};{m[2] or ''}" for m in run)
+        run.sort(key=lambda r: r[0])
+        for _, text in run:
+            out.extend(text)
         run.clear()
-    for ln in lines:
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
         m = _USE_RE.match(ln)
         if m:
-            run.append(m)
+            run.append((_use_key(m[1]), [f"use {_sort_braces(m[1])};{m[2] or ''}"]))
+        elif ln.startswith("use ") and ln.endswith("{"):
+            j = i
+            while j < len(lines) and not lines[j].endswith("};"):
+                j += 1
+            block = lines[i:j + 1]
+            tree = " ".join(x.strip() for x in block)[4:-1].replace("{ ", "{").replace(", }", "}").replace(",}", "}")
+            run.append((_use_key(tree), block))
+            i = j
         else:
             flush()
             out.append(ln)
+        i += 1
     flush()
     return "\n".join(out)
 
@@ -883,7 +940,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     extra_rams = [x for x in lay.regions if x.kind == "ram" and not x.is_main_ram and not x.commented_out] if lay else []
     have_init_ram = bool(extra_rams) and t.cortex_m
     have_init = bool(lay) and t.family == "stm32" and o.framework == "embassy" and bool(lay.bkp_words or not o.rtc)
-    ctx = dict(t=t, o=o, lay=lay, bkp_words=lay.bkp_words if lay else 0, info=info, err=err,
+    ctx = dict(t=t, o=o, lay=lay, bkp_words=lay.bkp_words if lay else 0, info=info, err=err, embassy_crates=embassy_crates(o), es0548_bank2=es0548_bank2(t),
                bkp_region=lay.bkp_region if lay else CNT_BKP_DEFAULT_REGION, CNT_BKP_DEFAULT_REGION=CNT_BKP_DEFAULT_REGION,
                have_init=have_init, have_init_ram=have_init_ram, main_variant=main_variant(t, o),
                flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024,
@@ -904,7 +961,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
 
     files: dict[str, str] = {}
     if lay:
-        files["memory.x"] = render_memory_x(t, lay)
+        files["memory.x"] = render_memory_x(t, lay, prefetch=o.framework == "embassy")
     if have_init_ram:
         files["src/init_ram.rs"] = render("app/src/init_ram.rs.j2", **ctx, extra=extra_rams,
                                           sram_enable=r.sram_enable if r else {},
@@ -942,7 +999,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
 
 
 def gen_bootloader(t: Target, o: Opts, lay: Layout, root: str = "") -> dict[str, str]:
-    ctx = dict(t=t, o=o, flash_size=lay.regions[0].length, root=root,
+    ctx = dict(t=t, o=o, flash_size=lay.regions[0].length, root=root, embassy_crates=embassy_crates(o, bootloader_crate=True),
                max_erase_size=max(m.erase_size for m in t.memories if m.kind == "flash"))
     # no counters, logging or build-std in the bootloader's .cargo/config.toml
     cfg_opts = Opts(**{**vars(o), "counters": False, "log": "none", "build_core": False, "panic_immediate_abort": False,
@@ -1360,6 +1417,9 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              rtc=args.rtc, supply_config=args.supply_config or "", smps_voltage=args.smps_voltage or "",
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
              build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
+    o.embassy = args.embassy
+    if o.embassy == "main" and (fw != "embassy" or t.family != "stm32"):
+        die("--embassy main: generated code for embassy main exists for --framework embassy on STM32 so far (TPL-29)")
     if o.supply_config in ("SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass") and not o.smps_voltage:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
@@ -1386,6 +1446,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
             elif not t.usb:
                 die(f"{t.display} has no USB device peripheral; use --ww-transport rtt")
 
+    t.notes.append(errata_note(t))
     files = gen_project(t, o, lay, usb)
     files = {k: sort_uses(v) if k.endswith(".rs") else v for k, v in files.items()}
     files[FW_JSON] = fw_json(p_new, args, getattr(args, "prev_fw", None))
@@ -1467,6 +1528,10 @@ def main(argv=None) -> None:
     add_layout(p)
     p.add_argument("--out", help="output directory (default: ./<name>)")
     p.add_argument("--framework", choices=["embassy", "stm32-hal2", "stm32xx-hal", "bare"], default="embassy")
+    p.add_argument("--embassy", choices=["release", "main"], default="release",
+                   help="embassy crates: 'release' (crates.io, default) or 'main' (embassy-rs/embassy main at the rev "
+                        "pinned in data/versions.toml, through [patch.crates-io], for features not released yet: "
+                        "double-buffered USB bulk endpoints on USB v4, G0 flash prefetch); STM32 only so far")
     p.add_argument("--log", choices=["defmt", "rtt", "esp-println", "none"], default="defmt")
     p.add_argument("--log-level", default="debug", help="DEFMT_LOG / ESP_LOG default level (default debug)")
     p.add_argument("--rtt-buffer", type=int, default=1024, help="DEFMT_RTT_BUFFER_SIZE (default 1024)")

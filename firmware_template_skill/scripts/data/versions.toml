@@ -16,6 +16,10 @@ embassy-executor = "0.10.0"
 embassy-time = "0.5.1"
 embassy-sync = "0.8.0"
 embassy-stm32 = "0.6.0"
+# --embassy main (TPL-28): embassy-rs/embassy main at this commit replaces every embassy crate above through
+# [patch.crates-io]; main must still carry the versions above (checked 19 Oct 2026: it does). Move it forward with care,
+# main changes API between releases.
+embassy-main = "262fdba545e8bc7affce0225c6ccd276b8125a86"
 embassy-rp = "0.10.0"
 embassy-nrf = "0.11.0"
 embassy-boot-stm32 = "0.8.0"

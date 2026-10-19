@@ -160,7 +160,7 @@ pub fn record(snapshot: &Snapshot) -> ResetRecord<'_> {
         build_id: MaxLen::new_unchecked(RefVec::new_bytes(crash.map_or(&[][..], |c| c.build_id))),
         uptime: crash
             .and_then(|c| c.uptime_ms)
-            .map(|ms| Second::milliseconds(ms as u32)),
+            .map(|ms| Second::milli(ms as u32)),
         fault: crash.and_then(|c| c.regs).map(|r| {
             Fault::CortexM(CortexMFault {
                 pc: r.pc,

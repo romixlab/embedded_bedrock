@@ -10,6 +10,43 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `--embassy release|main` (TPL-28), default `release`: `main` takes every embassy crate the project uses from
+  embassy-rs/embassy main at the commit in `data/versions.toml` (`embassy-main`, 262fdba545 of 19 Oct 2026) through a
+  `[patch.crates-io]` block in `Cargo.toml` and `bootloader/Cargo.toml`, the dependency lines staying the crates.io
+  ones; the code then uses main's API (`mux::Usbsel::Hsi48`, `usb::Driver::new(usb, dp, dm, Irqs)`,
+  `Driver::new_fs(usb, dp, dm, Irqs, buf, config)`). `release` prints the same block commented out, ready to switch.
+  STM32 with `--framework embassy` only (RP / nRF / ESP: TPL-29). With `--wire-weaver` on a USB v1 / v4 part (F1, F3,
+  L1, C0, G0, H5, U0, U3, U5) `src/ww.rs` calls `usb_init_with_endpoints` with double-buffered bulk endpoints
+  (embassy-rs/embassy#7275, ~2x throughput behind a hub on Donguru); this needs WireWeaver with
+  `usb_init_with_endpoints` (wire_weaver_usb_embassy, TR-12).
+
+  Upgrade notes: new answer `embassy` (missing = `release`, nothing changes but the commented-out block at the end
+  of `Cargo.toml`). A firmware already on embassy main by hand (Donguru: `[patch.crates-io]` on 262fdba, main's API
+  in its own code) records `"embassy": "main"`; take the generated block only if its crate list or rev differs.
+
+- G0 flash prefetch and the ES0548 check (TPL-32): with `--framework embassy` on STM32G0, `main.rs` turns
+  `FLASH_ACR.PRFTEN` on after `embassy_stm32::init` (embassy-stm32 0.6 sets the wait states but leaves prefetch off,
+  8-16% slower code at 64 MHz; embassy main does it itself). On dual-bank G0B1 / G0C1, `memory.x` gets
+  `ASSERT(__etext <= 0x08040000, ...)`: ES0548 2.2.10, "the code prefetch may fail upon branching and function calls
+  across flash memory banks", not fixed in any revision, so code reaching bank 2 now fails to link instead of
+  HardFaulting at run time (seen on Donguru, its FW-38).
+
+  Upgrade notes: G0 firmwares get the three `PRFTEN` lines in `main.rs` (embassy 0.6) or a comment (main), and on
+  G0B1 / G0C1 the ASSERT in `memory.x`. A firmware whose code already spans both banks (Donguru: ~400 KiB) must keep
+  prefetch off and leave the ASSERT out: reject both, note it in `nuances`. Check after taking it: the firmware
+  links (the ASSERT holds), and runs.
+
+- Errata (TPL-33): `new` prints where the chip's errata sheet is (STM32: the `errata_sheet` link of stm32-data plus
+  http://www.efton.sk/STM32/gotcha/; RP, nRF, ESP: the vendor document), also in the generated `README.md` notes.
+  `references/errata.md` lists them per vendor and the errata the template handles.
+
+  Upgrade notes: README.md gains one note line; nothing else.
+
+- `src/last_reset.rs` uses `Second::milli` (ww_si 0.2 removed `Second::milliseconds`), so `--wire-weaver` projects
+  build against today's WireWeaver again.
+
+  Upgrade notes: take the one-line change in `last_reset.rs` (firmware on ww_si 0.2 already has it, e.g. Donguru).
+
 - `just flash-bootsel [SERIAL]` for RP targets (TPL-27): a generated `justfile` with one recipe — build release,
   then `ww bootsel flash` (wire_weaver CLT-21) writes the ELF straight through PICOBOOT in the RP2040/RP2350 boot
   ROM (BOOTSEL mode), no probe, picotool, elf2uf2 or objcopy step; `SERIAL` waits for the device to (re)appear and

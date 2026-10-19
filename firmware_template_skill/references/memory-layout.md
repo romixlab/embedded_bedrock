@@ -57,7 +57,8 @@ Notes for manual edits: the cortex-m-rt `link.x` requires `FLASH` and `RAM`; `--
 regions need not be 64K-aligned; `flip-link` (the `linker` in `.cargo/config.toml`) moves the stack below
 `.bss/.data` for overflow detection. Leave the extra-RAM sections without symbols or `. = ...` lines: lld then drops an
 empty one, while flip-link 0.1.12 counts an empty section right at the end of `RAM` (RP2350 `.sram8`) as used RAM and
-leaves no room for the stack.
+leaves no room for the stack (the fix is in knurling-rs/flip-link#142, open and unreleased on 19 Oct 2026; keep the
+workaround until a release has it).
 
 ## Backup-register counters (`BKPSRAM` / `BKP_REGS`)
 

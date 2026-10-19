@@ -1,4 +1,4 @@
-{% from "macros.j2" import dep, bedrock_build %}
+{% from "macros.j2" import dep, bedrock_build, embassy_patch %}
 {% set hal = "embassy-" ~ t.family %}
 [package]
 name = "{{ o.name }}-bootloader"
@@ -49,3 +49,7 @@ debug = 2
 lto = "fat"
 opt-level = "z"
 incremental = false
+{% if o.framework == "embassy" and t.family == "stm32" %}
+
+{{ embassy_patch(o.embassy == "main", embassy_crates) }}
+{% endif %}

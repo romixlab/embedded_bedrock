@@ -1,4 +1,4 @@
-{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep %}
+{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep, embassy_patch %}
 {% set defmt = o.log == "defmt" %}
 {% set ww_rtt = o.ww and ww.rtt %}
 [package]
@@ -176,3 +176,7 @@ debug = false
 debug-assertions = false
 opt-level = 0
 overflow-checks = false
+{% if o.framework == "embassy" and t.family == "stm32" %}
+
+{{ embassy_patch(o.embassy == "main", embassy_crates) }}
+{% endif %}

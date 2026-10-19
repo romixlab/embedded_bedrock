@@ -67,11 +67,21 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves
      it as `ww_firmware_info::LastReset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /
      panic-halt as before). It takes `bedrock_crash` from `--bedrock` like `--build-info` does.
+   - embassy crates `--embassy release|main` [release] (STM32 with `--framework embassy`): `release` takes the
+     crates.io embassy and prints a commented-out `[patch.crates-io]` for embassy main; `main` takes embassy-rs/embassy
+     main at the rev pinned in `scripts/data/versions.toml` (active patch block, code in main's API) for what isn't
+     released yet: double-buffered USB bulk endpoints on USB v1 / v4 (with `--wire-weaver`) and the G0 flash
+     prefetch inside embassy. Suggest `main` only when the user
+     wants those; it moves the firmware off released crates until the next embassy release.
    - board LED pin `--led` (PB14 / PIN_25 / P0_13 / GPIO8 by default), RTC usage `--rtc`
    - STM32H7 with SMPS: `--supply-config <variant>` [+ `--smps-voltage V1_8|V2_5`] — the script **refuses** to
      generate without it; the value must come from the board schematic. Explain the options
      (see `references/stm32-notes.md`) and ask, never guess.
 2. Run `chip-info` first for STM32 parts to confirm the part exists in stm32-data and show memories.
+   **Read the chip's errata sheet** for the silicon revision on the board (`chip-info` lists `doc: errata_sheet:`
+   for STM32, `new` prints it as a note; for STM32 also http://www.efton.sk/STM32/gotcha/; RP, nRF, ESP: see
+   `references/errata.md`) for everything the firmware will rely on (peripherals, clocks, flash, DMA, low power,
+   boot), and tell the user what matters. Quote errata from the document.
 3. Run `new`. Show the user the memory table from the generated `README.md` and the printed notes.
 4. `cd <name> && cargo build` (`cd <name>/firmware` with `--wire-weaver`; and `cd bootloader && cargo build` when
    generated). All supported
@@ -102,6 +112,7 @@ For firmware without `bedrock_fw.json` (pre-0.4.0) see the 0.4.0 upgrade notes i
 | `--min-bootloader 24K` | bootloader region, rounded up to erase sectors; dev+release profiles of the bootloader are `opt-level = "z"` so it fits |
 | `--main-ram AXISRAM` | which RAM becomes `RAM` (default: AXISRAM > RAM/SRAM > largest) |
 | `--offline --flash-size 512K --ram-size 128K --erase-size 2K --rust-target ...` | STM32 without network/cached data |
+| `--embassy main` | embassy-rs/embassy main at a pinned rev through `[patch.crates-io]` instead of crates.io (STM32, `--framework embassy`); see `references/frameworks.md#embassy-main` |
 | `--dry-run` | list files + memory.x without writing |
 
 ## What gets generated

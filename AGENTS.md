@@ -100,6 +100,11 @@ into a scratch directory and delete it afterwards; never into one of the firmwar
 - Crate versions live in `scripts/data/versions.toml`; check crates.io before bumping.
 - Firmware conventions the template encodes and every firmware keeps: flip-link, defmt with an explicit buffer
   size and level, `cnt` counters for unexpected events, fault handlers, BOOT pin reachable for the ROM bootloader.
+- Check the errata, always (tpm CLAUDE.md "Firmware: check the errata, always"): template or firmware work on a
+  chip's peripherals, clocks, flash, DMA, low-power modes or boot path reads the chip's errata sheet for the silicon
+  revision in use, and for STM32 also http://www.efton.sk/STM32/gotcha/; errata are quoted from the document, not
+  from memory. Where to find them per vendor and the errata the template already handles (ES0548 flash prefetch on
+  dual-bank G0B1): `firmware_template_skill/references/errata.md`.
 - The build-info format is read by deployed firmware and host tools (RockFace): change it only compatibly, or bump
   its version and keep reading the old one.
 

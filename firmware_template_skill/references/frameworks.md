@@ -25,6 +25,23 @@ Pitfalls with older documentation / examples:
 Bootloader: `Flash::new_blocking(p.FLASH).into_blocking_regions().bank1_region`, `BootLoader::prepare::<_,_,_,ERASE>`
 with the largest erase size, `bl.load(BANK1_REGION.base() + active_offset)`.
 
+Flash prefetch on G0: embassy-stm32 0.6 leaves `FLASH_ACR.PRFTEN` off, so `main.rs` sets it after
+`embassy_stm32::init` (embassy main does it itself, embassy-rs/embassy#7276). On dual-bank G0B1 / G0C1 `memory.x` gets
+`ASSERT(__etext <= <bank 2 base>)`: prefetch faults on branches across the banks (ES0548 2.2.10, see `errata.md`).
+
+#### embassy main (`--embassy main`, TPL-28) {#embassy-main}
+
+`--embassy main` takes every embassy crate from embassy-rs/embassy main at `embassy-main` in `data/versions.toml`
+(262fdba545, 19 Oct 2026) through `[patch.crates-io]` in `Cargo.toml` (and `bootloader/Cargo.toml`), listing only
+the crates the project uses (cargo warns about unused patches). The dependency lines stay the crates.io ones: main
+still has those versions. With `--embassy release` (default) the same block is printed commented out. What main has
+that 0.6 hasn't: double-buffered USB bulk endpoints on USB v1 / v4 (#7275; with `--wire-weaver` `src/ww.rs` passes
+them to wire_weaver_usb_embassy's `usb_init_with_endpoints`), G0 flash prefetch in `rcc` (#7276). API differences the
+templates handle: PAC enums in CamelCase (`mux::Usbsel::Hsi48`), the interrupt binding last in `usb::Driver::new` /
+`new_fs`. Others a firmware may meet: `uid::uid()` returns `&'static [u8; 12]`, one ADC driver for every chip
+(`Adc::new_blocking(adc, Config)`, `Config.oversampling`, `into_ring_buffered(.., sequence, None)`; SMPSEL and CCRDY
+handled inside), `embassy-net-driver` is gone (xarxa). STM32 only so far; RP / nRF on main: TPL-29.
+
 ### RP2040 / RP235x (embassy)
 `embassy-rp` features `rp2040|rp235xa|rp235xb`, `time-driver`, `critical-section-impl`, `executor-thread`,
 `executor-interrupt`, `binary-info` (235x). embassy-rp brings its own executor and `__pender`, therefore
@@ -178,6 +195,12 @@ new espc3  --chip esp32c3 --counters            (embassy, defmt via esp-println)
 new espc3p --chip esp32c3 --log esp-println
 new espc3b --chip esp32c3 --framework bare --log esp-println
 new g0usb  --chip STM32G0B1RE --wire-weaver --counters                         (USB, HSI48)                  (+release)
+new g0usbm --chip STM32G0B1RE --wire-weaver --counters --embassy main          (embassy main, USB v4, ES0548 ASSERT) (+release)
+new g0m    --chip STM32G0B1RE --bootloader --settings --counters --bkp-counters tamp --embassy main          (+bootloader, release)
+new g0setm --chip STM32G0B1CE --settings --bkp-counters auto --counters --led PF1 --wire-weaver --embassy main  (Donguru-like, +release)
+new h725m  --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bootloader --embassy main  (OTG_HS, +bootloader)
+new l476m  --chip STM32L476RG --wire-weaver --led PA5 --embassy main            (USB v? no CRS)
+new f103m  --chip STM32F103CB --wire-weaver --led PC13 --embassy main           (USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8) (+release)
 new g0rtt  --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings     (+bootloader)
 new g0rttn --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log none
 new g0rttr --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log rtt --ww-api g0_dev

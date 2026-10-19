@@ -19,3 +19,26 @@
 {% macro ww_dep(name, subdir, src, prefix, extra="") -%}
 {{ name }} = { {% if src == "git" %}git = "{{ WW_GIT }}"{% else %}path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}"{% endif %}{{ extra }} }
 {%- endmacro %}
+
+{#- [patch.crates-io] taking `crates` from embassy main (--embassy main), or the same block commented out ready to
+    switch (--embassy release) -#}
+{% macro embassy_patch(main, crates) -%}
+{% if main %}
+# embassy from upstream main at a pinned rev (--embassy main, TPL-28): double-buffered USB bulk endpoints on USB v4
+# (embassy-rs/embassy#7275) and the G0 flash prefetch (#7276) are merged but not released yet. The dependency lines
+# above stay the crates.io ones (main still has those versions), this block swaps the source of every embassy crate
+# (embassy-stm32's path dependencies would otherwise clash with the crates.io ones). The code uses main's API. Back to
+# crates.io: drop this block once the next embassy-stm32 release ships (bump the versions above, check the API).
+[patch.crates-io]
+{% for c in crates %}
+{{ c }} = { git = "{{ EMBASSY_GIT }}", rev = "{{ V["embassy-main"] }}" }
+{% endfor %}
+{% else %}
+# embassy main instead of the crates.io release (--embassy main, TPL-28): uncomment, and take main's API in the code
+# as well (regenerate with --embassy main and compare: CamelCase PAC enums, interrupt binding last, ...).
+# [patch.crates-io]
+{% for c in crates %}
+# {{ c }} = { git = "{{ EMBASSY_GIT }}", rev = "{{ V["embassy-main"] }}" }
+{% endfor %}
+{% endif %}
+{%- endmacro %}

@@ -106,6 +106,31 @@ What every device built on bedrock should offer, so host tools (RockFace, IOWeav
 same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, `ww_dfu`, `ww_counters` and
 `ww_log_bare_metal` trait crates to build on.
 
+- 🚧 **TPL-28 embassy main for STM32** (`--embassy release|main`, default release): `main` takes every embassy crate
+  from embassy-rs/embassy main at `embassy-main` in `scripts/data/versions.toml` through `[patch.crates-io]` (app and
+  bootloader `Cargo.toml`, only the crates the project uses; `macros.j2` `embassy_patch`, `embassy_crates()`), with
+  main's API in the code (`mux::Usbsel::Hsi48`, interrupt binding last in `usb::Driver::new` / `new_fs`); `release`
+  prints the same block commented out. With `--wire-weaver` on a USB v1 / v4 part (`u.double_buffer`), `src/ww.rs`
+  sets up double-buffered bulk endpoints through wire_weaver_usb_embassy's `usb_init_with_endpoints` (needs
+  WireWeaver with it: branch s/19oct2026-ww-usb-endpoints, to land first). Builds for the tested matrix's
+  `--embassy main` entries; not run on a board through the template yet (Donguru runs the same endpoints).
+- ✅ **TPL-32 G0 flash prefetch, ES0548 check**: with `--framework embassy` on G0, `main.rs` sets `FLASH_ACR.PRFTEN`
+  after `embassy_stm32::init` (embassy 0.6 leaves it off; main does it itself). On dual-bank G0B1 / G0C1 `memory.x`
+  gets `ASSERT(__etext <= <bank 2 base>)` (`es0548_bank2()`): ES0548 2.2.10, prefetch fails on branches across the
+  banks, so code reaching bank 2 fails to link instead of HardFaulting (Donguru FW-38). Checked: the ASSERT stops the
+  link with its message when tightened.
+- 🐛 **TPL-34 `f103` (STM32F103C8, `--wire-weaver`) no longer fits 64 KiB**: the release build overflows FLASH by
+  ~1.3 KiB against WireWeaver main of 19 Oct 2026, with the template of `main` (0d6bd3a, plus the `Second::milli`
+  fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
+  that matrix entry uses the 128 KiB F103CB. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
+  on 64 KiB parts, or the tested part moves to F103CB.
+- 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
+  too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
+- ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
+  `errata_sheet` doc plus efton.sk's STM32 gotchas, a pointer for RP / nRF / ESP), also in the generated
+  `README.md`; `references/errata.md` lists where per vendor and the errata the template handles; SKILL.md
+  workflow step 2 and AGENTS.md *Conventions* say to read it.
+
 - ✅ **DEV-1 Native USB interface** for the Rust API (WireWeaver over USB, TPL-10).
 - 🧪 **DEV-2 `fw_info` trait**: `--wire-weaver` firmware serves `ww_firmware_info::FirmwareInfo` (name, version, git
   commit and dirty flag, build time, profile, GNU build id) from `<Root>Consts`; not tried against a host yet.
@@ -156,7 +181,8 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `.bss` sat at the start of RAM. Fixed 15 Oct 2026: `linker = "flip-link"` under `[target.<triple>]` in
   `.cargo/config.toml` (`templates/app/cargo_config.toml.j2`, application and bootloader). The extra-RAM sections in
   `memory.x` lost their tail `. = ALIGN(n)` so an empty one is dropped: flip-link 0.1.12 counts an empty section at
-  the end of RAM (RP2350 `.sram8`) as used RAM and left a zero-size stack. Applied to usb_io_fw and typec_dongle.
+  the end of RAM (RP2350 `.sram8`) as used RAM and left a zero-size stack (fix in knurling-rs/flip-link#142, not
+  released as of 19 Oct 2026). Applied to usb_io_fw and typec_dongle.
   The superseded `bedrock_template/` (TPL-20) still has the old line.
 - 📋 **ROB-3 HardFault reporting**: blink the address and flags in Morse code, then reboot (default) or keep blinking;
   keep the reason for the next boot.
