@@ -124,6 +124,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bedrock_led"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "embassy-sync",
+ "embassy-time",
+ "embedded-hal 1.0.0",
+ "ww_indication",
+]
+
+[[package]]
 name = "bincode"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -701,6 +712,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "document-features"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b8a88685455ed29a21542a33abd9cb6510b6b129abadabdcef0f4c55bc8f61"
+dependencies = [
+ "litrs",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -711,6 +731,45 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
+name = "embassy-sync"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bbd85cf5a5ae56bdf26f618364af642d1d0a4e245cdd75cd9aabda382f65a81"
+dependencies = [
+ "cfg-if",
+ "critical-section",
+ "embedded-io-async",
+ "futures-core",
+ "futures-sink",
+ "heapless",
+]
+
+[[package]]
+name = "embassy-time"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "592b0c143ec626e821d4d90da51a2bd91d559d6c442b7c74a47d368c9e23d97a"
+dependencies = [
+ "cfg-if",
+ "critical-section",
+ "document-features",
+ "embassy-time-driver",
+ "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "futures-core",
+]
+
+[[package]]
+name = "embassy-time-driver"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ee71af1b3a0deaa53eaf2d39252f83504c853646e472400b763060389b9fcc9"
+dependencies = [
+ "document-features",
+]
 
 [[package]]
 name = "embedded-bedrock"
@@ -731,6 +790,30 @@ name = "embedded-hal"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "361a90feb7004eca4019fb28352a9465666b24f840f5c3cddf0ff13920590b89"
+
+[[package]]
+name = "embedded-hal-async"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c4c685bbef7fe13c3c6dd4da26841ed3980ef33e841cddfa15ce8a8fb3f1884"
+dependencies = [
+ "embedded-hal 1.0.0",
+]
+
+[[package]]
+name = "embedded-io"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9eb1aa714776b75c7e67e1da744b81a129b3ff919c8712b5e1b32252c1f07cc7"
+
+[[package]]
+name = "embedded-io-async"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2564b9f813c544241430e147d8bc454815ef9ac998878d30cc3055449f7fd4c0"
+dependencies = [
+ "embedded-io",
+]
 
 [[package]]
 name = "equivalent"
@@ -869,6 +952,12 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
 ]
+
+[[package]]
+name = "futures-sink"
+version = "0.3.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1944426bf7d03f1d14f708785e4b33efd750b36d48a157b836b3efc15ede8e1d"
 
 [[package]]
 name = "fw_registry"
@@ -1183,6 +1272,12 @@ name = "litemap"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
+
+[[package]]
+name = "litrs"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4744e383959f0db86ede514b809b1c53251889093803c05267acc7d4e7030d70"
 
 [[package]]
 name = "lock_api"
@@ -1908,6 +2003,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 name = "shrink_wrap"
 version = "0.2.0"
 dependencies = [
+ "defmt",
  "either",
  "paste",
  "serde",
@@ -2556,6 +2652,7 @@ checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 name = "wire_weaver"
 version = "0.5.0"
 dependencies = [
+ "defmt",
  "shrink_wrap",
  "wire_weaver_derive",
  "ww_error",
@@ -2580,6 +2677,7 @@ dependencies = [
  "shrink_wrap",
  "syn 3.0.6",
  "wire_weaver_snapshots",
+ "ww_global",
  "ww_numeric",
  "ww_self",
  "ww_version",
@@ -2597,6 +2695,7 @@ dependencies = [
  "subprocess",
  "syn 3.0.6",
  "wire_weaver_core",
+ "ww_global",
 ]
 
 [[package]]
@@ -2626,6 +2725,7 @@ dependencies = [
 name = "ww_error"
 version = "0.1.0"
 dependencies = [
+ "defmt",
  "shrink_wrap",
 ]
 
@@ -2634,15 +2734,26 @@ name = "ww_global"
 version = "0.2.0"
 dependencies = [
  "convert_case",
+ "defmt",
  "serde",
  "serde_json",
  "shrink_wrap",
 ]
 
 [[package]]
+name = "ww_indication"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "wire_weaver",
+ "ww_si",
+]
+
+[[package]]
 name = "ww_numeric"
 version = "0.2.0"
 dependencies = [
+ "defmt",
  "serde",
  "shrink_wrap",
 ]
@@ -2660,9 +2771,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ww_si"
+version = "0.2.0"
+dependencies = [
+ "defmt",
+ "shrink_wrap",
+ "ww_numeric",
+]
+
+[[package]]
 name = "ww_version"
 version = "0.2.0"
 dependencies = [
+ "defmt",
  "hex",
  "semver 1.0.28",
  "serde",

@@ -134,6 +134,16 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - ✅ **DEV-1 Native USB interface** for the Rust API (WireWeaver over USB, TPL-10).
 - 🧪 **DEV-2 `fw_info` trait**: `--wire-weaver` firmware serves `ww_firmware_info::FirmwareInfo` (name, version, git
   commit and dirty flag, build time, profile, GNU build id) from `<Root>Consts`; not tried against a host yet.
+- 🧪 **DEV-12 Status LED crate** (`bedrock_led`): the breath / blink animation with eased fades (smoothstep), gamma 2
+  and a perceptual peak, an identify blink, all u32 math but one 64-bit multiply, host-tested (`Animation`, `ease`,
+  `scale`, `duty`); `Leds<N>`, N LEDs under one indication (mode each, visible each, one peak, a colour per RGB LED as
+  per-channel peak, identify over everything; HAL-free, host-tested); `Channel` and `Pwm` over embedded-hal 1.0
+  `SetDutyCycle` (active-low option); feature `embassy`: `Indication<N>` in a `static` and its `run` loop (10 ms
+  ticker, sleeps while nothing animates); feature `ww-indication`: brightness peaks and the identify busy / cap of a
+  `ww_indication::Indication` server. Used by Donguru (two mono LEDs, typec_dongle FW-2 / API-9) and rePort (one,
+  usb_io_fw PLAT-3), the same compare values as before but for the 64-bit ease (Donguru: at most 6 of 64000 counts).
+  rePort B200 flashed, `device.indication` mode, brightness and identify answered (21 Oct 2026); the RGB path not run
+  on a board yet (B135 next). The template does not generate LED code with it yet.
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).

@@ -1,13 +1,22 @@
 # Changelog
 
-Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock`,
-`bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
+`bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_led` 0.1.0: status LED animation for bedrock firmware (DEV-12), taken out of Donguru and rePort. Off / On /
+  Breath / Blink with eased fades, gamma, a perceptual peak brightness and an identify blink, HAL-free and
+  host-tested; `Leds<N>` for several LEDs and RGB LEDs (colour as per-channel peak) under one indication; `Pwm` over
+  embedded-hal `SetDutyCycle` with an active-low option; feature `embassy` for the `static` indication and its task
+  loop, `ww-indication` for the brightness peaks and identify bookkeeping of a `ww_indication::Indication` server.
+- `just test` and `just lint` for the workspace.
 
 ## [0.2.4] - 2026-10-19
 

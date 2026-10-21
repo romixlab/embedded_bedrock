@@ -8,6 +8,7 @@ members = [
     "bedrock",
     "bedrock_build",
     "bedrock_crash",
+    "bedrock_led",
     "bedrock_build_info",
     "bedrock_cli",
     "fw_registry",
