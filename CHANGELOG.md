@@ -1,7 +1,7 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow

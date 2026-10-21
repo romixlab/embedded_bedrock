@@ -65,6 +65,9 @@ so a missing entry means work nobody sees.
   from git.
 - `bedrock_led/` — status LED animation and driver (breath / blink, gamma, peak, identify; mono and RGB over
   embedded-hal PWM; `embassy` and `ww-indication` features); firmware takes it by path from the checkout next to it.
+- `bedrock_sync/` — the shared clock (local clock disciplined onto UTC by host steer points or a sync line, holdover,
+  slewing, scheduled actions, an optional oscillator backend; `embassy` and `ww-timebase` features); host side is
+  wire_weaver's `ww_clock_sync`. Firmware takes it by path, like `bedrock_led`, which aligns its animations to it.
 - `bedrock/` — host-side prototype: reads targets through probe-rs, ELF symbol scan (`nm.rs`).
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md
