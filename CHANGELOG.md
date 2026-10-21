@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-10-21
+
 ### Added
 
 - `bedrock_led::look` (DEV-15): the bedrock look, what a status LED shows for what it means, the same on every
