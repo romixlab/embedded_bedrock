@@ -16,7 +16,10 @@ use ww_timebase::{
     TimeMapPoint,
 };
 
-use crate::{Line, SharedClock, Source, Sources, SourcesError, State, Steer, SteerError, Steered};
+use crate::{
+    Line, NoOscillator, Oscillator, SharedClock, Source, Sources, SourcesError, State, Steer,
+    SteerError, Steered,
+};
 
 /// The `Clock` server's state besides the [SharedClock]: the sync line's configuration and how the board writes
 /// local time.
@@ -68,6 +71,18 @@ impl ClockServer {
         now_us: u64,
         point: &SteerPoint,
     ) -> Result<Option<SyncSource>, ClockError<'static>> {
+        self.steer_with(clock, now_us, point, &mut NoOscillator)
+    }
+
+    /// [steer](Self::steer) on a board with an [Oscillator] backend: [SharedClock::steer_with] trims `osc` by part
+    /// of the point's rate.
+    pub fn steer_with(
+        &self,
+        clock: &mut SharedClock,
+        now_us: u64,
+        point: &SteerPoint,
+        osc: &mut impl Oscillator,
+    ) -> Result<Option<SyncSource>, ClockError<'static>> {
         let invalid = |reason| -> ClockError<'static> {
             CommonError::InvalidArgument {
                 arg: 0,
@@ -88,7 +103,7 @@ impl ClockServer {
             rate_ppb: point.rate_ppb,
             error_us: point.error_us,
         };
-        match clock.steer(now_us, steer, Source::Host) {
+        match clock.steer_with(now_us, steer, Source::Host, osc) {
             Ok(Steered::Ignored(source)) => Ok(source.map(sync_source)),
             Ok(_) => Ok(Some(SyncSource::Host)),
             Err(SteerError::RateOutOfRange) => Err(invalid("rate beyond 3 %")),
@@ -275,6 +290,32 @@ mod tests {
             ..point
         };
         assert!(server.steer(&mut clock, now, &fast).is_err());
+    }
+
+    #[test]
+    fn steer_with_trims_the_oscillator() {
+        struct Trim(i32);
+        impl crate::Oscillator for Trim {
+            fn set_trim_ppb(&mut self, ppb: i32) -> i32 {
+                self.0 = ppb;
+                ppb
+            }
+        }
+        let server = ClockServer::new(micros);
+        let mut clock = SharedClock::default();
+        let mut osc = Trim(0);
+        let point = SteerPoint {
+            local: micros(1_000),
+            shared_us: 1_761_000_000_000_000,
+            rate_ppb: 6_400,
+            error_us: 120,
+        };
+        assert_eq!(
+            server.steer_with(&mut clock, 1_000, &point, &mut osc),
+            Ok(Some(SyncSource::Host))
+        );
+        assert_eq!(osc.0, 100);
+        assert_eq!(clock.rates(), (6_400, 100));
     }
 
     #[test]
