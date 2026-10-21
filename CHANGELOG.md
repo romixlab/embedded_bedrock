@@ -17,6 +17,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   libcall on the Cortex-M0+ in the per-tick path. `Oscillator` lets a chip with a fractional PLL take the rate in
   hardware. Feature `embassy`: `Sync` in a `static` with `wait_until_shared`; `ww-timebase`: `ClockServer`, the
   bookkeeping of a `ww_timebase::Clock` server.
+- `bedrock_led` (DEV-14): animations aligned to shared time, `level = f(t mod period)` on UTC, so boards breathe in
+  phase: `SharedTime`, `Animation::align`, `Leds::align`, `Indication::run_with` (shared time read every tick).
+  Without shared time everything runs as before; per-tick math stays 32-bit on the Cortex-M0+.
 
 ## [0.2.6] - 2026-10-21
 

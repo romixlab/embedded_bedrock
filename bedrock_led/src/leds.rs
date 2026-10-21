@@ -1,6 +1,6 @@
 //! N LEDs under one indication, HAL-free: what each shows this tick.
 
-use crate::{Animation, DEFAULT_PEAK, Mode, TICK_MS, scale};
+use crate::{Animation, DEFAULT_PEAK, Mode, SharedTime, TICK_MS, scale};
 
 /// The indication state of N LEDs: an [Animation] each, which are visible, one peak brightness for all, a colour
 /// for RGB LEDs, and a running identify. The levels are perceptual (0..=65535), ready for [duty](crate::duty).
@@ -72,6 +72,17 @@ impl<const N: usize> Leds<N> {
         match self.identify {
             Some(_) => [level; 3],
             None => self.colours[led].map(|c| scale(level, c)),
+        }
+    }
+
+    /// Puts every animation where shared time `t` has it ([Animation::align]): devices showing the same modes are
+    /// in phase. Call it before [level](Self::level) each tick while there is shared time; `None` (no shared clock
+    /// yet) leaves them running free. The identify blink always runs free, from its start.
+    pub fn align(&mut self, t: Option<SharedTime>) {
+        if let Some(t) = t {
+            for led in &mut self.leds {
+                led.align(t);
+            }
         }
     }
 
@@ -236,5 +247,34 @@ mod tests {
         let mut leds = Leds::new([Mode::On, Mode::Off]);
         leds.set_colour(0, [0, 0, 0]);
         assert_eq!(leds.level(0), scale(FULL, DEFAULT_PEAK));
+    }
+
+    #[test]
+    fn aligned_leds_and_free_identify() {
+        let t = |us: u64| {
+            Some(crate::SharedTime {
+                us: 1_761_000_000_000_000 + us,
+                generation: 7,
+            })
+        };
+        let mut a = Leds::new([BREATH, Mode::Off]);
+        let mut b = Leds::new([Mode::Off, Mode::Off]);
+        run(&mut a, 0, 33);
+        b.set(0, BREATH);
+        for i in 0..200 {
+            a.align(t(i * 10_000 + 3));
+            b.align(t(i * 10_000 + 3));
+            assert_eq!(a.level(0), b.level(0), "tick {i}");
+            a.advance();
+            b.advance();
+        }
+        // identify still blinks from its own start
+        a.identify(300);
+        a.align(t(5_000_000));
+        assert_eq!(a.level(0), 0, "identify starts dark");
+        // no shared time: nothing changes
+        let mut c = a.clone();
+        c.align(None);
+        assert_eq!(c.level(0), a.level(0));
     }
 }

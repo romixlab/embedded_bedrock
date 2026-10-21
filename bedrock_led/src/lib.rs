@@ -5,7 +5,9 @@
 //!
 //! The layers, each usable on its own:
 //! - [Animation] steps a [Mode] every [TICK_MS] and gives its perceptual level (0..=65535); [scale] applies a peak
-//!   brightness, [duty] the gamma. Plain u32 math, tested on the host.
+//!   brightness, [duty] the gamma. Plain u32 math, tested on the host. With shared time (a host-steered or
+//!   line-locked clock, bedrock_sync) [Animation::align] puts it at `t mod period` instead (DEV-14), so devices
+//!   breathe in phase; without, it runs free from its last mode change as before.
 //! - [Leds] is the state of N LEDs under one indication: the levels to show this tick, HAL-free.
 //! - [Channel] is one PWM output; [Pwm] adapts any embedded-hal [SetDutyCycle](embedded_hal::pwm::SetDutyCycle)
 //!   (active-low option).
@@ -13,7 +15,8 @@
 //!   writes each tick's levels to its channels.
 //! - `indication` (feature `ww-indication`) is the bookkeeping behind a `ww_indication::Indication` server.
 //!
-//! All math is u32, without 64-bit libcalls: the Cortex-M0+ has no 64-bit multiply and no hardware divide.
+//! All per-tick math is u32, without 64-bit libcalls: the Cortex-M0+ has no 64-bit multiply and no hardware divide.
+//! Only aligning to shared time after a mode change or a clock step takes one 64-bit remainder.
 
 #[cfg(feature = "embassy")]
 mod driver;
@@ -55,6 +58,15 @@ pub enum Mode {
     },
 }
 
+/// Shared time for [Animation::align]: µs since the Unix epoch (UTC), and the shared clock's generation, which
+/// changes when shared time steps or switches source (bedrock_sync's `SharedNow`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct SharedTime {
+    pub us: u64,
+    pub generation: u32,
+}
+
 /// A running [Mode]: where in its cycle it is.
 #[derive(Clone, Copy, Debug)]
 pub struct Animation {
@@ -64,6 +76,10 @@ pub struct Animation {
     phase: u32,
     /// Breath: phase increment per tick. Blink: edge fade duration in ms (>= 1).
     step: u32,
+    /// Aligned to shared time ([align](Self::align)): the low 32 bits of the shared µs the current cycle started at,
+    /// valid for the clock generation `anchor_gen`; `None` until aligned, and after a mode change.
+    anchor: u32,
+    anchor_gen: Option<u32>,
 }
 
 impl Animation {
@@ -83,7 +99,62 @@ impl Animation {
             mode,
             phase: 0,
             step,
+            anchor: 0,
+            anchor_gen: None,
         }
+    }
+
+    /// Period in µs of a breath or blink that can be aligned (up to 71 minutes), `None` otherwise. Never 0.
+    fn period_us(&self) -> Option<u32> {
+        let ms = match self.mode {
+            Mode::Breath { period_ms } => period_ms.max(TICK_MS),
+            // new() turns a blink without on or off time into Off or On: never 0
+            Mode::Blink { on_ms, off_ms } => on_ms.checked_add(off_ms)?.max(1),
+            _ => return None,
+        };
+        // a compare, not checked_mul: its overflow check is a 64-bit multiply (libcall) on the M0+
+        (ms <= u32::MAX / 1000).then(|| ms * 1000)
+    }
+
+    /// Puts the animation where it is at shared time `t` when every cycle starts on a whole multiple of its period
+    /// since the Unix epoch, WSPR-style: animations of the same mode on several devices are in phase, with nothing
+    /// passed around (STD-50 in ww_indication). Call it every tick while there is shared time; [advance](Self::advance)
+    /// goes on from here when it stops. Off, On and periods over 71 minutes are left as they are.
+    ///
+    /// Per tick: 32-bit math (a divide for a blink); the cycle start is found with a 64-bit remainder only when the
+    /// mode or the clock's generation changed.
+    pub fn align(&mut self, t: SharedTime) {
+        let Some(period) = self.period_us() else {
+            return;
+        };
+        if self.anchor_gen != Some(t.generation) {
+            self.anchor_at(t, period);
+        }
+        let mut pos = (t.us as u32).wrapping_sub(self.anchor);
+        if pos >= period {
+            // the next cycle, usually; anything farther (a long pause between calls) starts over
+            if pos - period < period {
+                self.anchor = self.anchor.wrapping_add(period);
+                pos -= period;
+            } else {
+                pos = self.anchor_at(t, period);
+            }
+        }
+        self.phase = match self.mode {
+            // pos < period: below 2^32
+            Mode::Breath { .. } => pos * (u32::MAX / period.max(1)),
+            _ => pos / 1000,
+        };
+    }
+
+    /// Finds the start of the cycle `t` is in; returns how far into it `t` is (µs).
+    #[cold]
+    #[inline(never)]
+    fn anchor_at(&mut self, t: SharedTime, period: u32) -> u32 {
+        let pos = (t.us % period as u64) as u32;
+        self.anchor = (t.us as u32).wrapping_sub(pos);
+        self.anchor_gen = Some(t.generation);
+        pos
     }
 
     /// The identify blink.
@@ -327,5 +398,105 @@ mod tests {
         assert_eq!(scale(65535, 255), 65535);
         assert_eq!(scale(65535, 0), 0);
         assert_eq!(scale(65535, 128), 32896);
+    }
+
+    const UTC: u64 = 1_761_000_000_000_000; // a multiple of 3 s and 1 s
+
+    fn at(us: u64) -> SharedTime {
+        SharedTime { us, generation: 1 }
+    }
+
+    #[test]
+    fn aligned_breath_starts_on_period_boundaries() {
+        let mut a = Animation::new(Mode::Breath { period_ms: 3000 });
+        a.align(at(UTC));
+        assert_eq!(a.level(), 0, "dark at a multiple of the period");
+        a.align(at(UTC + 1_500_000));
+        assert!(a.level() > 65000, "top half way");
+        a.align(at(UTC + 3_000_000));
+        assert_eq!(a.level(), 0);
+        a.align(at(UTC + 3_750_000));
+        let quarter = a.level();
+        assert!(quarter > 20000 && quarter < 45000, "{quarter}");
+    }
+
+    #[test]
+    fn aligned_devices_agree_whenever_their_mode_was_set() {
+        let mode = Mode::Breath { period_ms: 2000 };
+        let mut early = Animation::new(mode);
+        for _ in 0..137 {
+            early.advance();
+        }
+        let mut late = Animation::new(mode);
+        for i in 0..500u64 {
+            let t = at(UTC + 777 + i * 10_000);
+            early.align(t);
+            late.align(t);
+            assert_eq!(early.level(), late.level(), "tick {i}");
+            early.advance();
+            late.advance();
+        }
+    }
+
+    #[test]
+    fn aligned_blink_is_on_at_the_start_of_each_cycle() {
+        let mut a = Animation::new(Mode::Blink {
+            on_ms: 500,
+            off_ms: 500,
+        });
+        let level = |a: &mut Animation, us| {
+            a.align(at(us));
+            a.level()
+        };
+        assert_eq!(level(&mut a, UTC), 0);
+        assert!(level(&mut a, UTC + 200_000) >= 65533);
+        assert_eq!(level(&mut a, UTC + 700_000), 0);
+        assert!(level(&mut a, UTC + 1_200_000) >= 65533);
+        // a long pause between calls: found again
+        assert!(level(&mut a, UTC + 3_600_000_200_000) >= 65533);
+    }
+
+    #[test]
+    fn free_running_takes_over_where_aligned_left_off() {
+        let mut a = Animation::new(Mode::Breath { period_ms: 1000 });
+        a.align(at(UTC + 250_000));
+        let before = a.level();
+        a.advance();
+        let after = a.level();
+        // one tick on from the aligned phase, no jump back to dark
+        assert!(
+            after > before && after - before < 4000,
+            "{before} -> {after}"
+        );
+    }
+
+    #[test]
+    fn a_new_generation_finds_the_cycle_again() {
+        let mut a = Animation::new(Mode::Breath { period_ms: 1000 });
+        a.align(at(UTC + 100_000));
+        // the clock stepped by 0.4 s
+        a.align(SharedTime {
+            us: UTC + 500_000,
+            generation: 2,
+        });
+        let mut b = Animation::new(Mode::Breath { period_ms: 1000 });
+        b.align(at(UTC + 500_000));
+        assert_eq!(a.level(), b.level());
+    }
+
+    #[test]
+    fn off_on_and_long_periods_stay_as_they_are() {
+        for mode in [Mode::Off, Mode::On] {
+            let mut a = Animation::new(mode);
+            let l = a.level();
+            a.align(at(UTC + 5));
+            assert_eq!(a.level(), l);
+        }
+        // 2 hours: not aligned, runs free from dark
+        let mut a = Animation::new(Mode::Breath {
+            period_ms: 7_200_000,
+        });
+        a.align(at(UTC + 3_000_000_000));
+        assert_eq!(a.level(), 0);
     }
 }

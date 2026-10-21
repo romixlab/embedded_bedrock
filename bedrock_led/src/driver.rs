@@ -7,7 +7,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Ticker};
 
-use crate::{Leds, Mode, TICK_MS};
+use crate::{Leds, Mode, SharedTime, TICK_MS};
 
 /// N LEDs under one indication, as a `static` the firmware changes from any task or interrupt; [run](Self::run)
 /// in the LED task shows it. Changes take effect on the next tick; with nothing animated the task sleeps until a
@@ -124,8 +124,21 @@ impl<const N: usize> Indication<N> {
     }
 
     /// Runs the indication from `modes`: every [TICK_MS] (or after a change, when idle), `show` writes the levels
-    /// of this tick to the channels, [Leds::level] for a mono LED, [Leds::rgb] for an RGB one.
-    pub async fn run(&self, modes: [Mode; N], mut show: impl FnMut(&Leds<N>)) -> ! {
+    /// of this tick to the channels, [Leds::level] for a mono LED, [Leds::rgb] for an RGB one. Animations run free
+    /// from their last mode change; [run_with](Self::run_with) aligns them to shared time.
+    pub async fn run(&self, modes: [Mode; N], show: impl FnMut(&Leds<N>)) -> ! {
+        self.run_with(modes, || None, show).await
+    }
+
+    /// [run](Self::run) with shared time: `shared` is read every tick, and while it gives a time the animations are
+    /// aligned to it ([Leds::align]), so boards on one shared clock breathe and blink in phase. With bedrock_sync:
+    /// `|| SYNC.shared_now().map(|s| SharedTime { us: s.us, generation: s.generation })`.
+    pub async fn run_with(
+        &self,
+        modes: [Mode; N],
+        mut shared: impl FnMut() -> Option<SharedTime>,
+        mut show: impl FnMut(&Leds<N>),
+    ) -> ! {
         // all off, then the modes one by one: no Animation::new inlined per LED, and the state is built in place
         let mut state = Leds::new([Mode::Off; N]);
         for (i, mode) in modes.into_iter().enumerate() {
@@ -134,6 +147,7 @@ impl<const N: usize> Indication<N> {
         let mut ticker = Ticker::every(Duration::from_millis(TICK_MS as u64));
         loop {
             self.take(&mut state);
+            state.align(shared());
             show(&state);
             if state.advance() {
                 ticker.next().await;

@@ -161,6 +161,16 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `Instant` (`shared_now`, `steer`, `wait_until_shared`); feature `ww-timebase`: `ClockServer`, the `Clock` server
   bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`). Hardware check
   open: Donguru and rePort steered by `ww sync` (P2528 piece 6).
+- 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath
+  or blink at `t mod period` of shared time (UTC), WSPR-style, so boards showing the same mode are in phase with
+  nothing passed around (wire_weaver STD-50); `Leds::align` for all LEDs, `Indication::run_with(modes, shared, show)`
+  reads shared time every tick (`run` unchanged: free-running from the last mode change, as before). Without shared
+  time, or for Off / On and periods over 71 min, nothing changes; leaving alignment, the animation runs on free from
+  where it was; the identify blink always runs free. Per tick 32-bit math only (one `__aeabi_uidiv` per LED, no 64-bit
+  libcall, checked in the disassembly at opt-level `z` and `3`); the cycle start is found with one 64-bit remainder
+  only after a mode change or a step of the clock (`generation`). `align` 180 B, `anchor_at` 52 B at `z`. Host
+  tests: aligned breath and blink, two devices set at different times agree tick by tick, hand-over to free running,
+  a new generation. Hardware check open: Donguru and rePort breathing in phase on omarchy-m1 (P2528 piece 6).
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).
