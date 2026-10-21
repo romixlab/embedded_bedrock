@@ -12,10 +12,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 ### Added
 
 - `bedrock_led` 0.1.0: status LED animation for bedrock firmware (DEV-12), taken out of Donguru and rePort. Off / On /
-  Breath / Blink with eased fades, gamma, a perceptual peak brightness and an identify blink, HAL-free and
-  host-tested; `Leds<N>` for several LEDs and RGB LEDs (colour as per-channel peak) under one indication; `Pwm` over
-  embedded-hal `SetDutyCycle` with an active-low option; feature `embassy` for the `static` indication and its task
-  loop, `ww-indication` for the brightness peaks and identify bookkeeping of a `ww_indication::Indication` server.
+  Breath / Blink with eased fades, gamma, a perceptual peak brightness and an identify blink, u32 math only (the
+  smoothstep exact and monotonic without 64-bit libcalls), HAL-free and host-tested; `Leds<N>` for several LEDs and
+  RGB LEDs (colour as per-channel peak) under one indication; `Pwm` over embedded-hal `SetDutyCycle` with an
+  active-low option; feature `embassy` for the `static` indication (in `.bss`, one critical section per tick) and its
+  task loop, `ww-indication` for the brightness peaks and identify bookkeeping of a `ww_indication::Indication`
+  server.
 - `just test` and `just lint` for the workspace.
 
 ## [0.2.4] - 2026-10-19

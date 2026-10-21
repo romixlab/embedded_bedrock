@@ -13,7 +13,7 @@
 //!   writes each tick's levels to its channels.
 //! - `indication` (feature `ww-indication`) is the bookkeeping behind a `ww_indication::Indication` server.
 //!
-//! All math is u32 except one 64-bit multiply in [ease]: Cortex-M0+ has no hardware divide.
+//! All math is u32, without 64-bit libcalls: the Cortex-M0+ has no 64-bit multiply and no hardware divide.
 
 #[cfg(feature = "embassy")]
 mod driver;
@@ -106,7 +106,7 @@ impl Animation {
                 ease(x)
             }
             Mode::Blink { on_ms, .. } => {
-                let fade = self.step;
+                let fade = self.step.max(1); // >= 1 already (new()): no divide-by-zero panic path
                 let x = if self.phase < on_ms {
                     self.phase.min(fade) * FULL / fade
                 } else {
@@ -138,12 +138,18 @@ impl Animation {
     }
 }
 
-/// Smoothstep 3x^2 - 2x^3 on Q16 (0..=65535), for soft starts and stops.
+/// Smoothstep 3x^2 - 2x^3 on Q16 (0..=65535), for soft starts and stops: floor(x^2 (3 - 2x)), exact to the last
+/// count and monotonic, in 32-bit multiplies only (no 64-bit libcall on the Cortex-M0+).
 pub fn ease(x: u32) -> u32 {
-    // x^2 * (3 - 2x) in 64 bits (< 2^50), so it rises monotonically to the last count (UMULL on M3 and up,
-    // __aeabi_lmul on the M0+)
-    let x = x.min(FULL) as u64;
-    ((x * x * (3 * 65536 - 2 * x)) >> 32) as u32
+    let x = x.min(FULL);
+    let a = x * x; // < 2^32
+    let c = 3 * 32768 - x; // (3 - 2x) / 2 in Q16: 32769..=98304
+    let (ah, al) = (a >> 16, a & 0xffff);
+    let (ch, cl) = (c >> 16, c & 0xffff);
+    // a * c / 2^31 as (ah * c + al * ch) * 2^16 + al * cl, every part below 2^32: ah * c grows with x up to
+    // 65534 * 32769 < 2^31 at x = 65535; flooring by 2^16 and then by 2^15 is the same as by 2^31
+    let h = ah * c + al * ch;
+    (h + ((al * cl) >> 16)) >> 15
 }
 
 /// A perceptual level (0..=65535) scaled by a peak brightness (0..=255).
@@ -178,6 +184,31 @@ mod tests {
         assert!(ease(32768).abs_diff(32768) < 8);
         // soft start: slower than linear at first
         assert!(ease(6553) < 6553 / 2);
+    }
+
+    /// The same curve in 64 bits, the reference.
+    fn ease_u64(x: u32) -> u32 {
+        let x = x.min(FULL) as u64;
+        ((x * x * (3 * 65536 - 2 * x)) >> 32) as u32
+    }
+
+    /// Donguru's ease before bedrock_led: 32-bit, the square rounded down first.
+    fn ease_donguru(x: u32) -> u32 {
+        let x2 = (x * x) >> 16;
+        (x2 * ((3 * 65536 - 2 * x) >> 2)) >> 14
+    }
+
+    #[test]
+    fn ease_is_exact() {
+        for x in 0..=70000 {
+            assert_eq!(ease(x), ease_u64(x), "ease({x})");
+        }
+        // within 3 counts of the old Donguru curve
+        let worst = (0..=65535)
+            .map(|x| ease(x).abs_diff(ease_donguru(x)))
+            .max()
+            .unwrap();
+        assert_eq!(worst, 3);
     }
 
     #[test]

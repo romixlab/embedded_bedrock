@@ -1,12 +1,13 @@
 //! The async driver: [Indication] in a `static`, changed from anywhere, shown by [Indication::run] in a task.
 
+use core::cell::Cell;
+
+use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Ticker};
 
 use crate::{Leds, Mode, TICK_MS};
-
-type Sig<T> = Signal<CriticalSectionRawMutex, T>;
 
 /// N LEDs under one indication, as a `static` the firmware changes from any task or interrupt; [run](Self::run)
 /// in the LED task shows it. Changes take effect on the next tick; with nothing animated the task sleeps until a
@@ -29,56 +30,96 @@ type Sig<T> = Signal<CriticalSectionRawMutex, T>;
 /// }
 /// ```
 pub struct Indication<const N: usize> {
-    modes: [Sig<Mode>; N],
-    visible: [Sig<bool>; N],
-    colours: [Sig<[u8; 3]>; N],
-    peak: Sig<u8>,
-    identify: Sig<u32>,
+    /// What changed since the last tick, one critical section for all of it. All zero when nothing changed, so
+    /// the `static` sits in `.bss`.
+    pending: Mutex<CriticalSectionRawMutex, Pending<N>>,
     /// Wakes the task when it is idle (no animation running).
-    wake: Sig<()>,
+    wake: Signal<CriticalSectionRawMutex, ()>,
+}
+
+/// Changes waiting for the next tick: a value per kind and LED, valid where its bit in the mask is set (a later
+/// change of the same kind overwrites an earlier one).
+struct Pending<const N: usize> {
+    modes: [Cell<Mode>; N],
+    visible: [Cell<bool>; N],
+    colours: [Cell<[u8; 3]>; N],
+    peak: Cell<u8>,
+    identify_ms: Cell<u32>,
+    /// One bit per LED.
+    modes_set: Cell<u32>,
+    visible_set: Cell<u32>,
+    colours_set: Cell<u32>,
+    peak_set: Cell<bool>,
+    identify_set: Cell<bool>,
 }
 
 impl<const N: usize> Indication<N> {
     pub const fn new() -> Self {
+        const { assert!(N <= 32, "one bit per LED in a u32") };
         Self {
-            modes: [const { Signal::new() }; N],
-            visible: [const { Signal::new() }; N],
-            colours: [const { Signal::new() }; N],
-            peak: Signal::new(),
-            identify: Signal::new(),
+            pending: Mutex::const_new(
+                CriticalSectionRawMutex::new(),
+                Pending {
+                    modes: [const { Cell::new(Mode::Off) }; N],
+                    visible: [const { Cell::new(false) }; N],
+                    colours: [const { Cell::new([0; 3]) }; N],
+                    peak: Cell::new(0),
+                    identify_ms: Cell::new(0),
+                    modes_set: Cell::new(0),
+                    visible_set: Cell::new(0),
+                    colours_set: Cell::new(0),
+                    peak_set: Cell::new(false),
+                    identify_set: Cell::new(false),
+                },
+            ),
             wake: Signal::new(),
         }
     }
 
     /// Change the mode of one LED; breath and blink restart from dark.
     pub fn set(&self, led: usize, mode: Mode) {
-        self.modes[led].signal(mode);
-        self.wake.signal(());
+        self.change(|p| {
+            p.modes[led].set(mode);
+            p.modes_set.set(p.modes_set.get() | 1 << led);
+        });
     }
 
     /// Show or hide one LED (default shown); its animation keeps running hidden.
     pub fn set_visible(&self, led: usize, visible: bool) {
-        self.visible[led].signal(visible);
-        self.wake.signal(());
+        self.change(|p| {
+            p.visible[led].set(visible);
+            p.visible_set.set(p.visible_set.get() | 1 << led);
+        });
     }
 
     /// Colour of an RGB LED (default white), see [Leds::set_colour].
     pub fn set_colour(&self, led: usize, rgb: [u8; 3]) {
-        self.colours[led].signal(rgb);
-        self.wake.signal(());
+        self.change(|p| {
+            p.colours[led].set(rgb);
+            p.colours_set.set(p.colours_set.get() | 1 << led);
+        });
     }
 
     /// Peak brightness of all LEDs (default [DEFAULT_PEAK](crate::DEFAULT_PEAK)), without restarting their
     /// animations.
     pub fn set_peak(&self, peak: u8) {
-        self.peak.signal(peak);
-        self.wake.signal(());
+        self.change(|p| {
+            p.peak.set(peak);
+            p.peak_set.set(true);
+        });
     }
 
     /// Blink every LED at full brightness for `ms` (restarts a running identify, 0 ends it), then show the
     /// animations again.
     pub fn identify(&self, ms: u32) {
-        self.identify.signal(ms);
+        self.change(|p| {
+            p.identify_ms.set(ms);
+            p.identify_set.set(true);
+        });
+    }
+
+    fn change(&self, f: impl FnOnce(&Pending<N>)) {
+        self.pending.lock(f);
         self.wake.signal(());
     }
 
@@ -106,23 +147,30 @@ impl<const N: usize> Indication<N> {
 
     /// Applies what changed since the last tick.
     fn take(&self, state: &mut Leds<N>) {
-        for i in 0..N {
-            if let Some(mode) = self.modes[i].try_take() {
-                state.set(i, mode);
+        self.pending.lock(|p| {
+            let (modes, visible, colours) = (
+                p.modes_set.replace(0),
+                p.visible_set.replace(0),
+                p.colours_set.replace(0),
+            );
+            for i in 0..N {
+                if modes & 1 << i != 0 {
+                    state.set(i, p.modes[i].get());
+                }
+                if visible & 1 << i != 0 {
+                    state.set_visible(i, p.visible[i].get());
+                }
+                if colours & 1 << i != 0 {
+                    state.set_colour(i, p.colours[i].get());
+                }
             }
-            if let Some(v) = self.visible[i].try_take() {
-                state.set_visible(i, v);
+            if p.peak_set.replace(false) {
+                state.set_peak(p.peak.get());
             }
-            if let Some(c) = self.colours[i].try_take() {
-                state.set_colour(i, c);
+            if p.identify_set.replace(false) {
+                state.identify(p.identify_ms.get());
             }
-        }
-        if let Some(p) = self.peak.try_take() {
-            state.set_peak(p);
-        }
-        if let Some(ms) = self.identify.try_take() {
-            state.identify(ms);
-        }
+        });
     }
 }
 

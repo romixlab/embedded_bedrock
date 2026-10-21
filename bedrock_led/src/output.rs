@@ -22,25 +22,31 @@ pub trait Channel {
 }
 
 /// An embedded-hal PWM output as a [Channel]; active low inverts the duty (LED from the supply to the pin).
+///
+/// `max_duty_cycle` is read once, here: wrap the output again after changing its frequency. (Some HALs compute it
+/// with a fallible conversion, which every tick would pay for.)
 pub struct Pwm<P> {
     pwm: P,
+    max: u16,
     active_low: bool,
 }
 
 impl<P: SetDutyCycle> Pwm<P> {
     /// LED lit while the output is high.
     pub fn new(pwm: P) -> Self {
-        Self {
-            pwm,
-            active_low: false,
-        }
+        Self::with_polarity(pwm, false)
     }
 
     /// LED lit while the output is low.
     pub fn active_low(pwm: P) -> Self {
+        Self::with_polarity(pwm, true)
+    }
+
+    fn with_polarity(pwm: P, active_low: bool) -> Self {
         Self {
+            max: pwm.max_duty_cycle(),
             pwm,
-            active_low: true,
+            active_low,
         }
     }
 
@@ -52,11 +58,11 @@ impl<P: SetDutyCycle> Pwm<P> {
 
 impl<P: SetDutyCycle> Channel for Pwm<P> {
     fn max_duty(&self) -> u32 {
-        self.pwm.max_duty_cycle() as u32
+        self.max as u32
     }
 
     fn set_duty(&mut self, duty: u32) {
-        let max = self.max_duty();
+        let max = self.max as u32;
         let duty = duty.min(max);
         let duty = if self.active_low { max - duty } else { duty };
         // within max_duty_cycle, the only error SetDutyCycle defines; an LED has nothing to do on others
