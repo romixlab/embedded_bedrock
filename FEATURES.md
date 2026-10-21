@@ -166,8 +166,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `Config::lock_within_us` (2 ms: a full-speed USB board's own error bound is about 1 ms), slewing at 5 %; `Locked`
   once within, slewing at 1 %; back to `Acquiring` beyond twice the setting or on a step; `SyncStatus::slew_us`.
   Closed-loop test against wire_weaver's `Estimator` (`tests/closed_loop.rs`, simulated USB): a board 250 ms off is
-  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware check open: Donguru and rePort steered by
-  `ww sync` (P2528 piece 6).
+  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware (omarchy-m1, 21 Oct 2026, `ww sync` with Donguru B153A, rePort B200 and B135B): all three locked within 2 ms after 1.2 s from a fresh start and 2.4 s after 45 s in holdover; LED phase as ww sync estimates it 30 µs to 1.0 ms apart (±1.5-2.5 ms, rePort's and Donguru's ~1.4-1.8 ms round trips); over 5 min Donguru left once on a -2.0 ms residual (±1.2 ms) and was back in 37 s. No logic analyser on this PC: the phase is not measured on the pins.
 - 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath
   or blink at `t mod period` of shared time (UTC), WSPR-style, so boards showing the same mode are in phase with
   nothing passed around (wire_weaver STD-50); `Leds::align` for all LEDs, `Indication::run_with(modes, shared, show)`
@@ -184,7 +183,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `CYCLE_MS`, so on shared time all looks of all boards start together. Used by Donguru (power `OK`, status
   `HEARTBEAT`), rePort (`OK`, was a 4 s breath) and B135 (SD `OK` in `STORAGE` / `FAULT`, CAN `OK` / `WARN` /
   `ALERT`). Kept on a module of `bedrock_led`: it holds `Mode`, the fades and the peaks already; a buzzer or display
-  vocabulary would get its own module next to it when one exists. Hardware check open.
+  vocabulary would get its own module next to it when one exists. Flashed on all three boards (21 Oct 2026); the looks themselves not yet looked at by a person.
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).
