@@ -162,8 +162,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   not Donguru's HSI trim (too coarse) nor the RP2350 (no fractional PLL). Feature `embassy`: `Sync` in a `static` on
   `Instant` (`shared_now`, `steer`, `wait_until_shared`); feature `ww-timebase`: `ClockServer`, the `Clock` server
   bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`, `set_sources` /
-  `sources`). Hardware check
-  open: Donguru and rePort steered by `ww sync` (P2528 piece 6).
+  `sources`). States (21 Oct 2026): `Acquiring` while the slew left plus the source's error is above
+  `Config::lock_within_us` (2 ms: a full-speed USB board's own error bound is about 1 ms), slewing at 5 %; `Locked`
+  once within, slewing at 1 %; back to `Acquiring` beyond twice the setting or on a step; `SyncStatus::slew_us`.
+  Closed-loop test against wire_weaver's `Estimator` (`tests/closed_loop.rs`, simulated USB): a board 250 ms off is
+  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware check open: Donguru and rePort steered by
+  `ww sync` (P2528 piece 6).
 - 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath
   or blink at `t mod period` of shared time (UTC), WSPR-style, so boards showing the same mode are in phase with
   nothing passed around (wire_weaver STD-50); `Leds::align` for all LEDs, `Indication::run_with(modes, shared, show)`
@@ -174,6 +178,13 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   only after a mode change or a step of the clock (`generation`). `align` 180 B, `anchor_at` 52 B at `z`. Host
   tests: aligned breath and blink, two devices set at different times agree tick by tick, hand-over to free running,
   a new generation. Hardware check open: Donguru and rePort breathing in phase on omarchy-m1 (P2528 piece 6).
+- 🧪 **DEV-15 Common look** (`bedrock_led::look`): what a status LED shows for what it means, named by meaning and
+  the same on every board (`OK`, `BUSY`, `WARN`, `FAULT`, `ALERT`, `HEARTBEAT`, `IDENTIFY`, `OFF`; palette
+  `colour::{OK, WARN, FAULT, STORAGE}`; `Look::under` for the `ww_indication` mode); every period divides the 3 s
+  `CYCLE_MS`, so on shared time all looks of all boards start together. Used by Donguru (power `OK`, status
+  `HEARTBEAT`), rePort (`OK`, was a 4 s breath) and B135 (SD `OK` in `STORAGE` / `FAULT`, CAN `OK` / `WARN` /
+  `ALERT`). Kept on a module of `bedrock_led`: it holds `Mode`, the fades and the peaks already; a buzzer or display
+  vocabulary would get its own module next to it when one exists. Hardware check open.
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).

@@ -9,6 +9,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_led::look` (DEV-15): the bedrock look, what a status LED shows for what it means, the same on every
+  board: `OK` (3 s breath), `BUSY` and `WARN` (1.5 s breath), `FAULT` (steady), `ALERT` (250 ms blink),
+  `HEARTBEAT` (300 ms flash every 1.5 s), `IDENTIFY`, `OFF`, as `Look { mode, colour }` with the palette in
+  `look::colour` (`OK` green, `WARN` amber, `FAULT` red, `STORAGE` blue), `Look::in_colour`, `Look::under` (the
+  `ww_indication` mode, feature `ww-indication`). Every period divides `CYCLE_MS` (3 s), so on shared time all looks
+  of all boards start together.
+- `bedrock_sync` (DEV-13): `State::Acquiring`, `Config::lock_within_us` (2 ms) and `Config::acquire_slew_ppm` (5 %),
+  `SharedClock::slew_left_at`; `ClockServer::sync_status` fills `SyncStatus::slew_us`.
+
+### Changed
+
+- `bedrock_sync` (DEV-13): `Locked` means within the tolerance now, not just "points come in": the clock is
+  `Acquiring` while the offset still to slew plus the source's error is above `lock_within_us`, `Locked` once within,
+  and back to `Acquiring` when a point finds it more than twice that off or steps it. While acquiring it slews at 5 %
+  (250 ms in 5 s; was 1 %, 25 s), once locked at 1 % as before; shared time still never jumps or goes back.
+
 ## [0.2.8] - 2026-10-21
 
 ### Added

@@ -73,14 +73,17 @@ fn slews_a_small_offset_and_steps_a_large_one() {
     assert_eq!(s, Ok(Steered::Slewing(5_000)));
     assert_eq!(c.generation(), g, "a slew keeps the generation");
     assert_eq!(c.error_us(1_000_000), Some(5_100));
+    // 5 ms off: out of lock, slewed at the acquiring rate
+    assert_eq!(c.state(1_000_000), State::Acquiring);
     let t = ticks(&mut c, 1_000_000, 100);
-    // 1 % of 10 ms a tick: 10.1 ms ticks until the 5 ms are in (half a second), never a jump
+    // 5 % of 10 ms a tick: 10.5 ms ticks until the 5 ms are in (a tenth of a second), never a jump
     assert!(
         t.windows(2)
-            .all(|w| (10_000..=10_100).contains(&(w[1] - w[0])))
+            .all(|w| (10_000..=10_500).contains(&(w[1] - w[0])))
     );
     assert_eq!(t[100], UTC + 2_005_000);
     assert_eq!(c.error_us(2_000_000), Some(100));
+    assert_eq!(c.state(2_000_000), State::Locked);
     // 2 s off: stepped, the generation changes
     let s = c.steer(
         2_000_000,
@@ -309,4 +312,98 @@ fn the_source_list_decides() {
         Sources::new(&[irig, pps, Source::Host, irig, pps]),
         Err(SourcesError::TooMany)
     );
+}
+
+/// A 1 ms lock tolerance, for round numbers.
+const ONE_MS: Config = Config {
+    lock_within_us: 1_000,
+    ..Config::DEFAULT
+};
+
+#[test]
+fn locked_until_a_point_finds_it_twice_the_setting_off() {
+    let mut c = SharedClock::new(ONE_MS);
+    c.steer(0, point(0, UTC, 0), Source::Host).unwrap();
+    // on the point, within its 100 µs error
+    assert_eq!(c.state(0), State::Locked);
+    // 1.5 ms off: more than the 1 ms setting, but within twice it: stays locked, slewed at the locked 1 %
+    c.steer(
+        1_000_000,
+        point(1_000_000, UTC + 1_001_500, 0),
+        Source::Host,
+    )
+    .unwrap();
+    assert_eq!(c.state(1_000_000), State::Locked);
+    let t = ticks(&mut c, 1_000_000, 20);
+    assert!(
+        t.windows(2)
+            .all(|w| (10_000..=10_100).contains(&(w[1] - w[0])))
+    );
+    // 2.5 ms off: acquiring again until the slew is in
+    c.steer(
+        2_000_000,
+        point(2_000_000, UTC + 2_004_000, 0),
+        Source::Host,
+    )
+    .unwrap();
+    assert_eq!(c.state(2_000_000), State::Acquiring);
+    assert_eq!(c.slew_left_at(2_000_000), 2_500);
+    // 5 % of 40 ms: 2 ms in, 0.5 ms + 100 µs left: within the setting again
+    assert!((500..=501).contains(&c.slew_left_at(2_040_000)));
+    assert_eq!(c.state(2_040_000), State::Locked);
+    // from acquiring, a point needs to be within the setting itself: 1.5 ms is not
+    let mut c = SharedClock::new(ONE_MS);
+    c.steer(0, point(0, UTC, 0), Source::Host).unwrap();
+    c.steer(
+        1_000_000,
+        point(1_000_000, UTC + 1_005_000, 0),
+        Source::Host,
+    )
+    .unwrap();
+    c.steer(
+        1_010_000,
+        point(1_010_000, UTC + 1_016_500, 0),
+        Source::Host,
+    )
+    .unwrap();
+    assert_eq!(c.state(1_010_000), State::Acquiring);
+}
+
+#[test]
+fn a_point_with_a_large_error_never_locks() {
+    let mut c = SharedClock::new(ONE_MS);
+    let p = Steer {
+        error_us: 1_500,
+        ..point(0, UTC, 0)
+    };
+    c.steer(0, p, Source::Host).unwrap();
+    assert_eq!(c.state(0), State::Acquiring);
+    assert_eq!(c.state(3_000_001), State::Holdover);
+}
+
+/// The first lock after a long holdover (P2528#21oct-1838): Donguru took 25 s to slew out 250 ms at 1 %; at the
+/// acquiring 5 % it is in within 5 s, and shared time never jumps or goes back.
+#[test]
+fn a_large_offset_is_slewed_fast_while_acquiring() {
+    let mut c = SharedClock::default();
+    c.steer(0, point(0, UTC, 0), Source::Host).unwrap();
+    // a point every 100 ms (the host steers at 10 Hz while acquiring), 250 ms ahead of the clock
+    let mut locked_at = None;
+    let mut last = c.shared(0).unwrap();
+    for i in 1..=100u64 {
+        let now = i * 100_000;
+        for tick in 1..=10 {
+            let s = c.shared(now - 100_000 + tick * 10_000).unwrap();
+            // 10 ms a tick plus at most 5 %
+            assert!((10_000..=10_500).contains(&(s - last)), "{}", s - last);
+            last = s;
+        }
+        c.steer(now, point(now, UTC + now + 250_000, 0), Source::Host)
+            .unwrap();
+        if locked_at.is_none() && c.state(now) == State::Locked {
+            locked_at = Some(now);
+        }
+    }
+    let locked_at = locked_at.expect("locked");
+    assert!((5_000_000..5_200_000).contains(&locked_at), "{locked_at}");
 }

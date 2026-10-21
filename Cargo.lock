@@ -57,6 +57,9 @@ name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
+dependencies = [
+ "portable-atomic",
+]
 
 [[package]]
 name = "autocfg"
@@ -142,6 +145,7 @@ dependencies = [
  "embassy-sync",
  "embassy-time",
  "wire_weaver",
+ "ww_clock_sync",
  "ww_si",
  "ww_timebase",
 ]
@@ -247,6 +251,12 @@ dependencies = [
  "derive_more",
  "semver 1.0.28",
 ]
+
+[[package]]
+name = "bumpalo"
+version = "3.20.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "bytemuck"
@@ -442,9 +452,9 @@ dependencies = [
 
 [[package]]
 name = "crc"
-version = "3.3.0"
+version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9710d3b3739c2e349eb44fe848ad0b7c8cb1e42bd87ee49371df2f7acaf3e675"
+checksum = "5eb8a2a1cd12ab0d987a5d5e825195d372001a4094a0376319d5a0ad71c1ba0d"
 dependencies = [
  "crc-catalog",
 ]
@@ -857,7 +867,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_plain",
- "strum",
+ "strum 0.27.2",
  "thiserror",
 ]
 
@@ -881,7 +891,7 @@ dependencies = [
  "object 0.38.1",
  "serde",
  "sha2 0.10.9",
- "strum",
+ "strum 0.27.2",
  "thiserror",
 ]
 
@@ -911,6 +921,12 @@ name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
+
+[[package]]
+name = "fastrand"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "flate2"
@@ -961,7 +977,10 @@ version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f78e10609fe0e0b3f4157ffab1876319b5b0db102a2c60dc4626306dc46b44ad"
 dependencies = [
+ "fastrand",
  "futures-core",
+ "futures-io",
+ "parking",
  "pin-project-lite",
 ]
 
@@ -970,6 +989,25 @@ name = "futures-sink"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1944426bf7d03f1d14f708785e4b33efd750b36d48a157b836b3efc15ede8e1d"
+
+[[package]]
+name = "futures-task"
+version = "0.3.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd417de3d1d015fc3bfd2b1ea46dfc7bab72ef86f1cc7cc9c78e728b34a6d1fd"
+
+[[package]]
+name = "futures-util"
+version = "0.3.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81"
+dependencies = [
+ "futures-core",
+ "futures-task",
+ "pin-project-lite",
+ "pin-utils",
+ "slab",
+]
 
 [[package]]
 name = "fw_registry"
@@ -1213,7 +1251,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "617ee6cf8e3f66f3b4ea67a4058564628cde41901316e19f559e14c7c72c5e7b"
 dependencies = [
  "core-foundation-sys",
- "mach2",
+ "mach2 0.4.3",
+]
+
+[[package]]
+name = "io-kit-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06d3a048d09fbb6597dbf7c69f40d14df4a49487db1487191618c893fc3b1c26"
+dependencies = [
+ "core-foundation-sys",
+ "mach2 0.5.0",
 ]
 
 [[package]]
@@ -1252,6 +1300,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "js-sys"
+version = "0.3.106"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7883d941dae510fb2d978fc3fe018c71c9e2892fd38854de3e8b92c2e5ad9cc5"
+dependencies = [
+ "cfg-if",
+ "futures-util",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.174"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1278,6 +1337,12 @@ name = "linux-raw-sys"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd945864f07fe9f5371a27ad7b52a172b4b499999f1d97574c9fa68373937e12"
+
+[[package]]
+name = "linux-raw-sys"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "litemap"
@@ -1308,10 +1373,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
+name = "lz4_flex"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecbdfe44b1bd960b68170b417450a628c43f7cf56bb3c5317e61cb230ee7f226"
+
+[[package]]
 name = "mach2"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "mach2"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a1b95cd5421ec55b445b5ae102f5ea0e768de1f82bd3001e11f426c269c3aea"
 dependencies = [
  "libc",
 ]
@@ -1446,13 +1526,36 @@ dependencies = [
  "core-foundation 0.9.4",
  "core-foundation-sys",
  "futures-core",
- "io-kit-sys",
+ "io-kit-sys 0.4.1",
  "libc",
  "log",
  "once_cell",
  "rustix 0.38.44",
  "slab",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "nusb"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03fba503685f5c3e9f6a11ff9711c16086ab6beacaa6ad3df9e217a91a8d4c82"
+dependencies = [
+ "core-foundation 0.10.1",
+ "core-foundation-sys",
+ "futures-core",
+ "io-kit-sys 0.5.0",
+ "js-sys",
+ "linux-raw-sys 0.12.1",
+ "log",
+ "once_cell",
+ "rustix 1.0.8",
+ "slab",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1586,10 +1689,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "picoboot_host"
+version = "0.1.0"
+source = "git+https://github.com/vhrdtech/picoboot_host?tag=v0.1.0#795498dd2b17d8ff2711b8db78cccad56607bd2d"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b"
+
+[[package]]
+name = "pin-utils"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13bee6c73da26345c729282832b60b0363cf3dd9f4bfd81d8551b7a1c889a113"
 
 [[package]]
 name = "pkg-config"
@@ -1610,6 +1727,12 @@ dependencies = [
  "rustix 1.0.8",
  "windows-sys 0.60.2",
 ]
+
+[[package]]
+name = "portable-atomic"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05c8b63e8d9609db387f0324918f81d68fe27748f084ef092fb35954d0539a85"
 
 [[package]]
 name = "potential_utf"
@@ -1647,7 +1770,7 @@ dependencies = [
  "ihex",
  "itertools",
  "jep106",
- "nusb",
+ "nusb 0.1.14",
  "object 0.37.3",
  "parking_lot",
  "probe-rs-target",
@@ -1975,8 +2098,8 @@ dependencies = [
  "cfg-if",
  "core-foundation 0.10.1",
  "core-foundation-sys",
- "io-kit-sys",
- "mach2",
+ "io-kit-sys 0.4.1",
+ "mach2 0.4.3",
  "nix 0.26.4",
  "scopeguard",
  "unescaper",
@@ -2051,6 +2174,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
+name = "stm32_dfu_host"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2062,14 +2193,32 @@ version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.27.2",
 ]
+
+[[package]]
+name = "strum"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
 
 [[package]]
 name = "strum_macros"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -2173,6 +2322,27 @@ checksum = "5d4f6d1145dcb577acf783d4e601bc1d76a13337bb54e6233add580b07344c8b"
 dependencies = [
  "displaydoc",
  "zerovec",
+]
+
+[[package]]
+name = "tokio"
+version = "1.54.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0c168a474b95bfecfe908a65d4bdffc523144b649a74c09c286afb35d53e0bc"
+dependencies = [
+ "pin-project-lite",
+ "tokio-macros",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78773a2a397f451582ce068015985c33193cf6dea8b74d2a639fe457b2f07b0e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -2402,6 +2572,72 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de437e2a6208b014ab52972a27e59b33fa2920d3e00fe05026167a1c509d19cc"
 dependencies = [
  "vcell",
+]
+
+[[package]]
+name = "wasm-bindgen"
+version = "0.2.129"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bb54f33acc68fd454578d9820b0bde1a1a3d17aa17bb7b6595806d02886d409"
+dependencies = [
+ "cfg-if",
+ "once_cell",
+ "rustversion",
+ "wasm-bindgen-macro",
+ "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cbab34de2d982e9b48e18d216d04c4a6f641066ff19ffb699980f591ee3610e"
+dependencies = [
+ "js-sys",
+ "tokio",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "wasm-bindgen-macro"
+version = "0.2.129"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e29d0c35b16e224a7eeb5cd2d25e3e1968fbd65604117b44d3b789d00ee8535"
+dependencies = [
+ "quote",
+ "wasm-bindgen-macro-support",
+]
+
+[[package]]
+name = "wasm-bindgen-macro-support"
+version = "0.2.129"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f501a8bc3719dba86ef8ae4728879c08001bea749eb1333ac5b91e040e2a6b7"
+dependencies = [
+ "bumpalo",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+ "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-shared"
+version = "0.2.129"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23f0c9c52aa7cd7d77769a4cfe2a9adb1b331f489a41d912ce14513d5ab995c6"
+dependencies = [
+ "unicode-ident",
+]
+
+[[package]]
+name = "web-sys"
+version = "0.3.106"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88261b9deccee56594c11a3460c462c41f58d148598fe70ad77070126a68aba4"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -2672,6 +2908,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "wire_weaver_client"
+version = "0.5.0"
+dependencies = [
+ "anyhow",
+ "either",
+ "futures-lite",
+ "hex",
+ "nusb 0.2.8",
+ "picoboot_host",
+ "ron",
+ "semver 1.0.28",
+ "stm32_dfu_host",
+ "strum 0.28.0",
+ "strum_macros 0.28.0",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "wire_weaver",
+ "wire_weaver_snapshots",
+ "ww_client_server",
+ "ww_framer",
+ "ww_global",
+ "ww_link",
+ "ww_lz4",
+ "ww_numeric",
+ "ww_self",
+ "ww_si",
+ "ww_stream",
+ "ww_tap",
+ "ww_tape",
+ "ww_version",
+]
+
+[[package]]
 name = "wire_weaver_core"
 version = "0.5.0"
 dependencies = [
@@ -2726,6 +2996,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 
 [[package]]
+name = "ww_block"
+version = "0.1.0"
+dependencies = [
+ "crc",
+ "wire_weaver",
+ "ww_error",
+]
+
+[[package]]
+name = "ww_client_server"
+version = "0.2.0"
+dependencies = [
+ "wire_weaver",
+ "ww_global",
+ "ww_si",
+]
+
+[[package]]
+name = "ww_clock_sync"
+version = "0.5.0"
+dependencies = [
+ "tokio",
+ "wire_weaver",
+ "wire_weaver_client",
+ "ww_date_time",
+ "ww_si",
+ "ww_timebase",
+]
+
+[[package]]
 name = "ww_date_time"
 version = "0.1.0"
 dependencies = [
@@ -2739,6 +3039,14 @@ name = "ww_error"
 version = "0.1.0"
 dependencies = [
  "defmt",
+ "shrink_wrap",
+]
+
+[[package]]
+name = "ww_framer"
+version = "0.5.0"
+dependencies = [
+ "crc",
  "shrink_wrap",
 ]
 
@@ -2763,6 +3071,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ww_link"
+version = "0.5.0"
+dependencies = [
+ "shrink_wrap",
+ "wire_weaver",
+ "ww_block",
+ "ww_framer",
+ "ww_global",
+ "ww_version",
+]
+
+[[package]]
+name = "ww_lz4"
+version = "0.1.0"
+dependencies = [
+ "lz4_flex",
+]
+
+[[package]]
 name = "ww_numeric"
 version = "0.2.0"
 dependencies = [
@@ -2776,9 +3103,11 @@ name = "ww_self"
 version = "0.3.0"
 dependencies = [
  "anyhow",
+ "quote",
  "serde",
  "sha2 0.11.0",
  "shrink_wrap",
+ "syn 3.0.6",
  "ww_numeric",
  "ww_version",
 ]
@@ -2790,6 +3119,35 @@ dependencies = [
  "defmt",
  "shrink_wrap",
  "ww_numeric",
+]
+
+[[package]]
+name = "ww_stream"
+version = "0.5.0"
+dependencies = [
+ "atomic-waker",
+ "portable-atomic",
+ "wire_weaver",
+ "ww_client_server",
+ "ww_si",
+]
+
+[[package]]
+name = "ww_tap"
+version = "0.1.0"
+dependencies = [
+ "tracing",
+ "wire_weaver",
+ "ww_tape",
+]
+
+[[package]]
+name = "ww_tape"
+version = "0.1.0"
+dependencies = [
+ "crc",
+ "shrink_wrap",
+ "ww_version",
 ]
 
 [[package]]

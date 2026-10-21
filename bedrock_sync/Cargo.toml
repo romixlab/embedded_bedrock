@@ -22,3 +22,7 @@ embassy-time = { version = "0.5.1", optional = true }
 wire_weaver = { workspace = true, optional = true }
 ww_si = { path = "../../wire_weaver/ww_stdlib/ww_si", default-features = false, features = ["time", "u32"], optional = true }
 ww_timebase = { path = "../../wire_weaver/ww_stdlib/ww_timebase", default-features = false, optional = true }
+
+[dev-dependencies]
+# the host side of the closed-loop test (tests/closed_loop.rs): the estimator that fits and steers
+ww_clock_sync = { path = "../../wire_weaver/ww_clock_sync" }

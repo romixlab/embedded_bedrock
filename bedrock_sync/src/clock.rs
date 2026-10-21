@@ -121,6 +121,11 @@ impl ClockServer {
             error: clock.error_us(now_us).map(|us| {
                 Second::from_parts(Prefix::Micro, ww_si::ww_numeric::NumericValue::U32(us))
             }),
+            slew_us: clock.last_point().map(|_| {
+                clock
+                    .slew_left_at(now_us)
+                    .clamp(i32::MIN as i64, i32::MAX as i64) as i32
+            }),
         }
     }
 
@@ -225,6 +230,7 @@ fn state(s: State) -> SyncState {
     match s {
         State::Free => SyncState::Free,
         State::Locked => SyncState::Locked,
+        State::Acquiring => SyncState::Acquiring,
         State::Holdover => SyncState::Holdover,
     }
 }
@@ -276,6 +282,7 @@ mod tests {
         assert_eq!(status.state, SyncState::Locked);
         assert_eq!(status.source, Some(SyncSource::Host));
         assert_eq!(status.error, Some(micros(120)));
+        assert_eq!(status.slew_us, Some(0));
         let p = server.time_map_point(&mut clock, now).unwrap();
         assert_eq!(p.source, Some(SyncSource::Host));
         assert_eq!(p.local, micros(now));

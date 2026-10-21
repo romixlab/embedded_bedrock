@@ -3,6 +3,8 @@
 //! shown through one indication state ([Leds]): which LEDs are visible, one peak brightness for all, a colour per RGB
 //! LED, and an identify blink that overrides everything for a while.
 //!
+//! What a LED shows for what it means (ok, busy, fault, ... in a status colour) is [look], the same on every board.
+//!
 //! The layers, each usable on its own:
 //! - [Animation] steps a [Mode] every [TICK_MS] and gives its perceptual level (0..=65535); [scale] applies a peak
 //!   brightness, [duty] the gamma. Plain u32 math, tested on the host. With shared time (a host-steered or
@@ -23,6 +25,7 @@ mod driver;
 #[cfg(feature = "ww-indication")]
 pub mod indication;
 mod leds;
+pub mod look;
 mod output;
 
 #[cfg(feature = "embassy")]

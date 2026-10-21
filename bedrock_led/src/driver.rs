@@ -14,13 +14,13 @@ use crate::{Leds, Mode, SharedTime, TICK_MS};
 /// change.
 ///
 /// ```ignore
-/// use bedrock_led::{Channel, Indication, Mode, Pwm};
+/// use bedrock_led::{Channel, Indication, Mode, Pwm, look};
 ///
 /// pub static LEDS: Indication<2> = Indication::new();
 ///
 /// #[embassy_executor::task]
 /// async fn led_task(mut power: Pwm<SimplePwmChannel<'static, TIM14>>, mut rgb: [Pwm<SimplePwmChannel<'static, TIM3>>; 3]) {
-///     LEDS.run([Mode::Breath { period_ms: 3000 }, Mode::On], |leds| {
+///     LEDS.run([look::OK.mode, Mode::On], |leds| {
 ///         power.set_level(leds.level(0));
 ///         for (ch, level) in rgb.iter_mut().zip(leds.rgb(1)) {
 ///             ch.set_level(level);

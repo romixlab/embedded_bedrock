@@ -5,6 +5,8 @@
 //!
 //! - [SharedClock] is the clock: HAL-free, integer math, host-tested. It follows its best source (a locked sync
 //!   line before the host), slews to a new point instead of stepping, and coasts in holdover when the points stop.
+//!   [State] says how far to trust it: `Acquiring` while it follows a source but is farther off than
+//!   [Config::lock_within_us] (slewing fast, 5 %), `Locked` once within (slewing at 1 %).
 //! - [Oscillator] is an optional backend for chips that can trim their own clock (a fractional PLL): the rate is
 //!   then corrected in hardware and the software correction stays near zero.
 //! - `Sync` (feature `embassy`) is a [SharedClock] in a `static` on embassy-time's `Instant`, with
@@ -31,6 +33,8 @@ const Q: u32 = 20;
 const CHUNK: u64 = 1 << 15;
 /// Largest rate correction followed, in Q20: ±3 % (an RC oscillator is ±1-2 % off).
 const RATE_MAX: i32 = 31_457;
+/// Fastest slew, in Q20: 6 %. [CHUNK] times it plus a carried fraction stays below 2^31.
+const SLEW_MAX: i32 = 62_914;
 
 /// Where the shared clock takes its time from. By default ([Sources] not set) a locked line before the host.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -96,13 +100,22 @@ impl Sources {
 }
 
 /// State of the shared clock.
+///
+/// `Acquiring` and `Locked` both follow a source; what tells them apart is how close the clock is: the offset
+/// still to slew in plus the source's own error, against [Config::lock_within_us]. A clock enters `Locked` once
+/// that is within the setting and leaves it again (back to `Acquiring`) when a steer point finds it more than twice
+/// the setting off, or steps it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum State {
     /// Never steered, or coasting for longer than [Config::free_after_us]: [SharedClock::shared] still runs (on the
     /// last line, once there was one) but nothing vouches for it.
     Free,
-    /// Steer points come in: the shared clock follows [SharedClock::source].
+    /// Steer points come in and the clock follows [SharedClock::source], but it isn't within
+    /// [Config::lock_within_us] yet: it slews at [Config::acquire_slew_ppm].
+    Acquiring,
+    /// Steer points come in and the clock is within [Config::lock_within_us] of [SharedClock::source]: what it
+    /// says is shared time to that, and LEDs on several boards are in phase. Slews at [Config::slew_ppm].
     Locked,
     /// Steer points stopped coming: coasting on the last offset and rate.
     Holdover,
@@ -149,8 +162,15 @@ pub struct Config {
     pub holdover_after_us: u64,
     /// In holdover for this long, the clock counts as free again (1 h).
     pub free_after_us: u64,
-    /// How fast an offset is slewed away, in ppm of local time (10 000: 1 %, 10 ms in a second).
+    /// How fast an offset is slewed away once locked, in ppm of local time (10 000: 1 %, 10 ms in a second).
     pub slew_ppm: u32,
+    /// How fast an offset is slewed away while acquiring (50 000: 5 %, 250 ms in 5 s). Up to 6 %; shared time
+    /// still never jumps or runs backwards.
+    pub acquire_slew_ppm: u32,
+    /// The clock is `Locked` once the offset still to slew plus the source's error is within this, µs; `Acquiring`
+    /// until then. 2 ms: a full-speed USB board's own error bound is about 1 ms (half its shortest round trip and
+    /// the scatter of the host's fit, Donguru), and LEDs look in phase far beyond that.
+    pub lock_within_us: u32,
     /// A new point farther off than this is stepped to instead of slewed (1 s: something went wrong).
     pub step_above_us: u64,
     /// How fast the error grows in holdover, in ppb (10 ppm: an RC oscillator's temperature drift).
@@ -162,6 +182,8 @@ impl Config {
         holdover_after_us: 3_000_000,
         free_after_us: 3_600_000_000,
         slew_ppm: 10_000,
+        acquire_slew_ppm: 50_000,
+        lock_within_us: 2_000,
         step_above_us: 1_000_000,
         holdover_drift_ppb: 10_000,
     };
@@ -190,6 +212,9 @@ pub struct SharedClock {
     slew_frac: i32,
     /// Slew rate, Q20.
     slew: i32,
+    /// Was within [Config::lock_within_us] at or since the last point: `Locked` until a point finds it twice that
+    /// far off.
+    locked: bool,
     /// Ever steered: `base_*` hold a line.
     steered: bool,
     /// Local time of the last point followed (or noted from the followed source).
@@ -217,7 +242,8 @@ impl SharedClock {
             rate: 0,
             slew_left: 0,
             slew_frac: 0,
-            slew: ((config.slew_ppm as u64 * (1 << Q)) / 1_000_000) as i32,
+            slew: slew_q20(config.acquire_slew_ppm),
+            locked: false,
             steered: false,
             last_point: 0,
             source: None,
@@ -312,7 +338,10 @@ impl SharedClock {
         source: Source,
         osc: &mut impl Oscillator,
     ) -> Result<Steered, SteerError> {
-        let followed = self.source.filter(|_| self.state(now_us) == State::Locked);
+        let was = self.state(now_us);
+        let followed = self
+            .source
+            .filter(|_| matches!(was, State::Locked | State::Acquiring));
         let Some(rank) = self.rank(source) else {
             return Ok(Steered::Ignored(followed));
         };
@@ -352,6 +381,23 @@ impl SharedClock {
                 Steered::Stepped
             }
         };
+        // how far off the point found the clock: in lock within the setting, out of it beyond twice that
+        let within = self.config.lock_within_us as u64;
+        let off = match steered {
+            Steered::Slewing(off) => off.unsigned_abs() + point.error_us as u64,
+            _ => u64::MAX,
+        };
+        self.locked = self.source == Some(source)
+            && if was == State::Locked {
+                off <= 2 * within
+            } else {
+                off <= within
+            };
+        self.slew = slew_q20(if self.locked {
+            self.config.slew_ppm
+        } else {
+            self.config.acquire_slew_ppm
+        });
         if self.source != Some(source) {
             self.generation = self.generation.wrapping_add(1);
         }
@@ -404,7 +450,12 @@ impl SharedClock {
         let since = now_us.saturating_sub(self.last_point);
         let allowed = self.source.is_some_and(|s| self.rank(s).is_some());
         if since <= self.config.holdover_after_us && allowed {
-            State::Locked
+            let off = self.slew_left_at(now_us).unsigned_abs() + self.error_us as u64;
+            if self.locked || off <= self.config.lock_within_us as u64 {
+                State::Locked
+            } else {
+                State::Acquiring
+            }
         } else if since <= self.config.holdover_after_us + self.config.free_after_us {
             State::Holdover
         } else {
@@ -412,7 +463,16 @@ impl SharedClock {
         }
     }
 
-    /// The source followed (`Locked`) or last followed (`Holdover`, `Free` after a lock).
+    /// Offset still to slew in at local time `now_us` (not before the last [shared](Self::shared) call), µs:
+    /// positive while shared time is being sped up to catch up. 0 before the first point.
+    pub fn slew_left_at(&self, now_us: u64) -> i64 {
+        let d = now_us.saturating_sub(self.base_local);
+        let done =
+            (d.saturating_mul(self.slew as u64) >> Q).min(self.slew_left.unsigned_abs()) as i64;
+        self.slew_left - self.slew_left.signum() * done
+    }
+
+    /// The source followed (`Acquiring`, `Locked`) or last followed (`Holdover`, `Free` after a lock).
     pub fn source(&self) -> Option<Source> {
         self.source
     }
@@ -426,8 +486,8 @@ impl SharedClock {
         let coasting = now_us.saturating_sub(self.last_point + self.config.holdover_after_us);
         let drift = coasting / 1_000 * self.config.holdover_drift_ppb as u64 / 1_000_000;
         Some(
-            (self.error_us as u64 + drift + self.slew_left.unsigned_abs()).min(u32::MAX as u64)
-                as u32,
+            (self.error_us as u64 + drift + self.slew_left_at(now_us).unsigned_abs())
+                .min(u32::MAX as u64) as u32,
         )
     }
 
@@ -468,6 +528,16 @@ impl SharedClock {
 impl Default for SharedClock {
     fn default() -> Self {
         Self::new(Config::DEFAULT)
+    }
+}
+
+/// A slew of `ppm` in Q20, at most [SLEW_MAX]. Cold: once per steer point.
+const fn slew_q20(ppm: u32) -> i32 {
+    let q = (ppm as u64 * (1 << Q)) / 1_000_000;
+    if q > SLEW_MAX as u64 {
+        SLEW_MAX
+    } else {
+        q as i32
     }
 }
 
