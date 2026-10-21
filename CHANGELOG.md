@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Fixed
+
+- `bedrock_template/`: the manifests are `Cargo.toml.liquid` (cargo-generate drops the suffix), so cargo no longer
+  prints parse errors for them when a firmware takes `bedrock_crash` from git (TPL-20).
+
 ## [0.2.5] - 2026-10-21
 
 ### Added

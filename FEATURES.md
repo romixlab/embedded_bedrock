@@ -79,7 +79,8 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   LED pin.
 - 📋 **TPL-19 Ozone and GDB / LLDB start scripts** in generated projects.
 - 🔍 **TPL-20 Old cargo-generate template** (`bedrock_template/`): superseded by the skill; check nothing still uses
-  it, then move it to *Dropped*.
+  it, then move it to *Dropped*. Its manifests are `Cargo.toml.liquid`: cargo scans every `Cargo.toml` of a git
+  dependency's repo, and the template tags in them gave parse errors in firmware taking `bedrock_crash` from git.
 - 📋 **TPL-21 Hardware test matrix**: bootloader update cycle, settings stored across a power cut, BKP counters across reset, WireWeaver USB
   enumeration, on at least one STM32, RP and nRF board.
 - 📋 **TPL-24 Settings store with `--bootloader`**: the embassy-boot updater in `main` and `src/settings.rs` both
