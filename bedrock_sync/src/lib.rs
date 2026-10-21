@@ -32,14 +32,67 @@ const CHUNK: u64 = 1 << 15;
 /// Largest rate correction followed, in Q20: ±3 % (an RC oscillator is ±1-2 % off).
 const RATE_MAX: i32 = 31_457;
 
-/// Where the shared clock takes its time from, best first.
+/// Where the shared clock takes its time from. By default ([Sources] not set) a locked line before the host.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Source {
-    /// A sync line this device is a slave on (IRIG-B, PPS): µs between the boards on the line.
-    Line,
+    /// A sync line this device is a slave on: µs between the boards on the line.
+    Line(Line),
     /// The host steering it over its API: tens of µs to the host, and the host's UTC is as good as its NTP.
     Host,
+}
+
+/// The format of a sync line, as `ww_timebase::SyncFormat`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Line {
+    IrigB,
+    Pps,
+}
+
+/// An explicit source list, best first, see [SharedClock::set_sources]: `[Line(IrigB), Host]`, or `[Line(IrigB)]`
+/// for "never let a PC steer me". Up to [Sources::MAX] sources, each once.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Sources {
+    list: [Source; Sources::MAX],
+    len: u8,
+}
+
+/// Why a source list was refused.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum SourcesError {
+    /// More than [Sources::MAX] sources.
+    TooMany,
+    /// A source named twice.
+    Twice,
+}
+
+impl Sources {
+    /// Most sources in a list: every line format and the host.
+    pub const MAX: usize = 4;
+
+    pub fn new(sources: &[Source]) -> Result<Self, SourcesError> {
+        let mut list = [Source::Host; Self::MAX];
+        if sources.len() > Self::MAX {
+            return Err(SourcesError::TooMany);
+        }
+        for (i, s) in sources.iter().enumerate() {
+            if sources[..i].contains(s) {
+                return Err(SourcesError::Twice);
+            }
+            list[i] = *s;
+        }
+        Ok(Sources {
+            list,
+            len: sources.len() as u8,
+        })
+    }
+
+    pub fn as_slice(&self) -> &[Source] {
+        &self.list[..self.len as usize]
+    }
 }
 
 /// State of the shared clock.
@@ -75,8 +128,9 @@ pub enum Steered {
     Slewing(i64),
     /// Followed by a step: the first point, or one farther off than [Config::step_above_us].
     Stepped,
-    /// Only noted: the clock follows a better source (a locked line, when the host steers).
-    Ignored(Source),
+    /// Only noted: the source isn't allowed by the list, or the clock follows a better one that is locked. The source
+    /// followed, `None` for none.
+    Ignored(Option<Source>),
 }
 
 /// Why a steer point was refused.
@@ -141,6 +195,8 @@ pub struct SharedClock {
     /// Local time of the last point followed (or noted from the followed source).
     last_point: u64,
     source: Option<Source>,
+    /// The explicit source list, `None`: a locked line before the host.
+    sources: Option<Sources>,
     /// The followed source's error at its last point.
     error_us: u32,
     /// The host's rate of the last point, the oscillator trim asked for (unquantised, so steps smaller than the
@@ -165,6 +221,7 @@ impl SharedClock {
             steered: false,
             last_point: 0,
             source: None,
+            sources: None,
             error_us: 0,
             rate_ppb: 0,
             trim_target: 0,
@@ -255,9 +312,15 @@ impl SharedClock {
         source: Source,
         osc: &mut impl Oscillator,
     ) -> Result<Steered, SteerError> {
-        let state = self.state(now_us);
-        if source == Source::Host && self.source == Some(Source::Line) && state == State::Locked {
-            return Ok(Steered::Ignored(Source::Line));
+        let followed = self.source.filter(|_| self.state(now_us) == State::Locked);
+        let Some(rank) = self.rank(source) else {
+            return Ok(Steered::Ignored(followed));
+        };
+        if let Some(f) = followed
+            && f != source
+            && self.rank(f).is_some_and(|r| r < rank)
+        {
+            return Ok(Steered::Ignored(Some(f)));
         }
         // the oscillator takes a share of the rate; the software keeps the rest
         let trim_step = osc.trim_step_ppb(point.rate_ppb);
@@ -310,13 +373,37 @@ impl SharedClock {
         self.generation = self.generation.wrapping_add(1);
     }
 
+    /// Replaces the fixed ranking (a locked line before the host) with an explicit list, best first; `None` goes
+    /// back to the fixed ranking. A source the list leaves out is only noted from then on: if it is the one followed,
+    /// the clock goes into holdover on it until an allowed source steers it (slewed, as any switch).
+    pub fn set_sources(&mut self, sources: Option<Sources>) {
+        self.sources = sources;
+    }
+
+    /// The explicit source list, `None` for the fixed ranking.
+    pub fn sources(&self) -> Option<&[Source]> {
+        self.sources.as_ref().map(Sources::as_slice)
+    }
+
+    /// Place of `source` in the ranking, best first; `None` when it isn't allowed.
+    fn rank(&self, source: Source) -> Option<usize> {
+        match &self.sources {
+            Some(list) => list.as_slice().iter().position(|s| *s == source),
+            None => Some(match source {
+                Source::Line(_) => 0,
+                Source::Host => 1,
+            }),
+        }
+    }
+
     /// State at local time `now_us`.
     pub fn state(&self, now_us: u64) -> State {
         if !self.steered {
             return State::Free;
         }
         let since = now_us.saturating_sub(self.last_point);
-        if since <= self.config.holdover_after_us {
+        let allowed = self.source.is_some_and(|s| self.rank(s).is_some());
+        if since <= self.config.holdover_after_us && allowed {
             State::Locked
         } else if since <= self.config.holdover_after_us + self.config.free_after_us {
             State::Holdover

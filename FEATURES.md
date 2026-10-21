@@ -151,7 +151,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   sync, design P2528 `clock-sync.md`). `SharedClock` (HAL-free, host-tested) follows its best source (a locked line
   beats the host), slews to each new steer point at 1 % instead of stepping (steps only from free or beyond 1 s, with
   a `generation` that changes), coasts in holdover after 3 s without points and counts as free after an hour, with an
-  error estimate that grows in holdover; `local_at` for scheduled actions. Hot path (`shared`, every LED tick) without
+  error estimate that grows in holdover; an explicit source list (`Sources`, best first, `set_sources`: a source left
+  out is only noted, `None` keeps the fixed ranking; `Source::Line(Line::IrigB | Pps)`); `local_at` for scheduled
+  actions. Hot path (`shared`, every LED tick) without
   any libcall on the Cortex-M0+ at opt-level `z` and `3` (checked in the disassembly, 21 Oct 2026): 64-bit adds, 32-bit
   products of chunks up to 32 ms; a gap longer than that takes a cold path with two `__aeabi_lmul`, a steer point
   (once a second) a 64-bit divide. `Oscillator` backend: a chip with a fractional PLL takes the rate in hardware
@@ -159,7 +161,8 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   30 s window: a PLL 50 ppm slow converges without overshoot); first user B135B PLL1 FRACN (tpm P2404#21oct-1657),
   not Donguru's HSI trim (too coarse) nor the RP2350 (no fractional PLL). Feature `embassy`: `Sync` in a `static` on
   `Instant` (`shared_now`, `steer`, `wait_until_shared`); feature `ww-timebase`: `ClockServer`, the `Clock` server
-  bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`). Hardware check
+  bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`, `set_sources` /
+  `sources`). Hardware check
   open: Donguru and rePort steered by `ww sync` (P2528 piece 6).
 - 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath
   or blink at `t mod period` of shared time (UTC), WSPR-style, so boards showing the same mode are in phase with

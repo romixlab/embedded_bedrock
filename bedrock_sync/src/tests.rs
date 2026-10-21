@@ -118,7 +118,7 @@ fn holdover_then_free_with_growing_error() {
 fn a_locked_line_beats_the_host() {
     let mut c = SharedClock::default();
     assert_eq!(
-        c.steer(0, point(0, UTC, 0), Source::Line),
+        c.steer(0, point(0, UTC, 0), Source::Line(Line::IrigB)),
         Ok(Steered::Stepped)
     );
     let g = c.generation();
@@ -128,7 +128,7 @@ fn a_locked_line_beats_the_host() {
             point(1_000_000, UTC + 1_000_300, 0),
             Source::Host
         ),
-        Ok(Steered::Ignored(Source::Line))
+        Ok(Steered::Ignored(Some(Source::Line(Line::IrigB))))
     );
     assert_eq!(c.shared(1_000_000), Some(UTC + 1_000_000));
     // the line is lost: the host takes over, slewed, and the switch shows in the generation
@@ -145,11 +145,11 @@ fn a_locked_line_beats_the_host() {
         c.steer(
             5_000_000,
             point(5_000_000, UTC + 5_000_000, 0),
-            Source::Line
+            Source::Line(Line::IrigB)
         ),
         Ok(Steered::Slewing(-300))
     );
-    assert_eq!(c.source(), Some(Source::Line));
+    assert_eq!(c.source(), Some(Source::Line(Line::IrigB)));
 }
 
 #[test]
@@ -260,4 +260,53 @@ fn no_oscillator_keeps_everything_in_software() {
     c.steer_with(0, point(0, UTC, 5_000), Source::Host, &mut NoOscillator)
         .unwrap();
     assert_eq!(c.rates(), (5_000, 0));
+}
+
+#[test]
+fn the_source_list_decides() {
+    let irig = Source::Line(Line::IrigB);
+    let pps = Source::Line(Line::Pps);
+    let mut c = SharedClock::default();
+    assert_eq!(c.sources(), None);
+    // never let a PC steer me
+    c.set_sources(Some(Sources::new(&[irig]).unwrap()));
+    assert_eq!(c.sources(), Some(&[irig][..]));
+    assert_eq!(
+        c.steer(0, point(0, UTC, 0), Source::Host),
+        Ok(Steered::Ignored(None))
+    );
+    assert_eq!(c.shared(0), None);
+    assert_eq!(c.steer(0, point(0, UTC, 0), irig), Ok(Steered::Stepped));
+    assert_eq!(
+        c.steer(10, point(10, UTC + 10, 0), Source::Host),
+        Ok(Steered::Ignored(Some(irig)))
+    );
+    // PPS before IRIG-B: a PPS point wins over the locked IRIG-B line, and IRIG-B is then only noted
+    c.set_sources(Some(Sources::new(&[pps, irig, Source::Host]).unwrap()));
+    assert_eq!(
+        c.steer(20, point(20, UTC + 25, 0), pps),
+        Ok(Steered::Slewing(5))
+    );
+    assert_eq!(
+        c.steer(30, point(30, UTC + 30, 0), irig),
+        Ok(Steered::Ignored(Some(pps)))
+    );
+    // the host before the line: followed while the line is locked
+    c.set_sources(Some(Sources::new(&[Source::Host, pps]).unwrap()));
+    assert!(matches!(
+        c.steer(40, point(40, UTC + 45, 0), Source::Host),
+        Ok(Steered::Slewing(_))
+    ));
+    assert_eq!(c.source(), Some(Source::Host));
+    // a list that leaves the followed source out: holdover on it
+    c.set_sources(Some(Sources::new(&[pps]).unwrap()));
+    assert_eq!(c.state(50), State::Holdover);
+    // back to the fixed ranking
+    c.set_sources(None);
+    assert_eq!(c.state(50), State::Locked);
+    assert_eq!(Sources::new(&[irig, irig]), Err(SourcesError::Twice));
+    assert_eq!(
+        Sources::new(&[irig, pps, Source::Host, irig, pps]),
+        Err(SourcesError::TooMany)
+    );
 }

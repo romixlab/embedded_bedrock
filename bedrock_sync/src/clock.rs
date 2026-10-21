@@ -5,6 +5,9 @@
 //! writes a local time as a [Second] (the same function its `now()` uses), so `time_map` and `sync_status` come in
 //! the same prefix and storage. Driving a sync line (IRIG-B, PPS) is the board's too: it steers the same
 //! [SharedClock] with [Source::Line] points.
+//!
+//! `set_sources` / `sources` keep the explicit source list in both forms: the [SharedClock]'s, which decides, and
+//! the `ww_timebase` one the board answers `sources()` with.
 
 use wire_weaver::prelude::*;
 use ww_si::Prefix;
@@ -13,7 +16,7 @@ use ww_timebase::{
     TimeMapPoint,
 };
 
-use crate::{SharedClock, Source, State, Steer, SteerError, Steered};
+use crate::{Line, SharedClock, Source, Sources, SourcesError, State, Steer, SteerError, Steered};
 
 /// The `Clock` server's state besides the [SharedClock]: the sync line's configuration and how the board writes
 /// local time.
@@ -21,6 +24,8 @@ use crate::{SharedClock, Source, State, Steer, SteerError, Steered};
 pub struct ClockServer {
     config: SyncConfig,
     to_second: fn(u64) -> Second,
+    /// The explicit source list as `sources()` answers it, `None` for the fixed ranking.
+    sources: Option<([SyncSource; Sources::MAX], u8)>,
 }
 
 impl ClockServer {
@@ -29,6 +34,7 @@ impl ClockServer {
         ClockServer {
             config: SyncConfig::Off,
             to_second,
+            sources: None,
         }
     }
 
@@ -61,7 +67,7 @@ impl ClockServer {
         clock: &mut SharedClock,
         now_us: u64,
         point: &SteerPoint,
-    ) -> Result<SyncSource, ClockError<'static>> {
+    ) -> Result<Option<SyncSource>, ClockError<'static>> {
         let invalid = |reason| -> ClockError<'static> {
             CommonError::InvalidArgument {
                 arg: 0,
@@ -83,8 +89,8 @@ impl ClockServer {
             error_us: point.error_us,
         };
         match clock.steer(now_us, steer, Source::Host) {
-            Ok(Steered::Ignored(source)) => Ok(self.source(source)),
-            Ok(_) => Ok(SyncSource::Host),
+            Ok(Steered::Ignored(source)) => Ok(source.map(sync_source)),
+            Ok(_) => Ok(Some(SyncSource::Host)),
             Err(SteerError::RateOutOfRange) => Err(invalid("rate beyond 3 %")),
         }
     }
@@ -96,7 +102,7 @@ impl ClockServer {
             // local minus shared doesn't fit a device timestamp's storage when shared time is UTC
             offset: None,
             last_lock: clock.last_point().map(self.to_second),
-            source: clock.source().map(|s| self.source(s)),
+            source: clock.source().map(sync_source),
             error: clock.error_us(now_us).map(|us| {
                 Second::from_parts(Prefix::Micro, ww_si::ww_numeric::NumericValue::U32(us))
             }),
@@ -111,7 +117,7 @@ impl ClockServer {
             local: (self.to_second)(now_us),
             shared: (self.to_second)(shared),
             state: state(clock.state(now_us)),
-            source: clock.source().map(|s| self.source(s)),
+            source: clock.source().map(sync_source),
         })
     }
 
@@ -123,17 +129,80 @@ impl ClockServer {
     /// `info().sync_formats` of a board without a sync line: none (host steering needs no format).
     pub const NO_LINE: &'static [SyncFormat] = &[];
 
-    fn source(&self, source: Source) -> SyncSource {
-        match (source, self.config) {
-            (Source::Line, SyncConfig::Slave { format } | SyncConfig::Master { format }) => {
-                SyncSource::Line { format }
+    /// `Clock::set_sources`: the list, best first, or `None` for the fixed ranking (a locked line before the host).
+    /// `Unsupported` for a line format not in `supported` (the board's `info().sync_formats`), `InvalidArgument` for
+    /// a source named twice, more than [Sources::MAX] of them, or one from a newer API.
+    pub fn set_sources(
+        &mut self,
+        clock: &mut SharedClock,
+        sources: Option<MaxLen<RefVec<'_, SyncSource>, 8>>,
+        supported: &[SyncFormat],
+    ) -> Result<(), ClockError<'static>> {
+        let invalid = |reason| -> ClockError<'static> {
+            CommonError::InvalidArgument {
+                arg: 0,
+                reason: MaxLen::new_unchecked(reason),
             }
-            // a line source without a line configured: the board steered it with its own format
-            (Source::Line, _) => SyncSource::Line {
-                format: SyncFormat::Pps,
-            },
-            (Source::Host, _) => SyncSource::Host,
+            .into()
+        };
+        let Some(sources) = sources else {
+            clock.set_sources(None);
+            self.sources = None;
+            return Ok(());
+        };
+        let mut wire = [SyncSource::Host; Sources::MAX];
+        let mut list = [Source::Host; Sources::MAX];
+        let mut len = 0;
+        for s in sources.iter() {
+            let s = s.map_err(|_| invalid("a source list that doesn't read"))?;
+            if len == Sources::MAX {
+                return Err(invalid("more than 4 sources"));
+            }
+            list[len] = match s {
+                SyncSource::Host => Source::Host,
+                SyncSource::Line { format } if !supported.contains(&format) => {
+                    return Err(CommonError::Unsupported.into());
+                }
+                SyncSource::Line {
+                    format: SyncFormat::IrigB,
+                } => Source::Line(Line::IrigB),
+                SyncSource::Line {
+                    format: SyncFormat::Pps,
+                } => Source::Line(Line::Pps),
+                _ => return Err(invalid("a source from a newer version")),
+            };
+            wire[len] = s;
+            len += 1;
         }
+        let checked = Sources::new(&list[..len]).map_err(|e| match e {
+            SourcesError::TooMany => invalid("more than 4 sources"),
+            SourcesError::Twice => invalid("a source named twice"),
+        })?;
+        clock.set_sources(Some(checked));
+        self.sources = Some((wire, len as u8));
+        Ok(())
+    }
+
+    /// `Clock::sources`.
+    pub fn sources(&self) -> Option<MaxLen<RefVec<'_, SyncSource>, 8>> {
+        self.sources.as_ref().map(|(list, len)| {
+            MaxLen::new_unchecked(RefVec::Slice {
+                slice: &list[..*len as usize],
+            })
+        })
+    }
+}
+
+/// `source` as `ww_timebase` names it.
+pub fn sync_source(source: Source) -> SyncSource {
+    match source {
+        Source::Line(Line::IrigB) => SyncSource::Line {
+            format: SyncFormat::IrigB,
+        },
+        Source::Line(Line::Pps) => SyncSource::Line {
+            format: SyncFormat::Pps,
+        },
+        Source::Host => SyncSource::Host,
     }
 }
 
@@ -180,7 +249,10 @@ mod tests {
             rate_ppb: 0,
             error_us: 120,
         };
-        assert_eq!(server.steer(&mut clock, now, &point), Ok(SyncSource::Host));
+        assert_eq!(
+            server.steer(&mut clock, now, &point),
+            Ok(Some(SyncSource::Host))
+        );
         assert_eq!(
             server.shared_now(&mut clock, now),
             Some(1_761_000_000_000_500)
@@ -232,7 +304,7 @@ mod tests {
             rate_ppb: 0,
             error_us: 2,
         };
-        clock.steer(0, line, Source::Line).unwrap();
+        clock.steer(0, line, Source::Line(Line::IrigB)).unwrap();
         let point = SteerPoint {
             local: micros(10),
             shared_us: 1_761_000_000_000_300,
@@ -242,10 +314,62 @@ mod tests {
         // the host is only noted while the line is locked
         assert_eq!(
             server.steer(&mut clock, 10, &point),
-            Ok(SyncSource::Line {
+            Ok(Some(SyncSource::Line {
                 format: SyncFormat::IrigB
-            })
+            }))
         );
         assert_eq!(clock.shared(10), Some(1_761_000_000_000_010));
+    }
+
+    #[test]
+    fn source_list_in_both_forms() {
+        let mut server = ClockServer::new(micros);
+        let mut clock = SharedClock::default();
+        assert!(server.sources().is_none());
+        let irig = SyncSource::Line {
+            format: SyncFormat::IrigB,
+        };
+        let only_line = [irig];
+        let list = || {
+            MaxLen::new_unchecked(RefVec::Slice {
+                slice: &only_line[..],
+            })
+        };
+        assert_eq!(
+            server.set_sources(&mut clock, Some(list()), ClockServer::NO_LINE),
+            Err(CommonError::Unsupported.into())
+        );
+        server
+            .set_sources(&mut clock, Some(list()), &[SyncFormat::IrigB])
+            .unwrap();
+        let back: Vec<_> = server
+            .sources()
+            .unwrap()
+            .iter()
+            .map(|s| s.unwrap())
+            .collect();
+        assert_eq!(back, [irig]);
+        assert_eq!(clock.sources(), Some(&[Source::Line(Line::IrigB)][..]));
+        // the host is only noted, nothing followed
+        let point = SteerPoint {
+            local: micros(10),
+            shared_us: 1_761_000_000_000_300,
+            rate_ppb: 0,
+            error_us: 100,
+        };
+        assert_eq!(server.steer(&mut clock, 10, &point), Ok(None));
+        let twice = [SyncSource::Host, SyncSource::Host];
+        let r = server.set_sources(
+            &mut clock,
+            Some(MaxLen::new_unchecked(RefVec::Slice { slice: &twice[..] })),
+            &[],
+        );
+        assert!(r.is_err());
+        server.set_sources(&mut clock, None, &[]).unwrap();
+        assert!(server.sources().is_none());
+        assert_eq!(
+            server.steer(&mut clock, 10, &point),
+            Ok(Some(SyncSource::Host))
+        );
     }
 }
