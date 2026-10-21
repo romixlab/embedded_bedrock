@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-10-21
+
 ### Added
 
 - `bedrock_sync` (DEV-13): `ClockServer::steer_with`, `Clock::steer` on a board with an `Oscillator` backend (first user: B135's H725 PLL1 / PLL2 FRACN).
