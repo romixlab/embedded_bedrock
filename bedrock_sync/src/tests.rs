@@ -8,6 +8,15 @@ fn point(local_us: u64, shared_us: u64, rate_ppb: i32) -> Steer {
         shared_us,
         rate_ppb,
         error_us: 100,
+        steerer: 0,
+    }
+}
+
+/// A point from steerer `id`.
+fn from(id: u64, local_us: u64, shared_us: u64) -> Steer {
+    Steer {
+        steerer: id,
+        ..point(local_us, shared_us, 0)
     }
 }
 
@@ -406,4 +415,109 @@ fn a_large_offset_is_slewed_fast_while_acquiring() {
     }
     let locked_at = locked_at.expect("locked");
     assert!((5_000_000..5_200_000).contains(&locked_at), "{locked_at}");
+}
+
+#[test]
+fn one_steerer_at_a_time() {
+    let mut c = SharedClock::default();
+    assert_eq!(
+        c.steer(0, from(1, 0, UTC), Source::Host),
+        Ok(Steered::Stepped)
+    );
+    assert_eq!(c.steerer(), 1);
+    let g = c.generation();
+    // a second steerer 3 ms apart: only noted while the first one's points keep coming
+    for i in 1..=5u64 {
+        let now = i * 1_000_000;
+        assert_eq!(
+            c.steer(now, from(2, now, UTC + now + 3_000), Source::Host),
+            Ok(Steered::OtherSteerer)
+        );
+        assert_eq!(
+            c.steer(now + 1, from(1, now + 1, UTC + now + 1), Source::Host),
+            Ok(Steered::Slewing(0))
+        );
+    }
+    assert_eq!(c.steerer(), 1);
+    assert_eq!(c.generation(), g);
+    assert_eq!(c.shared(5_000_001), Some(UTC + 5_000_001));
+    assert_eq!(c.state(5_000_001), State::Locked);
+}
+
+#[test]
+fn the_next_steerer_takes_over_after_the_followed_one_was_quiet() {
+    let mut c = SharedClock::default();
+    c.steer(0, from(1, 0, UTC), Source::Host).unwrap();
+    // just within the holdover time: still held
+    assert_eq!(
+        c.steer(3_000_000, from(2, 3_000_000, UTC + 3_003_000), Source::Host),
+        Ok(Steered::OtherSteerer)
+    );
+    let g = c.generation();
+    // the first one quiet for longer: the second takes over, slewed, and acquires as after any switch
+    let now = 3_000_001;
+    assert_eq!(c.state(now), State::Holdover);
+    assert_eq!(
+        c.steer(now, from(2, now, UTC + now + 3_000), Source::Host),
+        Ok(Steered::Slewing(3_000))
+    );
+    assert_eq!(c.steerer(), 2);
+    assert_ne!(c.generation(), g, "a steerer switch is a seam");
+    assert_eq!(c.state(now), State::Acquiring);
+    // now the first one is the other steerer
+    assert_eq!(
+        c.steer(now + 1, from(1, now + 1, UTC + now + 1), Source::Host),
+        Ok(Steered::OtherSteerer)
+    );
+}
+
+#[test]
+fn points_that_name_nobody_are_a_steerer_of_their_own() {
+    let mut c = SharedClock::default();
+    c.steer(0, point(0, UTC, 0), Source::Host).unwrap();
+    assert_eq!(c.steerer(), 0);
+    assert_eq!(
+        c.steer(1_000_000, from(7, 1_000_000, UTC + 1_000_000), Source::Host),
+        Ok(Steered::OtherSteerer)
+    );
+    assert_eq!(
+        c.steer(
+            2_000_000,
+            point(2_000_000, UTC + 2_000_000, 0),
+            Source::Host
+        ),
+        Ok(Steered::Slewing(0))
+    );
+    // a named steerer first, then anonymous points: noted the same way
+    let mut c = SharedClock::default();
+    c.steer(0, from(7, 0, UTC), Source::Host).unwrap();
+    assert_eq!(
+        c.steer(
+            1_000_000,
+            point(1_000_000, UTC + 1_000_000, 0),
+            Source::Host
+        ),
+        Ok(Steered::OtherSteerer)
+    );
+}
+
+#[test]
+fn a_locked_line_beats_any_steerer() {
+    let mut c = SharedClock::default();
+    c.steer(0, point(0, UTC, 0), Source::Line(Line::IrigB))
+        .unwrap();
+    assert_eq!(
+        c.steer(10, from(1, 10, UTC + 300), Source::Host),
+        Ok(Steered::Ignored(Some(Source::Line(Line::IrigB))))
+    );
+    // the line gone: the steerer takes over, and holds against a second one
+    let now = 3_000_001;
+    assert!(matches!(
+        c.steer(now, from(1, now, UTC + now), Source::Host),
+        Ok(Steered::Slewing(_))
+    ));
+    assert_eq!(
+        c.steer(now + 1, from(2, now + 1, UTC + now + 1), Source::Host),
+        Ok(Steered::OtherSteerer)
+    );
 }

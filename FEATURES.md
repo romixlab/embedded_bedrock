@@ -165,6 +165,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `sources`). States (21 Oct 2026): `Acquiring` while the slew left plus the source's error is above
   `Config::lock_within_us` (2 ms: a full-speed USB board's own error bound is about 1 ms), slewing at 5 %; `Locked`
   once within, slewing at 1 %; back to `Acquiring` beyond twice the setting or on a step; `SyncStatus::slew_us`.
+  One steerer at a time (22 Oct 2026, wire_weaver SRV-31): of the host's points, the clock follows one steerer
+  (`Steer::steerer`) while its points come within the holdover time, notes others (`Steered::OtherSteerer`), and
+  lets the next one take over (slewed) once the followed one was quiet that long; `sync_status` names the followed
+  and the last noted steerer (`SyncStatus::steerer` / `noted`, names cut to 24 B).
   Closed-loop test against wire_weaver's `Estimator` (`tests/closed_loop.rs`, simulated USB): a board 250 ms off is
   within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware (omarchy-m1, 21 Oct 2026, `ww sync` with Donguru B153A, rePort B200 and B135B): all three locked within 2 ms after 1.2 s from a fresh start and 2.4 s after 45 s in holdover; LED phase as ww sync estimates it 30 µs to 1.0 ms apart (±1.5-2.5 ms, rePort's and Donguru's ~1.4-1.8 ms round trips); over 5 min Donguru left once on a -2.0 ms residual (±1.2 ms) and was back in 37 s. No logic analyser on this PC: the phase is not measured on the pins.
 - 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath

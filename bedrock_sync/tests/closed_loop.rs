@@ -59,6 +59,7 @@ fn run(board: &Board, secs: u64, ahead_us: Option<u64>) -> Run {
             shared_us: UTC + ahead,
             rate_ppb,
             error_us: 100,
+            steerer: 0,
         };
         clock
             .steer(board.local_us(0), earlier, Source::Host)
@@ -102,6 +103,7 @@ fn run(board: &Board, secs: u64, ahead_us: Option<u64>) -> Run {
                 shared_us: UTC + (fit.shared_at(at / 1000 * 1000) / 1000.0) as u64,
                 rate_ppb: fit.rate_ppb(),
                 error_us: fit.error_us(),
+                steerer: 0,
             };
             in_flight = Some((host + board.min_us + rng.below(board.jitter_us), point));
             first_point.get_or_insert(host);

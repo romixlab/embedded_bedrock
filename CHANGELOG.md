@@ -9,6 +9,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_sync` (DEV-13, wire_weaver SRV-31): one steerer at a time. `Steer::steerer` (the point's
+  `ww_timebase::Steerer::id`, 0 for points that name nobody); of the host's points, `SharedClock` follows one steerer
+  while its points keep coming within `Config::holdover_after_us` (3 s) and only notes another one's
+  (`Steered::OtherSteerer`); once the followed one has been quiet that long, the next steerer's point takes over,
+  slewed and with a new `generation` as any switch. `SharedClock::steerer`, `SharedClock::config`.
+  `ClockServer::sync_status` fills `SyncStatus::steerer` (the followed or last followed host) and `noted` (the last
+  other steerer, within the holdover time), names kept in fixed buffers of `clock::NAME_MAX` (24) bytes, cut at a
+  char boundary.
+
+### Changed
+
+- `bedrock_sync`: `ClockServer::steer` / `steer_with` take `&mut self`; `Steer` has the new `steerer` field (0 for
+  a sync line's points), `Steered` the new `OtherSteerer` variant; `sync_status` returns `SyncStatus<'_>` (the
+  wire_weaver `ww_timebase` types carry a lifetime now).
+
 ## [0.2.9] - 2026-10-21
 
 ### Added

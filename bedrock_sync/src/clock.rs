@@ -6,14 +6,18 @@
 //! the same prefix and storage. Driving a sync line (IRIG-B, PPS) is the board's too: it steers the same
 //! [SharedClock] with [Source::Line] points.
 //!
+//! Steer points name their steerer (`SteerPoint::steerer`): the [SharedClock] follows one at a time, and the
+//! server keeps the followed and the last noted one (id, pid, host and program cut to [NAME_MAX] bytes) for
+//! `sync_status`.
+//!
 //! `set_sources` / `sources` keep the explicit source list in both forms: the [SharedClock]'s, which decides, and
 //! the `ww_timebase` one the board answers `sources()` with.
 
 use wire_weaver::prelude::*;
 use ww_si::Prefix;
 use ww_timebase::{
-    ClockError, Second, SteerPoint, SyncConfig, SyncFormat, SyncSource, SyncState, SyncStatus,
-    TimeMapPoint,
+    ClockError, Second, SteerPoint, Steerer, SyncConfig, SyncFormat, SyncSource, SyncState,
+    SyncStatus, TimeMapPoint,
 };
 
 use crate::{
@@ -21,14 +25,91 @@ use crate::{
     SteerError, Steered,
 };
 
-/// The `Clock` server's state besides the [SharedClock]: the sync line's configuration and how the board writes
-/// local time.
+/// Longest host and program name kept of a steerer, bytes: longer ones are cut at a char boundary.
+pub const NAME_MAX: usize = 24;
+
+/// A name of up to [NAME_MAX] bytes, cut at a char boundary.
+#[derive(Copy, Clone, Debug)]
+struct Name {
+    buf: [u8; NAME_MAX],
+    len: u8,
+}
+
+impl Name {
+    const EMPTY: Name = Name {
+        buf: [0; NAME_MAX],
+        len: 0,
+    };
+
+    fn set(&mut self, s: &str) {
+        let mut len = s.len().min(NAME_MAX);
+        while !s.is_char_boundary(len) {
+            len -= 1;
+        }
+        self.buf[..len].copy_from_slice(&s.as_bytes()[..len]);
+        self.len = len as u8;
+    }
+
+    fn as_str(&self) -> &str {
+        // only ever whole chars of a str
+        core::str::from_utf8(&self.buf[..self.len as usize]).unwrap_or("")
+    }
+}
+
+/// A steerer as `sync_status` reports it, in fixed buffers.
+#[derive(Copy, Clone, Debug)]
+struct Kept {
+    id: u64,
+    pid: u32,
+    host: Name,
+    program: Name,
+}
+
+impl Kept {
+    const NONE: Kept = Kept {
+        id: 0,
+        pid: 0,
+        host: Name::EMPTY,
+        program: Name::EMPTY,
+    };
+
+    /// Keeps `steerer`, `id` 0 (nobody) for `None`. The names are copied only when the id changes.
+    fn set(&mut self, steerer: Option<&Steerer>) {
+        let Some(s) = steerer else {
+            self.id = 0;
+            return;
+        };
+        if s.id != self.id {
+            self.id = s.id;
+            self.pid = s.pid;
+            self.host.set(s.host);
+            self.program.set(s.program);
+        }
+    }
+
+    fn get(&self) -> Option<Steerer<'_>> {
+        (self.id != 0).then(|| Steerer {
+            id: self.id,
+            host: self.host.as_str(),
+            program: self.program.as_str(),
+            pid: self.pid,
+        })
+    }
+}
+
+/// The `Clock` server's state besides the [SharedClock]: the sync line's configuration, how the board writes local
+/// time and the steerers seen.
 #[derive(Copy, Clone, Debug)]
 pub struct ClockServer {
     config: SyncConfig,
     to_second: fn(u64) -> Second,
     /// The explicit source list as `sources()` answers it, `None` for the fixed ranking.
     sources: Option<([SyncSource; Sources::MAX], u8)>,
+    /// The steerer followed or last followed, as its points named it.
+    steerer: Kept,
+    /// The last other steerer only noted, and the local time of its last point.
+    noted: Kept,
+    noted_at: u64,
 }
 
 impl ClockServer {
@@ -38,6 +119,9 @@ impl ClockServer {
             config: SyncConfig::Off,
             to_second,
             sources: None,
+            steerer: Kept::NONE,
+            noted: Kept::NONE,
+            noted_at: 0,
         }
     }
 
@@ -64,9 +148,10 @@ impl ClockServer {
     }
 
     /// `Clock::steer` at local time `now_us`: the point's `local` read near `now_us` (any integer storage of
-    /// `Prefix::Micro`, 32 bits are enough), then [SharedClock::steer] as [Source::Host].
+    /// `Prefix::Micro`, 32 bits are enough), then [SharedClock::steer] as [Source::Host] from the point's steerer.
+    /// A point from another steerer than the one followed answers `Host` too, and is kept as `noted`.
     pub fn steer(
-        &self,
+        &mut self,
         clock: &mut SharedClock,
         now_us: u64,
         point: &SteerPoint,
@@ -77,7 +162,7 @@ impl ClockServer {
     /// [steer](Self::steer) on a board with an [Oscillator] backend: [SharedClock::steer_with] trims `osc` by part
     /// of the point's rate.
     pub fn steer_with(
-        &self,
+        &mut self,
         clock: &mut SharedClock,
         now_us: u64,
         point: &SteerPoint,
@@ -102,18 +187,34 @@ impl ClockServer {
             shared_us: point.shared_us,
             rate_ppb: point.rate_ppb,
             error_us: point.error_us,
+            steerer: point.steerer.as_ref().map_or(0, |s| s.id),
         };
         match clock.steer_with(now_us, steer, Source::Host, osc) {
             Ok(Steered::Ignored(source)) => Ok(source.map(sync_source)),
-            Ok(_) => Ok(Some(SyncSource::Host)),
+            Ok(Steered::OtherSteerer) => {
+                self.noted.set(point.steerer.as_ref());
+                self.noted_at = now_us;
+                Ok(Some(SyncSource::Host))
+            }
+            Ok(_) => {
+                self.steerer.set(point.steerer.as_ref());
+                if self.noted.id == steer.steerer {
+                    self.noted.id = 0;
+                }
+                Ok(Some(SyncSource::Host))
+            }
             Err(SteerError::RateOutOfRange) => Err(invalid("rate beyond 3 %")),
         }
     }
 
-    /// `Clock::sync_status` at local time `now_us`.
-    pub fn sync_status(&self, clock: &SharedClock, now_us: u64) -> SyncStatus {
+    /// `Clock::sync_status` at local time `now_us`: `steerer` while the clock follows (or last followed) the host,
+    /// `noted` while the other steerer's last point is within [Config::holdover_after_us](crate::Config).
+    pub fn sync_status(&self, clock: &SharedClock, now_us: u64) -> SyncStatus<'_> {
+        let state = clock.state(now_us);
+        let hosted = clock.source() == Some(Source::Host) && state != State::Free;
+        let noted_lately = now_us.saturating_sub(self.noted_at) <= clock.config().holdover_after_us;
         SyncStatus {
-            state: state(clock.state(now_us)),
+            state: sync_state(state),
             // local minus shared doesn't fit a device timestamp's storage when shared time is UTC
             offset: None,
             last_lock: clock.last_point().map(self.to_second),
@@ -126,6 +227,12 @@ impl ClockServer {
                     .slew_left_at(now_us)
                     .clamp(i32::MIN as i64, i32::MAX as i64) as i32
             }),
+            steerer: if hosted { self.steerer.get() } else { None },
+            noted: if hosted && noted_lately {
+                self.noted.get()
+            } else {
+                None
+            },
         }
     }
 
@@ -136,7 +243,7 @@ impl ClockServer {
         Some(TimeMapPoint {
             local: (self.to_second)(now_us),
             shared: (self.to_second)(shared),
-            state: state(clock.state(now_us)),
+            state: sync_state(clock.state(now_us)),
             source: clock.source().map(sync_source),
         })
     }
@@ -226,7 +333,7 @@ pub fn sync_source(source: Source) -> SyncSource {
     }
 }
 
-fn state(s: State) -> SyncState {
+fn sync_state(s: State) -> SyncState {
     match s {
         State::Free => SyncState::Free,
         State::Locked => SyncState::Locked,
@@ -259,7 +366,7 @@ mod tests {
 
     #[test]
     fn steer_status_and_time_map() {
-        let server = ClockServer::new(micros);
+        let mut server = ClockServer::new(micros);
         let mut clock = SharedClock::default();
         let now = (1u64 << 32) + 1_000;
         assert_eq!(server.sync_status(&clock, now).state, SyncState::Free);
@@ -269,6 +376,7 @@ mod tests {
             shared_us: 1_761_000_000_000_000,
             rate_ppb: 0,
             error_us: 120,
+            steerer: None,
         };
         assert_eq!(
             server.steer(&mut clock, now, &point),
@@ -289,12 +397,12 @@ mod tests {
         // a point in ms, or a rate too far off
         let bad = SteerPoint {
             local: Second::from_parts(Prefix::Milli, NumericValue::U32(1)),
-            ..point
+            ..point.clone()
         };
         assert!(server.steer(&mut clock, now, &bad).is_err());
         let fast = SteerPoint {
             rate_ppb: 50_000_000,
-            ..point
+            ..point.clone()
         };
         assert!(server.steer(&mut clock, now, &fast).is_err());
     }
@@ -308,7 +416,7 @@ mod tests {
                 ppb
             }
         }
-        let server = ClockServer::new(micros);
+        let mut server = ClockServer::new(micros);
         let mut clock = SharedClock::default();
         let mut osc = Trim(0);
         let point = SteerPoint {
@@ -316,6 +424,7 @@ mod tests {
             shared_us: 1_761_000_000_000_000,
             rate_ppb: 6_400,
             error_us: 120,
+            steerer: None,
         };
         assert_eq!(
             server.steer_with(&mut clock, 1_000, &point, &mut osc),
@@ -351,6 +460,7 @@ mod tests {
             shared_us: 1_761_000_000_000_000,
             rate_ppb: 0,
             error_us: 2,
+            steerer: 0,
         };
         clock.steer(0, line, Source::Line(Line::IrigB)).unwrap();
         let point = SteerPoint {
@@ -358,6 +468,7 @@ mod tests {
             shared_us: 1_761_000_000_000_300,
             rate_ppb: 0,
             error_us: 100,
+            steerer: None,
         };
         // the host is only noted while the line is locked
         assert_eq!(
@@ -404,6 +515,7 @@ mod tests {
             shared_us: 1_761_000_000_000_300,
             rate_ppb: 0,
             error_us: 100,
+            steerer: None,
         };
         assert_eq!(server.steer(&mut clock, 10, &point), Ok(None));
         let twice = [SyncSource::Host, SyncSource::Host];
@@ -419,5 +531,77 @@ mod tests {
             server.steer(&mut clock, 10, &point),
             Ok(Some(SyncSource::Host))
         );
+    }
+
+    #[test]
+    fn status_names_the_followed_and_the_noted_steerer() {
+        let mut server = ClockServer::new(micros);
+        let mut clock = SharedClock::default();
+        let hub = Steerer {
+            id: 11,
+            host: "omarchy-m1",
+            program: "ww hub",
+            pid: 4242,
+        };
+        // 27 bytes, an "é" across byte 24: cut before it
+        let long = "a-very-long-host-name-xé-yz";
+        let app = Steerer {
+            id: 22,
+            host: long,
+            program: "app",
+            pid: 7,
+        };
+        let at = |us: u64, steerer: &Steerer<'static>| SteerPoint {
+            local: micros(us),
+            shared_us: 1_761_000_000_000_000 + us,
+            rate_ppb: 0,
+            error_us: 100,
+            steerer: Some(steerer.clone()),
+        };
+        assert_eq!(
+            server.steer(&mut clock, 0, &at(0, &hub)),
+            Ok(Some(SyncSource::Host))
+        );
+        let status = server.sync_status(&clock, 0);
+        assert_eq!(status.steerer, Some(hub.clone()));
+        assert_eq!(status.noted, None);
+        // the app's point is only noted, but answers Host
+        assert_eq!(
+            server.steer(&mut clock, 1_000_000, &at(1_000_000, &app)),
+            Ok(Some(SyncSource::Host))
+        );
+        let status = server.sync_status(&clock, 1_000_000);
+        assert_eq!(status.steerer, Some(hub.clone()));
+        let noted = status.noted.unwrap();
+        assert_eq!((noted.id, noted.pid, noted.program), (22, 7, "app"));
+        assert_eq!(noted.host, "a-very-long-host-name-x");
+        // the hub keeps steering, the app stops: noted no more after the holdover time
+        server
+            .steer(&mut clock, 4_000_000, &at(4_000_000, &hub))
+            .unwrap();
+        let status = server.sync_status(&clock, 4_000_001);
+        assert_eq!(status.steerer.unwrap().id, 11);
+        assert_eq!(status.noted, None);
+        // the hub stops: holdover still names it, then the app takes over
+        let status = server.sync_status(&clock, 7_500_000);
+        assert_eq!(status.state, SyncState::Holdover);
+        assert_eq!(status.steerer.unwrap().id, 11);
+        server
+            .steer(&mut clock, 7_500_000, &at(7_500_000, &app))
+            .unwrap();
+        let status = server.sync_status(&clock, 7_500_000);
+        assert_eq!(status.steerer.unwrap().id, 22);
+        // anonymous points: followed, nobody named
+        let mut server = ClockServer::new(micros);
+        let mut clock = SharedClock::default();
+        let anon = SteerPoint {
+            steerer: None,
+            ..at(0, &hub)
+        };
+        server.steer(&mut clock, 0, &anon).unwrap();
+        server.steer(&mut clock, 1_000, &at(1_000, &hub)).unwrap();
+        let status = server.sync_status(&clock, 1_000);
+        assert_eq!(status.steerer, None);
+        assert_eq!(status.noted.unwrap().id, 11);
     }
 }

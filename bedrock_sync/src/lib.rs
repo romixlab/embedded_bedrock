@@ -131,6 +131,10 @@ pub struct Steer {
     pub rate_ppb: i32,
     /// How far `shared_us` may be off, as the source estimates it.
     pub error_us: u32,
+    /// Who sends the point (`ww_timebase::Steerer::id`), 0 for a point that names nobody (a host built before
+    /// steerers, a sync line). Of the [Source::Host] points, the clock follows one steerer at a time, see
+    /// [SharedClock::steer].
+    pub steerer: u64,
 }
 
 /// What a steer point did, see [SharedClock::steer].
@@ -144,6 +148,9 @@ pub enum Steered {
     /// Only noted: the source isn't allowed by the list, or the clock follows a better one that is locked. The source
     /// followed, `None` for none.
     Ignored(Option<Source>),
+    /// Only noted: another steerer's [Source::Host] point while the followed one's keep coming (within
+    /// [Config::holdover_after_us]). The clock follows [Source::Host] from [SharedClock::steerer].
+    OtherSteerer,
 }
 
 /// Why a steer point was refused.
@@ -220,6 +227,8 @@ pub struct SharedClock {
     /// Local time of the last point followed (or noted from the followed source).
     last_point: u64,
     source: Option<Source>,
+    /// The steerer followed (`Steer::steerer`) or last followed, 0 for points that name nobody.
+    steerer: u64,
     /// The explicit source list, `None`: a locked line before the host.
     sources: Option<Sources>,
     /// The followed source's error at its last point.
@@ -247,6 +256,7 @@ impl SharedClock {
             steered: false,
             last_point: 0,
             source: None,
+            steerer: 0,
             sources: None,
             error_us: 0,
             rate_ppb: 0,
@@ -318,8 +328,12 @@ impl SharedClock {
     }
 
     /// Takes a steer point from `source` at local time `now_us`: followed unless a better source is locked, slewed
-    /// to unless it is the first one or farther off than [Config::step_above_us]. With an [Oscillator] backend the
-    /// rate goes to the oscillator first ([steer_with](Self::steer_with)).
+    /// to unless it is the first one or farther off than [Config::step_above_us].
+    ///
+    /// Of the [Source::Host] points, one steerer (`Steer::steerer`) is followed at a time: while its points keep
+    /// coming (within [Config::holdover_after_us]), another one's are only noted ([Steered::OtherSteerer]); once it
+    /// has been quiet that long, the next steerer's point takes over, slewed as any switch. With an [Oscillator]
+    /// backend the rate goes to the oscillator first ([steer_with](Self::steer_with)).
     pub fn steer(
         &mut self,
         now_us: u64,
@@ -351,6 +365,10 @@ impl SharedClock {
         {
             return Ok(Steered::Ignored(Some(f)));
         }
+        if followed == Some(source) && source == Source::Host && self.steerer != point.steerer {
+            return Ok(Steered::OtherSteerer);
+        }
+        let switch = self.source != Some(source) || self.steerer != point.steerer;
         // the oscillator takes a share of the rate; the software keeps the rest
         let trim_step = osc.trim_step_ppb(point.rate_ppb);
         let mut rate_ppb = point.rate_ppb;
@@ -387,7 +405,7 @@ impl SharedClock {
             Steered::Slewing(off) => off.unsigned_abs() + point.error_us as u64,
             _ => u64::MAX,
         };
-        self.locked = self.source == Some(source)
+        self.locked = !switch
             && if was == State::Locked {
                 off <= 2 * within
             } else {
@@ -398,12 +416,13 @@ impl SharedClock {
         } else {
             self.config.acquire_slew_ppm
         });
-        if self.source != Some(source) {
+        if switch {
             self.generation = self.generation.wrapping_add(1);
         }
         self.rate = rate;
         self.rate_ppb = point.rate_ppb;
         self.source = Some(source);
+        self.steerer = point.steerer;
         self.last_point = now_us;
         self.error_us = point.error_us;
         Ok(steered)
@@ -477,6 +496,17 @@ impl SharedClock {
         self.source
     }
 
+    /// The steerer followed or last followed (`Steer::steerer` of the last point taken), 0 for one that names
+    /// nobody. Only meaningful while [source](Self::source) is [Source::Host].
+    pub fn steerer(&self) -> u64 {
+        self.steerer
+    }
+
+    /// The holdover, slewing and step settings.
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
     /// Estimated error of shared time at `now_us`, µs: the source's own at its last point, plus the holdover drift
     /// since, plus what is still to slew. `None` before the first point.
     pub fn error_us(&self, now_us: u64) -> Option<u32> {
@@ -491,8 +521,8 @@ impl SharedClock {
         )
     }
 
-    /// Changes at every step and source switch: whatever a reader derived from shared time (an LED cycle's start)
-    /// is stale. Slews keep it, since shared time stays continuous.
+    /// Changes at every step and source (or steerer) switch: whatever a reader derived from shared time (an LED
+    /// cycle's start) is stale. Slews keep it, since shared time stays continuous.
     pub fn generation(&self) -> u32 {
         self.generation
     }
