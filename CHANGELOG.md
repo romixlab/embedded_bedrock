@@ -9,6 +9,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_sync` 0.1.0 (DEV-13): the shared clock for bedrock firmware, the device side of wire_weaver's host clock
+  sync. `SharedClock` disciplines the local clock onto UTC from steer points (a locked sync line beats the host),
+  slews instead of stepping, holdover and free with a growing error estimate, `local_at` for scheduled actions; no
+  libcall on the Cortex-M0+ in the per-tick path. `Oscillator` lets a chip with a fractional PLL take the rate in
+  hardware. Feature `embassy`: `Sync` in a `static` with `wait_until_shared`; `ww-timebase`: `ClockServer`, the
+  bookkeeping of a `ww_timebase::Clock` server.
+
 ## [0.2.6] - 2026-10-21
 
 ### Fixed

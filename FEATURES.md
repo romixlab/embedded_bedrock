@@ -147,6 +147,20 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   as before but for Donguru's old 32-bit ease (at most 6 of 64000 counts). rePort B200 flashed, `device.indication`
   mode, brightness and identify answered (21 Oct 2026, with the interim 64-bit ease, same curve); the RGB path not
   run on a board yet (B135 next). The template does not generate LED code with it yet.
+- 🧪 **DEV-13 Shared clock crate** (`bedrock_sync`): the local clock disciplined onto UTC (wire_weaver STD-49 host
+  sync, design P2528 `clock-sync.md`). `SharedClock` (HAL-free, host-tested) follows its best source (a locked line
+  beats the host), slews to each new steer point at 1 % instead of stepping (steps only from free or beyond 1 s, with
+  a `generation` that changes), coasts in holdover after 3 s without points and counts as free after an hour, with an
+  error estimate that grows in holdover; `local_at` for scheduled actions. Hot path (`shared`, every LED tick) without
+  any libcall on the Cortex-M0+ at opt-level `z` and `3` (checked in the disassembly, 21 Oct 2026): 64-bit adds, 32-bit
+  products of chunks up to 32 ms; a gap longer than that takes a cold path with two `__aeabi_lmul`, a steer point
+  (once a second) a 64-bit divide. `Oscillator` backend: a chip with a fractional PLL takes the rate in hardware
+  (1/64 of each point's rate, unquantised target, clamp without wind-up; tested against a host whose rate lags by its
+  30 s window: a PLL 50 ppm slow converges without overshoot); first user B135B PLL1 FRACN (tpm P2404#21oct-1657),
+  not Donguru's HSI trim (too coarse) nor the RP2350 (no fractional PLL). Feature `embassy`: `Sync` in a `static` on
+  `Instant` (`shared_now`, `steer`, `wait_until_shared`); feature `ww-timebase`: `ClockServer`, the `Clock` server
+  bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`). Hardware check
+  open: Donguru and rePort steered by `ww sync` (P2528 piece 6).
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).

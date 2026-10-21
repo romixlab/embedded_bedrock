@@ -135,6 +135,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bedrock_sync"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "embassy-sync",
+ "embassy-time",
+ "wire_weaver",
+ "ww_si",
+ "ww_timebase",
+]
+
+[[package]]
 name = "bincode"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2718,6 +2730,7 @@ name = "ww_date_time"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "defmt",
  "shrink_wrap",
 ]
 
@@ -2777,6 +2790,16 @@ dependencies = [
  "defmt",
  "shrink_wrap",
  "ww_numeric",
+]
+
+[[package]]
+name = "ww_timebase"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "wire_weaver",
+ "ww_date_time",
+ "ww_si",
 ]
 
 [[package]]
