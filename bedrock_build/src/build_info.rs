@@ -31,7 +31,7 @@ pub fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
                 dirty: git.dirty,
                 commit_id: Some(git.commit_id),
                 commit_short_id: Some(git.commit_short_id),
-                commit_timestamp: git.commit_timestamp.try_into().unwrap(),
+                commit_timestamp: git.commit_timestamp.into(),
                 branch: git.branch,
                 tags: git.tags,
             }
@@ -68,11 +68,7 @@ fn crate_info(info: build_info_common::CrateInfo) -> CrateInfoOwned {
         version: info.version.try_into().unwrap(),
         authors: info.authors,
         enabled_features: info.enabled_features,
-        dependencies: info
-            .dependencies
-            .into_iter()
-            .map(|dep| crate_info(dep))
-            .collect(),
+        dependencies: info.dependencies.into_iter().map(crate_info).collect(),
     }
 }
 

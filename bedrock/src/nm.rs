@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 
 pub fn nm_test(file_path: &Path) {
-    let file = match fs::File::open(&file_path) {
+    let file = match fs::File::open(file_path) {
         Ok(file) => file,
         Err(err) => {
             println!("Failed to open file '{:?}': {}", file_path, err,);

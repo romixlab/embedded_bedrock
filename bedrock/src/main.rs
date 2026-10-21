@@ -114,7 +114,7 @@ fn main() -> Result<(), probe_rs::Error> {
         let tail = flash_mem.slice_from(matched_at_addr + 4);
         let expected_crc = u32::from_le_bytes([tail[2], tail[3], tail[4], tail[5]]);
         let data = &tail[6..(6 + len)];
-        let crc = build_info_crc(&data);
+        let crc = build_info_crc(data);
         if crc == expected_crc {
             println!("found build info! {data:02x?}");
             let build_info = BedrockBuildInfo::from_ww_bytes(data).unwrap();

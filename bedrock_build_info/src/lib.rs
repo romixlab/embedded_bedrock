@@ -261,7 +261,7 @@ mod tests {
             )
         );
         assert_eq!(bytes.len(), 50);
-        let mut rd = BufReader::new(&bytes[..]);
+        let mut rd = BufReader::new(bytes);
         let build_info_des = BedrockBuildInfo::des_shrink_wrap(&mut rd).unwrap();
         assert_eq!(build_info, build_info_des);
 
