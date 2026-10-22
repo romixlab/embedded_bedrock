@@ -95,7 +95,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   `CCMRAM_ICODE` is over 100 columns and rustfmt breaks it after `=`. Found 15 Oct 2026.
 - ✅ **TPL-27 `just flash-bootsel` for RP targets**: a generated `justfile` (`app/justfile.j2`, `t.family == "rp"`
   only, both the plain and `--wire-weaver` layouts) with one recipe, `flash-bootsel [SERIAL]`: build release, then
-  `ww bootsel flash` (wire_weaver CLT-21) writes the ELF straight through PICOBOOT in the RP2040/RP2350 boot ROM
+  `ww dfu rp flash` (wire_weaver CLT-21) writes the ELF straight through PICOBOOT in the RP2040/RP2350 boot ROM
   (BOOTSEL mode), no probe, picotool, elf2uf2 or objcopy step; `SERIAL` waits for the device to (re)appear and
   come back. `references/frameworks.md`'s RP2040/RP235x alternative-runner line and both app/ww `README.md.j2`
   mention it. probe-rs stays the default `cargo run`/`cargo build` runner in `.cargo/config.toml`, untouched.

@@ -10,6 +10,13 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `flash-bootsel`'s generated `justfile` recipe uses `ww dfu rp flash` (TPL-27): wire_weaver renamed `ww bootsel`
+  under `ww dfu` (the old name still runs as a hidden alias for now). `references/frameworks.md` and the generated
+  `ww/README.md.j2` updated to match.
+
+  Upgrade notes: regenerate the `justfile` recipe, or edit it by hand (`ww bootsel` -> `ww dfu rp`); either name
+  works until wire_weaver drops the alias.
+
 - `--embassy release|main` (TPL-28), default `release`: `main` takes every embassy crate the project uses from
   embassy-rs/embassy main at the commit in `data/versions.toml` (`embassy-main`, 262fdba545 of 19 Oct 2026) through a
   `[patch.crates-io]` block in `Cargo.toml` and `bootloader/Cargo.toml`, the dependency lines staying the crates.io

@@ -19,7 +19,7 @@ cargo run
 
 {% if t.family == "rp" %}
 Without a probe free: hold BOOTSEL and reset, then `just flash-bootsel [SERIAL]` in `firmware/` writes the ELF
-straight through PICOBOOT (`ww bootsel flash`), no picotool/elf2uf2/objcopy step.
+straight through PICOBOOT (`ww dfu rp flash`), no picotool/elf2uf2/objcopy step.
 
 {% endif %}
 ## Talk to the device
