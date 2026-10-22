@@ -2935,6 +2935,7 @@ dependencies = [
  "picoboot_host",
  "ron",
  "semver 1.0.28",
+ "sha2 0.11.0",
  "stm32_dfu_host",
  "strum 0.28.0",
  "strum_macros 0.28.0",
@@ -2945,6 +2946,7 @@ dependencies = [
  "wire_weaver",
  "wire_weaver_snapshots",
  "ww_client_server",
+ "ww_date_time",
  "ww_framer",
  "ww_global",
  "ww_link",
@@ -2956,6 +2958,7 @@ dependencies = [
  "ww_stream",
  "ww_tap",
  "ww_tape",
+ "ww_timebase",
  "ww_version",
 ]
 
@@ -3035,12 +3038,7 @@ dependencies = [
 name = "ww_clock_sync"
 version = "0.5.0"
 dependencies = [
- "tokio",
- "wire_weaver",
  "wire_weaver_client",
- "ww_date_time",
- "ww_si",
- "ww_timebase",
 ]
 
 [[package]]
