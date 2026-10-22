@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-10-22
+
 ### Added
 
 - `bedrock_sync` (DEV-13, wire_weaver SRV-31): one steerer at a time. `Steer::steerer` (the point's
