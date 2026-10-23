@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-10-23
+
 ### Added
 
 - `bedrock_rom_boot` (DEV-16): firmware updates through the STM32 ROM bootloader for G0 and H7 (H72x-75x), taken from Donguru and B135: boot word in the last backup register (Donguru's format, so Donguru keeps reading it), `early()` before the HAL's init jumps into the ROM on request (AN2606) and resets once after the ROM's leave, boot-loop rescue after three boots without a healthy mark, the ROM's USB serial number; feature `embassy` for the reboot task and the healthy watch, feature `ww-dfu` for `ww_dfu` `BootControl` and `UpdateNode` answers (`Profile::InPlace`, always `Confirmed`, `reboot(Updater)` into the ROM). No HAL dependency: raw RM addresses.
