@@ -224,6 +224,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bedrock_rom_boot"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "defmt",
+ "embassy-futures",
+ "embassy-sync",
+ "embassy-time",
+ "wire_weaver",
+ "ww_dfu",
+]
+
+[[package]]
 name = "bedrock_sync"
 version = "0.1.0"
 dependencies = [
@@ -913,6 +926,12 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
+name = "embassy-futures"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc2d050bdc5c21e0862a89256ed8029ae6c290a93aecefc73084b3002cdebb01"
 
 [[package]]
 name = "embassy-sync"
@@ -3577,6 +3596,14 @@ dependencies = [
  "chrono",
  "defmt",
  "shrink_wrap",
+]
+
+[[package]]
+name = "ww_dfu"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "wire_weaver",
 ]
 
 [[package]]

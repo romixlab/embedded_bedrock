@@ -9,6 +9,7 @@ members = [
     "bedrock_build",
     "bedrock_crash",
     "bedrock_led",
+    "bedrock_rom_boot",
     "bedrock_sync",
     "bedrock_build_info",
     "bedrock_board",

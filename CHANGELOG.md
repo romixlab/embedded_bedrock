@@ -1,13 +1,17 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_board`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_rom_boot`, `bedrock_board`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_rom_boot` (DEV-16): firmware updates through the STM32 ROM bootloader for G0 and H7 (H72x-75x), taken from Donguru and B135: boot word in the last backup register (Donguru's format, so Donguru keeps reading it), `early()` before the HAL's init jumps into the ROM on request (AN2606) and resets once after the ROM's leave, boot-loop rescue after three boots without a healthy mark, the ROM's USB serial number; feature `embassy` for the reboot task and the healthy watch, feature `ww-dfu` for `ww_dfu` `BootControl` and `UpdateNode` answers (`Profile::InPlace`, always `Confirmed`, `reboot(Updater)` into the ROM). No HAL dependency: raw RM addresses.
 
 ## [0.2.14] - 2026-10-23
 

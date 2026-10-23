@@ -203,6 +203,22 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `HEARTBEAT`), rePort (`OK`, was a 4 s breath) and B135 (SD `OK` in `STORAGE` / `FAULT`, CAN `OK` / `WARN` /
   `ALERT`). Kept on a module of `bedrock_led`: it holds `Mode`, the fades and the peaks already; a buzzer or display
   vocabulary would get its own module next to it when one exists. Flashed on all three boards (21 Oct 2026); the looks themselves not yet looked at by a person.
+- 🧪 **DEV-16 STM32 ROM bootloader entry crate** (`bedrock_rom_boot`): firmware alone at the start of flash, updated
+  by the STM32 ROM bootloader's USB DFU (`ww dfu stm32 flash`); extracted from Donguru (typec_dongle FW-12, FW-45,
+  G0B1) and B135 (BOOT-4, BOOT-5, BOOT-9, BOOT-10, H725). `BootWord` in the family's last backup register (G0
+  TAMP_BKP4R, H7 RTC_BKP31R; Donguru's format): ROM request, fell-back flag, unhealthy-boot count. `early()` first in
+  `main`, before the HAL: resets once when the ROM's leave jumped here (`Entered::from_reset` per family, a second
+  jump in a row goes on), takes a request and jumps to system memory (AN2606: G0 0x1FFF_0000, H72x-75x 0x1FF0_9800),
+  else counts the boot and returns `Start::Rescue` after three boots without `mark_healthy`; `rescue()`, `reboot()`,
+  `after_init()` (the H7's first init resets the backup domain), `usb_serial()` (the ROM's serial form, so a host
+  follows the board). Feature `embassy`: `request_reboot` / `reboot_when_asked` (50 ms for the reply),
+  `usb_configured` / `healthy_watch`; feature `ww-dfu`: `dfu::{boot_state, confirm, revert, reboot_target, node}`
+  (`Profile::InPlace`, always `Confirmed`, last result `Recovery` after a rescue). Raw RM addresses, no HAL
+  dependency (checked against stm32-metapac 21). Decisions host-tested; builds and links for thumbv6m (G0B1) and
+  thumbv7em (H725) (`just lint`, a scratch firmware calling every function). Not run on a board through this crate
+  yet: Donguru and B135 run the code it came from; first user nucleo_g0b1re_template's device suite (P2528#23oct-1258g).
+  Not yet: H7A3/7B3 (other RCC offsets, ROM at 0x1FF0_A000), dual-core H745/H755, other families; B135's A/B
+  bootloader path (feature `ab`) and its LED codes stay in B135 (`early_with` takes a closure for the code).
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).

@@ -1,0 +1,30 @@
+[package]
+name = "bedrock_rom_boot"
+version = "0.1.0"
+edition = "2024"
+description = "Firmware updates through the STM32 ROM bootloader for bedrock firmware: boot word in a backup register, the jump to system memory (AN2606), the reset after the ROM's leave, boot-loop rescue, ww_dfu BootControl in place"
+license = "MIT OR Apache-2.0"
+
+# Firmware takes this crate by path from the embedded_bedrock checkout next to it (like bedrock_led): the `ww-dfu`
+# feature depends on WireWeaver from the local checkout next to that, as the firmware does, so both resolve to the
+# same ww_dfu.
+
+[features]
+# The register accesses and the early boot for one chip family (exactly one; Cortex-M firmware). None: the decisions
+# only (host tests, board crates shared with a simulator)
+stm32g0 = ["dep:cortex-m"]
+stm32h7 = ["dep:cortex-m"]
+# With a family: the reboot task and the healthy watch on embassy-time and embassy-sync
+embassy = ["dep:embassy-time", "dep:embassy-sync", "dep:embassy-futures"]
+# `ww_dfu` BootControl and UpdateNode answers for a firmware updated in place by the ROM bootloader
+ww-dfu = ["dep:ww_dfu", "dep:wire_weaver"]
+defmt = ["dep:defmt", "ww_dfu?/defmt"]
+
+[dependencies]
+cortex-m = { version = "0.7", optional = true }
+defmt = { version = "1.0", optional = true }
+embassy-futures = { version = "0.1.2", optional = true }
+embassy-sync = { version = "0.8.0", optional = true }
+embassy-time = { version = "0.5.1", optional = true }
+wire_weaver = { path = "../../wire_weaver/wire_weaver", default-features = false, optional = true }
+ww_dfu = { path = "../../wire_weaver/ww_stdlib/ww_dfu", default-features = false, optional = true }
