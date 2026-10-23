@@ -3458,6 +3458,7 @@ dependencies = [
  "tracing",
  "windows-sys 0.61.2",
  "wire_weaver",
+ "wire_weaver_evolution",
  "wire_weaver_snapshots",
  "ww_client_server",
  "ww_date_time",
@@ -3515,6 +3516,18 @@ dependencies = [
  "syn 3.0.6",
  "wire_weaver_core",
  "ww_global",
+]
+
+[[package]]
+name = "wire_weaver_evolution"
+version = "0.5.0"
+dependencies = [
+ "ron",
+ "shrink_wrap",
+ "wire_weaver_snapshots",
+ "ww_numeric",
+ "ww_self",
+ "ww_version",
 ]
 
 [[package]]
