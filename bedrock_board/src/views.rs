@@ -436,15 +436,16 @@ fn draw_connector(
         let short = desc.pins.get(net).map(|p| p.short.as_str()).unwrap_or("");
         let col = column(px);
         let (lx, anchor, leader_to) = match labels {
+            // the label columns keep the pin columns' left-to-right order: the inner column's label sits next to
+            // the board, the outer column's further out (its leader passes the inner pads, under the halo)
             Labels::Left => {
-                // the column nearest to the board edge (the smallest x) gets the near label
                 let base = m.board_left().min(m.board_right()) - 10.0;
-                let x = base - col as f64 * LABEL_COLUMN;
+                let x = base - (ncol - 1 - col) as f64 * LABEL_COLUMN;
                 (x, Anchor::End, x + 2.0)
             }
             Labels::Right => {
                 let base = m.board_left().max(m.board_right()) + 10.0;
-                let x = base + (ncol - 1 - col) as f64 * LABEL_COLUMN;
+                let x = base + col as f64 * LABEL_COLUMN;
                 (x, Anchor::Start, x - 2.0)
             }
             Labels::InsideLeft => (px - r - 6.0, Anchor::End, px - r - 4.0),
