@@ -1,0 +1,15 @@
+[package]
+name = "bedrock_board"
+version = "0.1.0"
+edition = "2024"
+description = "Board infographics: top and bottom views, power tree and pin table of a dev board, from its PCB file and a TOML description"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+toml = "0.9"
+regex-lite = "0.1"
+# SVG to PNG, pure Rust (fonts from the system through fontdb)
+resvg = { version = "0.45", default-features = false, features = ["text", "system-fonts"] }

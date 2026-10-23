@@ -11,6 +11,8 @@ members = [
     "bedrock_led",
     "bedrock_sync",
     "bedrock_build_info",
+    "bedrock_board",
+    "bedrock_board_cli",
     "bedrock_cli",
     "fw_registry",
 ]

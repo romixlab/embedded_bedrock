@@ -1,13 +1,20 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_board`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_board` and `boardmap` (MAP-1..5): board infographics from a PCB file and a TOML description: top and
+  bottom views with every header pin labelled and coloured by what it is for, solder bridges with their default,
+  a power tree and a pin table; nets joined across fitted solder bridges; SVG and PNG. Example and first user: the
+  NUCLEO-G0B1RE (`bedrock_board/examples/nucleo_g0b1re/`).
 
 ## [0.2.12] - 2026-10-22
 

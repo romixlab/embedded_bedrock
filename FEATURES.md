@@ -291,6 +291,36 @@ A scriptable command-line tool next to RockFace (the GUI). `bedrock/` has a prob
   pages are empty.
 - ✅ **DOC-2 Skill docs**: `SKILL.md`, `references/` (frameworks and tested matrix, memory layout, STM32 notes).
 
+## Board map (`MAP`)
+
+Board infographics for the firmware templates and any dev board: `bedrock_board` (library) and `boardmap`
+(`bedrock_board_cli`). The facts come from the board's PCB file (a vendor's Altium or Allegro board through
+`kicad-cli pcb import`) and a TOML description (what to draw, what every pin does); the pictures are SVG (PNG on
+request, resvg). Example: `bedrock_board/examples/nucleo_g0b1re/` (NUCLEO-G0B1RE, MB1360 rev C).
+
+- ✅ **MAP-1 Geometry from a `.kicad_pcb`**: `boardmap extract` keeps the footprints of interest (connectors,
+  jumpers, solder bridges, LEDs, buttons, chips, crystals) with their pads at absolute positions, nets and side,
+  and the outline (`Edge.Cuts`, arcs kept), as a small JSON the description points to; the vendor's file is not
+  needed afterwards · `bedrock_board/src/geometry.rs`.
+- ✅ **MAP-2 Top and bottom views**: the outline, connectors pad by pad with a label each (net name, what the pin
+  does, Arduino name, pin number) coloured by role (free, shared, taken, function, power rails), parts of
+  interest as labelled boxes, solder bridges with their default state and a few words each; the bottom view is
+  mirrored like a board turned over, its labels dodge pads and each other · `views.rs`.
+- ✅ **MAP-3 Nets across fitted solder bridges**: a `SB_ON` bridge joins the nets the board file keeps apart, so
+  a header pin behind one shows the MCU pin it really carries (CN7-29 is PF0 through SB25) · `nets.rs`.
+- ✅ **MAP-4 Power tree**: sources, switches and jumpers, regulators, rails and loads on a grid from the
+  description, options off by default dashed · `power.rs`.
+- ✅ **MAP-5 Pin table**: every MCU pin with its header positions, what else sits on its net, its role and the
+  description's note, plus the solder bridge table (Markdown) · `pins.rs`.
+- 📋 **MAP-6 Every template ships its board map**: `docs/board/` with the description, the geometry, the rendered
+  pictures and the pin table, `just board` to re-render, the README showing the top view (user, 23 Oct 2026:
+  "standard for all templates"). Done for the Nucleo-G0B1RE template; the generator (TPL) should lay the folder
+  out for every board it knows.
+- 📋 **MAP-7 Label collisions on dense headers**: labels of inside-labelled sockets do not dodge solder bridges
+  next to them (CN8 on the Nucleo); a general placement pass would.
+- 📋 **MAP-8 Highlight a peripheral**: colour the pins of one function (an SPI, the USB pair) on request, for a
+  wiring picture in a docs page.
+
 ## Dropped and superseded
 
 (none yet)

@@ -68,6 +68,9 @@ so a missing entry means work nobody sees.
 - `bedrock_sync/` — the shared clock (local clock disciplined onto UTC by host steer points or a sync line, holdover,
   slewing, scheduled actions, an optional oscillator backend; `embassy` and `ww-timebase` features); host side is
   wire_weaver's `ww_clock_sync`. Firmware takes it by path, like `bedrock_led`, which aligns its animations to it.
+- `bedrock_board/`, `bedrock_board_cli/` — board infographics (`boardmap`: top and bottom views, power tree, pin
+  table) from a `.kicad_pcb` and a TOML description, for the templates' `docs/board/`; FEATURES.md area `MAP`,
+  example `bedrock_board/examples/nucleo_g0b1re/`.
 - `bedrock/` — host-side prototype: reads targets through probe-rs, ELF symbol scan (`nm.rs`).
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md
