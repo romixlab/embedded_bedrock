@@ -139,6 +139,16 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   generator writes none there, so the firmware build fails until `cargo generate-lockfile` runs in `<name>_api/`.
   Found building `g0bigit` (23 Oct 2026). Fix in wire_weaver (take the consumer's lockfile) or here (a host
   workspace root over the API crate, as `nucleo_g0b1re_template` has).
+- 🧪 **TPL-36 `just setup` in every generated project**: `scripts/setup.py` (`app/setup.py.j2`, run with uv, stdlib
+  only) sets up a fresh Arch, Ubuntu / Debian or Windows (winget) PC: build tools, rustup with the toolchain, targets
+  and components of `rust-toolchain.toml` (Xtensa: espup's `esp`), probe-rs (its installer), and per answers
+  flip-link, espup, espflash, cnt, ww; the probe's udev rule (probe-rs's rules file; checked by the probe's ids per
+  family; probe-rs's rules file pinned to a commit) or the ST-LINK driver on Windows. Before it changes anything it
+  prints its plan, naming every installer script it fetches and runs. Root steps are printed, `--root` runs them,
+  `--check` reports what is missing, `--no-probe` leaves the probe out (CI), `--skip TOOL` one step. A root `justfile` with `setup` is now generated for every target
+  (RP's `flash-bootsel` moves into it, `cd firmware` with `--wire-weaver`). Built first in nucleo_g0b1re_template
+  (its TPL-10), run there in an Ubuntu 24.04 container; `ww` from git needs wire_weaver P2401#23oct-1313. No git
+  hooks step: it comes with the hooks (TPL-37) and chains to the hooks a repository already has.
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -311,7 +321,9 @@ A scriptable command-line tool next to RockFace (the GUI). `bedrock/` has a prob
   where the PC points.
 - 📋 **CLI-9 Peripherals**: GPIO status and manipulation, enabled peripherals and their configuration, clock tree
   with PLL frequencies, interrupts (enabled, priority, default handler, in RAM).
-- 📋 **CLI-10 Install the tools** (flip-link, probe-rs, binutils).
+- 🧪 **CLI-10 Install the tools**: every generated project has `just setup` (`scripts/setup.py`, TPL-36): rustup with
+  the firmware's toolchain and target, probe-rs, flip-link, cnt, ww, espup / espflash as the answers need; root steps
+  printed. binutils (`cargo-binutils`, `llvm-tools`) not yet.
 - 💡 **CLI-11 Terminal to the firmware**, embassy CPU load, ETM.
 
 ## Testing support (`TST`)

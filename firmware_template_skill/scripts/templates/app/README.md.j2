@@ -4,20 +4,21 @@ Firmware for **{{ t.display }}** ({{ t.rust_target }}), framework: `{{ o.framewo
 
 ## Toolchain
 
+With [just](https://just.systems/man/en/packages.html) and [uv](https://docs.astral.sh/uv/getting-started/installation/) installed:
+
 ```
-rustup target add {{ t.rust_target }}
-{% if t.cortex_m %}
-cargo install probe-rs-tools --locked{{ " flip-link" if o.flip_link else "" }}
-{% elif t.arch == "xtensa" %}
-cargo install espup espflash
-espup install && source ~/export-esp.sh
-{% else %}
-cargo install espflash
-{% endif %}
+just setup           # rustup with {{ t.rust_target }}, {{ tool_list }}{{ "; then `espup install && source ~/export-esp.sh`" if t.arch == "xtensa" else "" }}
+just setup --check   # only report what is missing
+```
+
+`scripts/setup.py` runs on Arch, Ubuntu / Debian and Windows (winget) and skips what is already there. It prints
+its plan first, naming each script it fetches from the internet and runs, the way these tools are meant to be
+installed: probe-rs's udev rules file (pinned to a commit) and rustup's installer{{ "; probe-rs's installer, on Windows through `irm | iex` with `-ExecutionPolicy Bypass`" if probe_rs else "" }}. Steps that
+need root or an administrator (system packages, the probe's udev rule{{ ", the " ~ probe[0] ~ " driver on Windows" if windows_driver else "" }}) are
+printed for you; `just setup --root` runs them too, each shown first.
 {% if o.counters %}
-cargo install cnt_cli   # provides `cnt`: {{ "cnt tui" if t.cortex_m else "cnt tui --chip " ~ t.probe_chip }} (TUI), cnt read, cnt reset
+`cnt tui{{ "" if t.cortex_m else " --chip " ~ t.probe_chip }}` shows the event counters (also `cnt read`, `cnt reset`).
 {% endif %}
-```
 
 ## Run
 

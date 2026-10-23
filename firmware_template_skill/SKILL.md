@@ -118,7 +118,8 @@ For firmware without `bedrock_fw.json` (pre-0.4.0) see the 0.4.0 upgrade notes i
 ## What gets generated
 
 `Cargo.toml`, `build.rs`, `.cargo/config.toml` (probe-rs/espflash runner, `DEFMT_LOG`, `CNT_*`), `rust-toolchain.toml`,
-`memory.x` (not for ESP), `src/main.rs`, `bedrock_fw.json` (template origin + answers), `AGENTS.md` + `CLAUDE.md`
+`memory.x` (not for ESP), `src/main.rs`, `justfile` and `scripts/setup.py` (`just setup`: the PC's toolchain and
+tools, root steps printed), `bedrock_fw.json` (template origin + answers), `AGENTS.md` + `CLAUDE.md`
 (template upgrade instructions), optional `src/init.rs` (STM32 backup-domain reset / backup register enable),
 optional `src/init_ram.rs` (enable + zero extra SRAM banks, RCC bits looked up in stm32-data), `README.md` with
 memory table and MCU documentation links, `bootloader/` (own crate, own `memory.x` with swapped region names), and

@@ -10,6 +10,20 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `just setup` in every generated project (TPL-36): `scripts/setup.py` (run with uv, stdlib only) installs what the
+  firmware needs on a fresh Arch, Ubuntu / Debian or Windows PC: rustup with the toolchain, targets and components of
+  `rust-toolchain.toml` (Xtensa: espup), probe-rs, and as the answers need flip-link, espflash, cnt, ww. Steps that
+  need root (system packages, the probe's udev rule, the ST-LINK driver on Windows) are printed, `--root` runs them;
+  `--check` reports what is missing. It prints its plan first, naming every script it fetches and runs (rustup's and
+  probe-rs's installers, probe-rs's udev rules from a pinned commit). The `justfile` is now generated for every
+  target (ESP too), at the output root, with the `setup` recipe; with `--wire-weaver` its `flash-bootsel` (RP) and
+  `cnt` recipes build with `cd firmware`, so they move from `firmware/justfile` to the root. The generated README's
+  *Toolchain* section says `just setup`.
+
+  Upgrade notes: take `scripts/setup.py` and the `setup` recipe as they are (no answers involved); a firmware with
+  its own `justfile` adds the recipe. With `--wire-weaver`: move `firmware/justfile`'s recipes to the root
+  `justfile` (they gain `cd firmware && `). Nothing on the target changes.
+
 - `--build-info` builds with `--bedrock git` (BLD-8): embedded_bedrock now takes WireWeaver from git instead of
   `../wire_weaver`, so `bedrock_build` from git no longer fails with "no matching package named `wire_weaver`". With a
   local `--ww-src`, `Cargo.toml` and `bootloader/Cargo.toml` get a `[patch."https://github.com/vhrdtech/wire_weaver"]`

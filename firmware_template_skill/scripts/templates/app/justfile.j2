@@ -1,11 +1,22 @@
+# Windows runs the recipes with cmd (`cd x && y` works there too): not every PC has Git's sh on PATH
+set windows-shell := ["cmd.exe", "/c"]
+
+# rustup and the firmware's toolchain, {{ tool_list }}
+# Set up this PC; prints the steps that need root (`--root` runs them too, `--check` only reports what is missing)
+setup *args:
+    uv run scripts/setup.py {{ '{{' }}args{{ '}}' }}
+{% set cd = "cd " ~ fw_dir.rstrip("/") ~ " && " if fw_dir else "" %}
 {% if t.family == "rp" %}
+
 # Flash over PICOBOOT (BOOTSEL), no probe/picotool/elf2uf2: hold BOOTSEL and reset first, then run this; SERIAL waits for it to reappear and come back
 flash-bootsel serial="":
-    cargo build --release
-    ww dfu rp flash target/{{ t.rust_target }}/release/{{ o.name }} {{ '{{' }} if serial == "" { "" } else { "--wait 10 --follow -s " + serial } {{ '}}' }}
-
+    {{ cd }}cargo build --release
+    ww dfu rp flash {{ fw_dir }}target/{{ t.rust_target }}/release/{{ o.name }} {{ '{{' }} if serial == "" { "" } else { "--wait 10 --follow -s " + serial } {{ '}}' }}
 {% endif %}
+{% if t.family != "esp" %}
+
 # Build and run the dev firmware showing the defmt log plus live counters as they change (cnt run; cargo install cnt_cli)
 cnt *args:
-    cargo build
-    cnt run {{ '{{' }}args{{ '}}' }}
+    {{ cd }}cargo build
+    {{ cd }}cnt run {{ '{{' }}args{{ '}}' }}
+{% endif %}

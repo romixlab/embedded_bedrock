@@ -933,6 +933,46 @@ def ww_root_files(t: Target, o: Opts, ctx: dict) -> dict[str, str]:
     }
 
 
+# Debug probe per family for scripts/setup.py: its name and what a udev rules file for it contains (probe-rs's
+# 69-probe-rs.rules has them all); the Windows driver: what `pnputil /enum-drivers` shows, and how to get it
+SETUP_PROBES = {
+    "stm32": ("ST-LINK", ["0483", "374b"]),  # ST-LINK/V2-1, on Nucleo and Discovery boards
+    "rp": ("CMSIS-DAP probe", ["cmsis-dap"]),  # Raspberry Pi Debug Probe, picoprobe
+    "nrf": ("J-Link", ["1366", "1015"]),  # the J-Link OB of the nRF DKs
+    "esp": ("USB-JTAG/serial", ["303a", "1001"]),  # the chip's built-in USB-JTAG/serial
+}
+SETUP_WINDOWS_DRIVERS = {
+    "stm32": ("stlink", ["download STSW-LINK009 from https://www.st.com/en/development-tools/stsw-link009.html, unpack "
+                         "it and run ", "dpinst_amd64.exe (asks for administrator rights)"]),
+}
+
+
+def setup_context(t: Target, o: Opts) -> dict:
+    """Context of scripts/setup.py: the tools this firmware's build, flash and recipes use."""
+    tools = []
+    if o.flip_link and t.cortex_m:
+        tools.append(("flip-link", "linker with stack overflow protection, used by the firmware build", ["flip-link"]))
+    if t.arch == "xtensa":
+        tools.append(("espup", "installs the Xtensa Rust toolchain (`esp`)", ["espup"]))
+    if t.family == "esp":
+        tools.append(("espflash", "flashes the firmware and shows its log (the cargo runner)", ["espflash"]))
+    if o.counters or t.family != "esp":  # the justfile's `cnt` recipe (cnt run) is there for every non-ESP target
+        tools.append(("cnt", "defmt log and event counters of the running firmware (`just cnt`, `cnt tui`)", ["cnt_cli"]))
+    if o.ww or t.family == "rp":
+        what = "WireWeaver command line: introspect and call any API" if o.ww else "`just flash-bootsel` (PICOBOOT)"
+        tools.append(("ww", what, ["--git", WW_GIT, "wire_weaver_cli"]))
+    lines = []  # as ruff formats them at 120 columns
+    for b, what, args in tools:
+        one = f"    ({json.dumps(b)}, {json.dumps(what)}, {json.dumps(args)}),"
+        lines.append(one if len(one) <= 120 else
+                     f"    (\n        {json.dumps(b)},\n        {json.dumps(what)},\n        {json.dumps(args)},\n    ),")
+    probe_rs = t.family != "esp"
+    names = (["probe-rs"] if probe_rs else []) + [b for b, _, _ in tools]
+    return dict(cargo_tools=tools, cargo_tool_lines=lines, probe_rs=probe_rs, probe=SETUP_PROBES[t.family],
+                windows_driver=SETUP_WINDOWS_DRIVERS.get(t.family),
+                tool_list=", ".join(names[:-1]) + (" and " if len(names) > 1 else "") + names[-1])
+
+
 def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] = None) -> dict[str, str]:
     """Files relative to the output directory. With --wire-weaver the firmware is in firmware/, the API crate next to it."""
     r = o.regs
@@ -973,8 +1013,6 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     files["build.rs"] = render("app/build.rs.j2", **ctx, bootloader=False)
     files[".cargo/config.toml"] = render("app/cargo_config.toml.j2", **ctx)
     files["rust-toolchain.toml"] = render("app/rust-toolchain.toml.j2", **ctx)
-    if t.family != "esp":
-        files["justfile"] = render("app/justfile.j2", **ctx)
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
@@ -986,12 +1024,16 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
         files["src/build_info.rs"] = render("app/src/build_info.rs")
     files[".gitignore"] = render("app/gitignore")
     packages = ", ".join(f"{p['name']} ({p['package']}, {len(p['pins'])} pins)" for p in t.stm32.get("packages", []))
-    files["README.md"] = render("app/README.md.j2", **ctx, packages=packages, notes=t.notes + (r.notes if r else []))
+    setup = setup_context(t, o)
+    files["README.md"] = render("app/README.md.j2", **ctx, **setup, packages=packages, notes=t.notes + (r.notes if r else []))
     if o.bootloader and lay:
         files.update(gen_bootloader(t, o, lay, ctx["root"]))
     if o.ww:
         files = {f"{WW_FW_DIR}/{k}": v for k, v in files.items()}
         files.update(ww_root_files(t, o, ctx))
+    # set-up and recipes for the whole project, in the output directory
+    files["scripts/setup.py"] = render("app/setup.py.j2", **ctx, **setup)
+    files["justfile"] = render("app/justfile.j2", **ctx, **setup)
     # template upgrade instructions live next to bedrock_fw.json, in the output directory
     files["AGENTS.md"] = render("app/AGENTS.md.j2", **ctx)
     files["CLAUDE.md"] = render("app/CLAUDE.md")
