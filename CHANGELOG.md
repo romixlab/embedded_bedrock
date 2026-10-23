@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.13] - 2026-10-23
+
 ### Added
 
 - `bedrock_board` and `boardmap` (MAP-1..5): board infographics from a PCB file and a TOML description: top and
