@@ -12,6 +12,7 @@ rustflags = [
 ]
 {% else %}
 runner = "probe-rs run --chip {{ t.probe_chip }}{{ t.runner_extra }}"
+# runner = "cnt run --chip {{ t.probe_chip }}" # adds the defmt log plus live counters (cargo install cnt_cli), `just cnt`
   {% if o.flip_link and t.cortex_m %}
 # Stack overflow protection: the stack goes below .data/.bss and overflows fault (cargo install flip-link)
 linker = "flip-link"

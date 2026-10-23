@@ -6,14 +6,15 @@ embassy-executor 0.10 · embassy-time 0.5.1 · embassy-sync 0.8 · embassy-stm32
 embassy-boot-{stm32 0.8, rp 0.10, nrf 0.12} (all on embassy-boot 0.7) · esp-hal 1.2 · esp-rtos 0.4 · esp-println 0.18 ·
 esp-backtrace 0.20 · esp-bootloader-esp-idf 0.6 · stm32-hal2 2.1 ·
 stm32-rs HALs: stm32f0xx 0.18 · stm32f1xx 0.11 · stm32f3xx 0.10 · stm32f4xx 0.23 · stm32f7xx 0.8 · stm32g0xx 0.2 ·
-stm32g4xx 0.1 · stm32h7xx 0.16 · stm32l0xx 0.10 · stm32l4xx 0.7.1 · cnt 0.4 · defmt 1.1 · defmt-rtt 1.3 · panic-probe 1.0 ·
+stm32g4xx 0.1 · stm32h7xx 0.16 · stm32l0xx 0.10 · stm32l4xx 0.7.1 · cnt 0.5 · defmt 1.1 · defmt-rtt 1.3 · panic-probe 1.0 ·
 rtt-target 0.6 · cortex-m 0.7 · cortex-m-rt 0.7 · build-info-build 0.0.46.
 
 Pitfalls with older documentation / examples:
 - `embassy-executor` `task-arena-size-*` and `nightly` features: gone since 0.10, tasks are statically allocated on
   stable → no nightly needed, no `#![feature(impl_trait_in_assoc_type)]`.
-- `cnt 0.4`: `cnt!(name: u32)` counts unconditionally, `cnt_if!(cond, name: u32)` conditionally (0.2 needed
-  `cnt_if!(true, name: u32 += 1)`). Needs Rust 1.88+, host `cnt_cli` 0.4 (format version 2, rejects 0.2/0.3 firmware).
+- `cnt 0.5`: `cnt!(name: u32)` counts unconditionally, `cnt_if!(cond, name: u32)` conditionally (0.2 needed
+  `cnt_if!(true, name: u32 += 1)`). Needs Rust 1.88+, host `cnt_cli` 0.5 (format version 2, same as 0.4; rejects 0.2/0.3
+  firmware).
 - `embassy-stm32`: prefer `time-driver-any` over `time-driver-timN`. `SMPSSupplyVoltage::V1_8`/`V2_5`.
 - `bedrock_build` build-info is optional (`--build-info`) since `bedrock_build_info` depends on an unpublished `ww_date_time`.
 
@@ -148,6 +149,11 @@ Read with `cargo install cnt_cli` → `cnt tui` / `cnt read` / `cnt reset [--bkp
 newest ELF in the project; ESP needs `--chip`), or `counters_ram_buffer()` (`&[AtomicU32]`) from firmware. Generated
 code counts `led_toggles`/`loop_iterations`, `unhandled_exceptions`, and with BKP counters `unhandled_exceptions_total`
 and `hard_faults`.
+
+`.cargo/config.toml` (non-ESP) carries a commented `runner = "cnt run --chip <CHIP>"` under the active `probe-rs run`
+one: `cnt run` flashes, resets and then shows the defmt log plus live counters as they change, like `cnt read --watch`
+but usable as the cargo runner. The generated `justfile`'s `cnt` recipe (`cargo build && cnt run`) uses it without
+switching the default runner.
 
 ## Build info (`--build-info`)
 

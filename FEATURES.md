@@ -99,7 +99,16 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   (BOOTSEL mode), no probe, picotool, elf2uf2 or objcopy step; `SERIAL` waits for the device to (re)appear and
   come back. `references/frameworks.md`'s RP2040/RP235x alternative-runner line and both app/ww `README.md.j2`
   mention it. probe-rs stays the default `cargo run`/`cargo build` runner in `.cargo/config.toml`, untouched.
-  Verified by generating an rp2040, an rp2350b `--wire-weaver` and an STM32 project (no `justfile` for the latter).
+  Verified by generating an rp2040, an rp2350b `--wire-weaver` and an STM32 project; the `justfile` now also carries
+  the `cnt` recipe (TPL-35) on every non-ESP family, so it is no longer RP-only.
+- ✅ **TPL-35 `cnt run` as an alternative runner**: `.cargo/config.toml` (`app/cargo_config.toml.j2`, every non-ESP
+  family) carries a commented `runner = "cnt run --chip <CHIP>"` under the active `probe-rs run` one, and the
+  generated `justfile` gets a `cnt` recipe (`cargo build && cnt run`): both flash, reset and then show the defmt log
+  plus live counters as they change (`cnt_cli`), without switching the project's default runner. `cnt` bumped to
+  0.5 in `scripts/data/versions.toml` (macro API and the on-target buffer format, `SIGNATURE_VERSION`, are
+  unchanged from 0.4; only the host `cnt_cli` version moves). Verified by regenerating and building `g0`, `g0rtt`,
+  `rp2040`, `xf1` (stm32xx-hal) and `espc3` (no `justfile`, ESP keeps `espflash`/probe-rs only) of the tested matrix,
+  plus their bootloaders where present.
 
 ## Device contract (`DEV`)
 

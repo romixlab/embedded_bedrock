@@ -1,4 +1,11 @@
+{% if t.family == "rp" %}
 # Flash over PICOBOOT (BOOTSEL), no probe/picotool/elf2uf2: hold BOOTSEL and reset first, then run this; SERIAL waits for it to reappear and come back
 flash-bootsel serial="":
     cargo build --release
     ww dfu rp flash target/{{ t.rust_target }}/release/{{ o.name }} {{ '{{' }} if serial == "" { "" } else { "--wait 10 --follow -s " + serial } {{ '}}' }}
+
+{% endif %}
+# Build and run the dev firmware showing the defmt log plus live counters as they change (cnt run; cargo install cnt_cli)
+cnt *args:
+    cargo build
+    cnt run {{ '{{' }}args{{ '}}' }}

@@ -10,6 +10,15 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `cnt run` as an alternative runner (TPL-35): `.cargo/config.toml` (every non-ESP family) carries a commented
+  `runner = "cnt run --chip <CHIP>"` under the active `probe-rs run` one, and the generated `justfile` (now written
+  for every non-ESP family, not just RP, TPL-27) gets a `cnt` recipe (`cargo build && cnt run`): both flash, reset
+  and show the defmt log plus live counters as they change, without switching the default runner. `cnt` bumped to
+  0.5 in `data/versions.toml` (macro API and on-target buffer format unchanged from 0.4).
+
+  Upgrade notes: regenerate to pick up the commented runner line, the `justfile`'s `cnt` recipe and the `cnt` crate
+  bump; an existing firmware can also add the line and recipe by hand. `cargo install cnt_cli` (0.5) on the host.
+
 - `flash-bootsel`'s generated `justfile` recipe uses `ww dfu rp flash` (TPL-27): wire_weaver renamed `ww bootsel`
   under `ww dfu` (the old name still runs as a hidden alias for now). `references/frameworks.md` and the generated
   `ww/README.md.j2` updated to match.
