@@ -5,8 +5,8 @@ edition = "2024"
 description = "Shared clock for bedrock firmware: a local clock disciplined onto UTC by host steer points or a sync line, holdover, scheduled actions, the ww_timebase::Clock server bookkeeping"
 license = "MIT OR Apache-2.0"
 
-# Firmware takes this crate by path from the embedded_bedrock checkout next to it, like bedrock_led: the
-# `ww-timebase` feature depends on WireWeaver from the local checkout next to that, as the firmware does.
+# The `ww-timebase` feature takes WireWeaver from git (the workspace dependencies), like bedrock_led; firmware on a
+# local WireWeaver checkout points that git source at it with a [patch].
 
 [features]
 # A static shared clock on embassy-time's Instant, and wait_until_shared for scheduled actions
@@ -20,9 +20,9 @@ defmt = { version = "1.0", optional = true }
 embassy-sync = { version = "0.8.0", optional = true }
 embassy-time = { version = "0.5.1", optional = true }
 wire_weaver = { workspace = true, optional = true }
-ww_si = { path = "../../wire_weaver/ww_stdlib/ww_si", default-features = false, features = ["time", "u32"], optional = true }
-ww_timebase = { path = "../../wire_weaver/ww_stdlib/ww_timebase", default-features = false, optional = true }
+ww_si = { workspace = true, features = ["time", "u32"], optional = true }
+ww_timebase = { workspace = true, optional = true }
 
 [dev-dependencies]
 # the host side of the closed-loop test (tests/closed_loop.rs): the estimator that fits and steers
-ww_clock_sync = { path = "../../wire_weaver/ww_clock_sync" }
+ww_clock_sync.workspace = true

@@ -5,9 +5,9 @@ edition = "2024"
 description = "Status LED animation for bedrock firmware: breath and blink with eased fades, gamma, peak brightness, identify; mono and RGB LEDs over embedded-hal PWM"
 license = "MIT OR Apache-2.0"
 
-# Firmware takes this crate by path from the embedded_bedrock checkout next to it (not from git like
-# bedrock_crash): the `ww-indication` feature depends on WireWeaver from the local checkout next to that, as the
-# firmware does, so both resolve to the same ww_indication.
+# The `ww-indication` feature takes ww_indication from WireWeaver's git (the workspace dependencies); firmware that
+# builds against a local WireWeaver checkout points that git source at it with a [patch], so both resolve to the
+# same ww_indication.
 
 [features]
 # The async driver: shared state in statics, the task loop on embassy-time and embassy-sync. Off: the HAL-free
@@ -22,4 +22,4 @@ defmt = { version = "1.0", optional = true }
 embedded-hal = "1.0"
 embassy-sync = { version = "0.8.0", optional = true }
 embassy-time = { version = "0.5.1", optional = true }
-ww_indication = { path = "../../wire_weaver/ww_stdlib/ww_indication", default-features = false, optional = true }
+ww_indication = { workspace = true, optional = true }

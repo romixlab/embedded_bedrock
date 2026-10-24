@@ -81,7 +81,8 @@ so a missing entry means work nobody sees.
   TPL-20).
 - `book/` — notes on build info, counters and common issues.
 
-WireWeaver crates are path dependencies on `../wire_weaver`. Fix WireWeaver problems there, with its own
+WireWeaver crates come from git (root `Cargo.toml`), patched to the sibling `../wire_weaver` for local work in
+`.cargo/config.toml` (add a crate to both). Fix WireWeaver problems there, with its own
 FEATURES.md and CHANGELOG, rather than working around them here. The GUI side of the debug tool lives in RockFace;
 items here are for the scriptable CLI and the shared crates.
 

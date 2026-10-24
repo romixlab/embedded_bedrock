@@ -9,6 +9,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_build::serialize_compact_build_info`: `compact()` alone, for a crate without defmt (BLD-2).
+
+### Changed
+
+- The workspace takes WireWeaver by git, not by path; local work builds against `../wire_weaver` through the
+  `[patch]` in `.cargo/config.toml` (BLD-8). `bedrock_build` / `bedrock_build_info` taken from git, and
+  `cargo install --git https://github.com/romixlab/embedded_bedrock bedrock_board_cli`, now build on a PC without a
+  wire_weaver checkout. `bedrock_led`, `bedrock_sync` and `bedrock_rom_boot` take their WireWeaver crates through
+  the workspace too (`bedrock_rom_boot` with `ww-dfu` resolves from git).
+
+### Fixed
+
+- `bedrock_build` on `build-info-common` 0.0.46, the version `build-info-build` in the template uses: firmware
+  build scripts failed with mismatched `BuildInfo` types (BLD-2).
+
 ## [0.2.15] - 2026-10-23
 
 ### Added

@@ -134,6 +134,11 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
   that matrix entry uses the 128 KiB F103CB. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
   on 64 KiB parts, or the tested part moves to F103CB.
+- 🐛 **TPL-43 `--wire-weaver` with `--ww-src git`: the API crate has no `Cargo.lock`**: `#[ww_api_root]` (wire_weaver_core
+  `transform/cargo_source.rs`) needs a lockfile in `<name>_api/` or above it to find git dependencies, and the
+  generator writes none there, so the firmware build fails until `cargo generate-lockfile` runs in `<name>_api/`.
+  Found building `g0bigit` (23 Oct 2026). Fix in wire_weaver (take the consumer's lockfile) or here (a host
+  workspace root over the API crate, as `nucleo_g0b1re_template` has).
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -239,13 +244,18 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - 🚧 **BLD-1 Build info format** (`bedrock_build_info`): crate, target, compiler and version-control info,
   WireWeaver-serialized with a CRC; owned and borrowed forms. RockFace reads it from the ELF and shows it.
 - 🚧 **BLD-2 Embedding** (`bedrock_build`): build-script helper that embeds the compact form and a defmt-interned
-  full form. Off by default in the template (`--build-info`) because `bedrock_build_info` depends on unpublished
-  crates.
+  full form (`serialize_build_info`), or the compact form alone for a crate without defmt
+  (`serialize_compact_build_info`: the bootloader without its `defmt` feature). Off by default in the template
+  (`--build-info`); since BLD-8 it builds with `--bedrock git` too.
 - 📋 **BLD-3 Publish the crates** so `--build-info` can be on by default.
 - 📋 **BLD-4 Flash SHA / CRC** embedded for quick comparisons, defmt lookup and the bootloader's image check.
 - 📋 **BLD-5 Inject build info into the ELF after the build** (no source changes).
 - 🚧 **BLD-6 RAM linking option**: `bedrock_build/link_ram_cortex_m.x` exists, not wired into the template.
-- 📋 **BLD-7 Git hook** that replaces path dependencies with git links before pushing.
+- ✅ **BLD-8 Builds from git**: the workspace takes WireWeaver by git (root `Cargo.toml`), local work takes the
+  sibling `../wire_weaver` through the `[patch]` in `.cargo/config.toml`, which only builds run inside the checkout
+  see. So firmware's `bedrock_build` and `cargo install --git ... bedrock_board_cli --locked` work on a PC without
+  the sibling; generated firmware with a local `--ww-src` patches bedrock_build's WireWeaver to that checkout (one
+  WireWeaver in the build). Tested matrix entries `g0bi` and `g0bigit`.
 
 ## Robustness (`ROB`)
 
@@ -348,4 +358,5 @@ request, resvg). Example: `bedrock_board/examples/nucleo_g0b1re/` (NUCLEO-G0B1RE
 
 ## Dropped and superseded
 
-(none yet)
+- **BLD-7 Git hook** that replaces path dependencies with git links before pushing: superseded by BLD-8 (git
+  dependencies, patched to the sibling checkout for local work).

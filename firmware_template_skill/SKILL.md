@@ -106,7 +106,7 @@ For firmware without `bedrock_fw.json` (pre-0.4.0) see the 0.4.0 upgrade notes i
 
 | option | effect |
 |---|---|
-| `--build-info` | embeds bedrock build info (needs `--log defmt` and a buildable `embedded_bedrock`; `--bedrock <path>` for a local checkout). Off by default since `bedrock_build_info` depends on unpublished crates. |
+| `--build-info` | embeds bedrock build info (needs `--log defmt` and a buildable `embedded_bedrock`; `--bedrock <path>` for a local checkout). Off by default; builds with `--bedrock git` too (its WireWeaver comes from git, patched to a local `--ww-src`). |
 | `--nightly`, `--build-core`, `--panic-immediate-abort` | pin nightly / `build-std` for smaller binaries. Not required for embassy any more (executor 0.10 statically allocates tasks on stable). |
 | `--no-flip-link` | disable stack-overflow protection linker |
 | `--min-bootloader 24K` | bootloader region, rounded up to erase sectors; dev+release profiles of the bootloader are `opt-level = "z"` so it fits |

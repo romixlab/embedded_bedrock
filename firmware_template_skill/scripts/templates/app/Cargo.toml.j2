@@ -1,4 +1,4 @@
-{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep, embassy_patch %}
+{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep, bedrock_ww_patch, embassy_patch %}
 {% set defmt = o.log == "defmt" %}
 {% set ww_rtt = o.ww and ww.rtt %}
 [package]
@@ -142,6 +142,9 @@ build-info-build = "{{ V["build-info-build"] }}"
 {% endif %}
 {% if not (o.build_info or o.ww) %}
 # (none)
+{% endif %}
+{% if o.build_info and o.ww_src != "git" %}
+{{ bedrock_ww_patch(o.ww_src, root) }}
 {% endif %}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html

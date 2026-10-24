@@ -10,6 +10,20 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `--build-info` builds with `--bedrock git` (BLD-8): embedded_bedrock now takes WireWeaver from git instead of
+  `../wire_weaver`, so `bedrock_build` from git no longer fails with "no matching package named `wire_weaver`". With a
+  local `--ww-src`, `Cargo.toml` and `bootloader/Cargo.toml` get a `[patch."https://github.com/vhrdtech/wire_weaver"]`
+  block pointing bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` at that checkout. The bootloader's
+  `build.rs` embeds `compact()` alone without its `defmt` feature (`bedrock_build::serialize_compact_build_info`),
+  which failed to compile before. `bedrock_build` is on `build-info-common` 0.0.46, matching `build-info-build`
+  (mismatched `BuildInfo` types before). New tested-matrix entries `g0bi` (local sources) and `g0bigit` (git
+  sources, once per release).
+
+  Upgrade notes: firmware with `"build_info": true` takes the new `bedrock_build` on `cargo update -p bedrock_build`
+  (git) or at once (path). With a local `ww_src`, add the `[patch]` block (regenerate `Cargo.toml` and compare);
+  without it the build has two WireWeavers, which works but builds twice. A bootloader with build info takes the
+  `CARGO_FEATURE_DEFMT` branch in `build.rs`. Nothing to do for firmware without build info.
+
 - `cnt run` as an alternative runner (TPL-35): `.cargo/config.toml` (every non-ESP family) carries a commented
   `runner = "cnt run --chip <CHIP>"` under the active `probe-rs run` one, and the generated `justfile` (now written
   for every non-ESP family, not just RP, TPL-27) gets a `cnt` recipe (`cargo build && cnt run`): both flash, reset

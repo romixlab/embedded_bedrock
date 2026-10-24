@@ -1,0 +1,12 @@
+# Local work builds against the WireWeaver checkout next to this one (../wire_weaver), not the git source the
+# workspace names, so a change there is picked up here at once. Only builds run from inside this checkout see this
+# file: firmware and `cargo install --git` take WireWeaver from git.
+[patch."https://github.com/vhrdtech/wire_weaver"]
+wire_weaver = { path = "../wire_weaver/wire_weaver" }
+ww_clock_sync = { path = "../wire_weaver/ww_clock_sync" }
+ww_date_time = { path = "../wire_weaver/ww_stdlib/ww_date_time" }
+ww_dfu = { path = "../wire_weaver/ww_stdlib/ww_dfu" }
+ww_indication = { path = "../wire_weaver/ww_stdlib/ww_indication" }
+ww_si = { path = "../wire_weaver/ww_stdlib/ww_si" }
+ww_timebase = { path = "../wire_weaver/ww_stdlib/ww_timebase" }
+ww_version = { path = "../wire_weaver/ww_stdlib/ww_version" }

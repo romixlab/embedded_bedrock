@@ -342,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "build-info-common"
-version = "0.0.42"
+version = "0.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7a436965b6554ae18aba994745234bf2ed98d2c984e96b58aeb0f845c666969"
+checksum = "6b125336712bfd9373ecf441a6ae89177c59bc45e7719700b895c02041c182eb"
 dependencies = [
  "chrono",
  "derive_more",
@@ -3477,7 +3477,6 @@ dependencies = [
  "tracing",
  "windows-sys 0.61.2",
  "wire_weaver",
- "wire_weaver_evolution",
  "wire_weaver_snapshots",
  "ww_client_server",
  "ww_date_time",
@@ -3511,10 +3510,8 @@ dependencies = [
  "regex",
  "ron",
  "semver 1.0.28",
- "serde",
  "shrink_wrap",
  "syn 3.0.6",
- "toml 1.1.6+spec-1.1.0",
  "wire_weaver_snapshots",
  "ww_global",
  "ww_numeric",
@@ -3535,18 +3532,6 @@ dependencies = [
  "syn 3.0.6",
  "wire_weaver_core",
  "ww_global",
-]
-
-[[package]]
-name = "wire_weaver_evolution"
-version = "0.5.0"
-dependencies = [
- "ron",
- "shrink_wrap",
- "wire_weaver_snapshots",
- "ww_numeric",
- "ww_self",
- "ww_version",
 ]
 
 [[package]]

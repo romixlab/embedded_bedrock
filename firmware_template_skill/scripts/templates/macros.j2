@@ -20,6 +20,17 @@
 {{ name }} = { {% if src == "git" %}git = "{{ WW_GIT }}"{% else %}path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}"{% endif %}{{ extra }} }
 {%- endmacro %}
 
+{#- [patch] pointing bedrock_build's WireWeaver crates (embedded_bedrock takes them from git) at the local --ww-src
+    checkout, so the build has one WireWeaver. Starts with a blank line, no newline at the end -#}
+{% macro bedrock_ww_patch(src, prefix) %}
+
+# bedrock_build takes WireWeaver from git: the local checkout (--ww-src) instead
+[patch."{{ WW_GIT }}"]
+{% for name, subdir in [("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_version", "ww_stdlib/ww_version")] %}
+{{ name }} = { path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}" }{{ "\n" if not loop.last }}
+{%- endfor %}
+{%- endmacro %}
+
 {#- [patch.crates-io] taking `crates` from embassy main (--embassy main), or the same block commented out ready to
     switch (--embassy release) -#}
 {% macro embassy_patch(main, crates) -%}

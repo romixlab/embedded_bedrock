@@ -66,7 +66,16 @@ fn main() {
     let info = build_info_build::build_script()
         .collect_dependencies(build_info_build::DependencyDepth::Depth(0))
         .build();
+{% if bootloader %}
+    // full() needs defmt, an optional feature of the bootloader
+    let info = if env::var("CARGO_FEATURE_DEFMT").is_ok() {
+        bedrock_build::serialize_build_info(info)
+    } else {
+        bedrock_build::serialize_compact_build_info(info)
+    };
+{% else %}
     let info = bedrock_build::serialize_build_info(info);
+{% endif %}
     fs::write(out.join("build_info.rs"), info).unwrap();
 {% endif %}
 }

@@ -1423,6 +1423,8 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     if o.supply_config in ("SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass") and not o.smps_voltage:
         die(f"--supply-config {o.supply_config} needs --smps-voltage V1_8|V2_5")
 
+    if o.build_info:
+        o.ww_src = args.ww_src  # bedrock_build takes WireWeaver from git, patched to a local --ww-src
     if o.settings:
         o.settings_flash = settings_flash(t, fw, o.bootloader)
         o.ww_src = args.ww_src  # ww_settings comes from wire_weaver

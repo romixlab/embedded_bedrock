@@ -1,4 +1,4 @@
-{% from "macros.j2" import dep, bedrock_build, embassy_patch %}
+{% from "macros.j2" import dep, bedrock_build, bedrock_ww_patch, embassy_patch %}
 {% set hal = "embassy-" ~ t.family %}
 [package]
 name = "{{ o.name }}-bootloader"
@@ -27,6 +27,9 @@ bedrock_build = {{ bedrock_build(o.bedrock, prefix=root ~ "../") }}
 build-info-build = "{{ V["build-info-build"] }}"
 {% else %}
 # (none)
+{% endif %}
+{% if o.build_info and o.ww_src != "git" %}
+{{ bedrock_ww_patch(o.ww_src, root ~ "../") }}
 {% endif %}
 
 [features]

@@ -35,9 +35,28 @@ pub fn common() {
     println!("cargo:rerun-if-changed=../link_ram_cortex_m.x");
 }
 
+/// `compact()` and `full()`: the build information for flash and, through defmt string interning, for the ELF.
+/// The crate depends on defmt.
 pub fn serialize_build_info(info: BuildInfo) -> String {
-    let (info_full, mut info_pruned) = build_info::shrink_wrap_build_info(info);
+    let (compact, info_full) = serialize(info);
     let info_full = BASE64_STANDARD.encode(&info_full);
+    format!(
+        "{compact}
+    
+/// Full build information, only saved to the firmware ELF file through defmt string interning.
+/// Ensure to either print it via defmt or use _ = core::hint::black_box(full()) to ensure it is saved in ELF.
+pub fn full() -> defmt::Str {{ defmt::intern!(\"build_info:{info_full}\") }}"
+    )
+}
+
+/// `compact()` only, for a crate without defmt (a bootloader built without its `defmt` feature).
+pub fn serialize_compact_build_info(info: BuildInfo) -> String {
+    serialize(info).0
+}
+
+/// The `compact()` source and the full serialized build information.
+fn serialize(info: BuildInfo) -> (String, Vec<u8>) {
+    let (info_full, mut info_pruned) = build_info::shrink_wrap_build_info(info);
 
     let crc = build_info_crc(&info_pruned).to_le_bytes();
 
@@ -62,18 +81,15 @@ pub fn serialize_build_info(info: BuildInfo) -> String {
     );
     let total_flash_size = info_pruned.len();
 
-    format!(
+    let compact = format!(
         "const COMPACT: &'static [u8] = &{info_pruned:?};
 
 /// Build information to be embedded into MCU FLASH, optimized for size by omitting some fields.
 /// Size in FLASH with marker, length and CRC is {total_flash_size}B.
 /// Ensure to either print it via defmt or use _ = core::hint::black_box(compact()) to ensure it is saved in FLASH.
-pub fn compact() -> &'static [u8] {{ core::hint::black_box(&COMPACT[10..]) }}
-    
-/// Full build information, only saved to the firmware ELF file through defmt string interning.
-/// Ensure to either print it via defmt or use _ = core::hint::black_box(full()) to ensure it is saved in ELF.
-pub fn full() -> defmt::Str {{ defmt::intern!(\"build_info:{info_full}\") }}"
-    )
+pub fn compact() -> &'static [u8] {{ core::hint::black_box(&COMPACT[10..]) }}"
+    );
+    (compact, info_full)
     // let info_full_len = info_full.len();
     // let info_pruned_len = info_pruned.len();
     // let info_full = to_hex_strings(&info_full);

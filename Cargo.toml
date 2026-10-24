@@ -19,6 +19,14 @@ members = [
 ]
 
 [workspace.dependencies]
-wire_weaver = { path = "../wire_weaver/wire_weaver", default-features = false }
-ww_date_time = { path = "../wire_weaver/ww_stdlib/ww_date_time", default-features = false }
-ww_version = { path = "../wire_weaver/ww_stdlib/ww_version", default-features = false }
+# WireWeaver by git, so the crates build when embedded_bedrock itself comes from git (firmware's bedrock_build,
+# `cargo install --git ... bedrock_board_cli`). Local work takes the sibling checkout ../wire_weaver instead, through
+# the [patch] in .cargo/config.toml.
+wire_weaver = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_clock_sync = { git = "https://github.com/vhrdtech/wire_weaver" }
+ww_date_time = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_dfu = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_indication = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_si = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_timebase = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_version = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }

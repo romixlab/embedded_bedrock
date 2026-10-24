@@ -16,7 +16,8 @@ Pitfalls with older documentation / examples:
   `cnt_if!(true, name: u32 += 1)`). Needs Rust 1.88+, host `cnt_cli` 0.5 (format version 2, same as 0.4; rejects 0.2/0.3
   firmware).
 - `embassy-stm32`: prefer `time-driver-any` over `time-driver-timN`. `SMPSSupplyVoltage::V1_8`/`V2_5`.
-- `bedrock_build` build-info is optional (`--build-info`) since `bedrock_build_info` depends on an unpublished `ww_date_time`.
+- `bedrock_build` build-info is optional (`--build-info`); `bedrock_build_info` depends on WireWeaver crates from git
+  (`ww_date_time`, `ww_version`), not on crates.io.
 
 ## Per family
 
@@ -160,7 +161,10 @@ switching the default runner.
 `bedrock_build::common()` replaces the manual `-Tlink.x/-Tdefmt.x/--nmagic` lines and adds `RAM_LINK=1` support
 (link and run from RAM, `link_ram_cortex_m.x`). `bedrock_build::serialize_build_info()` writes `build_info.rs`
 with `compact()` (CRC'd blob in flash) and `full()` (defmt-interned, ELF only). Requires a checkout of
-`embedded_bedrock` whose `bedrock_build_info` dependencies resolve (`--bedrock <relative path>`, default `git`).
+`embedded_bedrock` (`--bedrock <relative path>`, default `git`); its WireWeaver crates come from git. With a local
+`--ww-src`, `Cargo.toml` and `bootloader/Cargo.toml` get a `[patch."https://github.com/vhrdtech/wire_weaver"]` that
+points bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` at that checkout, so the build has one
+WireWeaver. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
 
 ## Hubris
 
@@ -231,6 +235,8 @@ new h725set --chip STM32H725IG --settings --supply-config DirectSMPS --counters 
 new f411set --chip STM32F411CE --settings --log rtt --led PC13              (no ECC: BlockingAsync)
 new f411setw --chip STM32F411CE --settings --wire-weaver --led PC13
 new l4set  --chip STM32L476RG --settings --counters --log none               (ECC, no ww_ecc_flash family: region only)
+new g0bi   --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --build-info  (local --bedrock and --ww-src, +bootloader with and without defmt, release)
+new g0bigit --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --build-info (git sources, see below; +bootloader, release)
 ```
 
 Crash capture is on in every Cortex-M entry, built with `--bedrock <embedded_bedrock checkout>`
@@ -240,6 +246,11 @@ flip-link is on in every Cortex-M entry; check it in each ELF: `_stack_start` (`
 `.data` (`readelf -S`) and `_stack_end` is the start of `RAM`. Without flip-link `_stack_start` is the end of `RAM`.
 
 WireWeaver entries are built against WireWeaver `master` from git; `--ww-src <checkout>` builds against a local tree.
+At least once per release one entry builds with the default git sources (`--bedrock git --ww-src git`, `g0bigit`):
+the other entries use sibling checkouts and miss what only a git consumer sees (path dependencies inside
+embedded_bedrock, BLD-8; an unreleased WireWeaver change). Before the branch is on GitHub, point the generated
+`git = "https://github.com/romixlab/embedded_bedrock"` lines at `file://<checkout>` with `branch = "<branch>"`.
+`g0bigit` needs `cargo generate-lockfile` in `g0bi_api/` first (TPL-43).
 The USB set-up was also compiled for STM32G474RE (`USB_LP`, needs embassy-stm32 `single-bank`/`dual-bank`, which the
 template does not select yet), STM32U585AI (`OTG_FS`, `ICLKSEL`) and STM32H563ZI (`USB_DRD_FS`) after removing the
 H7-only `SupplyConfig` lines the SMPS check forces on U5/H5.
