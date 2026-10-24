@@ -200,6 +200,24 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   firmware.
 - 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
   (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
+- 🧪 **TPL-46 `--pins`: `ww_pin_diag::PinDiag` beside the device suite**: `--pins board|LIST|none` (`resolve_pins()`;
+  the `nucleo_g0b1re` preset answers `board`) serves `pins` in the API as nucleo_g0b1re_template FW-12 / TPL-11
+  (467f889) does: `board` takes every pin the preset's boardmap TOML marks free (no `[pins]` role or role `free`,
+  the same rule as boardmap's pin table), minus the LED, USB DP / DM and SWD, named as there, plus the preset's
+  `[pins.read_only]` (role `shared` only); without a preset an explicit list `PA0,PB3,PC13:ro`, checked against
+  stm32-data's package pins. Firmware `src/pins.rs` (analog until a host sets or reads a pin, `release_all` on a
+  link drop), `ww.rs` / `ww/device.rs` / `main.rs` parts, the API's `ww_impl!(pins: ...)`; host side `just pins`
+  (`ww pins tui`, over RTT with `--rtt CHIP --probe`, over USB `--api`, with the board map as preset when there is
+  one), README "Pins" (the preset's `readme-pins.md` adds the board part and a jumper test), the bare board's pin
+  test plan in `docs/board/`, and with a pin table the client test `tests/board_pins.rs` that checks the list
+  against it. The G0 answers with `--board nucleo_g0b1re` regenerate G0's `firmware/src`, `firmware/Cargo.toml`,
+  the client test, the pin test plan and the README section byte for byte (that firmware passed `ww pins test` on
+  the board); matrix entries `g0board`, `g0pinsh` (list, USB, `--host`), `g0pinsrtt` (list, no `--host`) and
+  `h7pins` build. Embassy on STM32 with `--log defmt` only; the H7 code has not run on a board.
+- 📋 **TPL-48 `--pins` on RP and nRF**: `resolve_pins()` dies outside STM32; embassy-rp and embassy-nrf have a
+  `Flex` too, `pins.rs` needs their pull / drive / analog (disconnected input) calls and the pin names of the chip.
+- 📋 **TPL-49 `--pins` without embassy**: the STM32 HAL crates (`stm32-hal2`, `stm32xx-hal`) and bare firmware have no
+  `pins.rs` yet (it is written against embassy-stm32's `Flex`); `--wire-weaver` there serves the device suite only.
 - ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`
   (`wire_weaver_evolution`, strict: the API's current version needs a snapshot), `just api-check` / `just api-save`,
   the CI step, and `.githooks/pre-commit` installed by `scripts/hooks.py` (`just hooks`, also a `just setup` step):

@@ -34,6 +34,30 @@ or options; purely internal refactors only need a line under the next version.
   `just api-save`. Host crates: `leds.rs` in the client and the CLI / Python additions. Check on the board: the LED
   breathes, `led on|off` hold it, `leds identify` blinks it.
 
+- `--pins board|LIST|none` (TPL-46), default `none` (the `nucleo_g0b1re` preset answers `board`): the firmware serves
+  `pins` (`ww_pin_diag::PinDiag`) beside the device suite, as nucleo_g0b1re_template FW-12 / TPL-11 (467f889) does.
+  `board` takes every pin the preset's board map marks free, named as there, plus the preset's `[pins.read_only]`;
+  a list `PA0,PB3,PC13:ro` works without a preset. Never the SWD pins, the LED or USB DP / DM. Embassy on STM32 with
+  `--log defmt` (RP / nRF: TPL-48, the HAL crates: TPL-49).
+  - Firmware: `src/pins.rs` (a pin stays analog until a host sets or reads it; `release_all` and every link drop put
+    it back), the `PinDiag` impl in `src/ww.rs` (refusals counted with `cnt` when `--counters`, release on
+    `LinkEvent::Down`), `Point` / `pins_points` in `src/ww/device.rs`, `mod pins` and `Pins::new` in `main.rs`,
+    `ww_pin_diag` and `ww_gpio` in `firmware/Cargo.toml`.
+  - API crate: `ww_impl!(pins: ww_pin_diag::PinDiag)`, `ww_pin_diag` / `ww_gpio` dependencies.
+  - Host: `just pins` (`ww pins tui`: over RTT `--rtt CHIP --probe`, over USB `--api`, with the board map as preset
+    when there is one), README "Pins" (from a preset also its `readme-pins.md`: the board's headers and a jumper
+    test); with `--host` the root workspace and the client take `ww_pin_diag` / `ww_gpio`, a preset's pin test plan
+    goes to `docs/board/`, and with a pin table `<name>_client/tests/board_pins.rs` checks the list against it.
+  - The G0 answers with `--board nucleo_g0b1re` regenerate G0's `firmware/src`, `firmware/Cargo.toml`, the client
+    test, the pin test plan and the README section byte for byte.
+
+  Upgrade notes: new answer `pins` (missing = `none`, nothing changes). To add it: regenerate with `--pins` into a
+  scratch directory and take `src/pins.rs` and the `pins` parts of `ww.rs`, `ww/device.rs`, `main.rs`, both
+  `Cargo.toml`s, the API's `lib.rs`, the justfile and README; adding `pins` to the API is a minor version bump of
+  the API crate (`just api-save` after it; `ww api save` 0.5.0 of 22 Oct panics on a `PinDiag` API, a newer `ww`
+  is needed). Pins the firmware uses for something else must leave the list first. `just pins` needs a `ww` with
+  `pins tui` (wire_weaver TOOL-21, ab32916). Run `ww pins test` on a board before relying on it.
+
 - `--host`: the Python crate's lib has `test = false` (it is tested from Python with `just test-py`; `cargo test --workspace` no longer runs a Rust test binary that needs libpython at run time), and the CLI's `use` of the client wraps at rustfmt's 98 columns, not 100 (failed `rustfmt --check` for longer project names). Upgrade notes: add `test = false` under `[lib]` in `<name>_py/Cargo.toml`.
 - Tested matrix: `f103m` builds release only (TPL-34).
 
