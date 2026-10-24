@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-10-24
+
 ### Added
 
 - `bedrock_build::serialize_compact_build_info`: `compact()` alone, for a crate without defmt (BLD-2).
