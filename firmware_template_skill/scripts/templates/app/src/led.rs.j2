@@ -17,16 +17,12 @@
 //! The time driver is {{ pw.driver | upper }} (`time-driver-{{ pw.driver }}` in Cargo.toml), named explicitly: `time-driver-any` picks one by
 //! embassy's own order and may take {{ tim }}.
 
-{% if s.leds %}
-pub use bedrock_led::{DEFAULT_PEAK, Mode, look};
-{% else %}
-pub use bedrock_led::{Mode, look};
-{% endif %}
-{% if pw.n %}
-use bedrock_led::{Channel, Indication};
-{% else %}
-use bedrock_led::{Indication, Pwm};
-{% endif %}
+{# rustfmt orders the two by their braces ({Channel / {DEFAULT_PEAK / {Indication / {Mode) #}
+{% set uses = [("{DEFAULT_PEAK, Mode, look};" if s.leds else "{Mode, look};", "pub "),
+               ("{Channel, Indication};" if pw.n else "{Indication, Pwm};", "")] %}
+{% for items, vis in uses | sort(attribute=0) %}
+{{ vis }}use bedrock_led::{{ items }}
+{% endfor %}
 use embassy_stm32::Peri;
 use embassy_stm32::gpio::OutputType;
 use embassy_stm32::peripherals::{{ "{" }}{{ l.pin }}, {{ tim }}{{ "}" }};
@@ -114,8 +110,7 @@ pub async fn led_task({{ tim | lower }}: Peri<'static, {{ tim }}>, {{ l.pin | lo
     pwm.enable(embassy_stm32::timer::Channel::Ch{{ pw.ch }});
     let mut {{ l.var }} = Led { pwm, max };
 
-    LEDS.run([mode], |leds| {{ l.var }}.set_level(leds.level(0)))
-        .await
+    LEDS.run([mode], |leds| {{ l.var }}.set_level(leds.level(0))).await
 {% else %}
     let mut pwm = SimplePwm::new(
         {{ tim | lower }},
