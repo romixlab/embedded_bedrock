@@ -45,6 +45,14 @@ Plan: ~/git/tpm/maintain/P2528-embedded-bedrock/design/g0-gen-suite.md (read it 
 - gen-pin-diag (P7) at step 3/5, uncommitted template edits + nucleo_g0b1re-pins-test.toml; its context was past soft limit (190k).
 - G5 landed in template main 467f889; G4 g0-led-sync ready (API 0.4.0), not landed: P5/P6 after. P8 reference is the template's latest main.
 
+## State at 24 Oct, conversation 5
+
+- TPL-44 matrix: gen-matrix rebased its commit onto 25eab9f itself (added the 11 P3/P4/--host entries to matrix.toml, host-tag checks: cargo test, clippy, fmt --check, just test-py; --board chip for flip-link); taken here as 346400c. gen-matrix said ready "taken into g0-gen-suite": it lands with this branch (close it with tpm work done).
+- Full matrix run on omarchy-m1: `PYTHONUNBUFFERED=1 uv run firmware_template_skill/scripts/bedrock_gen.py matrix --jobs 3 --bedrock $PWD --ww-src $(realpath ../wire_weaver)` > $CLAUDE_JOB_DIR/tmp/matrix.log (job ecca77b3). Known baseline failures: TPL-22/23/34 (xf3/xg4/xl4 rustfmt, f103 release).
+- P5+P6 in one session gen-led-sync (omarchy-m1, opus, from 346400c, task P2528#24oct-1610, TPL-39 + TPL-40 bound) against G4's ready branch f3bb2a2 (worktree ~/git/.wt/g0-led-sync/nucleo_g0b1re_template here). Its login ~/.claude-vhrd2 was at 98%: may stop, `tpm work resume gen-led-sync`.
+- gen-pin-diag (P7) told to rebase onto 346400c and add its entries to matrix.toml.
+- Asked parent about G4 landing and W4 state; no answer yet. Local ~/git/nucleo_g0b1re_template main is stale (5bcbba0): use origin/main (467f889).
+
 ## Decisions / gotchas
 
 - A preset's store_true default (e.g. host) can't be turned off by a flag (no --no-host); edit the answers. Fine for now.
