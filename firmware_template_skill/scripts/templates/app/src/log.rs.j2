@@ -26,11 +26,11 @@ use ww_stream::tx::Reliable;
 
 /// The ring between the logging code and [pump]: holds what is logged between two pumps (the boot log until the
 /// server task runs, at most [PUMP_PERIOD] after that). A frame that doesn't fit is dropped and counted.
-const RING_LEN: usize = 4096;
+const RING_LEN: usize = {{ s.log.ring }};
 ww_defmt_logger::global_logger!(LOG, RING_LEN);
 
 /// Bytes of log the store keeps until a host acknowledges them; the oldest go first when full.
-pub const STORE_LEN: usize = 8192;
+pub const STORE_LEN: usize = {{ s.log.store }};
 pub type Store = PersistentRamRing<'static, STORE_LEN>;
 pub type Stream = Reliable<Store>;
 

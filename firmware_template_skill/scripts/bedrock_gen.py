@@ -1024,8 +1024,10 @@ def uid_context(t: Target, o: Opts) -> dict:
     and hands it to ServerState::new), `serial`: device.board's serial (STM32: embassy's hex string, else ww.rs makes
     one)."""
     if t.family == "stm32":
+        # `ref`: embassy main's uid() is a &'static [u8; 12] already, the release's an array to keep in a cell
         return dict(len=12, doc="STM32 96-bit unique id", kind="ChipUnique", source="InternalIc",
-                    expr="embassy_stm32::uid::uid()", serial="embassy_stm32::uid::uid_hex()")
+                    expr="embassy_stm32::uid::uid()", serial="embassy_stm32::uid::uid_hex()",
+                    ref=o.embassy == "main")
     if t.rp_variant == "rp2040":
         # the RP2040 has no id of its own: the QSPI flash chip's 64-bit unique id
         return dict(len=8, doc="the flash chip's 64-bit unique id (the RP2040 has none)", kind="ChipUnique",
@@ -1136,7 +1138,11 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
     rb = b.get("rom_boot", {})
     s["boot"] = {"word": ROM_BOOT[o.rom_boot][2], "usb": rb.get("usb", "PA11 / PA12"), "healthy": rb.get("healthy", ""),
                  "rescue": rb.get("rescue", "")} if s["dev"]["boot"] else {}
-    s["uid"] = {"arg": False, "reg": "", **uid_context(t, o)} if o.ww else {}
+    s["uid"] = {"arg": False, "reg": "", "ref": False, **uid_context(t, o)} if o.ww else {}
+    # src/log.rs: the logger's ring and the stream's store, a quarter of them on parts with less than 64 KiB of RAM
+    # (12 KiB of 20 on an L073 left no stack)
+    ram = next((r.length for r in lay.regions if r.kind == "ram" and r.is_main_ram), 0) if lay else 0
+    s["log"] = {"ring": 4096, "store": 8192} if not ram or ram >= 64 * 1024 else {"ring": 1024, "store": 2048}
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
     s["dev_variant"] = s["dev"]["variant"]

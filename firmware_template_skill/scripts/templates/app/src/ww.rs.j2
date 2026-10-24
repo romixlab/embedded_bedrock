@@ -117,9 +117,11 @@ pub struct ServerState {
     stream_sessions: u32,
 {% endif %}
 }
+{% if not u_id.ref %}
 
 /// The chip's unique id, read once
 static UID: StaticCell<[u8; {{ u_id.len }}]> = StaticCell::new();
+{% endif %}
 {% if t.family != "stm32" %}
 /// [UID] in hex, `device.board`'s serial
 static SERIAL: StaticCell<[u8; {{ 2 * u_id.len }}]> = StaticCell::new();
@@ -167,9 +169,13 @@ impl ServerState {
                 kind: UidKind::{{ u_id.kind }},
                 source: UidSource::{{ u_id.source }},
 {% if t.family == "stm32" %}
+  {% if u_id.ref %}
+                value: MaxLen::new_unchecked(RefVec::new_bytes({{ u_id.expr }})),
+  {% else %}
                 value: MaxLen::new_unchecked(RefVec::new_bytes(
                     UID.init({{ u_id.expr }}),
                 )),
+  {% endif %}
 {% else %}
                 value: MaxLen::new_unchecked(RefVec::new_bytes(uid)),
 {% endif %}
