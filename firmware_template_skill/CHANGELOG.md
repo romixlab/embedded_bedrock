@@ -21,7 +21,8 @@ or options; purely internal refactors only need a line under the next version.
     a `select` over requests, the log pump and the settings write), `src/ww/device.rs` the `device` handlers,
     `src/log.rs` (`--log defmt`: `ww_defmt_logger` store, `device.log.frames` stream, and with RTT transport the
     defmt RTT tee that returns `ww_up` / `ww_down`), `src/settings.rs` gains `led_at_boot` (slot 1, the LED's state at
-    boot) and `reset_to_defaults`.
+    boot) and `reset_to_defaults`. The log's ring and store are 4 / 8 KiB, 1 / 2 KiB on parts with less than 64 KiB
+    of RAM.
   - `boot` and `dfu.node` through `bedrock_rom_boot` (G0, single-core H7; needs `--log defmt`, not with
     `--bootloader`): `src/boot.rs` (`boot::early()` first thing in `main`, the boot word in the last backup
     register, the boot-loop rescue), `memory.x` and `CNT_BKP_BUFFER_SIZE_WORDS` leave that word out of cnt's BKPSRAM.
