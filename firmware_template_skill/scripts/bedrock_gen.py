@@ -748,7 +748,7 @@ def rust_use(path: str, items: list[str], width: int = 100) -> str:
         return one
     lines, line = [], "   "
     for x in items:
-        if len(line) + 1 + len(x) + 1 > width:
+        if len(line) + 1 + len(x) + 2 > width:  # rustfmt counts ", " after each item, also the line's last
             lines.append(line)
             line = "   "
         line += f" {x},"
@@ -1223,7 +1223,8 @@ def host_names(t: Target, o: Opts, s: dict) -> dict:
         "probe_const": f"{ct.upper()}_PROBE",        # VID:PID of the probe, the default of Probe
         "probe_kind": kind,                          # "the only Nucleo ST-LINK attached"
         "probe_kind_a": kind_a,
-        "py_board": ct.lower(),                      # the Python Device's accessor of the connected board
+        # the Python Device's accessor of the connected board; `board` is taken by the board() method of the contract
+        "py_board": ct.lower() if ct.lower() != "board" else "connected",
         "board_short": ct if b else "board",         # "Blink the Nucleo's LED"
         "board_revision": s["revision"] or "A",      # board_line's example
         "led_name": readme.get("led", ""),           # the LED's name on the board (LD4)
