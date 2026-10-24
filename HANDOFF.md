@@ -77,3 +77,10 @@ Both rebased onto template main cc1c30b, not landed. g0-led-sync (G4): API 0.3.0
 Save refreshes only the current version's snapshot. Also: SAVE_ENV, Check::save(force), `ww api check --require-current`. Hook idea from evo-current: refuse a staged change/delete of a snapshot whose last commit is in a tag (docs/evolution/checker_tool.md#a-released-snapshot-never-changes); then `new` can run `just api-save` instead of `ww api save`.
 
 `tests/evolution.rs`: `wire_weaver_evolution::Check::new(env!("CARGO_MANIFEST_DIR")).require_current(true).assert();`. justfile: `api-save:` -> `WW_API_SAVE=1 cargo test -p <api> --test evolution -- --nocapture`; `api-check:` -> `cargo test -p <api> --test evolution`. Failure messages name `just api-save`.
+
+## Parent's next steps (g0-template-suite, 24 Oct late)
+
+1. gen-led-sync (P5/P6, omarchy-m1) and gen-pin-diag (P7, gpd-omarchy) both said ready: cherry-pick both onto this branch, building on top (no rewrite of pushed refs; resets on omarchy-m1 ask Roman). Check that TPL-40 clock sync is in gen-led-sync's work too, not only TPL-39 (its ready note named only TPL-39). gen-pin-diag's last commit 0f0ab90 only removes HANDOFF.md: skip it. gen-pin-diag needs ww >= wire_weaver 689b697a for `ww api save` on a PinDiag API (old 9b43a906 panics); gpd-omarchy updated, check omarchy-m1's ww.
+2. G0 reference is now template main a182dbc (v0.1.7: API 0.4.0, LED breath, clock sync). wire_weaver master 689b697 (ww-pins-tui landed). W4 evo-current said ready (EVO-12), land state unknown: apply require_current only once it is on master.
+3. Regenerate G0 against a182dbc and rerun the LED / pins matrix entries. Heavy builds stay on omarchy-m1 (gpd-omarchy short of RAM).
+4. Then P8 (G0 upgrade, TPL-3) here, or `tpm work ready` for the generator part first and P8 as its own session.
