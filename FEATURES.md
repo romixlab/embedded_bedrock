@@ -132,7 +132,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - 🐛 **TPL-34 `f103` (STM32F103C8, `--wire-weaver`) no longer fits 64 KiB**: the release build overflows FLASH by
   ~1.3 KiB against WireWeaver main of 19 Oct 2026, with the template of `main` (0d6bd3a, plus the `Second::milli`
   fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
-  that matrix entry uses the 128 KiB F103CB; since the device suite (TPL-41) its dev build overflows the F103CB too (27 KiB), release fits. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
+  that matrix entry uses the 128 KiB F103CB; since the device suite (TPL-41) the F103C8 release is 26.7 KiB over and the F103CB dev build 27 KiB over (its release fits); a 64 KiB part needs the suite trimmed (log, introspection docs) by an option. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
   on 64 KiB parts, or the tested part moves to F103CB.
 - ✅ **TPL-43 `--wire-weaver` with `--ww-src git`: the API crate has no `Cargo.lock`**: fixed with a host workspace
   root over the API crate (`suite/Cargo.toml.j2`, the firmware excluded), as `nucleo_g0b1re_template` has; `new`
