@@ -136,6 +136,7 @@ pub struct ServerState {
 {% if pins %}
     /// `pins`: the free pins (src/pins.rs)
     pins: crate::pins::Pins,
+{% endif %}
 {% if leds %}
     /// `leds`: mode, brightness and the end of a running identify (src/led.rs shows them)
     leds: leds::LedsState,
@@ -217,6 +218,7 @@ impl ServerState {
 {% endif %}
 {% if pins %}
             pins,
+{% endif %}
 {% if leds %}
             leds: leds::LedsState::new(),
 {% endif %}

@@ -48,6 +48,7 @@ defmt = { version = "{{ V["defmt"] }}", optional = true }
 {% if s.pins %}
 # PinDiag: raw access to the free pins for pin tests (`ww pins tui`)
 {{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, "../", ", default-features = false") }}
+{% endif %}
 {% if s.leds %}
 # `leds`: {{ s.led.name }}'s indication
 {{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, "../", ", default-features = false") }}

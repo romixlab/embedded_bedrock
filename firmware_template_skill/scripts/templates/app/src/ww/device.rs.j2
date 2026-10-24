@@ -358,6 +358,7 @@ impl super::server_impl::{{ ww.trait }}Consts for ServerState {
             slice: crate::pins::POINTS,
         }
     }
+{% endif %}
 {% if s.leds %}
 
     // ww_indication::Indication at leds: its one LED (src/ww/leds.rs)
