@@ -121,10 +121,14 @@ same code serves every framework, cleared with `RMVF`; RP2040 / RP235x `CHIP_RES
 embassy-rp's PAC; nRF, bare RP and ESP: `Undetermined` (TODO(ROB-11)). Uptime from `embassy_time` with embassy,
 otherwise none.
 
-`--wire-weaver` adds `firmware: ww_firmware_info::FirmwareInfo` and `last_reset: ww_firmware_info::LastReset` to the
-API root. `FirmwareInfo` is served from `<Root>Consts` (no handlers, API-36): `FIRMWARE_FIRMWARE =
-firmware_summary!()` (from `ww_firmware_info::build::emit()` in `build.rs`), `firmware_build_id()` (`const_model =
-"BUILD_ID=fn"`), `BUILD_RECORD` omitted; `LastReset` has three handlers on `ServerState::last_reset`.
+`--wire-weaver` serves the device contract at `device: Device` in the API (TPL-41, `src/ww/device.rs`), with the
+items the answers allow: `firmware` (`ww_firmware_info::FirmwareInfo`, served from consts: `firmware_summary!()` from
+`ww_firmware_info::build::emit()` in `build.rs`, `BUILD_ID=fn`, `BUILD_RECORD` omitted), `last_reset` (crash
+capture), `board`, `uid` (STM32 96-bit id, RP2040 the flash chip's id, RP2350 OTP chip id, nRF FICR DEVICEID),
+`label` and `settings` (`--settings`), `counters` (`--counters`), `log` (`--log defmt`, `src/log.rs`), `variant`
+(STM32 parts with a `[variant.<dev_id>]` table in `stm32.toml`) and `boot` / `dfu` (`bedrock_rom_boot` on G0 and
+single-core H7 without `--bootloader`, needs `--log defmt`; `src/boot.rs`, the boot word in the last backup register,
+left out of cnt's BKPSRAM).
 
 Every Cortex-M application links with `--build-id=sha1` (build.rs) and keeps `.note.gnu.build-id` in flash after
 `.rodata` (memory.x, symbols `__build_id_start` / `__build_id_end` for `ww_firmware_info::build_id()`); check with
@@ -163,8 +167,8 @@ switching the default runner.
 with `compact()` (CRC'd blob in flash) and `full()` (defmt-interned, ELF only). Requires a checkout of
 `embedded_bedrock` (`--bedrock <relative path>`, default `git`); its WireWeaver crates come from git. With a local
 `--ww-src`, `Cargo.toml` and `bootloader/Cargo.toml` get a `[patch."https://github.com/vhrdtech/wire_weaver"]` that
-points bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` at that checkout, so the build has one
-WireWeaver. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
+points bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` (and bedrock_rom_boot's `ww_dfu` with
+`device.boot`) at that checkout, so the build has one WireWeaver. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
 
 ## Hubris
 
