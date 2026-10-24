@@ -36,7 +36,13 @@ ww_uid.workspace = true
 {% if d.log %}
 ww_log.workspace = true
 {% endif %}
+{% if s.leds %}
+ww_si.workspace = true
+# `leds`
+ww_indication.workspace = true
+{% else %}
 ww_si.workspace = true # used by the generated client (ww_codegen!), not by name
+{% endif %}
 ww_report.workspace = true
 {% if d.counters or d.log %}
 cnt_core.workspace = true

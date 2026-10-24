@@ -1,6 +1,7 @@
-{# Common tail of the embassy main() bodies; `led` is an Output created by the caller, `p` the peripherals. #}
+{# Common tail of the embassy main() bodies; `led` is an Output created by the caller (none when it breathes,
+   s.led.pwm: src/led.rs owns it), `p` the peripherals. #}
 {% if o.ww %}
-  {% set args = feats("led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid") %}
+  {% set args = feats(not s.led.pwm and "led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid") %}
 
     let state = ww::ServerState::new({{ args | join(", ") }}){{ ".await" if s.dev.log else "" }};
   {% if ww.usb %}
@@ -24,8 +25,12 @@
 {% if o.settings_flash and not o.ww %}
         settings.persist_if_due().await; // changes made with settings.set(..) are written once they settle
 {% endif %}
-{% if o.ww %}
+{% if o.ww or s.led.pwm %}
+  {% if not s.led.pwm %}
         // the LED is switched over WireWeaver, see src/ww.rs
+  {% elif not o.ww %}
+        // {{ s.led.name }} breathes on its own (src/led.rs)
+  {% endif %}
   {% if o.counters %}
         cnt!(loop_iterations: u32);
   {% endif %}

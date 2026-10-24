@@ -17,6 +17,9 @@ mod init_ram;
 {% if o.crash %}
 mod last_reset;
 {% endif %}
+{% if s.led.pwm %}
+mod led;
+{% endif %}
 {% if s.dev.log %}
 mod log;
 {% endif %}
@@ -29,12 +32,14 @@ mod ww;
 {% set ww_rtt = o.ww and ww.rtt and not s.dev.log %}{# with device.log, src/log.rs sets RTT up #}
 {# `use` lines follow the mods (a panic crate, logging, cnt): else the blank line before the include separates them #}
 {% set have_uses = o.log != "none" or t.family == "esp" or not o.crash or ww_rtt or o.counters %}
-{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings_flash) and have_uses %}
+{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings_flash or s.led.pwm) and have_uses %}
 
 {% endif %}
 {# --- logging / panic handler --- #}
 {% if o.log == "defmt" %}
-  {% if t.cortex_m %}
+  {% if t.cortex_m and s.led.pwm %}
+use defmt::{info, error, unwrap};
+  {% elif t.cortex_m %}
 use defmt::{info, error};
   {% else %}
 use defmt::info;

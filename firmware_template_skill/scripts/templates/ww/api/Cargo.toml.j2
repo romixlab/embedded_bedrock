@@ -9,11 +9,20 @@ description = "WireWeaver API of the {{ o.name }} firmware"
 [features]
 # owned (alloc) variants of the API types, for host-side users
 std = [
-{% for c in feats("wire_weaver", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", d.log and "ww_log", "ww_uid", d.label and "ww_user_info") %}
+{% for c in feats("wire_weaver", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", s.leds and "ww_indication", d.log and "ww_log", "ww_uid", d.label and "ww_user_info") %}
     "{{ c }}/std",
 {% endfor %}
 ]
-defmt = ["wire_weaver/defmt", "ww_firmware_info/defmt"{{ ', "ww_user_info/defmt"' if d.label else "" }}, "dep:defmt"]
+{% set dm = feats("wire_weaver/defmt", "ww_firmware_info/defmt", s.leds and "ww_indication/defmt", d.label and "ww_user_info/defmt", "dep:defmt") %}
+{% if dm | length > 4 %}
+defmt = [
+  {% for c in dm %}
+    "{{ c }}",
+  {% endfor %}
+]
+{% else %}
+defmt = {{ dm | toml_list }}
+{% endif %}
 
 [dependencies]
 defmt = { version = "{{ V["defmt"] }}", optional = true }
@@ -35,6 +44,10 @@ defmt = { version = "{{ V["defmt"] }}", optional = true }
 {% endif %}
 {% if d.dfu %}
 {{ ww_dep("ww_dfu", "ww_stdlib/ww_dfu", o.ww_src, "../", ", default-features = false") }}
+{% endif %}
+{% if s.leds %}
+# `leds`: {{ s.led.name }}'s indication
+{{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 
 [dev-dependencies]

@@ -13,13 +13,25 @@ use wire_weaver::prelude::*;
 /// {{ o.name }} device
 #[ww_api_root]
 pub trait {{ ww.trait }} {
+{% if s.leds %}
+    /// {{ s.led.Name }} solid on (`leds` shows it until another mode)
+    fn led_on();
+    /// {{ s.led.Name }} off (`leds` shows it until another mode)
+    fn led_off();
+{% else %}
     /// Turn the LED on
     fn led_on();
     /// Turn the LED off
     fn led_off();
+{% endif %}
 
     /// Device contract: {{ ["firmware", d.last_reset and "last reset", "board", "ids", d.label and "label", d.counters and "counters", d.log and "log", d.variant and "variant", d.settings and "settings", d.boot and "boot", d.dfu and "update node"] | select | join(", ") }}
     ww_impl!(device: Device);
+{% if s.leds %}
+
+    /// {{ s.led.Name }} as one indication: global mode, brightness, identify. It breathes by default.
+    ww_impl!(leds: ww_indication::Indication);
+{% endif %}
 }
 
 /// The device contract: what every WireWeaver device answers, so generic host tools (`ww info`, `ww log`) work.

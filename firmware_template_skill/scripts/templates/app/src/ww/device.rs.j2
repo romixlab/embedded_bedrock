@@ -278,7 +278,12 @@ impl ServerState {
 }
 {% endif %}
 
+{% if s.leds %}
+// Values of the API's `const` items (device and leds), served without a handler and read once per connection by a
+// host.
+{% else %}
 // Values of the API's `const` items, served without a handler and read once per connection by a host.
+{% endif %}
 impl super::server_impl::{{ ww.trait }}Consts for ServerState {
     // name, version, git commit, build time and profile, from build.rs (ww_firmware_info::build::emit())
     const DEVICE_FIRMWARE_FIRMWARE: FirmwareSummary<'static> =
@@ -341,5 +346,10 @@ impl super::server_impl::{{ ww.trait }}Consts for ServerState {
             build_id: MaxLen::new_unchecked(RefVec::new_bytes(ww_firmware_info::build_id())),
         }
     }
+{% endif %}
+{% if s.leds %}
+
+    // ww_indication::Indication at leds: its one LED (src/ww/leds.rs)
+    const LEDS_NAMES: RefVec<'static, &'static str> = super::leds::NAMES;
 {% endif %}
 }

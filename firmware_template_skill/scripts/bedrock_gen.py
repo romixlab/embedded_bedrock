@@ -866,6 +866,7 @@ class Opts:
     probe: str = ""         # debug probe VID:PID
     board: Optional[dict] = None  # --board preset (data/boards/<name>/preset.toml) plus its "name" and "dir"
     rom_boot: str = ""      # bedrock_rom_boot family feature ("stm32g0", "stm32h7"): device.boot and dfu (TPL-41)
+    led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm())
 
 
 def log_macros(o: Opts) -> tuple[str, str]:
@@ -1072,6 +1073,47 @@ def rom_boot_word(regs: Optional[Stm32Regs], rom_boot: str) -> Optional[tuple[st
     return None
 
 
+# embassy's time driver when the LED's timer has to stay free (--led-mode breath, TPL-39): a general-purpose 16-bit
+# timer first (the driver needs one compare channel; the 2-channel ones are what small packages route to LED pins),
+# then embassy's own `time-driver-any` order
+TIME_DRIVERS = ("TIM4", "TIM3", "TIM22", "TIM21", "TIM12", "TIM9", "TIM15", "TIM24", "TIM23", "TIM5", "TIM2", "TIM20",
+                "TIM8", "TIM1")
+
+
+def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
+    """--led-mode (TPL-39): the LED pin's timer channel for breath (PWM through bedrock_led) and the embassy time
+    driver that leaves its timer free, from stm32-data's peripherals[].pins; None for a plain GPIO output. `auto`
+    breathes where the pin has a channel. A plain CHy before a complementary CHyN, a general-purpose timer before an
+    advanced one (TIM1 / TIM8 stay for motor control)."""
+    if mode == "gpio":
+        return None
+    why, chans = "", []
+    if t.family != "stm32" or framework != "embassy":
+        why = "breath is generated for --framework embassy on STM32 so far (RP and nRF PWM are not wired yet)"
+    else:
+        timers = {p["name"]: p for p in t.stm32.get("cores", [{}])[0].get("peripherals", [])
+                  if p.get("registers", {}).get("kind") == "timer" and p["registers"].get("block", "").startswith("TIM_")}
+        for name, p in timers.items():
+            for pin in p.get("pins", []):
+                m = re.fullmatch(r"CH([1-4])(N?)", pin["signal"])
+                if pin["pin"] == led and m and "af" in pin:  # no "af": F1's AFIO remaps, not generated
+                    chans.append(dict(timer=name, ch=int(m.group(1)), n=bool(m.group(2)), af=pin["af"],
+                                      block=p["registers"]["block"], signal=f"{name}_{pin['signal']}"))
+        chans.sort(key=lambda c: (c["n"], c["block"] == "TIM_ADV", int(c["timer"][3:])))
+        driver = next((d for d in TIME_DRIVERS if d in timers and chans and d != chans[0]["timer"]), None)
+        if not chans:
+            why = f"{led} has no timer channel on {t.display}"
+        elif not driver:
+            why = f"no timer left for embassy's time driver besides {chans[0]['timer']}"
+    if why:
+        if mode == "breath":
+            die(f"--led-mode breath: {why}; use --led-mode gpio or another --led")
+        if t.family == "stm32" and framework == "embassy":
+            t.notes.append(f"LED {led}: plain GPIO output, {why} (--led-mode gpio)")
+        return None
+    return {**chans[0], "driver": driver.lower()}
+
+
 def uid_context(t: Target, o: Opts) -> dict:
     """device.uid: how the firmware reads the unit's unique id (`expr` gives the `len` bytes; RP2040: main reads it
     and hands it to ServerState::new), `serial`: device.board's serial (STM32: embassy's hex string, else ww.rs makes
@@ -1196,6 +1238,13 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
     # (12 KiB of 20 on an L073 left no stack)
     ram = next((r.length for r in lay.regions if r.kind == "ram" and r.is_main_ram), 0) if lay else 0
     s["log"] = {"ring": 4096, "store": 8192} if not ram or ram >= 64 * 1024 else {"ring": 1024, "store": 2048}
+    # the LED (TPL-39): its name on the board for prose, `pwm` the timer channel it breathes on (led_pwm(), None: a
+    # plain GPIO); `leds`: ww_indication::Indication in the API, with breath and --wire-weaver
+    led_name = b.get("readme", {}).get("led", "")
+    s["led"] = {"name": led_name or "the LED", "Name": led_name or "The LED", "var": led_name.lower() or "led",
+                "pin": o.led, "pwm": o.led_pwm, "essential": b.get("led", {}).get("essential", ""),
+                "timer_mhz": b.get("clock", {}).get("timer_mhz")}
+    s["leds"] = o.ww and bool(o.led_pwm)
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
     s["dev_variant"] = s["dev"]["variant"]
@@ -1264,7 +1313,7 @@ def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
     for f in sorted((tpl / "docs/logo/fonts").iterdir()):
         files[f"docs/logo/fonts/{f.name}"] = f.read_bytes()
     s = ctx["s"]
-    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"]),
+    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"] + (["src/leds.rs"] if s["leds"] else [])),
                               (s["cli_crate"], "cli", ["Cargo.toml", "build.rs", "src/main.rs"]),
                               (s["py"], "py", ["Cargo.toml", "pyproject.toml", "src/lib.rs", "examples/blink.py",
                                                "examples/device.py", "tests/test_module.py"])):
@@ -1394,6 +1443,10 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
         files["src/ww/device.rs"] = render("app/src/ww/device.rs.j2", **ctx)
+        if ctx["s"]["leds"]:
+            files["src/ww/leds.rs"] = render("app/src/ww/leds.rs.j2", **ctx)
+    if o.led_pwm:
+        files["src/led.rs"] = render("app/src/led.rs.j2", **ctx)
     if ctx["s"]["dev"]["log"]:
         files["src/log.rs"] = render("app/src/log.rs.j2", **ctx)
     if ctx["s"]["dev"]["boot"]:
@@ -2126,6 +2179,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     o.host = args.host
     o.cli_name = args.cli_name or name
     o.probe = args.probe or SETUP_PROBES[t.family][1]
+    o.led_pwm = led_pwm(t, fw, led, args.led_mode)
     if o.host and not args.wire_weaver:
         die("--host needs --wire-weaver (the host crates talk to the firmware through its WireWeaver API)")
     if not re.fullmatch(r"[a-z][a-z0-9_-]*", o.cli_name):
@@ -2311,6 +2365,10 @@ def main(argv=None) -> None:
     p.add_argument("--supply-config", help="STM32H7 SupplyConfig variant (required when the part has SMPS pins)")
     p.add_argument("--smps-voltage", choices=["V1_8", "V2_5"], help="SMPS output voltage for SMPS*LDO configs")
     p.add_argument("--led", help="LED pin name in HAL terms (default PB14 / PIN_25 / P0_13 / GPIO8)")
+    p.add_argument("--led-mode", choices=["auto", "breath", "gpio"], default="auto",
+                   help="the LED: 'breath' (PWM on the pin's timer channel through bedrock_led: breathes, `leds` in "
+                        "the API with --wire-weaver, embassy's time driver named off that timer), 'gpio' (a plain "
+                        "output), 'auto' (default: breath where the pin has a timer channel; embassy on STM32 so far)")
     p.add_argument("--bedrock", default="git", help="'git' (default) or path to a local embedded_bedrock checkout, relative to the output directory")
     p.add_argument("--build-info", action="store_true", help="embed build info via bedrock_build (needs a buildable embedded_bedrock, see --bedrock)")
     p.add_argument("--wire-weaver", action="store_true",

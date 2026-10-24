@@ -57,8 +57,14 @@ subtitle = "WireWeaver firmware template"
 toml = "nucleo_g0b1re.toml"
 geometry = "nucleo_g0b1re.geometry.json"
 
-# main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "LD3, the power LED, is wired to the supply"
+
+# main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO; timer_mhz: the timers' clock (the
+# LED's PWM resolution in src/led.rs)
 [clock]
+timer_mhz = 64
 use = "embassy_stm32::rcc::{Pll, PllMul, PllPreDiv, PllRDiv, PllSource, Sysclk}"
 code = """
     // Clock tree: the Nucleo-G0B1RE has no HSE crystal fitted (X3 is open; the ST-LINK's MCO is routed to PF0 but
