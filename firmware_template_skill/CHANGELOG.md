@@ -11,7 +11,7 @@ or options; purely internal refactors only need a line under the next version.
 ## [Unreleased]
 
 - The LED breathes on its timer channel (TPL-39): `--led-mode auto|breath|gpio` (default `auto`: breath where the
-  LED pin has a timer channel, embassy on STM32 so far), as nucleo_g0b1re_template's FW-10 / API-4 (f3bb2a2).
+  LED pin has a timer channel, embassy on STM32 so far), as nucleo_g0b1re_template's FW-10 / API-4 (v0.1.7, a182dbc).
   - The pin's `TIMx_CHy` (or `CHyN`) and AF come from stm32-data; `src/led.rs` drives it as `SimplePwm` (or
     `ComplementaryPwm`, duty inverted) at 1 kHz through embedded_bedrock's `bedrock_led` (`embassy` feature): a
     breath by default, `led_on` / `led_off` hold it solid on / off, `led_at_boot` starts it solid on. `main.rs`
