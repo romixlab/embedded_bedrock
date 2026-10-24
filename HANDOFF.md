@@ -11,12 +11,17 @@ Compare: `uv run firmware_template_skill/scripts/bedrock_gen.py new --answers /h
 - Templates: app/src/led.rs.j2 (SimplePwm, or ComplementaryPwm with an inverted Channel impl for CHyN like Donguru), app/src/ww/leds.rs.j2 (G0 verbatim, cnt optional), main.rs mod led + defmt unwrap, embassy-stm32.rs.j2 spawns led_task (led_at_boot -> Mode::On), _embassy_loop (no led arg), ww.rs (no Output, LedsState, led_on/off via crate::led::set), device.rs LEDS_NAMES const, API lib.rs leds ww_impl + docs, API Cargo (ww_indication std/defmt), firmware Cargo (time-driver-timN + comment, bedrock_led, ww_si u32, ww_indication, ww_error without settings), macros bedrock_ww_patch(extra=[...]) patches ww_indication for a local --ww-src, root Cargo ww_indication, client Cargo + client src/leds.rs.j2 (G0 sync.rs's leds half) + lib.rs docs.
 - G0 diff of led.rs / ww/leds.rs / main.rs / Cargo.toml: only the clock (P6) and pins (P7) parts remain.
 
+## Done since (P5 step 2-4)
+
+- G0 regenerated: firmware build + clippy, host workspace clippy, rustfmt all clean; leds parts equal G0 but clock/pins and P3/P4's accepted wording.
+- CLI `leds`, Python leds_mode/brightness/identify, client leds.rs docs through rewrap, README "## LED" (P6: rename to "LED and clock"), suite FEATURES rows FW/API-3/HOST/PY-2.
+- matrix.toml: g0ledn, h7ledpb0, h7ledpe1, g0ledgpio, g0ledoff (+ g0brd, g0set cover PA5 and PF1).
+- FEATURES TPL-39, template CHANGELOG [Unreleased], SKILL.md --led-mode.
+
 ## Next (P5)
 
-1. Build G0 regenerated (firmware + root `cargo test`, clippy), rustfmt check on generated .rs (the `LEDS.run(...)` formatting of led.rs.j2 is a guess; non-ww and CHN variants unchecked).
-2. CLI `leds` subcommand (G0 cli main.rs LedsCmd/LedsMode/Level, `Cmd::Leds`), Python leds_mode/brightness/identify (G0 py lib.rs), README "LED" section, suite FEATURES.md.j2 rows, client lib imports (Brightness, Mode in CLI/py use lines).
-3. matrix.toml entries: G0 PA5 (TIM2_CH1, ww rtt host), Donguru-like G0B1CE PF1 (TIM15_CH1N, usb), H7 PB0 (TIM3_CH3) and H7 PE1 (no channel -> gpio), G0 PC13 no channel, non-ww breath, --embassy main breath. Note: every embassy STM32 entry with default LED PB14 now breathes (G0 TIM15_CH1, H7 TIM12_CH1, L0 TIM21_CH2, F4 TIM1_CH2N): run the whole embassy part of the matrix.
-4. FEATURES TPL-39, template CHANGELOG [Unreleased] + upgrade notes (time-driver, led.rs, API leds = API minor bump), SKILL.md option list. Commit (squash wip).
+1. Matrix: the new entries, then the whole embassy part (every PB14 default breathes now). Fix what fails.
+2. Squash into one feat commit.
 
 ## Then P6 (TPL-40, --clock-sync)
 
