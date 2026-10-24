@@ -29,7 +29,7 @@ Plan: ~/git/tpm/maintain/P2528-embedded-bedrock/design/g0-gen-suite.md (read it 
 
 ## Next
 
-1. Spawn P4 (P2528#24oct-1609b, TPL-41) and P3 (P2528#24oct-1609c, bind TPL-37) `--from-here` on gpd-omarchy; tell parent.
+1. Spawned on omarchy-m1 from 649f664 (--from-here only works on this PC): gen-device-suite (P4, P2528#24oct-1609b, TPL-41) and gen-host-crates (P3, P2528#24oct-1609c, TPL-37 bound), in parallel against G0's API; P3 rebases onto P4 before ready. Wait for them; P5-P7 after G4/G5 land.
 2. W4 (evo-current) when it lands: `require_current(true)` in tests/evolution.rs, `api-save` via `WW_API_SAVE=1 cargo test`.
 3. P8 after all pieces land.
 
