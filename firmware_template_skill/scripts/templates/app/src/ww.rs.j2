@@ -126,18 +126,18 @@ static SERIAL: StaticCell<[u8; {{ 2 * u_id.len }}]> = StaticCell::new();
 {% endif %}
 
 impl ServerState {
-    pub {{ "async " if streams else "" }}fn new(
-        led: Output<'static>,
-{% if o.crash %}
-        last_reset: bedrock_crash::Snapshot,
-{% endif %}
-{% if settings %}
-        settings: crate::settings::SettingsStore,
-{% endif %}
-{% if u_id.arg %}
-        uid: [u8; {{ u_id.len }}],
-{% endif %}
+{% set params = ["led: Output<'static>"] + (["last_reset: bedrock_crash::Snapshot"] if o.crash else [])
+     + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) %}
+{% set sig = "    pub " ~ ("async " if streams else "") ~ "fn new(" %}
+{% if (sig ~ params | join(", ") ~ ") -> Self {") | length <= 100 %}
+{{ sig }}{{ params | join(", ") }}) -> Self {
+{% else %}
+{{ sig }}
+  {% for p in params %}
+        {{ p }},
+  {% endfor %}
     ) -> Self {
+{% endif %}
 {% if streams %}
   {% if o.crash %}
         // the boot count in the high half: a session of this boot never takes a host's cursor of an earlier boot

@@ -20,13 +20,14 @@
 {{ name }} = { {% if src == "git" %}git = "{{ WW_GIT }}"{% else %}path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}"{% endif %}{{ extra }} }
 {%- endmacro %}
 
-{#- [patch] pointing bedrock_build's WireWeaver crates (embedded_bedrock takes them from git) at the local --ww-src
-    checkout, so the build has one WireWeaver. Starts with a blank line, no newline at the end -#}
-{% macro bedrock_ww_patch(src, prefix) %}
+{#- [patch] pointing the WireWeaver crates embedded_bedrock's crates take from git (bedrock_build; bedrock_rom_boot with
+    `dfu`) at the local --ww-src checkout, so the build has one WireWeaver. Starts with a blank line, no newline at
+    the end -#}
+{% macro bedrock_ww_patch(src, prefix, dfu=false) %}
 
-# bedrock_build takes WireWeaver from git: the local checkout (--ww-src) instead
+# {{ "bedrock_build and bedrock_rom_boot take" if dfu else "bedrock_build takes" }} WireWeaver from git: the local checkout (--ww-src) instead
 [patch."{{ WW_GIT }}"]
-{% for name, subdir in [("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_version", "ww_stdlib/ww_version")] %}
+{% for name, subdir in [("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_version", "ww_stdlib/ww_version")] + ([("ww_dfu", "ww_stdlib/ww_dfu")] if dfu else []) %}
 {{ name }} = { path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}" }{{ "\n" if not loop.last }}
 {%- endfor %}
 {%- endmacro %}

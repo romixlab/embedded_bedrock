@@ -157,6 +157,18 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `typst` runs when on PATH) and `docs/board/` with `--board`. `--cli-name` names the CLI and its env prefix. Still
   to come: the host crates (client over probe and USB, CLI, Python; P2528#24oct-1609c), behind `has_client` /
   `has_cli` / `has_py`.
+- 🚧 **TPL-41 Device suite in firmware and API**: every `--wire-weaver` firmware serves the device contract as
+  nucleo_g0b1re_template (cc1c30b) does, with the items the answers allow (`suite_context()` `s.dev`): the API crate
+  (`ww/api/src/lib.rs.j2`) has `device: Device` with `firmware`, `last_reset` (crash capture), `board`, `uid`,
+  `label` and `settings` (`--settings`, `led_at_boot`), `counters`, `log` (`--log defmt`: ww_defmt_logger, RTT tee),
+  `variant` (STM32 DBGMCU_IDCODE + FLASH_SIZE, revisions from `stm32.toml` `[variant.<dev_id>]`), `boot` and
+  `dfu.node` (bedrock_rom_boot on G0 / single-core H7 without `--bootloader`, needs `--log defmt`); the firmware
+  `src/ww.rs`, `src/ww/device.rs`, `src/log.rs`, `src/boot.rs`; the boot word is taken out of cnt's BKPSRAM
+  (`memory.x`, `CNT_BKP_BUFFER_SIZE_WORDS`). The G0 answers with `--board nucleo_g0b1re` regenerate G0's
+  `firmware/src` byte for byte. Builds for the tested matrix's `--wire-weaver` entries; not run on a board
+  through the template yet.
+- 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
+  (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
 - ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`
   (`wire_weaver_evolution`, strict: the API's current version needs a snapshot), `just api-check` / `just api-save`,
   the CI step, and `.githooks/pre-commit` installed by `scripts/hooks.py` (`just hooks`, also a `just setup` step):

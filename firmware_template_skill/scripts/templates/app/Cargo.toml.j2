@@ -171,8 +171,8 @@ build-info-build = "{{ V["build-info-build"] }}"
 {% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
-{% if o.build_info and o.ww_src != "git" %}
-{{ bedrock_ww_patch(o.ww_src, root) }}
+{% if (o.build_info or s.dev.boot) and o.ww_src != "git" %}
+{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot) }}
 {% endif %}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
