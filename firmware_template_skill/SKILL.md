@@ -94,6 +94,9 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      `bedrock_led` (breathes, `leds` in the API with `--wire-weaver`) and names embassy's time driver off that timer;
      `auto` breathes where the pin has a channel (embassy on STM32 so far), `gpio` keeps a plain output. Ask when the
      firmware needs the LED's timer for something else.
+   - clock sync `--clock-sync auto|on|off` [auto]: `clock` in the API (`ww_timebase::Clock` through
+     `bedrock_sync`): a host steers the board's shared clock onto UTC and the LED breathes on it, in phase with other
+     boards; `auto` turns it on with `--wire-weaver` on embassy STM32. `off` for firmware that wants no clock.
    - STM32H7 with SMPS: `--supply-config <variant>` [+ `--smps-voltage V1_8|V2_5`] — the script **refuses** to
      generate without it; the value must come from the board schematic. Explain the options
      (see `references/stm32-notes.md`) and ask, never guess.
