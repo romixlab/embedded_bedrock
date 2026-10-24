@@ -232,8 +232,9 @@ idcode = "idcode"           # the PAC's register name
 idcode_ref = "RM0444 40.4.1"
 flash_ref = "1.5"
 flash_size = 0x1FFF75E0
-# the DBGMCU registers need their APB clock (RCC_APBENR1.DBGEN)
+# the DBGMCU registers need their APB clock: the code that turns it on, and the comment above it
 clock = "pac::RCC.apbenr1().modify(|w| w.set_dbgen(true));"
+clock_note = "the DBGMCU registers need their APB clock (RCC_APBENR1.DBGEN)"
 # DEV_ID is bits 11:0; the PAC's field also takes the reserved 15:12, which read 0x6 on a G0B1
 dev_id_note = "the PAC's field also takes the reserved 15:12, which read 0x6 on a G0B1"
 # ES0548 Rev 4 (Sep 2026) Table 2

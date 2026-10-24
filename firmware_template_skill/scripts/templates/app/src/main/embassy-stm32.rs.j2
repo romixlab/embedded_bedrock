@@ -23,11 +23,18 @@ use embassy_sync::blocking_mutex::Mutex;
 
 #[embassy_executor::main]
 async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner) {
+{% if s.dev.boot %}
+    // First: may reset once (after the ROM bootloader's jump) or jump into the ROM bootloader (src/boot.rs)
+    let early = boot::early();
+{% endif %}
 {% if have_init_ram %}
     init_ram::init_ram(); // enable + zero additional SRAM banks before anything is placed there
 {% endif %}
 {% include "app/src/main/_rtt_init.rs.j2" %}
     {{ info }}("{{ o.name }} starting...");
+{% if s.dev.boot %}
+    boot::log(&early);
+{% endif %}
 {% include "app/src/main/_last_reset_boot.rs.j2" %}
     let {{ "mut " if o.supply_config or clock or (o.ww and ww.usb and ww.stm32_usb.hsi48) else "" }}config = embassy_stm32::Config::default();
 {% if o.supply_config %}
@@ -78,6 +85,9 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
     // Enable D-cache only once DMA coherency is handled (cache clean/invalidate around DMA buffers)
     // cp.SCB.enable_dcache(&mut cp.CPUID);
 {% endif %}
+{% if s.dev.boot %}
+    boot::after_init(spawner, &early); // the boot word again, the rescue after a boot loop, the reboot task
+{% endif %}
 {% if o.bootloader %}
 
     let flash = Mutex::new(RefCell::new(Flash::new_blocking(p.FLASH)));
@@ -98,5 +108,14 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
   {% endif %}
 {% endif %}
 
+{% if s.led_at_boot %}
+    let led_level = if settings.get().led_at_boot {
+        Level::High
+    } else {
+        Level::Low
+    };
+    let led = Output::new(p.{{ o.led }}, led_level, Speed::Low);
+{% else %}
     let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::Low, Speed::Low);
+{% endif %}
 {% include "app/src/main/_embassy_loop.rs.j2" %}

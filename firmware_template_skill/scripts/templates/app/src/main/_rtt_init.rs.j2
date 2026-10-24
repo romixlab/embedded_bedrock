@@ -1,5 +1,13 @@
 {# RTT set-up at the top of main(): rtt-target's print channel, or all channels when WireWeaver runs over RTT #}
-{% if o.ww and ww.rtt %}
+{% if s.dev.log %}
+  {% if ww.rtt %}
+    // RTT channels: the log's tee, WireWeaver up and down (src/log.rs)
+    let (ww_up, ww_down) = log::init_rtt();
+  {% else %}
+    // RTT channel: the log's tee (src/log.rs)
+    log::init_rtt();
+  {% endif %}
+{% elif o.ww and ww.rtt %}
     // RTT channels: {{ "log output, " if o.log != "none" else "" }}WireWeaver up (device -> host) and down (host -> device).
     // The WireWeaver up channel must hold a whole message + framing, see ww::MAX_MESSAGE_LEN.
     let channels = rtt_init! {
