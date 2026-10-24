@@ -717,6 +717,51 @@ def feats(*xs) -> list[str]:
     return [x for x in xs if x]
 
 
+def rewrap(text: str, prefix: str, width: int = 116) -> str:
+    """Re-flows comment paragraphs (`{% filter rewrap("//! ") %}`): each run of lines starting with `prefix` becomes one
+    paragraph wrapped greedily at `width` columns, as the hand-wrapped host crates of G0 are (and doc_comment); other lines stay."""
+    out, para = [], []
+
+    def flush():
+        if para:
+            out.extend(textwrap.wrap(" ".join(para), width, initial_indent=prefix, subsequent_indent=prefix,
+                                     break_on_hyphens=False, break_long_words=False))
+            para.clear()
+    for ln in text.split("\n"):
+        if ln.startswith(prefix) and ln[len(prefix):].strip():
+            para.append(ln[len(prefix):].strip())
+        else:
+            flush()
+            out.append(ln)
+    flush()
+    return "\n".join(out)
+
+
+def rust_use(path: str, items: list[str], width: int = 100) -> str:
+    """`use path::{items};` as rustfmt writes it (`{{ "krate" | rust_use(names) }}`): sorted, on one line when it fits in
+    `width` columns, else the names packed into lines of a block."""
+    items = sorted(set(items))
+    if len(items) == 1:
+        return f"use {path}::{items[0]};"
+    one = f"use {path}::{{{', '.join(items)}}};"
+    if len(one) <= width:
+        return one
+    lines, line = [], "   "
+    for x in items:
+        if len(line) + 1 + len(x) + 2 > width:  # rustfmt counts ", " after each item, also the line's last
+            lines.append(line)
+            line = "   "
+        line += f" {x},"
+    lines.append(line)
+    return f"use {path}::{{\n" + "\n".join(lines) + "\n};"
+
+
+def and_join(items: list[str]) -> str:
+    """["a", "b", "c"] -> "a, b and c"."""
+    items = list(items)
+    return ", ".join(items[:-1]) + " and " + items[-1] if len(items) > 1 else "".join(items)
+
+
 def nightly_date() -> Optional[str]:
     try:
         v = subprocess.run(["rustc", "+nightly", "--version"], capture_output=True, text=True, timeout=20).stdout
@@ -747,6 +792,9 @@ JINJA.filters.update(
     hex8_=lambda n: f"0x{n >> 16:04X}_{n & 0xFFFF:04X}",  # a Rust literal: 0x1FFF_75E0
     fmt_len=fmt_len,
     rcc_bit=lambda b: f"RCC.{b[0].upper()}.{b[1].upper()}",
+    rewrap=rewrap,
+    and_join=and_join,
+    rust_use=rust_use,
 )
 JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, WW_GIT=WW_GIT, EMBASSY_GIT=EMBASSY_GIT, feats=feats, nightly_channel=nightly_channel)
 
@@ -1108,10 +1156,10 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "boardmap": b.get("boardmap"),  # docs/board/: boardmap's description and geometry
         # the logo's values (docs/logo/logo.typ): the board's, else the project name and the chip
         "logo": {"board": o.name, "chip": t.display, "subtitle": "WireWeaver firmware", **b.get("logo", {})},
-        # host crates (TPL-37, crates piece) and the device suite (TPL-41): their pieces turn these on
-        "has_client": False,
-        "has_cli": False,
-        "has_py": False,
+        # host crates (TPL-37): the client library, the command line, the Python module
+        "has_client": o.host,
+        "has_cli": o.host,
+        "has_py": o.host,
     }
     # the device contract (TPL-41): `device` in the API with the items the answers allow, keys as the Device trait's
     variant = variant_context(t) if o.ww else None
@@ -1149,10 +1197,46 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
     s["dev_log"] = s["dev"]["log"]
     s["rom_boot"] = s["dev"]["boot"]
     s["repo"] = n + ("_template" if b.get("board", {}).get("template") else "")  # AGENTS.md title
+    s.update(host_names(t, o, s))
     s["feature_areas"] = ["FW", "API"] + (["HOST"] if s["has_client"] else []) + (["PY"] if s["has_py"] else []) + ["TPL"]
     s["members"] = [o.ww_api] + [c for c, on in ((s["client"], s["has_client"]), (s["cli_crate"], s["has_cli"]),
                                                  (s["py"], s["has_py"])) if on]
     return s
+
+
+# Probe names for the client's comments: what it is called after "the only ...", and with its article
+PROBE_KINDS = {"ST-LINK": ("ST-LINK", "an ST-LINK"), "CMSIS-DAP probe": ("CMSIS-DAP probe", "a CMSIS-DAP probe"),
+               "J-Link": ("J-Link", "a J-Link"), "USB-JTAG/serial": ("USB-JTAG/serial", "a USB-JTAG/serial")}
+
+
+def host_names(t: Target, o: Opts, s: dict) -> dict:
+    """The host crates' names and prose (TPL-37): the client's types and constants, how comments call the probe, the
+    board, its LED and ids, and which device items the client has methods for."""
+    b = o.board or {}
+    board, readme = b.get("board", {}), b.get("readme", {})
+    ct = s["client_type"]
+    family_probe = SETUP_PROBES[t.family][0] if o.probe == SETUP_PROBES[t.family][1] else ""
+    kind, kind_a = (board["probe_kind"], board["probe_kind_a"]) if "probe_kind" in board else \
+        PROBE_KINDS.get(family_probe, (f"probe {o.probe}", f"a probe {o.probe}"))
+    names = {
+        "client_struct": f"{ct}Client",              # the generated client (ww_codegen!)
+        "probe_const": f"{ct.upper()}_PROBE",        # VID:PID of the probe, the default of Probe
+        "probe_kind": kind,                          # "the only Nucleo ST-LINK attached"
+        "probe_kind_a": kind_a,
+        # the Python Device's accessor of the connected board; `board` is taken by the board() method of the contract
+        "py_board": ct.lower() if ct.lower() != "board" else "connected",
+        "board_short": ct if b else "board",         # "Blink the Nucleo's LED"
+        "board_revision": s["revision"] or "A",      # board_line's example
+        "led_name": readme.get("led", ""),           # the LED's name on the board (LD4)
+        "version": "0.1.0",                          # the workspace's (host crates') first version
+    }
+    doc = s["uid"].get("doc", "")
+    names["uid_desc"] = doc if doc.startswith("the ") else f"the {doc}"  # "the STM32 96-bit unique id"
+    v = s["variant"]
+    if v:  # variant_line's example: `STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash`
+        name, rev_id = v["revisions"][0][:2]
+        names["variant_example"] = f"{v['device']} ({v['dev_id']:#05x}) rev {name} ({rev_id:#06x}), {v['flash_kib']} KiB flash"
+    return names
 
 
 def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
@@ -1174,6 +1258,13 @@ def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
         files[rel] = (tpl / rel).read_text()
     for f in sorted((tpl / "docs/logo/fonts").iterdir()):
         files[f"docs/logo/fonts/{f.name}"] = f.read_bytes()
+    s = ctx["s"]
+    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"]),
+                              (s["cli_crate"], "cli", ["Cargo.toml", "build.rs", "src/main.rs"]),
+                              (s["py"], "py", ["Cargo.toml", "pyproject.toml", "src/lib.rs", "examples/blink.py",
+                                               "examples/device.py", "tests/test_module.py"])):
+        for rel in rels:
+            files[f"{crate}/{rel}"] = render(f"suite/{part}/{rel}.j2", **ctx)
     bm = (o.board or {}).get("boardmap")
     if bm:  # boardmap's description and geometry; `just board` renders the pictures
         for key in ("toml", "geometry"):
@@ -1871,6 +1962,8 @@ def post_steps(o: Opts, out: Path) -> list[str]:
         bm = (o.board or {}).get("boardmap")
         if bm and not post_step("the board pictures", ["boardmap", "render", f"docs/board/{bm['toml']}"], out):
             nexts.append(f"cd {out} && just board (needs boardmap, `cargo install --git {BEDROCK_GIT} bedrock_board_cli`)")
+    if o.host and not post_step("the Python module's lock file", ["uv", "lock"], out / f"{o.name.replace('-', '_')}_py"):
+        nexts.append(f"cd {out}/{o.name.replace('-', '_')}_py && uv lock (the Python module's lock file)")
     if o.ww and not post_step("the API's first snapshot, for the evolution check", ["ww", "api", "save", o.ww_api], out):
         nexts.append(f"cd {out} && just api-save (needs ww), then commit {o.ww_api}/api_snapshots/ (the evolution "
                      "check needs a snapshot of the API's first version)")

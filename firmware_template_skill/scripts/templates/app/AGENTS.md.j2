@@ -13,8 +13,9 @@ dependencies); the firmware is a standalone crate next to it, excluded from the 
 `{{ t.rust_target }}` with its own `.cargo/config.toml` and `Cargo.lock`:
 
 - `{{ ww.api }}/` — `#![no_std]` API crate, a workspace member and the firmware's path dependency: the
-  `{{ ww.trait }}` trait (`#[ww_api_root]`) and its data types (`#[derive_shrink_wrap]`). Its name + version identify the API on the wire: bump the version with every change and
-  follow WireWeaver's `docs/evolution/rules.md` so deployed devices and hosts keep working together.
+  `{{ ww.trait }}` trait (`#[ww_api_root]`) and its data types (`#[derive_shrink_wrap]`).
+  Its name + version identify the API on the wire: bump the version with every change and follow WireWeaver's
+  `docs/evolution/rules.md` so deployed devices and hosts keep working together.
 - `firmware/` — the firmware; `src/ww.rs` implements the API on `ServerState` (`ww_codegen!`) and runs the transport.
   All firmware commands (`cargo build`, `cargo run`) run there{{ ", the bootloader is in `firmware/bootloader/`" if o.bootloader else "" }}.
 

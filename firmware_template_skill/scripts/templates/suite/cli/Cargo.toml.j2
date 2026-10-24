@@ -1,0 +1,30 @@
+[package]
+name = "{{ s.cli_crate }}"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+{% if s.repository %}
+repository.workspace = true
+{% endif %}
+description = "{{ s.cli }}: command line for the {{ s.title }} firmware, a thin layer over {{ s.client }}"
+
+[[bin]]
+name = "{{ s.cli }}"
+path = "src/main.rs"
+
+[dependencies]
+{{ s.client }}.workspace = true
+anstream.workspace = true
+anstyle.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+indicatif.workspace = true
+tokio.workspace = true
+{% if ww.rtt %}
+# `--probe` completion lists the debug probes attached right now; the same probe-rs the client connects through
+probe-rs = { version = "{{ V["probe-rs"] }}", default-features = false }
+{% else %}
+# `--device` completion and `{{ s.cli }} devices` list the boards on USB; the same nusb the client connects through
+nusb = "{{ V["nusb"] }}"
+{% endif %}

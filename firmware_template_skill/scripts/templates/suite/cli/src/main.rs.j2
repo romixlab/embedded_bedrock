@@ -1,0 +1,684 @@
+{% set T = s.client_type %}
+{% set C = s.client %}
+{% set E = s.env %}
+{% set d = s.dev %}
+{% set decode = d.counters or d.log %}
+{% set elf = ww.rtt or decode %}
+{% set uses = feats("BootTarget" if d.boot else "", "CounterBuffer" if d.counters else "", "Error", T,
+                    "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
+                    "Usb" if ww.usb else "", "api_line", "board_line" if d.board else "", "firmware_line",
+                    "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
+{% set about = feats("the LED", "the firmware", "the board" if d.board else "", "its label" if d.label else "",
+                     ("counters and log" if d.log else "counters") if d.counters else ("its log" if d.log else ""),
+                     "settings" if d.settings else "", "the last reset" if d.last_reset else "",
+                     "reboots into the ROM bootloader" if d.boot else "") %}
+{% filter rewrap("//! ") %}
+//! `{{ s.cli }}`: the command line over `{{ C }}`. Argument parsing and printing live here, everything that talks to the board is the library's.
+//!
+//! Shell completion, with the serials of the {{ "probes" if ww.rtt else "boards" }} attached right now: `source <(COMPLETE=bash {{ s.cli }})` in `~/.bashrc`, `COMPLETE=zsh {{ s.cli }}`, `COMPLETE=fish {{ s.cli }} | source`.
+{% endfilter %}
+
+{% if elf %}
+use std::ffi::OsStr;
+{% endif %}
+use std::io::IsTerminal;
+{% if elf %}
+use std::path::PathBuf;
+{% endif %}
+use std::process::ExitCode;
+use std::time::Duration;
+
+use anstream::println;
+use anstyle::{AnsiColor, Color, Style};
+use clap::{CommandFactory, Parser, Subcommand};
+{% if elf %}
+use clap_complete::engine::{ArgValueCandidates, ArgValueCompleter, PathCompleter, ValueCompleter};
+{% else %}
+use clap_complete::engine::ArgValueCandidates;
+{% endif %}
+use clap_complete::{CompleteEnv, CompletionCandidate};
+use indicatif::{ProgressBar, ProgressStyle};
+{{ C | rust_use(uses) }}
+{% if ww.usb %}
+use nusb::MaybeFuture;
+{% endif %}
+
+/// `--version`: `0.1.0 (a1b2c3d-dirty, built 23 Oct 2026 10:20 UTC)`, stamped by `build.rs`.
+const VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("{{ E }}_GIT"),
+    ", built ",
+    env!("{{ E }}_BUILT"),
+    ")"
+);
+
+const BOLD: Style = Style::new().bold();
+const DIM: Style = Style::new().dimmed();
+const GREEN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+const YELLOW: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
+const RED: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
+
+{% filter rewrap("/// ") %}
+/// {{ s.title }} over its {{ "debug probe" if ww.rtt else "USB" }}: {{ about | join(", ") }}.
+{% endfilter %}
+#[derive(Parser)]
+#[command(
+    name = "{{ s.cli }}",
+    version = VERSION,
+    after_help = "Shell completion: source <(COMPLETE=bash {{ s.cli }}), COMPLETE=zsh {{ s.cli }}, COMPLETE=fish {{ s.cli }} | source"
+)]
+struct Cli {
+{% if ww.rtt %}
+{% filter rewrap("    /// ") %}
+    /// The debug probe: a serial number (or a part of it) of {{ s.probe_kind_a }}, or VID:PID[:SERIAL] as probe-rs takes it (default: the only {{ s.probe_kind }} attached, USB id {{ s.probe }}; never another probe)
+{% endfilter %}
+    #[arg(short, long, env = "{{ s.probe_env }}", global = true, value_name = "PROBE", add = ArgValueCandidates::new(probe_serials))]
+    probe: Option<String>,
+    /// probe-rs chip name of the MCU on the board
+    #[arg(long, env = "{{ E }}_CHIP", global = true, default_value = PROBE_RS_CHIP)]
+    chip: String,
+{% filter rewrap("    /// ") %}
+    /// The firmware's ELF, for a fast attach (the RTT control block address is read from it instead of scanning the RAM, about 1.5 s through an ST-LINK){{ " and to decode " ~ (feats("counters" if d.counters else "", "the log" if d.log else "") | and_join) ~ " (default for those: the ELF of the board's build id, from target/ or what `ww elf add` keeps)" if decode else "" }}
+{% endfilter %}
+    #[arg(long, env = "{{ s.elf_env }}", global = true, value_name = "FILE", add = ArgValueCompleter::new(elf_files))]
+    elf: Option<PathBuf>,
+    /// SWD clock in Hz (default: the probe's)
+    #[arg(long, global = true, value_name = "HZ")]
+    speed_hz: Option<u32>,
+{% else %}
+{% filter rewrap("    /// ") %}
+    /// The board on USB: a serial number (or a part of it), or VID:PID[:SERIAL] (default: the only board with the firmware's USB id, c0de:cafe, that serves this API)
+{% endfilter %}
+    #[arg(short, long, env = "{{ E }}_DEVICE", global = true, value_name = "DEVICE", add = ArgValueCandidates::new(usb_serials))]
+    device: Option<String>,
+{% if decode %}
+{% filter rewrap("    /// ") %}
+    /// The firmware's ELF, to decode {{ feats("counters" if d.counters else "", "the log" if d.log else "") | and_join }} (default: the ELF of the board's build id, from target/ or what `ww elf add` keeps)
+{% endfilter %}
+    #[arg(long, env = "{{ s.elf_env }}", global = true, value_name = "FILE", add = ArgValueCompleter::new(elf_files))]
+    elf: Option<PathBuf>,
+{% endif %}
+{% endif %}
+    #[command(subcommand)]
+    command: Cmd,
+}
+
+#[derive(Subcommand)]
+enum Cmd {
+{% if ww.rtt %}
+    /// List the debug probes attached to this PC
+    Probes,
+{% else %}
+    /// List the boards on USB with the firmware's USB id
+    Devices,
+{% endif %}
+    /// {{ feats("Firmware", "API", "board" if d.board else "", "ids" if d.uid else "", "chip" if d.variant else "", "label" if d.label else "", "last reset" if d.last_reset else "") | and_join }} of the board
+    Info,
+    /// The running firmware: name, version, git commit, build time and profile, build id
+    Firmware,
+{% if d.board %}
+    /// Board name, revision and serial number
+    Board,
+{% endif %}
+{% if d.uid %}
+    /// The board's unique ids ({{ s.uid_desc }})
+    Uid,
+{% endif %}
+{% if d.variant %}
+    /// The chip on the board: device id, silicon revision, flash size
+    Variant,
+{% endif %}
+{% if d.counters %}
+    /// The firmware's cnt counters{{ " (RAM and backup registers)" if o.bkp else "" }}, decoded with its ELF
+    Counters {
+        /// Zero the counters of a buffer afterwards
+        #[arg(long, value_name = "BUFFER")]
+        reset: Option<Buffer>,
+        /// Use --elf although its build id differs from the board's
+        #[arg(long)]
+        force: bool,
+    },
+{% endif %}
+{% if d.log %}
+    /// The defmt log the board keeps (since boot, and from before a crash), decoded with its ELF
+    Log {
+        /// Keep printing new lines as they are logged (Ctrl-C stops)
+        #[arg(short, long)]
+        follow: bool,
+        /// Use --elf although its build id differs from the board's
+        #[arg(long)]
+        force: bool,
+    },
+{% endif %}
+{% if d.settings %}
+    /// Settings kept in the board's flash
+    #[command(subcommand)]
+    Settings(SettingsCmd),
+{% endif %}
+{% if d.boot %}
+    /// Boot state, and reboots into the firmware or the STM32 ROM bootloader
+    #[command(subcommand)]
+    Boot(BootCmd),
+{% endif %}
+{% if d.dfu %}
+    /// The update node: product, profile, boot state, last result
+    Dfu,
+{% endif %}
+{% filter rewrap("    /// ") %}
+    /// Everything of the device contract in one text, for a bug report: {{ feats("firmware", "board" if d.board else "", "ids" if d.uid else "", "label" if d.label else "", "last reset with the crash's addresses named" if d.last_reset else "", "counters" if d.counters else "", "the stored log" if d.log else "") | join(", ") }}
+{% endfilter %}
+{% if decode %}
+    Report {
+        /// Use --elf although its build id differs from the board's
+        #[arg(long)]
+        force: bool,
+    },
+{% else %}
+    Report,
+{% endif %}
+    /// The user LED{{ (" (" ~ s.led_name ~ ")") if s.led_name else "" }}
+    #[command(subcommand)]
+    Led(LedCmd),
+{% if d.label %}
+    /// Show the board's label, or store a new one (kept in the board's flash)
+    Label {
+        /// The new label, at most 32 bytes
+        name: Option<String>,
+    },
+{% endif %}
+{% if d.last_reset %}
+    /// Why the board last reset, with the crash record after a fault or panic
+    LastReset {
+        /// Forget the record and zero the boot counter afterwards
+        #[arg(long)]
+        clear: bool,
+    },
+{% endif %}
+}
+{% if d.settings %}
+
+#[derive(Subcommand)]
+enum SettingsCmd {
+{% if s.led_at_boot %}
+    /// Show every setting
+    Show,
+    /// The LED after boot: on or off
+    LedAtBoot { state: OnOff },
+{% endif %}
+    /// Every setting back to its default{{ ", the label too" if d.label else "" }}
+    Reset,
+}
+{% endif %}
+{% if d.boot %}
+
+#[derive(Subcommand)]
+enum BootCmd {
+    /// The boot state (always confirmed: the firmware is the only image)
+    State,
+    /// Reset the board into the firmware, or into the STM32 ROM bootloader with --updater (USB DFU on PA11/PA12;
+    /// `just flash` brings the firmware back through the probe)
+    Reboot {
+        #[arg(long)]
+        updater: bool,
+    },
+}
+{% endif %}
+{% if s.led_at_boot %}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum OnOff {
+    On,
+    Off,
+}
+{% endif %}
+{% if d.counters %}
+
+/// A counter buffer of the firmware
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum Buffer {
+    /// The RAM counters (zeroed by every reset)
+    Ram,
+{% if o.bkp %}
+    /// The counters in the backup registers (kept across resets, not power cuts)
+    Bkp,
+{% endif %}
+}
+{% endif %}
+
+#[derive(Subcommand)]
+enum LedCmd {
+    /// Switch the LED on
+    On,
+    /// Switch the LED off
+    Off,
+    /// Blink the LED a few times
+    Blink {
+        /// How many times
+        #[arg(short = 'n', long, default_value_t = 3)]
+        count: u32,
+        /// One on-off cycle, in milliseconds
+        #[arg(long, default_value_t = 500, value_name = "MS")]
+        period: u64,
+    },
+}
+{% if ww.rtt %}
+
+/// Serials of the attached probes for `--probe`, the probe's name as help; empty on any error.
+fn probe_serials() -> Vec<CompletionCandidate> {
+    probe_rs::probe::list::Lister::new()
+        .list_all()
+        .into_iter()
+        .filter_map(|p| {
+            let serial = p.serial_number.clone()?;
+            Some(CompletionCandidate::new(serial).help(Some(p.identifier.clone().into())))
+        })
+        .collect()
+}
+{% else %}
+
+/// The USB devices with the firmware's USB id ([USB_ID]); empty on any error.
+fn usb_devices() -> Vec<nusb::DeviceInfo> {
+    nusb::list_devices()
+        .wait()
+        .map(|list| {
+            list.filter(|d| (d.vendor_id(), d.product_id()) == USB_ID)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Serials of the boards on USB for `--device`, the product name as help.
+fn usb_serials() -> Vec<CompletionCandidate> {
+    usb_devices()
+        .into_iter()
+        .filter_map(|d| {
+            let serial = d.serial_number()?.to_string();
+            let product = d.product_string().unwrap_or("").to_string();
+            Some(CompletionCandidate::new(serial).help(Some(product.into())))
+        })
+        .collect()
+}
+{% endif %}
+{% if elf %}
+
+/// Firmware ELF files for `--elf`: directories to walk into, files without an extension (cargo's output) or `.elf`.
+fn elf_files(current: &OsStr) -> Vec<CompletionCandidate> {
+    PathCompleter::file()
+        .filter(|path| {
+            path.is_dir()
+                || path
+                    .extension()
+                    .is_none_or(|ext| ext.eq_ignore_ascii_case("elf"))
+        })
+        .complete(current)
+}
+{% endif %}
+
+impl Cli {
+{% if ww.rtt %}
+    /// The probe of `--probe` (or `{{ s.probe_env }}`, the same the recipes use), else any {{ s.probe_kind }}.
+    fn probe(&self) -> anyhow::Result<Probe> {
+        let probe = Probe {
+            chip: self.chip.clone(),
+            speed_hz: self.speed_hz,
+            elf: self.elf.clone(),
+            ..Probe::default()
+        };
+        Ok(match self.probe.as_deref().filter(|s| !s.is_empty()) {
+            Some(spec) => probe.select(spec)?,
+            None => probe,
+        })
+    }
+{% else %}
+    /// The board of `--device` (or `{{ E }}_DEVICE`), else any board with the firmware's USB id.
+    fn usb(&self) -> anyhow::Result<Usb> {
+        Ok(match self.device.as_deref().filter(|s| !s.is_empty()) {
+            Some(spec) => Usb::default().select(spec)?,
+            None => Usb::default(),
+        })
+    }
+{% endif %}
+}
+
+{% if ww.rtt %}
+/// Connects, with a spinner on stderr while it takes (a RAM scan for the RTT control block is slow on an ST-LINK).
+{% else %}
+/// Connects, with a spinner on stderr while it takes.
+{% endif %}
+async fn connect(cli: &Cli) -> anyhow::Result<{{ T }}> {
+    let spinner = if std::io::stderr().is_terminal() {
+{% if ww.rtt %}
+        let s = ProgressBar::new_spinner().with_message(format!("connecting to {}", cli.chip));
+{% else %}
+        let s = ProgressBar::new_spinner().with_message("connecting over USB");
+{% endif %}
+        s.set_style(ProgressStyle::with_template("{spinner} {msg}").expect("template"));
+        s.enable_steady_tick(Duration::from_millis(80));
+        Some(s)
+    } else {
+        None
+    };
+    let result = {{ T }}::connect(&cli.{{ "probe" if ww.rtt else "usb" }}()?).await;
+    if let Some(s) = spinner {
+        s.finish_and_clear();
+    }
+    Ok(result?)
+}
+
+async fn run(cli: Cli) -> anyhow::Result<()> {
+    match &cli.command {
+{% if ww.rtt %}
+        Cmd::Probes => {
+            let probes = probe_rs::probe::list::Lister::new().list_all();
+            if probes.is_empty() {
+                println!("{YELLOW}no debug probe attached{YELLOW:#}");
+            }
+            for p in probes {
+                let serial = p.serial_number.as_deref().unwrap_or("-");
+                println!(
+                    "{BOLD}{serial}{BOLD:#}  {}  {DIM}{:04x}:{:04x}{DIM:#}",
+                    p.identifier, p.vendor_id, p.product_id
+                );
+            }
+        }
+{% else %}
+        Cmd::Devices => {
+            let devices = usb_devices();
+            if devices.is_empty() {
+                println!(
+                    "{YELLOW}no board on USB with id {:04x}:{:04x}{YELLOW:#}",
+                    USB_ID.0, USB_ID.1
+                );
+            }
+            for d in devices {
+                let serial = d.serial_number().unwrap_or("-");
+                println!(
+                    "{BOLD}{serial}{BOLD:#}  {}  {DIM}{:04x}:{:04x}{DIM:#}",
+                    d.product_string().unwrap_or(""),
+                    d.vendor_id(),
+                    d.product_id()
+                );
+            }
+        }
+{% endif %}
+        Cmd::Info => {
+            let board = connect(&cli).await?;
+            let info = board.info();
+            println!("{BOLD}API{BOLD:#}        {}", api_line(info));
+            let fw = board.firmware().await?;
+            println!("{BOLD}firmware{BOLD:#}   {}", firmware_line(&fw));
+            match board.build_id().await {
+                Ok(id) => println!("{BOLD}build id{BOLD:#}   {}", hex(&id)),
+                Err(Error::Unimplemented { .. }) => {}
+                Err(e) => return Err(e.into()),
+            }
+{% if d.board %}
+            println!(
+                "{BOLD}board{BOLD:#}      {}",
+                board_line(&board.board().await?)
+            );
+{% endif %}
+{% if d.variant %}
+            let v = board.variant().await?;
+            println!("{BOLD}chip{BOLD:#}       {}", variant_line(&v));
+{% endif %}
+{% if d.label %}
+            let label = board.label().await?;
+            if label.is_empty() {
+                println!("{BOLD}label{BOLD:#}      {DIM}(none){DIM:#}");
+            } else {
+                println!("{BOLD}label{BOLD:#}      {label}");
+            }
+{% endif %}
+{% if d.last_reset %}
+            let boots = board.boot_count().await?;
+            let reset = board.last_reset().await?;
+            for (i, line) in reset_lines(&reset, boots).iter().enumerate() {
+                let label = if i == 0 { "last reset" } else { "          " };
+                println!("{BOLD}{label}{BOLD:#} {line}");
+            }
+{% endif %}
+            board.disconnect().await;
+        }
+        Cmd::Led(cmd) => {
+            let board = connect(&cli).await?;
+            match cmd {
+                LedCmd::On => board.led_on().await?,
+                LedCmd::Off => board.led_off().await?,
+                LedCmd::Blink { count, period } => {
+                    board.blink(*count, Duration::from_millis(*period)).await?
+                }
+            }
+            board.disconnect().await;
+        }
+{% if d.label %}
+        Cmd::Label { name } => {
+            let board = connect(&cli).await?;
+            match name {
+                Some(name) => {
+                    board.set_label(name).await?;
+                    println!("{GREEN}label stored{GREEN:#}: {name}");
+                }
+                None => match board.label().await?.as_str() {
+                    "" => println!("{DIM}(none){DIM:#}"),
+                    label => println!("{label}"),
+                },
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+        Cmd::Firmware => {
+            let board = connect(&cli).await?;
+            println!("{}", firmware_line(&board.firmware().await?));
+            println!("{DIM}build id {}{DIM:#}", hex(&board.build_id().await?));
+            board.disconnect().await;
+        }
+{% if d.board %}
+        Cmd::Board => {
+            let board = connect(&cli).await?;
+            println!("{}", board_line(&board.board().await?));
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.uid %}
+        Cmd::Uid => {
+            let board = connect(&cli).await?;
+            for id in board.uid().await? {
+                println!(
+                    "{}  {DIM}{:?}, {:?}{DIM:#}",
+                    hex(id.value.as_slice()),
+                    id.kind,
+                    id.source
+                );
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.variant %}
+        Cmd::Variant => {
+            let board = connect(&cli).await?;
+            println!("{}", variant_line(&board.variant().await?));
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.counters %}
+        Cmd::Counters { reset, force } => {
+            let board = connect(&cli).await?;
+            let report = board.counters(cli.elf.as_deref(), *force).await?;
+            if report.counters.is_empty() {
+                println!("{DIM}no counters{DIM:#}");
+            }
+            for c in &report.counters {
+                let style = match c.severity.as_str() {
+                    "error" => RED,
+                    "warn" => YELLOW,
+                    _ => Style::new(),
+                };
+                println!(
+                    "{DIM}{}{DIM:#}  {style}{}{style:#} = {BOLD}{}{BOLD:#} {}",
+                    c.buffer, c.name, c.value, c.unit
+                );
+            }
+            println!("{DIM}decoded with {}{DIM:#}", report.elf);
+            if let Some(buffer) = reset {
+                let (buffer, name) = match buffer {
+                    Buffer::Ram => (CounterBuffer::Ram, "RAM"),
+{% if o.bkp %}
+                    Buffer::Bkp => (CounterBuffer::Backup, "BKP"),
+{% endif %}
+                };
+                board.reset_counters(buffer).await?;
+                println!("{GREEN}{name} counters zeroed{GREEN:#}");
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.log %}
+        Cmd::Log { follow, force } => {
+            let board = connect(&cli).await?;
+            if *follow {
+                // Ctrl-C ends the follow with a clean disconnect; the board keeps the log for the next reader
+                tokio::select! {
+                    result = board.follow_log(cli.elf.as_deref(), *force, |line| println!("{line}")) => result?,
+                    _ = tokio::signal::ctrl_c() => {}
+                }
+                board.disconnect().await;
+            } else {
+                let report = board.log(cli.elf.as_deref(), *force).await?;
+                for line in &report.lines {
+                    println!("{line}");
+                }
+                board.disconnect().await;
+            }
+        }
+{% endif %}
+{% if d.settings %}
+        Cmd::Settings(cmd) => {
+            let board = connect(&cli).await?;
+            match cmd {
+{% if s.led_at_boot %}
+                SettingsCmd::Show => {
+                    let on = board.led_at_boot().await?;
+                    println!("led-at-boot  {}", if on { "on" } else { "off" });
+                }
+                SettingsCmd::LedAtBoot { state } => {
+                    board.set_led_at_boot(matches!(state, OnOff::On)).await?;
+                    println!("{GREEN}stored{GREEN:#}");
+                }
+{% endif %}
+                SettingsCmd::Reset => {
+                    board.reset_settings().await?;
+                    println!("{GREEN}settings back to their defaults{GREEN:#}");
+                }
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.boot %}
+        Cmd::Boot(cmd) => {
+            let board = connect(&cli).await?;
+            match cmd {
+                BootCmd::State => println!("{:?}", board.boot_state().await?),
+                BootCmd::Reboot { updater } => {
+                    let into = if *updater {
+                        BootTarget::Updater
+                    } else {
+                        BootTarget::App
+                    };
+                    board.reboot(into).await?;
+                    if *updater {
+                        println!(
+                            "{GREEN}rebooting into the STM32 ROM bootloader{GREEN:#} {DIM}(USB DFU on PA11/PA12; `just flash` brings the firmware back){DIM:#}"
+                        );
+                    } else {
+                        println!("{GREEN}rebooting{GREEN:#}");
+                    }
+                }
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.dfu %}
+        Cmd::Dfu => {
+            let board = connect(&cli).await?;
+            for line in node_lines(&board.dfu_node().await?) {
+                println!("{line}");
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if decode %}
+        Cmd::Report { force } => {
+            let board = connect(&cli).await?;
+            println!("{}", board.report(cli.elf.clone(), *force).await);
+            board.disconnect().await;
+        }
+{% else %}
+        Cmd::Report => {
+            let board = connect(&cli).await?;
+            println!("{}", board.report({{ "cli.elf.clone()" if elf else "None" }}, false).await);
+            board.disconnect().await;
+        }
+{% endif %}
+{% if d.last_reset %}
+        Cmd::LastReset { clear } => {
+            let board = connect(&cli).await?;
+            let boots = board.boot_count().await?;
+            let reset = board.last_reset().await?;
+            for line in reset_lines(&reset, boots) {
+                println!("{line}");
+            }
+            if *clear {
+                board.clear_last_reset().await?;
+                println!("{GREEN}cleared{GREEN:#}");
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+    }
+    Ok(())
+}
+{% if d.variant %}
+
+/// `{{ s.variant_example }}`.
+fn variant_line(v: &{{ C }}::Variant) -> String {
+    let device = match v.dev_id {
+        {{ "0x%x" | format(s.variant.dev_id) }} => "{{ s.variant.device }}",
+        _ => "unknown device",
+    };
+    let revision = match v.revision {
+{% for r in s.variant.revisions %}
+        {{ C }}::SiliconRevision::{{ r[0] }} => "rev {{ r[0] }}".to_string(),
+{% endfor %}
+        _ => "unknown revision".to_string(),
+    };
+    format!(
+        "{device} ({:#05x}) {revision} ({:#06x}), {} KiB flash",
+        v.dev_id, v.rev_id, v.flash_kib
+    )
+}
+{% endif %}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn main() -> ExitCode {
+    CompleteEnv::with_factory(Cli::command).complete();
+    let cli = Cli::parse();
+    let rt = match tokio::runtime::Runtime::new() {
+        Ok(rt) => rt,
+        Err(e) => {
+            anstream::eprintln!("{RED}error{RED:#}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match rt.block_on(run(cli)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            anstream::eprintln!("{RED}error{RED:#}: {e:#}");
+            ExitCode::FAILURE
+        }
+    }
+}
