@@ -1,7 +1,6 @@
 # Windows runs the recipes with cmd (`cd x && y` works there too): not every PC has Git's sh on PATH
 set windows-shell := ["cmd.exe", "/c"]
 
-# rustup and the firmware's toolchain, {{ tool_list }}
 # Set up this PC; prints the steps that need root (`--root` runs them too, `--check` only reports what is missing)
 setup *args:
     uv run scripts/setup.py {{ '{{' }}args{{ '}}' }}
