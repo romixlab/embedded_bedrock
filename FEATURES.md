@@ -148,15 +148,19 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (RP's `flash-bootsel` moves into it, `cd firmware` with `--wire-weaver`). Built first in nucleo_g0b1re_template
   (its TPL-10), run there in an Ubuntu 24.04 container; `ww` from git needs wire_weaver P2401#23oct-1313. No git
   hooks step: it comes with the hooks (TPL-37) and chains to the hooks a repository already has.
-- 🚧 **TPL-37 Template suite: the host side next to the firmware** (`--host`, needs `--wire-weaver`; what
+- 🧪 **TPL-37 Template suite: the host side next to the firmware** (`--host`, needs `--wire-weaver`; what
   nucleo_g0b1re_template proved): `suite_files()` / `suite_context()` and `scripts/templates/suite/`: a root `justfile`
   for building, flashing and checking all of it (probe-rs / cnt recipes with the probe, `api-check`, `hooks`, `logo`,
   `setup`), `.github/workflows/ci.yml` (lint, test, firmware and bootloader build, evolution check) and `setup.yml`,
   `scripts/rename.py`, README (board prose from the preset), AGENTS (layout and procedures before the upgrade
   section), FEATURES and CHANGELOG skeletons from the options, LICENSE, `docs/logo/` (Typst, board name and chip label;
-  `typst` runs when on PATH) and `docs/board/` with `--board`. `--cli-name` names the CLI and its env prefix. Still
-  to come: the host crates (client over probe and USB, CLI, Python; P2528#24oct-1609c), behind `has_client` /
-  `has_cli` / `has_py`.
+  `typst` runs when on PATH) and `docs/board/` with `--board`. `--cli-name` names the CLI and its env prefix. The host
+  crates (`suite/{client,cli,py}/`, from G0 cc1c30b): `<name>_client` (typed methods for the device items the answers
+  have, one `Error`, `Probe` over RTT or `Usb` by VID:PID and serial), `<name>_cli` (clap, anstream colour, dynamic
+  completion with live probe serials or USB devices, `--version` from `build.rs`; info, led, label, last-reset,
+  firmware, board, uid, variant, counters, log -f, settings, boot, dfu, report), `<name>_py` (PyO3 + maturin, uv,
+  examples, pytest). The G0 answers regenerate G0's host crates modulo wording and reflow; the matrix's `--host`
+  entries pass cargo test, clippy and `just test-py`. Not run against a board through the template yet.
 - 🧪 **TPL-41 Device suite in firmware and API**: every `--wire-weaver` firmware serves the device contract as
   nucleo_g0b1re_template (cc1c30b) does, with the items the answers allow (`suite_context()` `s.dev`): the API crate
   (`ww/api/src/lib.rs.j2`) has `device: Device` with `firmware`, `last_reset` (crash capture), `board`, `uid`,

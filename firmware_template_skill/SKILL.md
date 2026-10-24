@@ -151,9 +151,17 @@ API crate, and the firmware as a standalone crate excluded from it (it builds fo
                 transport tasks (USB: embassy-usb driver + wire_weaver_usb_embassy; RTT: ww_device::rtt channels)
   .githooks/pre-commit, scripts/hooks.py   evolution check before each commit (`just hooks`, chained after the
                 hooks already in .git/hooks)
+  <name>_client/  --host: typed async methods over the generated client, one Error, Target = Probe (RTT: chip,
+                VID:PID from --probe, serial from <CLI>_PROBE, ELF) or Usb (VID:PID, serial); log and counters
+                decoded with the ELF found by build id (cnt_core)
+  <name>_cli/   --host: the --cli-name binary (clap, colour, completion with live probe serials or USB devices,
+                --version with git SHA and build time); info, led, label, last-reset and the device subcommands
+  <name>_py/    --host: PyO3 + maturin module `Device`, uv project, examples blink.py / device.py, pytest
+                (`just test-py`)
 ```
 
-`--host` adds `FEATURES.md`, `CHANGELOG.md`, `LICENSE`, `.github/workflows/` (CI: lint, test, firmware build,
+`--host` adds the three host crates above (items the answers leave out, such as settings, counters, the log or
+boot, leave their methods and subcommands out), `FEATURES.md`, `CHANGELOG.md`, `LICENSE`, `.github/workflows/` (CI: lint, test, firmware build,
 evolution check; setup check), `scripts/rename.py` (rename the project after cloning), `docs/logo/` (Typst, rendered
 when `typst` is on PATH) and with `--board` `docs/board/` (boardmap TOML and geometry, rendered when `boardmap` is on
 PATH). `new` runs `cargo generate-lockfile` and prints the next steps (`just api-save` for the first snapshot,

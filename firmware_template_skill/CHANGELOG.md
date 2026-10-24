@@ -10,6 +10,28 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- The template suite, host crates (TPL-37): `--host` generates `<name>_client`, `<name>_cli` and `<name>_py` next to
+  the API crate, as nucleo_g0b1re_template (cc1c30b) has them.
+  - `<name>_client`: the typed `<Board>` over the generated client with one `Error`, methods for the device items
+    the answers have (firmware, last reset, board, uid, label, counters and the BKP buffer, log, variant,
+    settings / LED at boot, boot, dfu, report). Target: with RTT `Probe` (chip, `<NAME>_PROBE` VID:PID from
+    `--probe`, serial, ELF for a fast attach), with USB `Usb` (VID:PID `USB_ID`, serial). Counters and the log are
+    decoded with the firmware's ELF, found by its build id (cnt_core).
+  - `<name>_cli` (`--cli-name`): clap with anstream colour, dynamic completion (probe serials, or USB devices through
+    nusb), `--version` with git SHA and build time (`build.rs`); `info`, `led`, the device subcommands, `probes` or
+    `devices`.
+  - `<name>_py`: PyO3 + maturin, a uv project (`uv lock` in `new`), `Device(...)`, examples `blink.py` and
+    `device.py`, a pytest (`just test-py`).
+  - Root `Cargo.toml` gains the members and `[workspace.dependencies]` for them; host crate versions in
+    `versions.toml`. The G0 answers with `--board nucleo_g0b1re` regenerate G0's host crates but for wording and
+    reflow (title "Nucleo-G0B1RE", the stm32.toml variant table with revisions Z and Y).
+
+  Upgrade notes: existing firmware with `host` on and no host crates: regenerate into a scratch directory and copy
+  `<name>_client/`, `<name>_cli/`, `<name>_py/` in, add them to the root workspace's members and dependencies, run
+  `cargo generate-lockfile` and `uv lock` in `<name>_py/`. A firmware that already has its own host crates (G0)
+  compares them and takes what it wants; nothing changes for firmware without `--host`. The client's methods need
+  the device suite (TPL-41) in the API. Run `info`, `log -f` and `counters` once against the board.
+
 - The device suite (TPL-41): every `--wire-weaver` firmware serves the device contract as nucleo_g0b1re_template
   does, with the items the answers allow.
   - API crate: `device: Device` with `firmware`, `last_reset` (crash capture), `board` (name, revision, serial from
