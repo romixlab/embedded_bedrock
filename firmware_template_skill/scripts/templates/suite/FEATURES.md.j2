@@ -42,6 +42,10 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% set n.i = n.i + 1 %}
 {{ row("FW-" ~ n.i, "The device suite (`device` in the API)", "🧪", "`firmware/src/ww/device.rs`") -}}
 {% endif %}
+{% if s.led.pwm %}
+{% set n.i = n.i + 1 %}
+{{ row("FW-" ~ n.i, s.led.Name ~ " breathes by default: " ~ s.led.pwm.signal ~ " PWM on " ~ s.led.pin ~ " at 1 kHz through embedded_bedrock's `bedrock_led`; `led_on` / `led_off` hold it solid" ~ ("; `leds` (mode, brightness, identify)" if s.leds else "") ~ "; embassy's time driver named explicitly (" ~ s.led.pwm.driver | upper ~ ") so " ~ s.led.pwm.timer ~ " stays free", "🧪", "`firmware/src/led.rs`" ~ (", `src/ww/leds.rs`" if s.leds else "")) -}}
+{% endif %}
 
 ## API: `{{ s.api }}`
 
@@ -49,6 +53,9 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 |---|---|---|---|
 | API-1 | `led_on` / `led_off` | 🧪 | |
 | API-2 | Device contract: `FirmwareInfo` (name, version, commit, build time, build id){{ ", `LastReset`" if o.crash else "" }}{{ ", `UserInfo` label" if o.settings_flash else "" }} | 🧪 | WireWeaver stdlib traits |
+{% if s.leds %}
+| API-3 | `leds: ww_indication::Indication` (mode, brightness, identify); `led_on` / `led_off` are solid on / off | 🧪 | |
+{% endif %}
 {% if s.has_client %}
 
 ## HOST: client library{{ " and command line" if s.has_cli else "" }}
@@ -62,6 +69,9 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% if ww.rtt %}
 | HOST-4 | Fast attach through the firmware's ELF (`--elf`, `{{ s.elf_env }}`) | 🧪 | RTT control block address from the ELF |
 {% endif %}
+{% if s.leds %}
+| HOST-{{ 5 if ww.rtt else 4 }} | `{{ s.cli }} leds show\|mode\|brightness\|identify`; client `leds_mode`, `brightness`, `identify` | 🧪 | `{{ s.client }}/src/leds.rs` |
+{% endif %}
 {% endif %}
 {% endif %}
 {% if s.has_py %}
@@ -71,6 +81,9 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 | ID | Feature | Status | Notes |
 |---|---|---|---|
 | PY-1 | `{{ s.py_module }}.Device`: connect, LED, firmware{{ ", label" if o.settings_flash else "" }}{{ ", last reset" if o.crash else "" }}; context manager | 🧪 | PyO3 + maturin, `just py` |
+{% if s.leds %}
+| PY-2 | `leds_mode`, `brightness`, `identify()` | 🧪 | |
+{% endif %}
 {% endif %}
 
 ## TPL: template chores

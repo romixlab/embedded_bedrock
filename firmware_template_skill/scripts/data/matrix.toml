@@ -469,3 +469,42 @@ args = ["--chip", "rp2040", "--wire-weaver", "--host"]
 builds = ["dev"]
 tags = ["ww", "host"]
 note = "USB client without counters: no --elf"
+
+# --led-mode (TPL-39): every embassy STM32 entry above breathes on its default LED pin where it has a timer channel
+# (PB14: G0 TIM15_CH1, H7 TIM12_CH1, L0 TIM21_CH2, F4 TIM1_CH2N); g0brd is G0's PA5 on TIM2_CH1 with the host crates,
+# g0set Donguru's PF1 on TIM15_CH1N.
+
+[[entry]]
+name = "g0ledn"
+args = ["--chip", "STM32G0B1CE", "--wire-weaver", "--led", "PF1", "--settings", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "breath on a complementary channel (TIM15_CH1N), leds over USB with the host crates"
+
+[[entry]]
+name = "h7ledpb0"
+args = ["--chip", "STM32H725IG", "--supply-config", "DirectSMPS", "--wire-weaver", "--ww-transport", "rtt", "--led", "PB0", "--host"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "breath on TIM3_CH3, time driver TIM4"
+
+[[entry]]
+name = "h7ledpe1"
+args = ["--chip", "STM32H725IG", "--supply-config", "DirectSMPS", "--wire-weaver", "--ww-transport", "rtt", "--led", "PE1"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+note = "PE1 has no timer channel: plain GPIO, no leds"
+
+[[entry]]
+name = "g0ledgpio"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--led", "PC13", "--host"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "PC13 has no timer channel: plain GPIO, host crates without leds"
+
+[[entry]]
+name = "g0ledoff"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--led", "PA5", "--led-mode", "gpio", "--settings", "--host"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "--led-mode gpio on a pin with a channel"

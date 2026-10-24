@@ -179,6 +179,22 @@ start says so, the lines after it are complete.
 {{ s.board_rom_boot }}
 {% endif %}
 {% endif %}
+{% if s.leds and s.has_cli %}
+{% set L = s.led %}
+
+## LED
+
+{% filter rewrap("") %}
+{{ L.Name }} breathes (a 3 s breath, PWM on {{ L.pwm.signal }} at 1 kHz, embedded_bedrock's `bedrock_led`). `{{ s.cli }} led on|off|blink` hold it solid on or off until the next reset{{ ("; `" ~ s.cli ~ " settings led-at-boot on` starts it solid on instead") if s.led_at_boot else "" }}.
+{% endfilter %}
+
+```sh
+{{ (s.cli ~ ' leds show').ljust(31) }} # mode and brightness
+{{ (s.cli ~ ' leds mode essential').ljust(31) }} # hide {{ L.name }} (normal shows it, off hides it too); RAM only, normal after a reset
+{{ (s.cli ~ ' leds brightness low').ljust(31) }} # lowest, low, normal, high, highest; RAM only
+{{ (s.cli ~ ' leds identify 10').ljust(31) }} # blink {{ L.name }} at full brightness for 10 s, then back to its mode
+```
+{% endif %}
 {% if s.has_py %}
 
 ## Python
@@ -218,6 +234,11 @@ with {{ s.py_module }}.Device() as dev:{{ " " * [1, 22 - s.py_module | length] |
 {% endif %}
 {% if s.rom_boot %}
     print(dev.boot_state(), dev.dfu_node())
+{% endif %}
+{% if s.leds %}
+    dev.brightness = "low"                  # dev.leds_mode = "normal" | "essential" | "off"; dev.identify(5)
+{% endif %}
+{% if s.rom_boot %}
     dev.reboot()                            # reboot(updater=True): into the ROM bootloader; disconnects
 {% endif %}
 {% endif %}

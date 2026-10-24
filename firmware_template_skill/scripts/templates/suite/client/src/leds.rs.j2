@@ -12,8 +12,9 @@ use crate::{Error, {{ T }}, Result, call_fallible, read};
 pub use ww_indication::{Brightness, Mode};
 
 impl {{ T }} {
-    /// The global indication mode: `Normal` shows {{ L }}, `OnlyEssential` and `AllOff` hide it (RAM only, `Normal` after
-    /// a reset).
+{% filter rewrap("    /// ") %}
+    /// The global indication mode: `Normal` shows {{ L }}, `OnlyEssential` and `AllOff` hide it (RAM only, `Normal` after a reset).
+{% endfilter %}
     pub async fn leds_mode(&self) -> Result<Mode> {
         read("Indication::mode", self.raw.leds().read_mode()).await
     }
@@ -39,8 +40,9 @@ impl {{ T }} {
             .map_err(|source| Error::Link { item, source })
     }
 
-    /// Blinks {{ L }} at full brightness for `duration` (up to 10 minutes), then shows its mode again; an error while
-    /// one runs (`Busy`).
+{% filter rewrap("    /// ") %}
+    /// Blinks {{ L }} at full brightness for `duration` (up to 10 minutes), then shows its mode again; an error while one runs (`Busy`).
+{% endfilter %}
     pub async fn identify(&self, duration: Duration) -> Result<()> {
         let ms = u32::try_from(duration.as_millis())
             .map_err(|_| Error::Invalid(format!("identify for {duration:?}: too long")))?;

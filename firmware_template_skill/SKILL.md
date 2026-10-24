@@ -86,6 +86,10 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      prefetch inside embassy. Suggest `main` only when the user
      wants those; it moves the firmware off released crates until the next embassy release.
    - board LED pin `--led` (PB14 / PIN_25 / P0_13 / GPIO8 by default), RTC usage `--rtc`
+   - LED mode `--led-mode auto|breath|gpio` [auto]: `breath` drives the LED pin's timer channel as PWM through
+     `bedrock_led` (breathes, `leds` in the API with `--wire-weaver`) and names embassy's time driver off that timer;
+     `auto` breathes where the pin has a channel (embassy on STM32 so far), `gpio` keeps a plain output. Ask when the
+     firmware needs the LED's timer for something else.
    - STM32H7 with SMPS: `--supply-config <variant>` [+ `--smps-voltage V1_8|V2_5`] — the script **refuses** to
      generate without it; the value must come from the board schematic. Explain the options
      (see `references/stm32-notes.md`) and ask, never guess.
