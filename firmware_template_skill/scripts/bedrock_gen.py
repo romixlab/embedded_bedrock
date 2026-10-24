@@ -749,7 +749,7 @@ def rust_use(path: str, items: list[str], width: int = 100) -> str:
     if len(items) == 1:
         return f"use {path}::{items[0]};"
     one = f"use {path}::{{{', '.join(items)}}};"
-    if len(one) <= width:
+    if len(one) <= width - 2:  # rustfmt keeps a use list on one line up to 98 columns, not 100
         return one
     lines, line = [], "   "
     for x in items:
