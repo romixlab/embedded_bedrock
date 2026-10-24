@@ -17,7 +17,7 @@ Layout:
 | `app/` | application crate; `build.rs`, `cargo_config.toml`, `rust-toolchain.toml`, `memory.x` are shared with the bootloader; `AGENTS.md.j2`/`CLAUDE.md` describe the template upgrade flow (`bedrock_fw.json` itself is written by `fw_json()` in the script) |
 | `app/src/main/` | one `main.rs` body per framework/family, included by `app/src/main.rs.j2` |
 | `bootloader/` | embassy-boot bootloader crate |
-| `ww/` | `--wire-weaver`: API crate (`ww/api/` → `<ww-api>/`) and the project `README.md`; the firmware side is `app/src/ww.rs.j2` + `app/src/main/_rtt_init.rs.j2` |
+| `ww/` | `--wire-weaver`: API crate (`ww/api/` → `<ww-api>/`) and the project `README.md`; the firmware side is `app/src/ww.rs.j2`, `app/src/ww/device.rs.j2` (the device contract), `app/src/log.rs.j2`, `app/src/boot.rs.j2` + `app/src/main/_rtt_init.rs.j2` |
 | `linker/` | static linker script fragments |
 | `hubris/` | `hubris-memory` output |
 
