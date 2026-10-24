@@ -34,6 +34,14 @@ Plan: ~/git/tpm/maintain/P2528-embedded-bedrock/design/g0-gen-suite.md (read it 
 3. W4 (evo-current) when it lands: `require_current(true)` in tests/evolution.rs, `api-save` via `WW_API_SAVE=1 cargo test`.
 4. P8 after all pieces land.
 
+## State at 24 Oct evening
+
+- P4 gen-device-suite ready at 281f2ce (s/24oct2026-gen-device-suite): device suite, G0 regenerates byte for byte, F103C8 64K over (TPL-34).
+- P3 gen-host-crates still working, branched on P4's f52b5ab; told to rebase onto 281f2ce before ready.
+- P7 gen-pin-diag (P2528#24oct-1610c, TPL-46) spawned on gpd-omarchy, reset onto P4's 281f2ce; rebases onto P3 when P3 is ready (tell it).
+- G5 landed in template main 467f889; G4 g0-led-sync ready (s/24oct2026-g0-led-sync-clean f3bb2a2, API 0.4.0), not landed: P5/P6 after.
+- Integration: take P3 (contains P4) onto this branch, then P7. Then `git rm --cached firmware_template_skill/scripts/__pycache__/bedrock_gen.cpython-313.pyc` and add `__pycache__/` to .gitignore (committed by mistake in 649f664).
+
 ## Decisions / gotchas
 
 - A preset's store_true default (e.g. host) can't be turned off by a flag (no --no-host); edit the answers. Fine for now.
