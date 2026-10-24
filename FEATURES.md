@@ -196,7 +196,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   plain GPIO output (`new` says so); `--led-mode breath` refuses there. The G0 answers with `--board nucleo_g0b1re`
   regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (v0.1.7, a182dbc) but for the clock (TPL-40) and pins. Builds
   for the tested matrix (`g0brd` PA5 TIM2_CH1, `g0ledn` PF1 TIM15_CH1N, `h7ledpb0` PB0 TIM3_CH3, `h7ledpe1` and
-  `g0ledgpio` without a channel, `g0ledoff`, and every embassy STM32 entry on PB14); ran on a board only as G0's own
+  `g0ledgpio` without a channel, `g0ledoff`, and every embassy STM32 entry on PB14; full run 24 Oct 2026: only the known TPL-22, TPL-23, TPL-34 fail); ran on a board only as G0's own
   firmware.
 - 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
   (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
