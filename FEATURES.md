@@ -466,8 +466,8 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   next to them (CN8 on the Nucleo); a general placement pass would.
 - 📋 **MAP-8 Highlight a peripheral**: colour the pins of one function (an SPI, the USB pair) on request, for a
   wiring picture in a docs page.
-- 🐛 **MAP-9 `boardmap --version` names no git SHA**: it prints `boardmap 0.1.0`, so `tpm install` refuses it
-  (AGENTS.md *Versions*: version, SHA and build time from a small `build.rs`); install it with `cargo install` until then.
+- ✅ **MAP-9 `boardmap --version` names the git SHA**: version, SHA (`-dirty`) and build time from a small
+  `build.rs` (AGENTS.md *Versions*), so `tpm install` takes it: `bedrock_board_cli/build.rs`.
 
 ## Dropped and superseded
 
