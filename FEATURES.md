@@ -109,6 +109,17 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   unchanged from 0.4; only the host `cnt_cli` version moves). Verified by regenerating and building `g0`, `g0rtt`,
   `rp2040`, `xf1` (stm32xx-hal) and `espc3` (no `justfile`, ESP keeps `espflash`/probe-rs only) of the tested matrix,
   plus their bootloaders where present.
+- ✅ **TPL-44 Tested matrix as a script**: `references/frameworks.md#tested-matrix` is now data,
+  `scripts/data/matrix.toml` (name, args, builds, tags: `ww`/`host`/`git`/`rtt`), and a `matrix` subcommand
+  (`[NAMES|--tag T] [--jobs N] [--keep] [--bedrock PATH --ww-src PATH]`): generates each entry into a scratch
+  directory, `cargo build`s the listed builds (`dev`/`release`/`bootloader`/`bootloader-nodefmt`; a `host` tag hook
+  for the g0-gen-suite plan's `--host` option runs `cargo test`+`clippy` at the generated workspace root instead, no
+  entry uses it yet), `rustfmt --edition 2024 --check` on every generated `.rs`, and the flip-link check
+  (`_stack_start` == `.data`'s address) on every Cortex-M ELF, with a progress line per entry and a summary table
+  with timings; exits 1 on a failure. `--bedrock`/`--ww-src` go to every entry except ones tagged `git` (`g0bigit`,
+  which must keep the real git sources); `git`-tagged `--wire-weaver` entries get `cargo generate-lockfile` in their
+  API crate first (TPL-43). `frameworks.md`, `SKILL.md` and `AGENTS.md` point at it instead of a hand-run block. Run
+  against the whole matrix: the only failures are the known bugs TPL-22, TPL-23 and TPL-34.
 
 ## Device contract (`DEV`)
 

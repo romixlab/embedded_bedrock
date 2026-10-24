@@ -97,6 +97,10 @@ or options; purely internal refactors only need a line under the next version.
   (`--board nucleo_g0b1re`) should regenerate to the same files apart from the host crates and the device suite,
   which arrive in later entries. Nothing on the target changes.
 
+- Internal: the tested matrix of `references/frameworks.md#tested-matrix` is now data (`scripts/data/matrix.toml`)
+  and a `matrix` subcommand that generates, builds, rustfmt-checks and flip-link-checks every entry (TPL-44). No
+  generated output changed.
+
 - `just setup` in every generated project (TPL-36): `scripts/setup.py` (run with uv, stdlib only) installs what the
   firmware needs on a fresh Arch, Ubuntu / Debian or Windows PC: rustup with the toolchain, targets and components of
   `rust-toolchain.toml` (Xtensa: espup), probe-rs, and as the answers need flip-link, espflash, cnt, ww. Steps that

@@ -180,78 +180,17 @@ Hubris only supports ARMv6-M/7-M/8-M (STM32F3/F4/G0/H7, LPC55) and needs power-o
 
 ## Tested matrix
 
-Every entry below generates and `cargo build`s (dev and, where listed, release) with the versions above:
+Every entry generates and `cargo build`s (dev and, where listed, release and the bootloader) with the versions
+above. The entries live as data in `../scripts/data/matrix.toml` (name, args, builds, tags — see its header
+comment), run by `uv run scripts/bedrock_gen.py matrix` (TPL-44): generates each entry into a scratch directory,
+runs the listed `cargo build`s, `rustfmt --edition 2024 --check` on every generated `.rs`, and the flip-link check
+below on every Cortex-M ELF; prints a summary table with per-step timings and exits 1 on a failure.
 
-```
-new h7app  --chip STM32H725IG --bootloader --settings --counters --bkp-counters rtc --supply-config DirectSMPS  (+bootloader, release)
-new g0     --chip STM32G0B1RE --bootloader --settings --counters --bkp-counters tamp                            (+bootloader, release)
-new g0hal  --chip STM32G0B1RE --framework stm32-hal2 --settings --counters
-new h7hal  --chip STM32H725IG --framework stm32-hal2 --supply-config DirectSMPS --counters
-new xf0    --chip STM32F030C8 --framework stm32xx-hal --log rtt
-new xf1    --chip STM32F103C8 --framework stm32xx-hal --counters --led PC13
-new xf3    --chip STM32F303VC --framework stm32xx-hal --log none
-new xf4    --chip STM32F407VG --framework stm32xx-hal --counters --settings
-new xf7    --chip STM32F767ZI --framework stm32xx-hal
-new xg0    --chip STM32G071RB --framework stm32xx-hal --counters
-new xg4    --chip STM32G474RE --framework stm32xx-hal
-new xh7    --chip STM32H743ZI --framework stm32xx-hal --counters
-new xh7s   --chip STM32H725IG --framework stm32xx-hal --supply-config DirectSMPS
-new xl0    --chip STM32L073RZ --framework stm32xx-hal
-new xl4    --chip STM32L476RG --framework stm32xx-hal --log rtt
-new f4bare --chip STM32F407VG --framework bare --log rtt
-new l4     --chip STM32L476RG --counters --log none
-new l4rtc  --chip STM32L476RG --rtc
-new rp2040 --chip rp2040 --bootloader --settings --counters                                                     (+bootloader, release)
-new rp2350 --chip rp2350 --bootloader                                                                              (+bootloader)
-new nrf    --chip nrf52840 --bootloader --counters                                                                 (+bootloader)
-new nrf9160 --chip nrf9160 --counters --log rtt
-new espc3  --chip esp32c3 --counters            (embassy, defmt via esp-println)
-new espc3p --chip esp32c3 --log esp-println
-new espc3b --chip esp32c3 --framework bare --log esp-println
-new g0usb  --chip STM32G0B1RE --wire-weaver --counters                         (USB, HSI48)                  (+release)
-new g0usbm --chip STM32G0B1RE --wire-weaver --counters --embassy main          (embassy main, USB v4, ES0548 ASSERT) (+release)
-new g0m    --chip STM32G0B1RE --bootloader --settings --counters --bkp-counters tamp --embassy main          (+bootloader, release)
-new g0setm --chip STM32G0B1CE --settings --bkp-counters auto --counters --led PF1 --wire-weaver --embassy main  (Donguru-like, +release)
-new h725m  --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bootloader --embassy main  (OTG_HS, +bootloader)
-new l476m  --chip STM32L476RG --wire-weaver --led PA5 --embassy main            (USB v? no CRS)
-new f103m  --chip STM32F103CB --wire-weaver --led PC13 --embassy main           (USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8; release only since the device suite, TPL-34)
-new g0rtt  --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings     (+bootloader)
-new g0rttn --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log none
-new g0rttr --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log rtt --ww-api g0_dev
-new h725   --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bkp-counters rtc --bootloader (OTG_HS in FS mode, +bootloader)
-new h743   --chip STM32H743ZI --wire-weaver --led PE1                            (OTG_FS)
-new f411   --chip STM32F411CE --wire-weaver --led PC13                           (OTG_FS, no HSI48: clock TODO)
-new l476   --chip STM32L476RG --wire-weaver --led PA5                            (no CRS: clock TODO)
-new l073   --chip STM32L073RZ --wire-weaver --led PA5
-new f103   --chip STM32F103C8 --wire-weaver --led PC13                           (USB_LP_CAN1_RX0, no HSI48; release only, 64K flash)
-new g0rb   --chip STM32G0B1RE --wire-weaver --counters --bkp-counters tamp --settings   (device suite: rom_boot stm32g0, boot word out of BKPSRAM, +release)
-new g0rbm  --chip STM32G0B1RE --wire-weaver --counters --bkp-counters tamp --settings --embassy main  (+release)
-new g0rbl  --chip STM32G0B1RE --wire-weaver --counters --bkp-counters tamp --settings --ww-src <wire_weaver checkout>  (ww_dfu in the [patch])
-new h725rb --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bkp-counters rtc --settings  (rom_boot stm32h7, +release)
-new g0brd  --board nucleo_g0b1re --host                                         (firmware/src equals nucleo_g0b1re_template's, +release)
-new rp2040 --chip rp2040 --wire-weaver --counters --bootloader                                            (+bootloader)
-new rp2350r --chip rp2350 --wire-weaver --ww-transport rtt --log rtt
-new nrf840 --chip nrf52840 --wire-weaver --counters
-new nrf9160r --chip nrf9160 --wire-weaver --ww-transport rtt
-new p2nocrash --chip rp2350 --wire-weaver --no-crash-capture
-new h7nocrash --chip STM32H725IG --supply-config DirectSMPS --no-crash-capture
-new g0set  --chip STM32G0B1CE --settings --bkp-counters auto --counters --led PF1 --wire-weaver  (Donguru-like: EccSafeFlash, label over USB, +release)
-new g0setrtt --chip STM32G0B1RE --settings --wire-weaver --ww-transport rtt --log rtt
-new g0setn --chip STM32G0B1RE --settings --log none                           (settings in the main loop)
-new g0setd --chip STM32G0B1RE --settings --counters
-new h743set --chip STM32H743ZI --settings --wire-weaver --led PE1           (EccSafeFlash stm32h7, bank 2)
-new h725set --chip STM32H725IG --settings --supply-config DirectSMPS --counters (single bank, 2 x 128K)
-new f411set --chip STM32F411CE --settings --log rtt --led PC13              (no ECC: BlockingAsync)
-new f411setw --chip STM32F411CE --settings --wire-weaver --led PC13
-new l4set  --chip STM32L476RG --settings --counters --log none               (ECC, no ww_ecc_flash family: region only)
-new g0bi   --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --build-info  (local --bedrock and --ww-src, +bootloader with and without defmt, release)
-new g0bigit --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --build-info (git sources, see below; +bootloader, release)
-new g0board --chip STM32G0B1RE --board nucleo_g0b1re                          (the G0 template's preset: --host, host crates equal G0's, root cargo test, just lint)
-new g0rtth --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --host  (no preset; +bootloader, root cargo test, just lint)
-new g0rtthm --chip STM32G0B1RE --wire-weaver --ww-transport rtt --host           (RTT client without settings, counters, BKP counters)
-new g0usbh --chip STM32G0B1RE --wire-weaver --ww-transport usb --host --settings --counters --led PA5  (USB client: Usb target, devices subcommand)
-new rp2040h --chip rp2040 --wire-weaver --counters --host                       (USB client, root cargo test, just lint)
-new rp2040hm --chip rp2040 --wire-weaver --host                                  (USB client without counters: no --elf)
+```sh
+uv run scripts/bedrock_gen.py matrix                                    # every entry
+uv run scripts/bedrock_gen.py matrix g0bi g0bigit                       # only these
+uv run scripts/bedrock_gen.py matrix --tag ww                           # only entries tagged ww
+uv run scripts/bedrock_gen.py matrix --bedrock <embedded_bedrock checkout> --ww-src <wire_weaver checkout>  # local, not git
 ```
 
 `--host` entries also pass, from the root: `cargo test --workspace`, `cargo clippy --workspace --all-targets --
@@ -268,7 +207,8 @@ At least once per release one entry builds with the default git sources (`--bedr
 the other entries use sibling checkouts and miss what only a git consumer sees (path dependencies inside
 embedded_bedrock, BLD-8; an unreleased WireWeaver change). Before the branch is on GitHub, point the generated
 `git = "https://github.com/romixlab/embedded_bedrock"` lines at `file://<checkout>` with `branch = "<branch>"`.
-`g0bigit` needs `cargo generate-lockfile` in `g0bi_api/` first (TPL-43).
+`g0bigit` needs `cargo generate-lockfile` in `g0bigit_api/` first (TPL-43); the `matrix` subcommand does this itself
+for any `git`-tagged `--wire-weaver` entry, so it only matters when running `new` by hand.
 The USB set-up was also compiled for STM32G474RE (`USB_LP`, needs embassy-stm32 `single-bank`/`dual-bank`, which the
 template does not select yet), STM32U585AI (`OTG_FS`, `ICLKSEL`) and STM32H563ZI (`USB_DRD_FS`) after removing the
 H7-only `SupplyConfig` lines the SMPS check forces on U5/H5.

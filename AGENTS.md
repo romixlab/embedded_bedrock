@@ -101,10 +101,12 @@ uv run $S new demo --chip STM32G0B1RE --counters --out <scratch>/demo      # gen
 uv run $S new --answers <fw>/bedrock_fw.json --out <tmp>                         # regenerate an existing firmware
 ```
 
-Before declaring a template change done: regenerate and build the tested matrix in
-`firmware_template_skill/references/frameworks.md#tested-matrix` (`cargo build`, plus `bootloader/` when enabled),
-check every generated `.rs` with `rustfmt --edition 2024 --check`, and add the template CHANGELOG entry. Generate
-into a scratch directory and delete it afterwards; never into one of the firmware repos.
+Before declaring a template change done: run `uv run $S matrix` (TPL-44, `firmware_template_skill/scripts/data/matrix.toml`)
+to regenerate and build the tested matrix of `firmware_template_skill/references/frameworks.md#tested-matrix` into
+a scratch directory it cleans up itself, check every generated `.rs` with `rustfmt --edition 2024 --check` and the
+flip-link check (both part of `matrix`), and add the template CHANGELOG entry. A chip / option combination worth
+tracking that `new` doesn't cover yet gets an entry in `matrix.toml` too. Never generate into one of the firmware
+repos.
 
 ## Conventions
 

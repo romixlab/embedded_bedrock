@@ -26,6 +26,7 @@ uv run scripts/bedrock_gen.py hubris-memory --chip STM32H743ZI
 uv run scripts/bedrock_gen.py new --answers <fw>/bedrock_fw.json --out <tmp>   # regenerate with recorded answers
 uv run scripts/bedrock_gen.py check-answers <fw>/bedrock_fw.json             # options new since generation
 uv run scripts/bedrock_gen.py compare --current <fw> --new <tmp> [--base <tmp-old>] [--diff]
+uv run scripts/bedrock_gen.py matrix [NAMES... | --tag ww|host|git|rtt] [--jobs N] [--keep] [--bedrock P --ww-src P]
 ```
 
 Paths are relative to this skill directory; use the absolute path when invoking.
@@ -185,10 +186,13 @@ Details: `references/memory-layout.md` (partitioning rules, symbols, embassy-boo
   the rust target / stm32-hal2 / stm32-rs HAL (`[xxhal.<series>]`) feature tables in `scripts/data/stm32.toml`.
 - Generated file contents are Jinja2 templates in `scripts/templates/` (conventions in its `README.md`); the
   script only resolves the chip, computes the memory layout and picks templates.
-- After changes, regenerate and build the matrix in `references/frameworks.md#tested-matrix`, and check that every
-  generated `.rs` passes `rustfmt --edition 2024 --check`. Top-level single-line `use` runs are sorted by
-  `sort_uses()` in the script, so Jinja chunks may emit them in any order; everything else (long lines, attribute
-  arguments, nested `use` groups) must be written in rustfmt style in the template.
+- After changes, run `uv run scripts/bedrock_gen.py matrix` (TPL-44, `scripts/data/matrix.toml`): it regenerates and
+  builds the tested matrix in `references/frameworks.md#tested-matrix`, checks every generated `.rs` with
+  `rustfmt --edition 2024 --check`, and the flip-link check on every Cortex-M ELF, with a summary table. A new chip /
+  option combination worth tracking gets an entry in `scripts/data/matrix.toml` as well as the frameworks.md prose.
+  Top-level single-line `use` runs are sorted by `sort_uses()` in the script, so Jinja chunks may emit them in any
+  order; everything else (long lines, attribute arguments, nested `use` groups) must be written in rustfmt style in
+  the template.
 - Every change that alters generated output or options gets a `CHANGELOG.md` entry (bump the version) with
   **Upgrade notes** for existing firmware: upgrading agents rely on it. Commit it, since `bedrock_fw.json` records
   the commit hash (a dirty tree is flagged with `"dirty": true`).
