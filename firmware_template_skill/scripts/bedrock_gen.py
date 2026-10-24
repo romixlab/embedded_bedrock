@@ -1815,10 +1815,10 @@ class StepResult:
     message: str = ""
 
 
-def cargo_build(cwd: Path, extra: list[str]) -> tuple[bool, Optional[Path], str]:
+def cargo_build(cwd: Path, extra: list[str], env: Optional[dict[str, str]] = None) -> tuple[bool, Optional[Path], str]:
     """`cargo build <extra> --message-format=json-render-diagnostics`; returns (ok, built executable, readable log)."""
     proc = subprocess.run(["cargo", "build", "--message-format=json-render-diagnostics", *extra],
-                          cwd=cwd, capture_output=True, text=True)
+                          cwd=cwd, capture_output=True, text=True, env=env)
     executable: Optional[Path] = None
     rendered: list[str] = []
     for line in proc.stdout.splitlines():
@@ -1837,8 +1837,8 @@ def cargo_build(cwd: Path, extra: list[str]) -> tuple[bool, Optional[Path], str]
     return proc.returncode == 0, executable, "".join(rendered) + proc.stderr
 
 
-def cargo_plain(cwd: Path, argv: list[str]) -> tuple[bool, str]:
-    proc = subprocess.run(["cargo", *argv], cwd=cwd, capture_output=True, text=True)
+def cargo_plain(cwd: Path, argv: list[str], env: Optional[dict[str, str]] = None) -> tuple[bool, str]:
+    proc = subprocess.run(["cargo", *argv], cwd=cwd, capture_output=True, text=True, env=env)
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
@@ -1871,9 +1871,28 @@ def flip_link_check(elf: Path) -> tuple[bool, str]:
     return ok, f"_stack_start=0x{stack_start:x} .data=0x{data_start:x}" + ("" if ok else " (flip-link not in effect)")
 
 
-def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww_src: Optional[str]) -> dict[str, StepResult]:
+def matrix_build_root(scratch: Path) -> Path:
+    """Where the matrix's cargo build dirs go: a shared `build-dir` (`~/.cargo/config.toml`) would keep one per
+    scratch path for ever, a few GB per entry and run, so each entry gets its own under the cache, removed after it."""
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+    return cache / "bedrock_matrix" / scratch.name
+
+
+def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww_src: Optional[str],
+                   keep: bool = False) -> dict[str, StepResult]:
+    build_dir = matrix_build_root(scratch) / entry.name
+    try:
+        return matrix_run_entry(entry, scratch, bedrock, ww_src, build_dir)
+    finally:
+        if not keep:
+            shutil.rmtree(build_dir, ignore_errors=True)
+
+
+def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww_src: Optional[str],
+                     build_dir: Path) -> dict[str, StepResult]:
     results: dict[str, StepResult] = {}
     outdir = scratch / entry.name
+    env = {**os.environ, "CARGO_BUILD_BUILD_DIR": str(build_dir / "{workspace-path-hash}")}
     argv = [sys.executable, str(HERE / "bedrock_gen.py"), "new", entry.name, "--out", str(outdir), *entry.args]
     if "git" not in entry.tags:
         if bedrock:
@@ -1881,7 +1900,7 @@ def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww
         if ww_src:
             argv += ["--ww-src", ww_src]
     t0 = time.monotonic()
-    proc = subprocess.run(argv, capture_output=True, text=True)
+    proc = subprocess.run(argv, capture_output=True, text=True, env=env)
     results["generate"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
                                      "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
     if not results["generate"].ok:
@@ -1902,7 +1921,8 @@ def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww
         else:
             ww_api = f"{entry.name}_api"
         t0 = time.monotonic()
-        proc = subprocess.run(["cargo", "generate-lockfile"], cwd=outdir / ww_api, capture_output=True, text=True)
+        proc = subprocess.run(["cargo", "generate-lockfile"], cwd=outdir / ww_api, capture_output=True, text=True,
+                              env=env)
         results["lockfile"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
                                          "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-2000:])
 
@@ -1910,7 +1930,7 @@ def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww
         t0 = time.monotonic()
         if b in ("dev", "release"):
             extra = ["--release"] if b == "release" else []
-            ok, elf, log = cargo_build(app_root, extra)
+            ok, elf, log = cargo_build(app_root, extra, env)
             results[b] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
             if ok and cortex_m and elf is not None:
                 fl_ok, fl_msg = flip_link_check(elf)
@@ -1921,7 +1941,7 @@ def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww
                 results[b] = StepResult(False, time.monotonic() - t0, f"{boot_root} does not exist")
                 continue
             extra = ["--features", "defmt"] if b == "bootloader" else []
-            ok, _, log = cargo_build(boot_root, extra)
+            ok, _, log = cargo_build(boot_root, extra, env)
             results[b] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
         else:
             die(f"matrix entry {entry.name}: unknown build type {b!r}")
@@ -1934,10 +1954,10 @@ def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww
             ("host-fmt", ["fmt", "--all", "--check"]),
         ):
             t0 = time.monotonic()
-            ok, log = cargo_plain(outdir, cmd)
+            ok, log = cargo_plain(outdir, cmd, env)
             results[step] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
         t0 = time.monotonic()
-        proc = subprocess.run(["just", "test-py"], cwd=outdir, capture_output=True, text=True)
+        proc = subprocess.run(["just", "test-py"], cwd=outdir, capture_output=True, text=True, env=env)
         results["host-test-py"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
                                              "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
 
@@ -1971,7 +1991,7 @@ def cmd_matrix(args) -> None:
     results: dict[str, dict[str, StepResult]] = {}
     t_start = time.monotonic()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futures = {pool.submit(matrix_run_one, e, scratch, bedrock, ww_src): e for e in selected}
+        futures = {pool.submit(matrix_run_one, e, scratch, bedrock, ww_src, args.keep): e for e in selected}
         for fut in concurrent.futures.as_completed(futures):
             e = futures[fut]
             r = results[e.name] = fut.result()
@@ -1996,7 +2016,7 @@ def cmd_matrix(args) -> None:
         print(f"{e.name:12} " + " ".join(cells) + note)
 
     print(f"\n{len(selected)} entries in {time.monotonic() - t_start:.0f}s"
-         + (f", kept in {scratch}" if args.keep else ""))
+         + (f", kept in {scratch} (cargo build dirs in {matrix_build_root(scratch)})" if args.keep else ""))
     if any_fail:
         print("\n--- failures ---")
         for e in selected:
@@ -2006,6 +2026,7 @@ def cmd_matrix(args) -> None:
 
     if not args.keep:
         shutil.rmtree(scratch, ignore_errors=True)
+        shutil.rmtree(matrix_build_root(scratch), ignore_errors=True)
     if any_fail:
         sys.exit(1)
 
