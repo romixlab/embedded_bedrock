@@ -36,10 +36,16 @@ ww_uid.workspace = true
 {% if d.log %}
 ww_log.workspace = true
 {% endif %}
-{% if s.leds %}
+{% if s.leds or s.clock %}
 ww_si.workspace = true
-# `leds`
+# {{ "`leds` and `clock`" if s.leds and s.clock else ("`clock`" if s.clock else "`leds`") }}
+  {% if s.leds %}
 ww_indication.workspace = true
+  {% endif %}
+  {% if s.clock %}
+ww_timebase.workspace = true
+ww_date_time.workspace = true # used by the generated client (clock.set_time_of_day), not by name
+  {% endif %}
 {% else %}
 ww_si.workspace = true # used by the generated client (ww_codegen!), not by name
 {% endif %}

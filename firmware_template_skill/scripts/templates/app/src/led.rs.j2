@@ -7,7 +7,13 @@
 //! {{ l.Name }} ({{ l.pin }}, {{ pw.signal }} PWM): breathes by default, solid on or off through `led_on` / `led_off`, shown through one
 //! indication (`leds` in the API, src/ww/leds.rs): visible or not, a peak brightness, and [`identify`], which
 //! blinks it for a while and then returns to the mode. The animation, its math and the task loop are embedded_bedrock's
+{% if s.clock %}
+//! `bedrock_led` (host-tested there); this module sets up the timer. While `crate::sync::SYNC` has shared time (a
+//! host steers it, src/ww/clock.rs), breath and blink are aligned to it, so two boards on hosts with NTP breathe in
+//! phase; free-running from the last mode change otherwise.
+{% else %}
 //! `bedrock_led` (host-tested there); this module sets up the timer.
+{% endif %}
 {% else %}
 //! {{ l.Name }} ({{ l.pin }}, {{ pw.signal }} PWM) breathes. The animation, its math and the task loop are embedded_bedrock's
 //! `bedrock_led` (host-tested there); this module sets up the timer. `LEDS.set(0, mode)` changes what it shows
@@ -19,7 +25,7 @@
 
 {# rustfmt orders the two by their braces ({Channel / {DEFAULT_PEAK / {Indication / {Mode) #}
 {% set uses = [("{DEFAULT_PEAK, Mode, look};" if s.leds else "{Mode, look};", "pub "),
-               ("{Channel, Indication};" if pw.n else "{Indication, Pwm};", "")] %}
+               (("{Channel, Indication" if pw.n else "{Indication, Pwm") ~ (", SharedTime" if s.clock) ~ "};", "")] %}
 {% for items, vis in uses | sort(attribute=0) %}
 {{ vis }}use bedrock_led::{{ items }}
 {% endfor %}
@@ -52,7 +58,12 @@ pub const DEFAULT_MODE: Mode = look::OK.mode;
 static LEDS: Indication<1> = Indication::new();
 {% if s.leds %}
 
+{% if s.clock %}
+/// Change {{ l.name }}'s mode. Takes effect on the next animation tick; breath and blink restart from dark (or at their
+/// place in shared time).
+{% else %}
 /// Change {{ l.name }}'s mode. Takes effect on the next animation tick; breath and blink restart from dark.
+{% endif %}
 pub fn set(mode: Mode) {
     LEDS.set(0, mode);
 }
@@ -110,7 +121,21 @@ pub async fn led_task({{ tim | lower }}: Peri<'static, {{ tim }}>, {{ l.pin | lo
     pwm.enable(embassy_stm32::timer::Channel::Ch{{ pw.ch }});
     let mut {{ l.var }} = Led { pwm, max };
 
+{% if s.clock %}
+    LEDS.run_with(
+        [mode],
+        || {
+            crate::sync::SYNC.shared_now().map(|s| SharedTime {
+                us: s.us,
+                generation: s.generation,
+            })
+        },
+        |leds| {{ l.var }}.set_level(leds.level(0)),
+    )
+    .await
+{% else %}
     LEDS.run([mode], |leds| {{ l.var }}.set_level(leds.level(0))).await
+{% endif %}
 {% else %}
     let mut pwm = SimplePwm::new(
         {{ tim | lower }},
@@ -125,9 +150,23 @@ pub async fn led_task({{ tim | lower }}: Peri<'static, {{ tim }}>, {{ l.pin | lo
     ch.enable();
     let mut {{ l.var }} = Pwm::new(ch);
 
+{% if s.clock %}
+    LEDS.run_with(
+        [mode],
+        || {
+            crate::sync::SYNC.shared_now().map(|s| SharedTime {
+                us: s.us,
+                generation: s.generation,
+            })
+        },
+        |leds| bedrock_led::Channel::set_level(&mut {{ l.var }}, leds.level(0)),
+    )
+    .await
+{% else %}
     LEDS.run([mode], |leds| {
         bedrock_led::Channel::set_level(&mut {{ l.var }}, leds.level(0))
     })
     .await
+{% endif %}
 {% endif %}
 }

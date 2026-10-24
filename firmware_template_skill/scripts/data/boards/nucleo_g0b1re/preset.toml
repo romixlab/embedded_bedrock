@@ -77,6 +77,8 @@ PC13 = { what = "the USER button B1", parts = "B1 and its pull-up on PC13", read
 # LED's PWM resolution in src/led.rs)
 [clock]
 timer_mhz = 64
+# where the core clock comes from (src/sync.rs, with --clock-sync)
+oscillator = "the 64 MHz comes from the HSI16 through the PLL"
 use = "embassy_stm32::rcc::{Pll, PllMul, PllPreDiv, PllRDiv, PllSource, Sysclk}"
 code = """
     // Clock tree: the Nucleo-G0B1RE has no HSE crystal fitted (X3 is open; the ST-LINK's MCO is routed to PF0 but

@@ -216,10 +216,12 @@ ww {{ wsel }} pins test   # shorts and pulls of every pin
 {{ ("`just pins` is `ww pins tui`: each pin with its level (`●` high, `○` low) and what was set on it. `ww pins test` drives and pulls each pin and reads it back: a pin shorted to GND, to the supply or to another pin, or one with an external pull, shows up. `ww " ~ wsel ~ " pins test --save docs/pins-test.toml` on a good board records what it shows, after which `--plan docs/pins-test.toml` is the pass/fail test of a board.") | wordwrap(118, break_long_words=False, break_on_hyphens=False) }}
 {% endif %}
 {% endif %}
-{% if s.leds and s.has_cli %}
+{% if (s.leds or s.clock) and s.has_cli %}
 {% set L = s.led %}
 
-## LED
+## {{ "LED and clock" if s.leds and s.clock else ("LED" if s.leds else "Clock") }}
+{% endif %}
+{% if s.leds and s.has_cli %}
 
 {% filter rewrap("") %}
 {{ L.Name }} breathes (a 3 s breath, PWM on {{ L.pwm.signal }} at 1 kHz, embedded_bedrock's `bedrock_led`). `{{ s.cli }} led on|off|blink` hold it solid on or off until the next reset{{ ("; `" ~ s.cli ~ " settings led-at-boot on` starts it solid on instead") if s.led_at_boot else "" }}.
@@ -230,7 +232,40 @@ ww {{ wsel }} pins test   # shorts and pulls of every pin
 {{ (s.cli ~ ' leds mode essential').ljust(31) }} # hide {{ L.name }} (normal shows it, off hides it too); RAM only, normal after a reset
 {{ (s.cli ~ ' leds brightness low').ljust(31) }} # lowest, low, normal, high, highest; RAM only
 {{ (s.cli ~ ' leds identify 10').ljust(31) }} # blink {{ L.name }} at full brightness for 10 s, then back to its mode
+{% if s.clock %}
+{{ (s.cli ~ ' clock --watch 60').ljust(31) }} # wait for the lock, then a line a second against this PC's UTC
+{% endif %}
 ```
+{% endif %}
+{% if s.clock and s.has_cli %}
+{% if not s.leds %}
+
+```sh
+{{ (s.cli ~ ' clock --watch 60').ljust(31) }} # wait for the lock, then a line a second against this PC's UTC
+```
+{% endif %}
+
+{% filter rewrap("") %}
+{% if s.leds %}
+The board keeps a shared clock (`clock` in the API, `ww_timebase::Clock`), and the breath follows it: two boards whose PCs keep UTC (NTP) breathe in phase. Nothing has to be started for it: whenever a host connects (`{{ s.cli }}`, Python, `ww`), WireWeaver's clock sync measures the board's clock against the PC and steers it onto UTC (`WW_CLOCK_SYNC=off` turns it off). Without a host the board's clock runs on: `Holdover`, then `Free` after an hour.
+{% else %}
+The board keeps a shared clock (`clock` in the API, `ww_timebase::Clock`): boards whose PCs keep UTC (NTP) share one time, for actions scheduled in it. Nothing has to be started for it: whenever a host connects (`{{ s.cli }}`, Python, `ww`), WireWeaver's clock sync measures the board's clock against the PC and steers it onto UTC (`WW_CLOCK_SYNC=off` turns it off). Without a host the board's clock runs on: `Holdover`, then `Free` after an hour.
+{% endif %}
+{% endfilter %}
+
+{% if s.board_clock %}
+{{ s.board_clock }}
+{% else %}
+{% filter rewrap("") %}
+`{{ s.cli }} clock` prints the board's `Locked` / `Acquiring` state, the **residual** (the board's shared time minus the PC's UTC, read once in the middle of a round trip, so known only to within half of it), the offset the board still slews in, the error bound the host sent with its last steer point and the fit's rate (how far the board's clock runs from the PC's).
+{% endfilter %}
+{% if ww.rtt %}
+
+{% filter rewrap("") %}
+Over RTT the host polls the probe, so a round trip takes milliseconds and the board follows UTC to a few milliseconds; the firmware locks within 10 ms (`firmware/src/sync.rs`) instead of bedrock_sync's 2 ms, which suits a USB board with sub-millisecond round trips.
+{% endfilter %}
+{% endif %}
+{% endif %}
 {% endif %}
 {% if s.has_py %}
 
@@ -241,6 +276,9 @@ just py                  # builds the module into {{ s.py }}/.venv, opens a prom
 just py-example          # {{ s.py }}/examples/blink.py
 {% if s.has_device %}
 just py-example device   # {{ s.py }}/examples/device.py: the device contract
+{% endif %}
+{% if s.clock %}
+just py-example clock 60 # {{ s.py }}/examples/clock.py: offset and residual of the board's clock for 60 s
 {% endif %}
 just test-py
 ```
@@ -274,6 +312,10 @@ with {{ s.py_module }}.Device() as dev:{{ " " * [1, 22 - s.py_module | length] |
 {% endif %}
 {% if s.leds %}
     dev.brightness = "low"                  # dev.leds_mode = "normal" | "essential" | "off"; dev.identify(5)
+{% endif %}
+{% if s.clock %}
+    dev.wait_clock_locked(timeout=60)
+    print(dev.clock_check())                # {"state": "Locked", "residual_us": -230.0, "rtt_us": 8204.0, ...}
 {% endif %}
 {% if s.rom_boot %}
     dev.reboot()                            # reboot(updater=True): into the ROM bootloader; disconnects

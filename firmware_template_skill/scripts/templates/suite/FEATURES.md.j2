@@ -46,6 +46,10 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% set n.i = n.i + 1 %}
 {{ row("FW-" ~ n.i, s.led.Name ~ " breathes by default: " ~ s.led.pwm.signal ~ " PWM on " ~ s.led.pin ~ " at 1 kHz through embedded_bedrock's `bedrock_led`; `led_on` / `led_off` hold it solid" ~ ("; `leds` (mode, brightness, identify)" if s.leds else "") ~ "; embassy's time driver named explicitly (" ~ s.led.pwm.driver | upper ~ ") so " ~ s.led.pwm.timer ~ " stays free", "🧪", "`firmware/src/led.rs`" ~ (", `src/ww/leds.rs`" if s.leds else "")) -}}
 {% endif %}
+{% if s.clock %}
+{% set n.i = n.i + 1 %}
+{{ row("FW-" ~ n.i, "Shared clock steered by the host (`clock`, `ww_timebase::Clock` through `bedrock_sync`'s ClockServer, U32 µs)" ~ ("; breath and blink aligned to shared time, so boards on PCs with NTP breathe in phase" if s.led.pwm else "") ~ ("; lock tolerance 10 ms for RTT" if ww.rtt else ""), "🧪", "`firmware/src/sync.rs`, `src/ww/clock.rs`") -}}
+{% endif %}
 {% if s.pins %}
 {% set n.i = n.i + 1 %}
 {{ row("FW-" ~ n.i, "`pins`: `ww_pin_diag::PinDiag` on " ~ (("the " ~ s.pins.free ~ " pins the board map marks free, named as there") if s.pins.board else (s.pins.free ~ " pins (`--pins`)")) ~ ((", plus " ~ s.pins.ro_readme ~ " read only") if s.pins.read_only else "") ~ "; analog until a host sets or reads a pin, back to analog on `release_all`, on a disconnect and when the host goes silent; `#[claim(exclusive)]`", "🧪", "`firmware/src/pins.rs`" ~ ("; the list is checked against the pin table by `" ~ s.client ~ "/tests/board_pins.rs`" if s.pins.table else "")) -}}
@@ -59,6 +63,9 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 | API-2 | Device contract: `FirmwareInfo` (name, version, commit, build time, build id){{ ", `LastReset`" if o.crash else "" }}{{ ", `UserInfo` label" if o.settings_flash else "" }} | 🧪 | WireWeaver stdlib traits |
 {% if s.leds %}
 | API-3 | `leds: ww_indication::Indication` (mode, brightness, identify); `led_on` / `led_off` are solid on / off | 🧪 | |
+{% endif %}
+{% if s.clock %}
+| API-{{ 4 if s.leds else 3 }} | `clock: ww_timebase::Clock` (local time, a host's steer points onto UTC, `host_sync`) | 🧪 | |
 {% endif %}
 {% if s.has_client %}
 
@@ -74,7 +81,10 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 | HOST-4 | Fast attach through the firmware's ELF (`--elf`, `{{ s.elf_env }}`) | 🧪 | RTT control block address from the ELF |
 {% endif %}
 {% if s.leds %}
-| HOST-{{ 5 if ww.rtt else 4 }} | `{{ s.cli }} leds show\|mode\|brightness\|identify`; client `leds_mode`, `brightness`, `identify` | 🧪 | `{{ s.client }}/src/leds.rs` |
+| HOST-{{ 5 if ww.rtt else 4 }} | `{{ s.cli }} leds show\|mode\|brightness\|identify`; client `leds_mode`, `brightness`, `identify` | 🧪 | `{{ s.client }}/src/{{ "sync" if s.clock else "leds" }}.rs` |
+{% endif %}
+{% if s.clock %}
+| HOST-{{ (5 if ww.rtt else 4) + (1 if s.leds else 0) }} | `{{ s.cli }} clock [--watch N] [--timeout S]`: waits for the lock, prints the residual (shared time minus UTC), the round trip it is known to, slew, error bound and the fit's rate; client `clock_steering`, `wait_clock_locked`, `clock_check` | 🧪 | `{{ s.client }}/src/sync.rs`; the connection steers the clock by itself (WireWeaver's clock sync, `WW_CLOCK_SYNC=off`) |
 {% endif %}
 {% endif %}
 {% endif %}
@@ -87,6 +97,9 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 | PY-1 | `{{ s.py_module }}.Device`: connect, LED, firmware{{ ", label" if o.settings_flash else "" }}{{ ", last reset" if o.crash else "" }}; context manager | 🧪 | PyO3 + maturin, `just py` |
 {% if s.leds %}
 | PY-2 | `leds_mode`, `brightness`, `identify()` | 🧪 | |
+{% endif %}
+{% if s.clock %}
+| PY-{{ 3 if s.leds else 2 }} | `wait_clock_locked()`, `clock_check()` (a dict: state, residual, round trip, slew, error bound, rate); `examples/clock.py` prints offset and residual and their statistics | 🧪 | |
 {% endif %}
 {% endif %}
 

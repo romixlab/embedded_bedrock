@@ -868,6 +868,7 @@ class Opts:
     rom_boot: str = ""      # bedrock_rom_boot family feature ("stm32g0", "stm32h7"): device.boot and dfu (TPL-41)
     led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm())
     pins: dict = field(default_factory=dict)  # --pins: resolve_pins(), {} without
+    clock: bool = False     # --clock-sync: `clock` (ww_timebase::Clock) through bedrock_sync (TPL-40)
 
 
 def log_macros(o: Opts) -> tuple[str, str]:
@@ -1115,6 +1116,17 @@ def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
     return {**chans[0], "driver": driver.lower()}
 
 
+def clock_sync(t: Target, framework: str, ww: bool, mode: str) -> bool:
+    """--clock-sync (TPL-40): `clock` (ww_timebase::Clock) served through bedrock_sync, the LED's breath aligned to
+    it. `auto` turns it on with --wire-weaver on embassy STM32, the combination it ran on (nucleo_g0b1re_template)."""
+    why = ("" if ww else "needs --wire-weaver (the host steers the clock through the API)") or (
+        "" if t.family == "stm32" and framework == "embassy" else
+        "generated for --framework embassy on STM32 so far (RP and nRF: TPL-50)")
+    if mode == "on" and why:
+        die(f"--clock-sync on: {why}")
+    return mode != "off" and not why
+
+
 def uid_context(t: Target, o: Opts) -> dict:
     """device.uid: how the firmware reads the unit's unique id (`expr` gives the `len` bytes; RP2040: main reads it
     and hands it to ServerState::new), `serial`: device.board's serial (STM32: embassy's hex string, else ww.rs makes
@@ -1344,6 +1356,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "board_readme": board_text("readme.md"),         # README: the board section
         "board_rom_boot": board_text("readme-rom-boot.md"),  # README: the ROM bootloader on this board
         "board_pins": board_text("readme-pins.md"),      # README: the pins on this board's headers (--pins board)
+        "board_clock": board_text("readme-clock.md"),    # README: what `clock` shows on this board, measured
         "client_type": b.get("board", {}).get("client", "Board"),  # the client library's typed board type
         "settings_size": f"{settings.length // 1024} KiB" if settings else "",
         "uid_bits": {"stm32": 96, "rp": 64, "nrf": 64, "esp": 48}[t.family],
@@ -1395,6 +1408,11 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
                 "pin": o.led, "pwm": o.led_pwm, "essential": b.get("led", {}).get("essential", ""),
                 "timer_mhz": b.get("clock", {}).get("timer_mhz")}
     s["leds"] = o.ww and bool(o.led_pwm)
+    # the clock a host steers (TPL-40): `source` names the local clock in clock.info, `m0`: no 64-bit ww_numeric
+    # `oscillator`: where the core clock comes from, for src/sync.rs (the preset's [clock] oscillator)
+    s["clock"] = {"source": o.led_pwm["driver"].upper() if o.led_pwm else "embassy-time",
+                  "m0": t.rust_target.startswith("thumbv6m"), "rtt": o.ww and o.ww_transport == "rtt",
+                  "oscillator": b.get("clock", {}).get("oscillator", "")} if o.clock else {}
     s["pins"] = o.pins                      # `pins` (ww_pin_diag::PinDiag) beside the device contract (TPL-46)
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
@@ -1464,12 +1482,13 @@ def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
     for f in sorted((tpl / "docs/logo/fonts").iterdir()):
         files[f"docs/logo/fonts/{f.name}"] = f.read_bytes()
     s = ctx["s"]
-    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"] + (["src/leds.rs"] if s["leds"] else [])),
+    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"] + (["src/sync.rs"] if s["clock"] else ["src/leds.rs"] if s["leds"] else [])),
                               (s["cli_crate"], "cli", ["Cargo.toml", "build.rs", "src/main.rs"]),
                               (s["py"], "py", ["Cargo.toml", "pyproject.toml", "src/lib.rs", "examples/blink.py",
-                                               "examples/device.py", "tests/test_module.py"])):
-        for rel in rels:
-            files[f"{crate}/{rel}"] = render(f"suite/{part}/{rel}.j2", **ctx)
+                                               "examples/device.py"] + (["examples/clock.py"] if s["clock"] else [])
+                               + ["tests/test_module.py"])):
+        for rel in rels:  # the client's leds.rs is sync.rs without the clock
+            files[f"{crate}/{rel}"] = render(f"suite/{part}/{'src/sync.rs' if rel == 'src/leds.rs' else rel}.j2", **ctx)
     bm = (o.board or {}).get("boardmap")
     if bm:  # boardmap's description and geometry; `just board` renders the pictures
         for key in ("toml", "geometry"):
@@ -1603,6 +1622,9 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
             files["src/ww/leds.rs"] = render("app/src/ww/leds.rs.j2", **ctx)
     if o.led_pwm:
         files["src/led.rs"] = render("app/src/led.rs.j2", **ctx)
+    if o.clock:
+        files["src/sync.rs"] = render("app/src/sync.rs.j2", **ctx)
+        files["src/ww/clock.rs"] = render("app/src/ww/clock.rs.j2", **ctx)
     if o.pins:
         files["src/pins.rs"] = render("app/src/pins.rs.j2", **ctx)
     if ctx["s"]["dev"]["log"]:
@@ -2338,6 +2360,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     o.cli_name = args.cli_name or name
     o.probe = args.probe or SETUP_PROBES[t.family][1]
     o.led_pwm = led_pwm(t, fw, led, args.led_mode)
+    o.clock = clock_sync(t, fw, args.wire_weaver, args.clock_sync)
     if o.host and not args.wire_weaver:
         die("--host needs --wire-weaver (the host crates talk to the firmware through its WireWeaver API)")
     if not re.fullmatch(r"[a-z][a-z0-9_-]*", o.cli_name):
@@ -2528,6 +2551,10 @@ def main(argv=None) -> None:
                    help="the LED: 'breath' (PWM on the pin's timer channel through bedrock_led: breathes, `leds` in "
                         "the API with --wire-weaver, embassy's time driver named off that timer), 'gpio' (a plain "
                         "output), 'auto' (default: breath where the pin has a timer channel; embassy on STM32 so far)")
+    p.add_argument("--clock-sync", choices=["auto", "on", "off"], default="auto",
+                   help="`clock` in the API (ww_timebase::Clock through bedrock_sync): a host steers the board's shared "
+                        "clock onto UTC, the LED breathes on it in phase with other boards; 'auto' (default): with "
+                        "--wire-weaver on embassy STM32")
     p.add_argument("--bedrock", default="git", help="'git' (default) or path to a local embedded_bedrock checkout, relative to the output directory")
     p.add_argument("--build-info", action="store_true", help="embed build info via bedrock_build (needs a buildable embedded_bedrock, see --bedrock)")
     p.add_argument("--wire-weaver", action="store_true",

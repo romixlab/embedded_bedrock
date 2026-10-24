@@ -7,7 +7,7 @@
 {% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
                     "Usb" if ww.usb else "", "SiliconRevision" if d.variant else "", "api_line",
-                    "firmware_line", "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
+                    "clock_line" if s.clock else "", "firmware_line", "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
 {% filter rewrap("//! ") %}
 //! `{{ M }}` Python module: [Device] wraps `{{ C }}::{{ T }}` with blocking calls on a tokio runtime of its own, so scripts and notebooks need no asyncio. Everything the module does, the library does.
 {% endfilter %}
@@ -20,7 +20,7 @@ use std::time::Duration;
 {{ C | rust_use(uses) }}
 use pyo3::exceptions::{PyConnectionError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-{% if d.board or d.variant or d.counters %}
+{% if d.board or d.variant or d.counters or s.clock %}
 use pyo3::types::PyDict;
 {% endif %}
 use tokio::runtime::Runtime;
@@ -244,6 +244,42 @@ impl Device {
         let duration = Duration::try_from_secs_f64(seconds)
             .map_err(|e| PyValueError::new_err(format!("identify for {seconds} s: {e}")))?;
         self.block(self.{{ B }}()?.identify(duration))
+    }
+{% endif %}
+{% if s.clock %}
+
+    /// Wait until the connection has steered the board's shared clock onto this PC's UTC (`Locked`), at most
+    /// `timeout` seconds; it takes a few seconds after connecting.
+    #[pyo3(signature = (timeout=30.0))]
+    fn wait_clock_locked(&self, timeout: f64) -> PyResult<()> {
+        let timeout = Duration::try_from_secs_f64(timeout)
+            .map_err(|e| PyValueError::new_err(format!("timeout {timeout} s: {e}")))?;
+        self.block(self.{{ B }}()?.wait_clock_locked(timeout))?;
+        Ok(())
+    }
+
+    /// One check of the board's shared time against this PC's UTC: `{"state", "source", "residual_us", "rtt_us",
+    /// "slew_us", "error_us", "rate_ppm", "fit_rms_us", "line"}`. `residual_us` is the board's shared time minus
+    /// UTC at the middle of the round trip, known to within `rtt_us / 2`; `slew_us` the offset the board still
+    /// slews in; `rate_ppm` and `fit_rms_us` come from the connection's fit of the board's clock. A value the board
+    /// or the connection can't tell yet is `None`.
+    fn clock_check<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let board = self.{{ B }}()?;
+        let check = self.block(board.clock_check())?;
+        let steering = board.clock_steering().map(|s| s.status());
+        let fit = steering.as_ref().and_then(|s| s.fit.as_ref());
+        let s = &check.status;
+        let d = PyDict::new(py);
+        d.set_item("state", format!("{:?}", s.state))?;
+        d.set_item("source", s.source.as_ref().map(|src| format!("{src:?}")))?;
+        d.set_item("residual_us", check.residual_us)?;
+        d.set_item("rtt_us", check.rtt_us)?;
+        d.set_item("slew_us", s.slew_us)?;
+        d.set_item("error_us", s.error.as_ref().map(|e| e.to_f64() * 1e6))?;
+        d.set_item("rate_ppm", fit.map(|f| (f.slope - 1.0) * 1e6))?;
+        d.set_item("fit_rms_us", fit.map(|f| f.residual_rms / 1e3))?;
+        d.set_item("line", clock_line(&check, steering.as_ref()))?;
+        Ok(d)
     }
 {% endif %}
 

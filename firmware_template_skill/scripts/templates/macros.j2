@@ -24,7 +24,7 @@
     `dfu`; `extra`: (bedrock crate, WireWeaver crate, its subdir) of the others, bedrock_led's ww_indication) at the
     local --ww-src checkout, so the build has one WireWeaver. Starts with a blank line, no newline at the end -#}
 {% macro bedrock_ww_patch(src, prefix, dfu=false, extra=[]) %}
-{% set takers = ["bedrock_build"] + (["bedrock_rom_boot"] if dfu else []) + extra | map(attribute=0) | list %}
+{% set takers = ["bedrock_build"] + (["bedrock_rom_boot"] if dfu else []) + extra | map(attribute=0) | unique | list %}
 
 # {{ takers | and_join }} {{ "take" if takers | length > 1 else "takes" }} WireWeaver from git: the local checkout (--ww-src) instead
 [patch."{{ WW_GIT }}"]
