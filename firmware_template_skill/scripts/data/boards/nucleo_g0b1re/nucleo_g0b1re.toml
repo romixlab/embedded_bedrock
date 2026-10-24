@@ -7,7 +7,7 @@ pcb = "MB1360 rev C02"
 mcu = "STM32G0B1RET6 (U7)"
 mcu_ref = "U7"
 geometry = "nucleo_g0b1re.geometry.json"
-sources = ["UM2324 Rev 5", "MB1360-G0B1RE-C02 schematic"]
+sources = ["UM2324 Rev 5", "MB1360-G0B1RE-C02 schematic", "STM32G0B1xx datasheet DS13560 Rev 6"]
 scale = 9.0
 
 [view]
@@ -46,6 +46,12 @@ ref = "CN8"
 label = "CN8 A0–A5"
 labels = "inside_right"
 
+# CN4: two 2-pin jumpers (SWCLK [1-2], SWDIO [3-4]) that pick the embedded ST-LINK/V2-1's SWD target
+# (UM2324 §6.4, §6.4.3, §6.4.4, Table 5):
+#   both ON  (default, SB7/SB9/SB11/SB13 ON) -> SWD goes to the on-board STM32G0B1RE (U7); do not also
+#             wire CN11, it can disturb that link.
+#   both OFF -> SWD is routed out to CN11 instead, to program/debug an external target board (Table 6:
+#             CN11-1 VDD_TARGET, -2 SWCLK, -3 GND, -4 SWDIO, -5 NRST, -6 SWO; SB19 OFF if CN11-5 is used).
 [[view.connector]]
 ref = "CN4"
 label = "CN4 SWD jumpers"
@@ -89,6 +95,10 @@ ref = "B2"
 label = "B2 RESET\nNRST"
 kind = "button"
 
+# LD4 (user, green): anode through R28 to 3V3, cathode to T2 (BSN20 N-MOSFET) drain, source to GND,
+# gate from PA5 through SB22/R35. PA5 high turns T2 on and lights it (UM2324 §6.10 point 4; T2/R28/R35
+# nets from the MB1360-G0B1RE-C02 netlist). PA5 is also TIM2_CH1_ETR (AF2, STM32G0B1xx datasheet DS13560
+# Table "Alternate function", PA5 row): a PWM there breathes the LED instead of a plain on/off GPIO.
 [[view.part]]
 ref = "LD4"
 label = "LD4 user\nPA5"
@@ -96,6 +106,7 @@ kind = "led"
 dx = 34
 dy = -8
 
+# LD3 (5V_PWR, green): on whenever the board's 5V rail (JP2's output) is present (UM2324 §6.10 point 3).
 [[view.part]]
 ref = "LD3"
 label = "LD3 5V\nPWR"
@@ -109,6 +120,10 @@ label = "LD2\nUSB over-\ncurrent"
 kind = "led"
 dx = 26
 
+# LD1 (COM, bicolour red/green): not wired to the target MCU, driven by the ST-LINK/V2-1 (U2) to show
+# USB/enumeration and PC<->ST-LINK<->STM32 communication state (UM2324 §6.10 point 1: slow red blink
+# before enumeration, fast red blink during enumeration, solid red once the link is up, green once STM32
+# communication starts, orange on a communication failure).
 [[view.part]]
 ref = "LD1"
 label = "LD1 COM"
@@ -204,13 +219,13 @@ PB9 = "D14 SDA"
 PB8 = "D15 SCL"
 
 [pins]
-PA13 = { role = "taken", short = "SWDIO", note = "ST-LINK SWDIO through SB13 and the CN4 [3-4] jumper. Only free with both CN4 jumpers off, i.e. no on-board debugger." }
-PA14 = { role = "taken", short = "SWCLK", note = "ST-LINK SWCLK through SB9 and the CN4 [1-2] jumper; also BOOT0. Only free with the CN4 jumpers off." }
+PA13 = { role = "taken", short = "SWDIO", note = "ST-LINK SWDIO through SB13 and the CN4 [3-4] jumper, ON by default: the ST-LINK debugs this on-board STM32G0B1RE. Both CN4 jumpers OFF frees it here and moves SWD to CN11, to debug an external target instead." }
+PA14 = { role = "taken", short = "SWCLK", note = "ST-LINK SWCLK through SB9 and the CN4 [1-2] jumper, ON by default (on-board target); also BOOT0. Both CN4 jumpers OFF frees it here and moves SWD to CN11, for an external target." }
 PF2 = { role = "taken", short = "NRST", note = "Reset: B2 button, the ST-LINK's T_NRST through SB19, Arduino CN6-3. Not a GPIO on this board." }
 PA2 = { role = "shared", short = "VCP RX", note = "USART2 TX to the ST-LINK virtual COM port (SB18 ON by default). A GPIO on CN10-34 only with SB18 OFF; then JP6 [1-2] keeps the VCP from floating." }
 PA3 = { role = "shared", short = "VCP TX", note = "USART2 RX from the ST-LINK virtual COM port (SB16 ON by default). A GPIO on CN10-6 only with SB16 OFF." }
-PA5 = { role = "shared", short = "LD4", note = "Drives the user LED LD4 through T2 (SB22 ON by default); also Arduino D13 / SPI1 SCK. SB22 OFF isolates the LED." }
-PC13 = { role = "shared", short = "B1", note = "USER button B1 to GND with a pull-up (SB20 ON by default); SB20 OFF frees it. Also on CN7-23." }
+PA5 = { role = "shared", short = "LD4", note = "Drives the user LED LD4 through the T2 MOSFET (SB22 ON by default): high lights it. Also Arduino D13 / SPI1 SCK, and TIM2_CH1_ETR (AF2) for a PWM breathe. SB22 OFF isolates the LED." }
+PC13 = { role = "shared", short = "B1", note = "USER button B1 (SB20 ON by default): R29 pulls PC13 up to VDD (reads 1) released, B1 pulls it to GND (reads 0) pressed. SB20 OFF frees PC13, floating. Also on CN7-23." }
 PC14 = { role = "function", short = "LSE", note = "32.768 kHz crystal X2 (OSC32_IN). Not on the headers: SB23 OFF by default; SB23 ON + R31 out puts it on CN7-25 as a GPIO." }
 PC15 = { role = "function", short = "LSE", note = "32.768 kHz crystal X2 (OSC32_OUT). SB24 OFF by default; SB24 ON + R32 out puts it on CN7-27 as a GPIO." }
 PF0 = { role = "shared", short = "MCO 8 MHz", note = "OSC_IN: X3 is not fitted; SB17 ON feeds the ST-LINK's 8 MHz MCO here (an HSE bypass clock), SB25 ON puts it on CN7-29. For a GPIO: SB17 OFF." }

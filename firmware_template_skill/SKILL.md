@@ -63,6 +63,16 @@ Paths are relative to this skill directory; use the absolute path when invoking.
         the API on the wire.
      `--ww-src <path>` uses a local WireWeaver checkout (relative to the output directory) instead of git.
      With `--wire-weaver` the output directory is laid out differently, see *What gets generated*.
+     4. *Also the host side (a client, CLI and Python package next to the firmware, justfile, CI, git hooks, README /
+        AGENTS / FEATURES / CHANGELOG / LICENSE, logo)?* → `--host` (needs `--wire-weaver`); `--cli-name SHORT` names
+        the command line and its env prefix [project name].
+   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`, e.g. `nucleo_g0b1re`): answers
+     for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...) plus what only the board knows (clock tree,
+     README board section, `docs/board/`, logo). Explicit flags override it. Ask which board first: a preset
+     answers most of the questions above.
+   - debug probe `--probe VID:PID` [the board preset's, else the family's on-board probe: ST-LINK 0483:374b, CMSIS-DAP
+     2e8a:000c on RP, J-Link 1366:1015 on nRF]: the cargo runner and every recipe select the probe by it, the serial
+     comes from `<CLI>_PROBE` in the environment or `.env`; a PC with several probes never gets an implicit one.
    - crash capture is on by default on Cortex-M (`bedrock_crash`: the HardFault and panic handlers save a record
      that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves
      it as `ww_firmware_info::LastReset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /
@@ -127,16 +137,26 @@ with `--settings` `src/settings.rs` (`DeviceSettings` with `#[derive(ww_settings
 `load` at boot, `set` + `persist_if_due` for writes once a change settles, `persist` for a write before answering;
 on G0 an NMI handler in `main.rs` that hands flash ECC errors to `ww_ecc_flash::on_nmi()`).
 
-With `--wire-weaver` the output directory is a project root holding two standalone crates (not a workspace, they
-build for different targets):
+With `--wire-weaver` the output directory is a project root: a host workspace (`Cargo.toml`, `Cargo.lock`) over the
+API crate, and the firmware as a standalone crate excluded from it (it builds for the MCU target):
 
 ```
 <name>/
-  bedrock_fw.json AGENTS.md CLAUDE.md README.md .gitignore   # upgrade flow runs from here
-  <ww-api>/     #![no_std] API crate: #[ww_api_root] trait with blinky stubs (led_on / led_off), std + defmt features
+  bedrock_fw.json AGENTS.md CLAUDE.md README.md .gitignore justfile   # upgrade flow runs from here
+  Cargo.toml Cargo.lock   host workspace; #[ww_api_root] finds its git dependencies through this lockfile
+  <ww-api>/     #![no_std] API crate: #[ww_api_root] trait with blinky stubs (led_on / led_off), std + defmt features;
+                tests/evolution.rs checks the API against api_snapshots/ (`just api-check`, `just api-save`)
   firmware/     the firmware as above (+ bootloader/), src/ww.rs: ServerState implementing the trait, ww_codegen!,
                 transport tasks (USB: embassy-usb driver + wire_weaver_usb_embassy; RTT: ww_device::rtt channels)
+  .githooks/pre-commit, scripts/hooks.py   evolution check before each commit (`just hooks`, chained after the
+                hooks already in .git/hooks)
 ```
+
+`--host` adds `FEATURES.md`, `CHANGELOG.md`, `LICENSE`, `.github/workflows/` (CI: lint, test, firmware build,
+evolution check; setup check), `scripts/rename.py` (rename the project after cloning), `docs/logo/` (Typst, rendered
+when `typst` is on PATH) and with `--board` `docs/board/` (boardmap TOML and geometry, rendered when `boardmap` is on
+PATH). `new` runs `cargo generate-lockfile` and prints the next steps (`just api-save` for the first snapshot,
+`just hooks`).
 
 The LED moves into `ServerState` and is switched by the API; the main loop only idles. For USB on STM32 the
 peripheral, DP/DM pins and interrupt come from stm32-data (`USB` > `USB_DRD_FS` > `USB_OTG_FS` > `USB_OTG_HS` in

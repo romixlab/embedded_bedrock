@@ -1,0 +1,63 @@
+# Board preset for `bedrock_gen.py new --board nucleo_g0b1re`: ST NUCLEO-G0B1RE (MB1360 rev C02), the board of
+# nucleo_g0b1re_template. [answers] are defaults for `new`'s options (explicit flags and --answers win), the rest is
+# what only the board knows. Facts: UM2324 Rev 5, the MB1360-G0B1RE-C02 schematic, DS13560 Rev 6.
+
+[answers]
+chip = "STM32G0B1RE"
+led = "PA5"           # LD4 through the T2 MOSFET, high lights it (UM2324 §6.10)
+probe = "0483:374b"   # the on-board ST-LINK/V2-1
+settings = true
+counters = true
+bkp_counters = "auto"
+wire_weaver = true
+ww_transport = "rtt"  # through the ST-LINK: nothing but the board and its USB cable
+host = true
+cli_name = "g0b1re"
+
+[board]
+title = "Nucleo-G0B1RE"            # prose and the README title
+product = "NUCLEO-G0B1RE"          # ww_board_info product
+revision = "C02"                   # MB1360 PCB revision
+url = "https://www.st.com/en/evaluation-tools/nucleo-g0b1re.html"
+core = "Cortex-M0+"
+client = "Nucleo"                  # the client library's typed board type
+probe_name = "the Nucleo-64's own ST-LINK/V2-1"
+template = true                    # a GitHub template repository: the README says how to make it yours
+repository = "https://github.com/vhrdtech/nucleo_g0b1re_template"  # the template's own repository (Cargo.toml)
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "Nucleos"                 # "with two Nucleos attached"
+variant = "STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash"
+led = "LD4"
+reset = "B2"                       # the RESET button
+first_item = """The user button B1 (PC13) as
+   a readable property is a good first one."""
+
+[logo]
+board = "Nucleo-G0B1RE"
+chip = "G0B1"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from ST's board file
+[boardmap]
+toml = "nucleo_g0b1re.toml"
+geometry = "nucleo_g0b1re.geometry.json"
+
+# main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO
+[clock]
+use = "embassy_stm32::rcc::{Pll, PllMul, PllPreDiv, PllRDiv, PllSource, Sysclk}"
+code = """
+    // Clock tree: the Nucleo-G0B1RE has no HSE crystal fitted (X3 is open; the ST-LINK's MCO is routed to PF0 but
+    // not used here), so the 16 MHz HSI feeds the PLL: 16 MHz / 1 * 8 = 128 MHz VCO, R divider 2 = 64 MHz system
+    // clock, the chip's maximum. AHB and APB run at 64 MHz too (embassy's default prescalers).
+    config.rcc.pll = Some(Pll {
+        source: PllSource::HSI,
+        prediv: PllPreDiv::DIV1,
+        mul: PllMul::MUL8,
+        divp: None,
+        divq: None,
+        divr: Some(PllRDiv::DIV2),
+    });
+    config.rcc.sys = Sysclk::PLL1_R;
+"""

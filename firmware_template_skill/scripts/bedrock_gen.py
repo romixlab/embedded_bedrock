@@ -51,12 +51,14 @@ BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
 WW_GIT = "https://github.com/vhrdtech/wire_weaver"
 EMBASSY_GIT = "https://github.com/embassy-rs/embassy"
 WW_FW_DIR = "firmware"  # with --wire-weaver the firmware goes into <out>/firmware, next to the API crate
+LICENSE_HOLDER = "vhrd.tech"  # LICENSE copyright line of --host projects (a preset's [board] holder overrides)
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
 FW_JSON = "bedrock_fw.json"
 CNT_BKP_DEFAULT_REGION = "BKPSRAM"  # cnt.x default for CNT_BKP_MEMORY_REGION
 FW_JSON_SCHEMA = 1
+EXECUTABLE = {".githooks/pre-commit"}  # generated files written with the executable bit (git runs them)
 # `new` arguments that are not answers about the firmware (not stored in / not restored from bedrock_fw.json)
 NON_ANSWERS = {"cmd", "func", "out", "force", "dry_run", "cache", "answers"}
 # answers renamed by a template version: old key -> new key, the value carries over (template CHANGELOG has the why)
@@ -74,6 +76,31 @@ STM32 = load_toml("stm32.toml")
 STM32_HAL2_FEATURES: dict[str, str] = STM32["hal2"]["features"]
 STM32_HAL2_RT: dict[str, str] = STM32["hal2"]["rt"]
 STM32_XXHAL: dict[str, dict] = STM32["xxhal"]  # stm32-rs stm32XXxx-hal crates by series
+BOARDS_DIR = HERE / "data" / "boards"  # --board presets: <name>/preset.toml and the files it names
+
+
+def board_presets() -> list[str]:
+    return [d.name for d in BOARDS_DIR.iterdir() if (d / "preset.toml").is_file()] if BOARDS_DIR.is_dir() else []
+
+
+def load_preset(name: str) -> dict:
+    """data/boards/<name>/preset.toml, with its "name" and "dir" added."""
+    d = BOARDS_DIR / name
+    if not (d / "preset.toml").is_file():
+        die(f"--board {name}: no such preset; known: {', '.join(sorted(board_presets())) or 'none'}")
+    with open(d / "preset.toml", "rb") as f:
+        preset = tomllib.load(f)
+    preset.setdefault("answers", {})
+    preset["name"], preset["dir"] = name, d
+    return preset
+
+
+def probe_id(s: str) -> str:
+    """--probe: a USB VID:PID as probe-rs takes it (lower-case hex)"""
+    if not re.fullmatch(r"[0-9a-fA-F]{4}:[0-9a-fA-F]{4}", s):
+        raise argparse.ArgumentTypeError(f"{s!r} is not VID:PID (four hex digits each, e.g. 0483:374b); the serial "
+                                         "goes into the <CLI>_PROBE environment variable instead")
+    return s.lower()
 
 
 # ----------------------------------------------------------------------------
@@ -756,6 +783,10 @@ class Opts:
     settings_flash: str = ""  # --settings code: "g0" / "h7" (ww_ecc_flash family), "plain" (no ECC), "" none
     embassy: str = "release"  # embassy crates: "release" (crates.io) or "main" (upstream git at EMBASSY_MAIN_REV)
     regs: Optional[Stm32Regs] = None
+    host: bool = False      # --host: root workspace, suite justfile, CI, hooks, docs (with --wire-weaver)
+    cli_name: str = ""      # the command line binary, prefix of its env vars
+    probe: str = ""         # debug probe VID:PID
+    board: Optional[dict] = None  # --board preset (data/boards/<name>/preset.toml) plus its "name" and "dir"
 
 
 def log_macros(o: Opts) -> tuple[str, str]:
@@ -922,29 +953,141 @@ def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
     return ctx
 
 
-def ww_root_files(t: Target, o: Opts, ctx: dict) -> dict[str, str]:
-    """API crate and project README next to firmware/ (--wire-weaver)."""
+def probe_rs_chip(t: Target) -> str:
+    """The probe-rs target name of the exact part (STM32G0B1RETx: `probe-rs download`, `cnt tui` and the client want
+    one target, `probe-rs run --chip STM32G0B1RE` picks it from the variants itself); the LQFP package when there is a
+    choice, as the board's part is unknown here."""
+    pkgs = [p["name"] for p in t.stm32.get("packages", [])] if t.family == "stm32" else []
+    return next((p for p in pkgs if p == f"{t.display}Tx"), pkgs[0] if pkgs else t.probe_chip)
+
+
+def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
+    """Names of the project suite (`s` in the templates): crates, the command line, its environment variables, the
+    probe, the board. Every piece of the suite takes its names from here."""
+    n = o.name.replace("-", "_")
+    env = o.cli_name.upper().replace("-", "_")
+    b = o.board or {}
+
+    def board_text(name: str) -> str:  # a Markdown piece of the preset (data/boards/<name>/<file>), "" without
+        f = b["dir"] / name if b else None
+        return f.read_text().rstrip("\n").replace("{cli}", o.cli_name) if f and f.is_file() else ""
+
+    settings = next((r for r in lay.regions if r.name == "SETTINGS" and not r.commented_out), None) if lay else None
+    s = {
+        "name": n,
+        "title": b.get("board", {}).get("title", o.name),  # prose: the board's name, else the project's
+        "api": o.ww_api,
+        "client": f"{n}_client",
+        "cli_crate": f"{n}_cli",
+        "py": f"{n}_py",
+        "py_module": n,
+        "cli": o.cli_name,                  # the command line binary
+        "env": env,                         # prefix of its environment variables
+        "probe_env": f"{env}_PROBE",        # the probe's serial, when several of its kind are attached
+        "elf_env": f"{env}_ELF",
+        "probe": o.probe,                   # VID:PID
+        # prose: the probe's name, for the README and the comments next to its VID:PID
+        "probe_name": b.get("board", {}).get("probe_name") or (
+            f"the {SETUP_PROBES[t.family][0]}" if o.probe == SETUP_PROBES[t.family][1] else "the board's probe"),
+        "chip": probe_rs_chip(t),
+        "fw_dir": f"{WW_FW_DIR}/target/{t.rust_target}",  # firmware build output, from the root
+        "board": b,
+        "board_intro": board_text("readme-intro.md"),    # README: how the firmware reaches the PC on this board
+        "board_readme": board_text("readme.md"),         # README: the board section
+        "board_rom_boot": board_text("readme-rom-boot.md"),  # README: the ROM bootloader on this board
+        "client_type": b.get("board", {}).get("client", "Board"),  # the client library's typed board type
+        "settings_size": f"{settings.length // 1024} KiB" if settings else "",
+        "uid_bits": {"stm32": 96, "rp": 64, "nrf": 64, "esp": 48}[t.family],
+        "year": datetime.date.today().year,  # LICENSE
+        "holder": b.get("board", {}).get("holder", LICENSE_HOLDER),
+        "repository": b.get("board", {}).get("repository", ""),  # Cargo.toml's, when the preset is a template repo
+        "boardmap": b.get("boardmap"),  # docs/board/: boardmap's description and geometry
+        # the logo's values (docs/logo/logo.typ): the board's, else the project name and the chip
+        "logo": {"board": o.name, "chip": t.display, "subtitle": "WireWeaver firmware", **b.get("logo", {})},
+        # host crates (TPL-37, crates piece) and the device suite (TPL-41): their pieces turn these on
+        "has_client": False,
+        "has_cli": False,
+        "has_py": False,
+        "has_device": False,   # `device` in the API (TPL-41)
+        "dev_variant": False,  # device.variant: chip id, revision, flash size (TPL-41)
+        "dev_log": False,      # device.log: the stored defmt log (TPL-41)
+        "rom_boot": False,     # device.boot / dfu through bedrock_rom_boot (TPL-41)
+    }
+    s["repo"] = n + ("_template" if b.get("board", {}).get("template") else "")  # AGENTS.md title
+    s["feature_areas"] = ["FW", "API"] + (["HOST"] if s["has_client"] else []) + (["PY"] if s["has_py"] else []) + ["TPL"]
+    s["members"] = [o.ww_api] + [c for c, on in ((s["client"], s["has_client"]), (s["cli_crate"], s["has_cli"]),
+                                                 (s["py"], s["has_py"])) if on]
+    return s
+
+
+def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
+    """--host: the repo-level files of the suite, from templates/suite/ (G0's files, parameterised)."""
+    tpl = HERE / "templates" / "suite"
+    files: dict[str, str | bytes] = {
+        "justfile": render("suite/justfile.j2", **ctx),
+        "README.md": render("suite/README.md.j2", **ctx),
+        "FEATURES.md": render("suite/FEATURES.md.j2", **ctx),
+        "CHANGELOG.md": render("suite/CHANGELOG.md.j2", **ctx),
+        "LICENSE": render("suite/LICENSE.j2", **ctx),
+        "scripts/rename.py": render("suite/scripts/rename.py.j2", **ctx),
+        ".github/workflows/ci.yml": render("suite/.github/workflows/ci.yml.j2", **ctx),
+        ".github/workflows/setup.yml": render("suite/.github/workflows/setup.yml.j2", **ctx),
+        "docs/logo/logo.typ": render("suite/docs/logo/logo.typ.j2", **ctx),
+    }
+    # board-agnostic as they are: the logo template, WireWeaver's twisted pair, the font
+    for rel in ("docs/logo/template_logo.typ", "docs/logo/social.typ", "docs/logo/pair.svg", "docs/logo/pair-dark.svg"):
+        files[rel] = (tpl / rel).read_text()
+    for f in sorted((tpl / "docs/logo/fonts").iterdir()):
+        files[f"docs/logo/fonts/{f.name}"] = f.read_bytes()
+    bm = (o.board or {}).get("boardmap")
+    if bm:  # boardmap's description and geometry; `just board` renders the pictures
+        for key in ("toml", "geometry"):
+            files[f"docs/board/{bm[key]}"] = (o.board["dir"] / bm[key]).read_text()
+    return files
+
+
+def ww_root_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
+    """Next to firmware/ (--wire-weaver): the root workspace over the API crate, the API crate with its evolution
+    check, the git hooks; with --host the rest of the suite (suite_files)."""
     a = o.ww_api
-    return {
+    files: dict[str, str | bytes] = {
+        "Cargo.toml": render("suite/Cargo.toml.j2", **ctx),
         f"{a}/Cargo.toml": render("ww/api/Cargo.toml.j2", **ctx),
         f"{a}/src/lib.rs": render("ww/api/src/lib.rs.j2", **ctx),
-        "README.md": render("ww/README.md.j2", **ctx),
-        ".gitignore": render("app/gitignore"),
+        f"{a}/tests/evolution.rs": render("suite/api/tests/evolution.rs", **ctx),
+        ".githooks/pre-commit": render("suite/.githooks/pre-commit.j2", **ctx),
+        "scripts/hooks.py": render("suite/scripts/hooks.py"),
+        ".gitignore": render("app/gitignore.j2", root=True, host=o.host, py=ctx["s"]["has_py"]),
     }
+    if o.host:
+        files.update(suite_files(t, o, ctx))
+    else:
+        files["README.md"] = render("ww/README.md.j2", **ctx)
+    return files
 
 
-# Debug probe per family for scripts/setup.py: its name and what a udev rules file for it contains (probe-rs's
-# 69-probe-rs.rules has them all); the Windows driver: what `pnputil /enum-drivers` shows, and how to get it
+# Debug probe per family (the --probe default): its name and USB VID:PID, which the cargo runner and every recipe
+# pass to probe-rs as --probe (never an implicit "the one probe attached": that may be someone else's board), and
+# what scripts/setup.py looks for in the udev rules (probe-rs's 69-probe-rs.rules has them all: by ids, CMSIS-DAP by
+# product name); the Windows driver: what `pnputil /enum-drivers` shows, and how to get it
 SETUP_PROBES = {
-    "stm32": ("ST-LINK", ["0483", "374b"]),  # ST-LINK/V2-1, on Nucleo and Discovery boards
-    "rp": ("CMSIS-DAP probe", ["cmsis-dap"]),  # Raspberry Pi Debug Probe, picoprobe
-    "nrf": ("J-Link", ["1366", "1015"]),  # the J-Link OB of the nRF DKs
-    "esp": ("USB-JTAG/serial", ["303a", "1001"]),  # the chip's built-in USB-JTAG/serial
+    "stm32": ("ST-LINK", "0483:374b", ["0483", "374b"]),  # ST-LINK/V2-1, on Nucleo and Discovery boards
+    "rp": ("CMSIS-DAP probe", "2e8a:000c", ["cmsis-dap"]),  # Raspberry Pi Debug Probe, picoprobe
+    "nrf": ("J-Link", "1366:1015", ["1366", "1015"]),  # the J-Link OB of the nRF DKs
+    "esp": ("USB-JTAG/serial", "303a:1001", ["303a", "1001"]),  # the chip's built-in USB-JTAG/serial
 }
 SETUP_WINDOWS_DRIVERS = {
     "stm32": ("stlink", ["download STSW-LINK009 from https://www.st.com/en/development-tools/stsw-link009.html, unpack "
                          "it and run ", "dpinst_amd64.exe (asks for administrator rights)"]),
 }
+
+
+def setup_probe(t: Target, o: Opts) -> tuple[str, list[str]]:
+    """(name, udev needles) of the probe for scripts/setup.py: the family's own, or by the ids of another --probe."""
+    name, vid_pid, needles = SETUP_PROBES[t.family]
+    if o.probe == vid_pid:
+        return name, needles
+    return f"probe {o.probe}", o.probe.split(":")
 
 
 def setup_context(t: Target, o: Opts) -> dict:
@@ -961,6 +1104,9 @@ def setup_context(t: Target, o: Opts) -> dict:
     if o.ww or t.family == "rp":
         what = "WireWeaver command line: introspect and call any API" if o.ww else "`just flash-bootsel` (PICOBOOT)"
         tools.append(("ww", what, ["--git", WW_GIT, "wire_weaver_cli"]))
+    if o.host and o.board and o.board.get("boardmap"):
+        tools.append(("boardmap", "re-draws the board pictures in docs/board/ (`just board`)",
+                      ["--git", BEDROCK_GIT, "bedrock_board_cli"]))
     lines = []  # as ruff formats them at 120 columns
     for b, what, args in tools:
         one = f"    ({json.dumps(b)}, {json.dumps(what)}, {json.dumps(args)}),"
@@ -968,12 +1114,12 @@ def setup_context(t: Target, o: Opts) -> dict:
                      f"    (\n        {json.dumps(b)},\n        {json.dumps(what)},\n        {json.dumps(args)},\n    ),")
     probe_rs = t.family != "esp"
     names = (["probe-rs"] if probe_rs else []) + [b for b, _, _ in tools]
-    return dict(cargo_tools=tools, cargo_tool_lines=lines, probe_rs=probe_rs, probe=SETUP_PROBES[t.family],
+    return dict(cargo_tools=tools, cargo_tool_lines=lines, probe_rs=probe_rs, probe=setup_probe(t, o), setup_tools=names,
                 windows_driver=SETUP_WINDOWS_DRIVERS.get(t.family),
                 tool_list=", ".join(names[:-1]) + (" and " if len(names) > 1 else "") + names[-1])
 
 
-def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] = None) -> dict[str, str]:
+def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] = None) -> dict[str, str | bytes]:
     """Files relative to the output directory. With --wire-weaver the firmware is in firmware/, the API crate next to it."""
     r = o.regs
     info, err = log_macros(o)
@@ -984,7 +1130,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
                bkp_region=lay.bkp_region if lay else CNT_BKP_DEFAULT_REGION, CNT_BKP_DEFAULT_REGION=CNT_BKP_DEFAULT_REGION,
                have_init=have_init, have_init_ram=have_init_ram, main_variant=main_variant(t, o),
                flash_size=lay.regions[0].length if lay else 2 * 1024 * 1024,
-               ww=ww_context(t, o, usb) if o.ww else None,
+               ww=ww_context(t, o, usb) if o.ww else None, s=suite_context(t, o, lay),
                # firmware crate -> output directory, for paths given relative to the latter (--bedrock, --ww-src)
                root="../" if o.ww else "", fw_dir=f"{WW_FW_DIR}/" if o.ww else "")
     if o.framework == "stm32-hal2":
@@ -999,7 +1145,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
             die(f"--led {o.led}: expected a pin like PB14")
         ctx["led_port"], ctx["led_pin"] = m.groups()
 
-    files: dict[str, str] = {}
+    files: dict[str, str | bytes] = {}
     if lay:
         files["memory.x"] = render_memory_x(t, lay, prefetch=o.framework == "embassy")
     if have_init_ram:
@@ -1022,7 +1168,7 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
         files["src/last_reset.rs"] = render("app/src/last_reset.rs.j2", **ctx, rf=r.reset_flags if r else None)
     if o.build_info:
         files["src/build_info.rs"] = render("app/src/build_info.rs")
-    files[".gitignore"] = render("app/gitignore")
+    files[".gitignore"] = render("app/gitignore.j2", root=not o.ww)  # the root's holds .env, the probe's serial
     packages = ", ".join(f"{p['name']} ({p['package']}, {len(p['pins'])} pins)" for p in t.stm32.get("packages", []))
     setup = setup_context(t, o)
     files["README.md"] = render("app/README.md.j2", **ctx, **setup, packages=packages, notes=t.notes + (r.notes if r else []))
@@ -1030,12 +1176,13 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
         files.update(gen_bootloader(t, o, lay, ctx["root"]))
     if o.ww:
         files = {f"{WW_FW_DIR}/{k}": v for k, v in files.items()}
-        files.update(ww_root_files(t, o, ctx))
+        files.update(ww_root_files(t, o, {**ctx, **setup}))
     # set-up and recipes for the whole project, in the output directory
     files["scripts/setup.py"] = render("app/setup.py.j2", **ctx, **setup)
-    files["justfile"] = render("app/justfile.j2", **ctx, **setup)
+    if not o.host:  # --host: the suite's justfile (suite_files)
+        files["justfile"] = render("app/justfile.j2", **ctx, **setup)
     # template upgrade instructions live next to bedrock_fw.json, in the output directory
-    files["AGENTS.md"] = render("app/AGENTS.md.j2", **ctx)
+    files["AGENTS.md"] = (render("suite/AGENTS.md.j2", **ctx, **setup) if o.host else "") + render("app/AGENTS.md.j2", **ctx)
     files["CLAUDE.md"] = render("app/CLAUDE.md")
     return files
 
@@ -1050,14 +1197,15 @@ def gen_bootloader(t: Target, o: Opts, lay: Layout, root: str = "") -> dict[str,
         "bootloader/Cargo.toml": render("bootloader/Cargo.toml.j2", **ctx),
         "bootloader/build.rs": render("app/build.rs.j2", **ctx, bootloader=True),
         "bootloader/memory.x": render_memory_x(t, lay, for_bootloader=True),
-        "bootloader/.cargo/config.toml": render("app/cargo_config.toml.j2", t=t, o=cfg_opts, bkp_words=0),
+        "bootloader/.cargo/config.toml": render("app/cargo_config.toml.j2", t=t, o=cfg_opts, bkp_words=0,
+                                                s=suite_context(t, o)),
         "bootloader/rust-toolchain.toml": render("app/rust-toolchain.toml.j2", **ctx),
     }
     if o.build_info:
         files["bootloader/src/build_info.rs"] = render("bootloader/src/build_info.rs")
     files["bootloader/src/main.rs"] = render("bootloader/src/main.rs.j2", **ctx)
     files["bootloader/README.md"] = render("bootloader/README.md.j2", **ctx)
-    files["bootloader/.gitignore"] = render("app/gitignore")
+    files["bootloader/.gitignore"] = render("app/gitignore.j2")
     return files
 
 
@@ -1122,7 +1270,7 @@ def answers_to_argv(p_new: argparse.ArgumentParser, answers: dict) -> list[str]:
             continue
         default = orig.get(dest, a.default)
         if isinstance(a, argparse._StoreTrueAction):
-            if v:
+            if v and not default:  # a preset's True needs no flag (and has none to turn it off: edit the answers)
                 argv.append(a.option_strings[0])
         elif v is not None and v != default and str(v) != str(default):
             argv += [a.option_strings[0], str(v)]
@@ -1179,25 +1327,40 @@ def renamed_answers(answers: dict, note: bool = False) -> dict:
 
 
 def apply_answers(ap: argparse.ArgumentParser, p_new: argparse.ArgumentParser, argv) -> argparse.Namespace:
-    """Parse `new` args with the answers of --answers <bedrock_fw.json> as defaults (explicit flags still win)."""
+    """Parse `new` args in layers: parser defaults < the --board preset's [answers] < the answers of --answers
+    <bedrock_fw.json> < explicit flags."""
     args = ap.parse_args(argv)
-    if getattr(args, "cmd", None) != "new" or not args.answers:
+    if getattr(args, "cmd", None) != "new" or not (args.answers or args.board):
         return args
-    prev = load_fw_json(args.answers)
-    answers = renamed_answers(prev.get("answers", {}), note=True)
     acts = answer_actions(p_new)
-    unknown = sorted(set(answers) - set(acts))
-    missing = sorted(set(acts) - set(answers))
-    if unknown:
-        warn(f"answers no longer known to this template (ignored): {', '.join(unknown)}")
-    if missing:
-        warn("new options not in the answers, using defaults: "
-             + ", ".join(f"{acts[k].option_strings[0] if acts[k].option_strings else k}={acts[k].default!r}" for k in missing)
-             + " (run check-answers and ask the user)")
-    p_new.orig_defaults = {k: a.default for k, a in acts.items()}  # for answers_to_argv
+    prev, answers = None, {}
+    if args.answers:
+        prev = load_fw_json(args.answers)
+        answers = {k: v for k, v in renamed_answers(prev.get("answers", {}), note=True).items()}
+    board = args.board or answers.get("board")  # an explicit --board wins over the recorded one
+    preset = load_preset(board) if board else None
+    defaults = {k: a.default for k, a in acts.items()}
+    if preset:
+        bad = sorted(set(preset["answers"]) - set(acts))
+        if bad:
+            die(f"{preset['dir'] / 'preset.toml'}: [answers] has keys `new` doesn't know: {', '.join(bad)}")
+        defaults.update(preset["answers"])
+    if args.answers:
+        unknown = sorted(set(answers) - set(acts))
+        missing = sorted(set(acts) - set(answers))
+        if unknown:
+            warn(f"answers no longer known to this template (ignored): {', '.join(unknown)}")
+        if missing:
+            warn("new options not in the answers, using defaults: "
+                 + ", ".join(f"{acts[k].option_strings[0] if acts[k].option_strings else k}={defaults[k]!r}" for k in missing)
+                 + " (run check-answers and ask the user)")
+    # the preset's values are the defaults the recorded command leaves out (answers_to_argv)
+    p_new.orig_defaults = defaults
+    p_new.set_defaults(**defaults)
     p_new.set_defaults(**{k: v for k, v in answers.items() if k in acts})
     args = ap.parse_args(argv)
     args.prev_fw = prev
+    args.preset = preset
     return args
 
 
@@ -1460,6 +1623,14 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
              build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
     o.embassy = args.embassy
+    o.board = getattr(args, "preset", None)
+    o.host = args.host
+    o.cli_name = args.cli_name or name
+    o.probe = args.probe or SETUP_PROBES[t.family][1]
+    if o.host and not args.wire_weaver:
+        die("--host needs --wire-weaver (the host crates talk to the firmware through its WireWeaver API)")
+    if not re.fullmatch(r"[a-z][a-z0-9_-]*", o.cli_name):
+        die(f"--cli-name {o.cli_name}: lower case letters, digits, - and _")
     if o.embassy == "main" and (fw != "embassy" or t.family != "stm32"):
         die("--embassy main: generated code for embassy main exists for --framework embassy on STM32 so far (TPL-29)")
     if o.supply_config in ("SMPSLDO", "SMPSExternalLDO", "SMPSExternalLDOBypass") and not o.smps_voltage:
@@ -1492,7 +1663,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
 
     t.notes.append(errata_note(t))
     files = gen_project(t, o, lay, usb)
-    files = {k: sort_uses(v) if k.endswith(".rs") else v for k, v in files.items()}
+    files = {k: sort_uses(v) if k.endswith(".rs") and isinstance(v, str) else v for k, v in files.items()}
     files[FW_JSON] = fw_json(p_new, args, getattr(args, "prev_fw", None))
     origin = template_origin()
     if not origin["commit"]:
@@ -1511,11 +1682,58 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     for rel, content in files.items():
         p = out / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(content)
+        if isinstance(content, bytes):
+            p.write_bytes(content)
+        else:
+            p.write_text(content)
+        if rel in EXECUTABLE:
+            p.chmod(0o755)
     print(f"generated {len(files)} files in {out}/")
     for n in t.notes + (regs.notes if regs else []):
         print(f"note: {n}")
+    nexts = post_steps(o, out)
     print(f"next: cd {out / WW_FW_DIR if o.ww else out} && cargo build")
+    for n in nexts:
+        print(f"next: {n}")
+
+
+def post_step(what: str, cmd: list[str], cwd: Path) -> bool:
+    """Run one tool on the generated project, if it is on PATH; False (and a warning) when it is not or fails."""
+    import shutil
+    if not shutil.which(cmd[0]):
+        return False
+    print(f"running: {' '.join(cmd)} ({what})")
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    if r.returncode != 0:
+        warn(f"{' '.join(cmd)} failed:\n{(r.stderr or r.stdout).strip()[-2000:]}")
+        return False
+    return True
+
+
+def post_steps(o: Opts, out: Path) -> list[str]:
+    """What `new` does after writing the files, with the tools the PC has; returns the `next:` lines for the rest."""
+    nexts = []
+    if o.ww and not post_step("#[ww_api_root] finds the API's git dependencies through it", ["cargo", "generate-lockfile"], out):
+        nexts.append(f"cd {out} && cargo generate-lockfile (the API crate needs the root Cargo.lock)")
+    fw = out / WW_FW_DIR
+    if o.host and not post_step("the recipes build the firmware with --locked", ["cargo", "generate-lockfile"], fw):
+        nexts.append(f"cd {fw} && cargo generate-lockfile (the recipes build with --locked)")
+    if o.host:  # the pictures the README shows; the same commands as `just logo` and `just board`
+        font = ["--ignore-system-fonts", "--font-path", "docs/logo/fonts"]
+        logo = [["typst", "compile", *font, "docs/logo/logo.typ", "docs/logo/logo.svg"],
+                ["typst", "compile", *font, "--input", "theme=dark", "docs/logo/logo.typ", "docs/logo/logo-dark.svg"],
+                ["typst", "compile", *font, "--ppi", "72", "docs/logo/social.typ", "docs/logo/social-preview.png"]]
+        if not all(post_step("the logo", cmd, out) for cmd in logo):
+            nexts.append(f"cd {out} && just logo (needs typst): docs/logo/logo.svg, logo-dark.svg, social-preview.png")
+        bm = (o.board or {}).get("boardmap")
+        if bm and not post_step("the board pictures", ["boardmap", "render", f"docs/board/{bm['toml']}"], out):
+            nexts.append(f"cd {out} && just board (needs boardmap, `cargo install --git {BEDROCK_GIT} bedrock_board_cli`)")
+    if o.ww and not post_step("the API's first snapshot, for the evolution check", ["ww", "api", "save", o.ww_api], out):
+        nexts.append(f"cd {out} && just api-save (needs ww), then commit {o.ww_api}/api_snapshots/ (the evolution "
+                     "check needs a snapshot of the API's first version)")
+    if o.ww:  # not run here: hooks belong to a git repository, which the user makes
+        nexts.append(f"cd {out} && just hooks (or just setup): the API check before each commit")
+    return nexts
 
 
 def cmd_chip_info(args) -> None:
@@ -1602,6 +1820,20 @@ def main(argv=None) -> None:
     p.add_argument("--ww-api", help="WireWeaver API crate name (default <name>_api)")
     p.add_argument("--ww-src", default="git",
                    help="'git' (default) or path to a local wire_weaver checkout, relative to the output directory")
+    p.add_argument("--host", action="store_true",
+                   help="the host side next to the firmware (needs --wire-weaver): a root workspace with the API crate "
+                        "and the host crates, a justfile for building, flashing and checking all of it, CI, git "
+                        "hooks, README / AGENTS / FEATURES / CHANGELOG / LICENSE, docs/logo (and docs/board with --board)")
+    p.add_argument("--cli-name", help="name of the command line binary and prefix of its environment variables "
+                                      "(<CLI>_PROBE, <CLI>_ELF); default the project name")
+    p.add_argument("--board", choices=sorted(board_presets()),
+                   help="board preset from data/boards/<BOARD>/preset.toml: defaults for chip, LED, probe and the "
+                        "other answers, plus what only the board knows (clock tree, README board section, docs/board, "
+                        "logo); explicit flags override it")
+    p.add_argument("--probe", type=probe_id,
+                   help="the board's debug probe as VID:PID (e.g. 0483:374b), used by the cargo runner and every "
+                        "recipe; the serial comes from <CLI>_PROBE in the environment or .env. Default: the family's "
+                        f"usual on-board probe ({', '.join(f'{k} {v[1]}' for k, v in SETUP_PROBES.items())})")
     p.add_argument("--dry-run", action="store_true", help="list files and print memory.x without writing")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")
     p.set_defaults(func=lambda a: cmd_new(a, p_new))

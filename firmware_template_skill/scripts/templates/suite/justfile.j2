@@ -1,0 +1,160 @@
+{% set L = '{{' %}{% set R = '}}' %}
+{% set fw = o.name %}
+{% if o.board %}
+# {{ s.title }} {{ "template" if o.board else "project" }}: the firmware (firmware/, its .cargo/config.toml sets the target), the host workspace at
+{% else %}
+# {{ s.title }}: the firmware (firmware/, its .cargo/config.toml sets the target), the host workspace at
+{% endif %}
+# the root (API crate{{ ", client library, `" ~ s.cli ~ "` command line, Python module" if s.has_cli else "" }}).
+
+# Windows runs the recipes with cmd (`cd x && y` works there too): not every PC has Git's sh on PATH
+set windows-shell := ["cmd.exe", "/c"]
+# {{ s.probe_env }} (below) can live in .env, kept out of git
+set dotenv-load
+
+chip := "{{ s.chip }}"
+fw_dir := "{{ s.fw_dir }}"
+# the same from inside firmware/
+fw_elf_dir := "target/{{ t.rust_target }}"
+# The probe every recipe uses: {{ s.probe_name }} ({{ s.probe }}), never another probe on the PC; with two
+# {{ s.board.get("readme", {}).get("plural", "of them") }} attached, {{ s.probe_env }}=SERIAL (`probe-rs list`) picks one{{ ", `" ~ s.cli ~ "` takes the same variable" if s.has_cli else "" }}
+probe := "{{ s.probe }}" + if env("{{ s.probe_env }}", "") == "" { "" } else { ":" + env("{{ s.probe_env }}") }
+runner := "target.{{ t.rust_target }}.runner='probe-rs run --chip {{ t.probe_chip }} --probe " + probe + "{{ t.runner_extra }}'"
+
+default:
+    @just --list
+
+# Set up this PC; prints the steps that need root (`--root` runs them too, `--check` only reports what is missing)
+setup *args:
+    uv run scripts/setup.py {{ L }}args{{ R }}
+
+# Turn on the project's git hooks in .githooks/ (the API check before a commit), after the hooks already there;
+# `--check` reports, `--remove` puts the old ones back (`just setup` runs it too)
+hooks *args:
+    uv run scripts/hooks.py {{ L }}args{{ R }}
+
+# Host tests (the workspace{{ "; the Python module's tests: `just test-py`" if s.has_py else "" }})
+test *flags:
+    cargo test --workspace --locked {{ L }}flags{{ R }}
+
+# Compare the API crate with its snapshots in {{ s.api }}/api_snapshots/: fails on a change without the version
+# bump it needs, and says which version to put into {{ s.api }}/Cargo.toml (also part of `just test`)
+api-check:
+    cargo test -p {{ s.api }} --test evolution
+
+# Record the released version of the API (ww api save, refuses a version not bumped enough); commit api_snapshots/
+api-save:
+    ww api save {{ s.api }}
+
+# Format check and clippy for the host workspace and the firmware; the firmware's release build must fit
+lint:
+    cargo fmt --all --check
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+    cd firmware && cargo fmt --all --check
+    cd firmware && cargo clippy --bins --locked -- -D warnings
+    cd firmware && cargo build --release --locked
+
+# Format the host workspace and the firmware
+fmt:
+    cargo fmt --all
+    cd firmware && cargo fmt --all
+
+# Build, flash and run the dev firmware with its defmt log (probe-rs); Ctrl-C stops the log, the firmware keeps running.
+{% if s.has_cli %}
+# The ELF goes into the ELF directory by its build id (cnt elf add), so `{{ s.cli }} counters|log` decode from anywhere
+{% else %}
+# The ELF goes into the ELF directory by its build id (cnt elf add), so host tools find it by the id the board reports
+{% endif %}
+run *args:
+    cd firmware && cargo build {{ L }}args{{ R }} && cnt elf add {{ L }}fw_elf_dir{{ R }}/debug/{{ fw }}
+    cd firmware && cargo run --config "{{ L }}runner{{ R }}" {{ L }}args{{ R }}
+
+# Build, flash and run the dev firmware showing the defmt log plus live counters as they change (cnt run; cargo install cnt_cli)
+cnt *args:
+    cd firmware && cargo build && cnt run --probe {{ L }}probe{{ R }} {{ L }}args{{ R }}
+
+# Build the release firmware
+build-fw:
+    cd firmware && cargo build --release --locked
+
+# Flash the release firmware through the probe and reset the board; its ELF goes into the ELF directory (cnt elf add)
+flash: build-fw
+    cnt elf add {{ L }}fw_dir{{ R }}/release/{{ fw }}
+    probe-rs download --chip {{ L }}chip{{ R }} --probe {{ L }}probe{{ R }} {{ L }}fw_dir{{ R }}/release/{{ fw }}
+    probe-rs reset --chip {{ L }}chip{{ R }} --probe {{ L }}probe{{ R }}
+
+{% if s.has_cli %}
+# Attach to the running dev firmware's defmt log without flashing (stop it before using `{{ s.cli }}`: one probe, one user)
+{% else %}
+# Attach to the running dev firmware's defmt log without flashing (one probe, one user: stop it before another tool)
+{% endif %}
+attach:
+    probe-rs attach --chip {{ L }}chip{{ R }} --probe {{ L }}probe{{ R }} {{ L }}fw_dir{{ R }}/debug/{{ fw }}
+{% if s.has_cli %}
+
+# Build the `{{ s.cli }}` command line and install it on this PC (with tpm on PATH through tpm install, else cargo install)
+[unix]
+install:
+    cargo build --profile deploy --locked -p {{ s.cli_crate }}
+    if command -v tpm >/dev/null; then tpm install target/deploy/{{ s.cli }}; else cargo install --locked --path {{ s.cli_crate }}; fi
+
+# Build the `{{ s.cli }}` command line and install it on this PC (cargo install)
+[windows]
+install:
+    cargo install --locked --path {{ s.cli_crate }}
+
+# Bring this PC and the board on the probe up to main: pull --ff-only (refuses on local changes), install, flash, check `{{ s.cli }} --version`
+deploy:
+    #!/usr/bin/env bash
+    set -eu
+    dirty=$(git status --porcelain)
+    if [ -n "$dirty" ]; then echo "local changes, not deploying:"; echo "$dirty"; exit 1; fi
+    git pull --ff-only
+    just install
+    just flash
+    {{ s.cli }} --version | grep -q "($(git rev-parse --short HEAD)" || { echo "{{ s.cli }} --version does not show $(git rev-parse --short HEAD):"; {{ s.cli }} --version; exit 1; }
+    {{ s.cli }} --version
+{% else %}
+
+# Bring the board on the probe up to main: pull --ff-only (refuses on local changes), flash
+deploy:
+    #!/usr/bin/env bash
+    set -eu
+    dirty=$(git status --porcelain)
+    if [ -n "$dirty" ]; then echo "local changes, not deploying:"; echo "$dirty"; exit 1; fi
+    git pull --ff-only
+    just flash
+{% endif %}
+{% if s.has_py %}
+
+# Build the Python module into {{ s.py }}/.venv (when Rust sources changed) and open a prompt with the board as `dev`
+py *args:
+    cd {{ s.py }} && uv sync && uv run python -i -c "import {{ s.py_module }}; dev = {{ s.py_module }}.Device({{ L }}args{{ R }}); print(dev, dev.firmware())"
+
+# Run a Python example of {{ s.py }}/examples: `blink` (the default) blinks the LED and prints what runs on the
+# board, `device` reads the device contract (board, ids, chip, counters, log, settings, boot, update node)
+py-example name="blink" *args:
+    cd {{ s.py }} && uv sync && uv run python examples/{{ L }}name{{ R }}.py {{ L }}args{{ R }}
+
+# Build the Python module and run its tests (no board needed)
+test-py:
+    cd {{ s.py }} && uv run --group dev pytest
+{% endif %}
+
+# Give the project your own name: `just rename my_board` (crates, directories, the command line name, env vars)
+rename name short="":
+    uv run scripts/rename.py {{ L }}name{{ R }} {{ L }}short{{ R }}
+{% if o.board and o.board.boardmap %}
+
+# Re-draw the board pictures in docs/board/ (top and bottom views, power tree, pin table) from the board description
+# with boardmap: `cargo install --git {{ BEDROCK_GIT }} bedrock_board_cli`
+board:
+    boardmap render docs/board/{{ o.board.boardmap.toml }}
+{% endif %}
+
+# Re-draw the logo in docs/logo/ from logo.typ: logo.svg and logo-dark.svg for the README, and social-preview.png
+# (1280 x 640) for GitHub's social preview; needs typst
+logo:
+    typst compile --ignore-system-fonts --font-path docs/logo/fonts docs/logo/logo.typ docs/logo/logo.svg
+    typst compile --ignore-system-fonts --font-path docs/logo/fonts --input theme=dark docs/logo/logo.typ docs/logo/logo-dark.svg
+    typst compile --ignore-system-fonts --font-path docs/logo/fonts --ppi 72 docs/logo/social.typ docs/logo/social-preview.png

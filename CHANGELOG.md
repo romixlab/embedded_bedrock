@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- `bedrock_board`'s NUCLEO-G0B1RE example moved to the template's board preset
+  (`firmware_template_skill/scripts/data/boards/nucleo_g0b1re/`), one copy for both (MAP, TPL-45).
+
 ## [0.2.17] - 2026-10-24
 
 ### Fixed

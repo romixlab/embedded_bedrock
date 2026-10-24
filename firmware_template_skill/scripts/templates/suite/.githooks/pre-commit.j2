@@ -1,0 +1,9 @@
+#!/bin/sh
+# API evolution check (README "Changing the API"), only when the commit touches the API crate. It checks the working
+# tree, the same as `just test`; `git commit --no-verify` skips it for a work-in-progress commit, CI still checks.
+git diff --cached --quiet -- {{ s.api }} && exit 0
+just api-check && exit 0
+echo >&2
+echo >&2 "pre-commit: the API evolution check failed, see above. A change to {{ s.api }} needs the version bump"
+echo >&2 "the report names (in {{ s.api }}/Cargo.toml; commit Cargo.lock with it); then commit again."
+exit 1

@@ -1,9 +1,37 @@
 # Windows runs the recipes with cmd (`cd x && y` works there too): not every PC has Git's sh on PATH
 set windows-shell := ["cmd.exe", "/c"]
+{% if t.family != "esp" %}
+# {{ s.probe_env }} (below) can live in .env, kept out of git
+set dotenv-load
+
+# The probe every recipe uses: {{ s.probe_name }} ({{ s.probe }}), never another probe on the PC; with two of
+# them attached, {{ s.probe_env }}=SERIAL (`probe-rs list`) picks one
+probe := "{{ s.probe }}" + if env("{{ s.probe_env }}", "") == "" { "" } else { ":" + env("{{ s.probe_env }}") }
+{% endif %}
 
 # Set up this PC; prints the steps that need root (`--root` runs them too, `--check` only reports what is missing)
 setup *args:
     uv run scripts/setup.py {{ '{{' }}args{{ '}}' }}
+{% if o.ww %}
+
+# Turn on the project's git hooks in .githooks/ (the API check before a commit), after the hooks already there;
+# `--check` reports, `--remove` puts the old ones back (`just setup` runs it too)
+hooks *args:
+    uv run scripts/hooks.py {{ '{{' }}args{{ '}}' }}
+
+# Host tests: the workspace at the root (the API crate and its evolution check)
+test *flags:
+    cargo test --workspace --locked {{ '{{' }}flags{{ '}}' }}
+
+# Compare the API crate with its snapshots in {{ s.api }}/api_snapshots/: fails on a change without the version
+# bump it needs, and says which version to put into {{ s.api }}/Cargo.toml (also part of `just test`)
+api-check:
+    cargo test -p {{ s.api }} --test evolution
+
+# Record the released version of the API (ww api save, refuses a version not bumped enough); commit api_snapshots/
+api-save:
+    ww api save {{ s.api }}
+{% endif %}
 {% set cd = "cd " ~ fw_dir.rstrip("/") ~ " && " if fw_dir else "" %}
 {% if t.family == "rp" %}
 
@@ -16,6 +44,5 @@ flash-bootsel serial="":
 
 # Build and run the dev firmware showing the defmt log plus live counters as they change (cnt run; cargo install cnt_cli)
 cnt *args:
-    {{ cd }}cargo build
-    {{ cd }}cnt run {{ '{{' }}args{{ '}}' }}
+    {{ cd }}cargo build && cnt run --probe {{ '{{' }}probe{{ '}}' }} {{ '{{' }}args{{ '}}' }}
 {% endif %}
