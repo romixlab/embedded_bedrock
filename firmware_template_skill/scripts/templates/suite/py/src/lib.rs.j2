@@ -241,7 +241,9 @@ impl Device {
 {% if d.variant %}
 
 {% set revs = s.variant.revisions | map(attribute=0) | list %}
+{% filter rewrap("    /// ") %}
     /// The chip on the board: `{"dev_id", "rev_id", "revision", "flash_kib"}`, `revision` is {{ revs | map("tojson") | join(", ") }} or "unknown".
+{% endfilter %}
     fn variant<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let v = self.block(self.{{ B }}()?.variant())?;
         let d = PyDict::new(py);

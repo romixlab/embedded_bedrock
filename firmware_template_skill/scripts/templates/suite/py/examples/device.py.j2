@@ -2,8 +2,9 @@
 {% set arg = "PROBE_SERIAL" if ww.rtt else "SERIAL" %}
 {% set kw = "probe_serial" if ww.rtt else "serial" %}
 {% set items = feats("board" if d.board else "", "ids" if d.uid else "", "chip" if d.variant else "", "counters" if d.counters else "", "log" if d.log else "", "settings" if s.led_at_boot else "", "boot state" if d.boot else "", "the update node" if d.dfu else "") %}
-"""Read everything the board's device contract serves: {{ items | and_join }}. From the repo root: `just py-example device [{{ arg }}]`, or
-`uv run --project {{ s.py }} python {{ s.py }}/examples/device.py [{{ arg }}]`.{{ " " ~ (feats("Counters" if d.counters else "", ("the log" if d.counters else "The log") if d.log else "") | and_join) ~ " " ~ ("are" if d.counters and d.log else "is") ~ " decoded with the firmware's ELF: `just flash` or `just run` puts it where it is found by its build id." if d.counters or d.log else "" }}"""
+{% filter rewrap("") %}
+"""Read everything the board's device contract serves: {{ items | and_join }}. From the repo root: `just py-example device [{{ arg }}]`, or `uv run --project {{ s.py }} python {{ s.py }}/examples/device.py [{{ arg }}]`.{{ " " ~ (feats("Counters" if d.counters else "", ("the log" if d.counters else "The log") if d.log else "") | and_join) ~ " " ~ ("are" if d.counters and d.log else "is") ~ " decoded with the firmware's ELF: `just flash` or `just run` puts it where it is found by its build id." if d.counters or d.log else "" }}"""
+{% endfilter %}
 
 import sys
 
