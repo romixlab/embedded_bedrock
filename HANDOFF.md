@@ -44,6 +44,8 @@ Plan: ~/git/tpm/maintain/P2528-embedded-bedrock/design/g0-gen-suite.md (read it 
 
 Both rebased onto template main cc1c30b, not landed. g0-led-sync (G4): API 0.3.0 (leds ww_indication, clock ww_timebase via bedrock_sync ClockServer), LED on TIM2_CH1 PA5. g0-pindiag (G5): PinDiag on 50 free pins + B1, `just pins` via `ww pins tui`. Second to land takes API 0.4.0; both add api_snapshots/..._0_2_0.ron. P5/P6/P7 start once they land.
 
-## W4 planned API (evo-current, to be confirmed)
+## W4 API (evo-current, confirmed 24 Oct: committed 4222d39b on wire_weaver s/24oct2026-evo-current, NOT landed; apply only once it is on master)
 
-`tests/evolution.rs`: `wire_weaver_evolution::Check::new(env!("CARGO_MANIFEST_DIR")).require_current(true).assert();`. justfile: `api-save:` -> `WW_API_SAVE=1 cargo test -p <api> --test evolution`.
+Save refreshes only the current version's snapshot. Also: SAVE_ENV, Check::save(force), `ww api check --require-current`. Hook idea from evo-current: refuse a staged change/delete of a snapshot whose last commit is in a tag (docs/evolution/checker_tool.md#a-released-snapshot-never-changes); then `new` can run `just api-save` instead of `ww api save`.
+
+`tests/evolution.rs`: `wire_weaver_evolution::Check::new(env!("CARGO_MANIFEST_DIR")).require_current(true).assert();`. justfile: `api-save:` -> `WW_API_SAVE=1 cargo test -p <api> --test evolution -- --nocapture`; `api-check:` -> `cargo test -p <api> --test evolution`. Failure messages name `just api-save`.
