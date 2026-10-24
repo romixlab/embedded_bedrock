@@ -289,7 +289,7 @@ pub fn firmware_line(fw: &FirmwareSummaryOwned) -> String {
 }
 {% if d.board %}
 
-/// One line for the board: `{{ s.board_product }} rev {{ s.board_revision }} (Assumed), serial 21002200175036344B333720`.
+/// One line for the board: `{{ s.product }} rev {{ s.board_revision }} (Assumed), serial 21002200175036344B333720`.
 pub fn board_line(b: &BoardSummaryOwned) -> String {
     let mut line = format!(
         "{} rev {} ({:?})",

@@ -648,8 +648,8 @@ fn variant_line(v: &{{ C }}::Variant) -> String {
         _ => "unknown device",
     };
     let revision = match v.revision {
-{% for name, _ in s.variant.revisions %}
-        {{ C }}::SiliconRevision::{{ name }} => "rev {{ name }}".to_string(),
+{% for r in s.variant.revisions %}
+        {{ C }}::SiliconRevision::{{ r[0] }} => "rev {{ r[0] }}".to_string(),
 {% endfor %}
         _ => "unknown revision".to_string(),
     };

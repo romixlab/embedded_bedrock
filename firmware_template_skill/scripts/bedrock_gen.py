@@ -717,9 +717,9 @@ def feats(*xs) -> list[str]:
     return [x for x in xs if x]
 
 
-def rewrap(text: str, prefix: str, width: int = 118) -> str:
+def rewrap(text: str, prefix: str, width: int = 116) -> str:
     """Re-flows comment paragraphs (`{% filter rewrap("//! ") %}`): each run of lines starting with `prefix` becomes one
-    paragraph wrapped greedily at `width` columns, as the hand-written host crates are; other lines stay."""
+    paragraph wrapped greedily at `width` columns, as the hand-wrapped host crates of G0 are (and doc_comment); other lines stay."""
     out, para = [], []
 
     def flush():
@@ -1207,8 +1207,6 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
 # Probe names for the client's comments: what it is called after "the only ...", and with its article
 PROBE_KINDS = {"ST-LINK": ("ST-LINK", "an ST-LINK"), "CMSIS-DAP probe": ("CMSIS-DAP probe", "a CMSIS-DAP probe"),
                "J-Link": ("J-Link", "a J-Link"), "USB-JTAG/serial": ("USB-JTAG/serial", "a USB-JTAG/serial")}
-UID_DESC = {"stm32": "the STM32 96-bit unique id", "rp": "the 64-bit unique id of the RP's flash",
-            "nrf": "the nRF 64-bit FICR device id", "esp": "the ESP32's 48-bit factory MAC address"}
 
 
 def host_names(t: Target, o: Opts, s: dict) -> dict:
@@ -1227,12 +1225,16 @@ def host_names(t: Target, o: Opts, s: dict) -> dict:
         "probe_kind_a": kind_a,
         "py_board": ct.lower(),                      # the Python Device's accessor of the connected board
         "board_short": ct if b else "board",         # "Blink the Nucleo's LED"
-        "board_product": board.get("product", o.name.upper()),
-        "board_revision": board.get("revision", "A"),
+        "board_revision": s["revision"] or "A",      # board_line's example
         "led_name": readme.get("led", ""),           # the LED's name on the board (LD4)
-        "uid_desc": UID_DESC[t.family],
         "version": "0.1.0",                          # the workspace's (host crates') first version
     }
+    doc = s["uid"].get("doc", "")
+    names["uid_desc"] = doc if doc.startswith("the ") else f"the {doc}"  # "the STM32 96-bit unique id"
+    v = s["variant"]
+    if v:  # variant_line's example: `STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash`
+        name, rev_id = v["revisions"][0][:2]
+        names["variant_example"] = f"{v['device']} ({v['dev_id']:#05x}) rev {name} ({rev_id:#06x}), {v['flash_kib']} KiB flash"
     return names
 
 
