@@ -101,8 +101,9 @@ or options; purely internal refactors only need a line under the next version.
   which arrive in later entries. Nothing on the target changes.
 
 - Internal: the tested matrix of `references/frameworks.md#tested-matrix` is now data (`scripts/data/matrix.toml`)
-  and a `matrix` subcommand that generates, builds, rustfmt-checks and flip-link-checks every entry (TPL-44). No
-  generated output changed.
+  and a `matrix` subcommand that generates, builds, rustfmt-checks and flip-link-checks every entry (TPL-44). Each
+  entry builds in its own cargo build dir under `~/.cache/bedrock_matrix/`, removed when the entry is done (a
+  shared `build-dir` kept one per scratch path: two full runs filled a 555 GB disk). No generated output changed.
 
 - `just setup` in every generated project (TPL-36): `scripts/setup.py` (run with uv, stdlib only) installs what the
   firmware needs on a fresh Arch, Ubuntu / Debian or Windows PC: rustup with the toolchain, targets and components of
