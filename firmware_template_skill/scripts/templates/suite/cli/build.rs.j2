@@ -1,6 +1,7 @@
 //! Stamps `--version` with the git commit and the build time, without extra crates:
-//! `G0B1RE_GIT` is the short SHA with `-dirty` for uncommitted changes (`unknown` without git), `G0B1RE_BUILT` the
-//! build time in UTC (`SOURCE_DATE_EPOCH` when set, for reproducible builds).
+{% filter rewrap("//! ") %}
+//! `{{ s.env }}_GIT` is the short SHA with `-dirty` for uncommitted changes (`unknown` without git), `{{ s.env }}_BUILT` the build time in UTC (`SOURCE_DATE_EPOCH` when set, for reproducible builds).
+{% endfilter %}
 
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -73,6 +74,6 @@ fn main() {
                 .duration_since(UNIX_EPOCH)
                 .map_or(0, |d| d.as_secs() as i64)
         });
-    println!("cargo:rustc-env=G0B1RE_GIT={}", describe());
-    println!("cargo:rustc-env=G0B1RE_BUILT={}", built(secs));
+    println!("cargo:rustc-env={{ s.env }}_GIT={}", describe());
+    println!("cargo:rustc-env={{ s.env }}_BUILT={}", built(secs));
 }

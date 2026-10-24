@@ -1,42 +1,82 @@
-//! `device`: the device contract (`nucleo_g0b1re_api::Device`): board, ids, variant, counters, log, settings, boot
-//! and the update node. Counters and the log are decoded with the firmware's ELF, found by the build id the board
-//! reports (`target/`, `WW_ELF_PATH`, the ELF directory `ww elf add` fills) or given as `elf`.
+{% set T = s.client_type %}
+{% set A = ww.krate %}
+{% set d = s.dev %}
+{% set decode = d.counters or d.log %}
+{% set uses = feats("Error" if decode or s.led_at_boot else "", T, "Result", "call" if d.boot or d.dfu else "",
+                    "call_fallible" if d.counters or d.settings or d.boot else "", "read", "write" if s.led_at_boot else "") %}
+{% set items = feats("board" if d.board else "", "ids" if d.uid else "", "variant" if d.variant else "",
+                     "counters" if d.counters else "", "log" if d.log else "", "settings" if d.settings else "",
+                     "boot" if d.boot else "", "the update node" if d.dfu else "") %}
+{% set report = feats("firmware", "board" if d.board else "", "ids" if d.uid else "", "label" if d.label else "",
+                      "last reset with the crash's addresses named" if d.last_reset else "", "counters" if d.counters else "",
+                      "the stored log" if d.log else "") %}
+{% filter rewrap("//! ") %}
+//! `device`: the device contract (`{{ A }}::Device`): {{ items | and_join }}.{{ " Counters and the log are decoded with the firmware's ELF, found by the build id the board reports (`target/`, `WW_ELF_PATH`, the ELF directory `ww elf add` fills) or given as `elf`." if d.counters and d.log else "" }}
+{% endfilter %}
 
+{% if decode %}
 use std::path::{Path, PathBuf};
+{% else %}
+use std::path::PathBuf;
+{% endif %}
+{% if d.log %}
 
 use defmt_decoder::{DecodeError, StreamDecoder, Table};
 use wire_weaver::prelude::UVlq64;
 use wire_weaver_client::{StreamCursor, StreamEvent};
+{% endif %}
 
-use crate::{Error, Nucleo, Result, call, call_fallible, read, write};
+use crate::{ {{- uses | sort(case_sensitive=true) | join(", ") }}};
 
-pub use nucleo_g0b1re_api::{SiliconRevision, Variant};
+{% if d.variant %}
+pub use {{ A }}::{SiliconRevision, Variant};
+{% endif %}
+{% if d.board %}
 pub use ww_board_info::BoardSummaryOwned;
+{% endif %}
+{% if d.counters %}
 pub use ww_counters::CounterBuffer;
-pub use ww_dfu::{BootState, BootTarget, NodeInfoOwned};
+{% endif %}
+{% if d.boot or d.dfu %}
+pub use ww_dfu::{ {{- feats("BootState, BootTarget" if d.boot else "", "NodeInfoOwned" if d.dfu else "") | join(", ") }}};
+{% endif %}
+{% if d.counters %}
 pub use ww_report::counters::{CounterValue, CountersReport};
+{% endif %}
+{% if d.log %}
 pub use ww_report::log::LogReport;
+{% endif %}
+{% if d.uid %}
 pub use ww_uid::UniqueIdOwned;
+{% endif %}
 
-impl Nucleo {
+impl {{ T }} {
+{% if d.board %}
     /// Board name, revision and serial number (the chip's unique id in hex).
     pub async fn board(&self) -> Result<BoardSummaryOwned> {
         read("BoardInfo::BOARD", self.raw.device().board().read_BOARD()).await
     }
+{% endif %}
+{% if d.uid %}
 
-    /// The board's unique ids: the STM32 96-bit unique id.
+    /// The board's unique ids: {{ s.uid_desc }}.
     pub async fn uid(&self) -> Result<Vec<UniqueIdOwned>> {
         let ids = read("Uid::IDS", self.raw.device().uid().read_IDS()).await?;
         Ok(ids.into_inner())
     }
+{% endif %}
+{% if d.variant %}
 
     /// The chip on the board: device id, silicon revision, flash size.
     pub async fn variant(&self) -> Result<Variant> {
         read("Device::variant", self.raw.device().read_variant()).await
     }
+{% endif %}
+{% if d.counters %}
 
-    /// Every `cnt` counter of the firmware, RAM and backup registers, decoded with the firmware's ELF (`elf`, or
-    /// the one of the board's build id). `force`: use `elf` although its build id differs.
+{% filter rewrap("    /// ") %}
+    /// Every `cnt` counter of the firmware, {{ "RAM and backup registers" if o.bkp else "in RAM" }}, decoded with the firmware's ELF (`elf`, or the one of the board's build id). `force`: use `elf` although its build id differs.
+{% endfilter %}
     pub async fn counters(&self, elf: Option<&Path>, force: bool) -> Result<CountersReport> {
         let info = read("Counters::INFO", self.raw.device().counters().read_INFO()).await?;
         let elf = resolve_elf(elf, info.build_id.as_slice(), force)?;
@@ -53,6 +93,8 @@ impl Nucleo {
         )
         .await
     }
+{% endif %}
+{% if d.log %}
 
     /// The defmt log the board keeps (since boot, and from before a crash), decoded with the firmware's ELF. Leaves
     /// the board's store as it is: running it again shows the same lines and the new ones.
@@ -63,7 +105,7 @@ impl Nucleo {
             .map_err(|e| Error::Decode(format!("log: {e:#}")))
     }
 
-    /// Like [Nucleo::log], then every new line as it is logged, handed to `on_line`, until the link drops.
+    /// Like [{{ T }}::log], then every new line as it is logged, handed to `on_line`, until the link drops.
     pub async fn follow_log(
         &self,
         elf: Option<&Path>,
@@ -148,6 +190,8 @@ impl Nucleo {
             Err(e) => Err(Error::Elf(format!("{}: {e:#}", elf.display()))),
         }
     }
+{% endif %}
+{% if s.led_at_boot %}
 
     /// The LED after boot: on or off.
     pub async fn led_at_boot(&self) -> Result<bool> {
@@ -170,11 +214,15 @@ impl Nucleo {
         )
         .await
     }
+{% endif %}
+{% if d.settings %}
 
-    /// Every setting back to its default, the label too; in flash when the call returns.
+    /// Every setting back to its default{{ ", the label too" if d.label else "" }}; in flash when the call returns.
     pub async fn reset_settings(&self) -> Result<()> {
         call_fallible("Settings::reset", self.raw.device().settings().reset()).await
     }
+{% endif %}
+{% if d.boot %}
 
     /// The boot state: always `Confirmed`, the firmware is the only image.
     pub async fn boot_state(&self) -> Result<BootState> {
@@ -190,27 +238,32 @@ impl Nucleo {
     pub async fn reboot(&self, into: BootTarget) -> Result<()> {
         call_fallible("BootControl::reboot", self.raw.device().boot().reboot(into)).await
     }
+{% endif %}
+{% if d.dfu %}
 
     /// Who the update node is: product, profile (`InPlace`), boot state, last result (`Recovery` after the ROM
     /// bootloader took over from a boot loop).
     pub async fn dfu_node(&self) -> Result<NodeInfoOwned> {
         call("UpdateNode::node", self.raw.device().dfu().node().node()).await
     }
+{% endif %}
 
-    /// The whole device contract in one text, as `ww report` prints it: firmware, board, ids, label, last reset
-    /// with the crash's addresses named, counters and the stored log, decoded with the ELF.
+{% filter rewrap("    /// ") %}
+    /// The whole device contract in one text, as `ww report` prints it: {{ report | and_join }}{{ ", decoded with the ELF" if decode else "" }}.
+{% endfilter %}
     pub async fn report(&self, elf: Option<PathBuf>, force: bool) -> String {
         let options = ww_report::report::ReportOptions {
             elf,
             force,
             defmt_table: None,
-            tool: format!("g0b1re {}", env!("CARGO_PKG_VERSION")),
+            tool: format!("{{ s.cli }} {}", env!("CARGO_PKG_VERSION")),
         };
         let report = ww_report::report::collect_report(&self.contract, &options).await;
         ww_report::report::render_report(&report)
     }
 }
 
+{% if d.log %}
 /// A piece of a positioned stream: frames, or units the device lost.
 enum Piece {
     Frames(Vec<u8>),
@@ -258,6 +311,9 @@ impl InOrder {
     }
 }
 
+{% endif %}
+{% if decode %}
+
 /// The ELF for `build_id` (or `elf` itself, checked against it unless `force`).
 fn resolve_elf(elf: Option<&Path>, build_id: &[u8], force: bool) -> Result<PathBuf> {
     if build_id.is_empty() && elf.is_none() {
@@ -269,6 +325,9 @@ fn resolve_elf(elf: Option<&Path>, build_id: &[u8], force: bool) -> Result<PathB
         .map_err(|e| Error::Elf(format!("{e:#}")))?;
     Ok(resolved.path)
 }
+
+{% endif %}
+{% if d.log %}
 
 /// The lines `bytes` completes.
 fn decode(bytes: &[u8], decoder: &mut dyn StreamDecoder) -> Vec<String> {
@@ -286,6 +345,9 @@ fn decode(bytes: &[u8], decoder: &mut dyn StreamDecoder) -> Vec<String> {
     }
     lines
 }
+
+{% endif %}
+{% if d.log %}
 
 #[cfg(test)]
 mod tests {
@@ -339,3 +401,4 @@ mod tests {
         );
     }
 }
+{% endif %}

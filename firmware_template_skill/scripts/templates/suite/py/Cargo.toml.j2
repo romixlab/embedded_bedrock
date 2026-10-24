@@ -1,18 +1,20 @@
 [package]
-name = "nucleo_g0b1re_py"
+name = "{{ s.py }}"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+{% if s.repository %}
 repository.workspace = true
-description = "Python module for the Nucleo G0B1RE firmware, wrapping nucleo_g0b1re_client"
+{% endif %}
+description = "Python module for the {{ s.title }} firmware, wrapping {{ s.client }}"
 publish = false # distributed as a Python wheel, see pyproject.toml
 
 [lib]
-name = "nucleo_g0b1re" # the Python module name
+name = "{{ s.py_module }}" # the Python module name
 crate-type = ["cdylib"]
 doc = false
 
 [dependencies]
-nucleo_g0b1re_client.workspace = true
+{{ s.client }}.workspace = true
 pyo3.workspace = true
 tokio.workspace = true

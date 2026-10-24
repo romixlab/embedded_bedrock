@@ -1,50 +1,74 @@
-//! Host library for the Nucleo G0B1RE firmware: typed access to its WireWeaver API (`nucleo_g0b1re_api`) through
-//! the debug probe (RTT). The command line (`nucleo_g0b1re_cli`) and the Python module (`nucleo_g0b1re_py`) are
-//! thin layers over this crate: everything that talks to the board lives here.
+{% set T = s.client_type %}
+{% set TC = s.client_struct %}
+{% set A = ww.krate %}
+{% set TR = ww.trait %}
+{% set d = s.dev %}
+{% set decode = d.counters or d.log %}
+{% filter rewrap("//! ") %}
+//! Host library for the {{ s.title }} firmware: typed access to its WireWeaver API (`{{ A }}`) {{ "through the debug probe (RTT)" if ww.rtt else "over USB" }}. The command line (`{{ s.cli_crate }}`) and the Python module (`{{ s.py }}`) are thin layers over this crate: everything that talks to the board lives here.
+{% endfilter %}
 //!
 //! ```no_run
-//! # async fn f() -> nucleo_g0b1re_client::Result<()> {
-//! use nucleo_g0b1re_client::{Nucleo, Probe, firmware_line};
-//! let board = Nucleo::connect(&Probe::default()).await?; // the only Nucleo ST-LINK attached
+//! # async fn f() -> {{ s.client }}::Result<()> {
+{% if ww.rtt %}
+//! use {{ s.client }}::{ {{- T }}, Probe, firmware_line};
+//! let board = {{ T }}::connect(&Probe::default()).await?; // the only {{ s.probe_kind }} attached
+{% else %}
+//! use {{ s.client }}::{ {{- T }}, Usb, firmware_line};
+//! let board = {{ T }}::connect(&Usb::default()).await?; // the only {{ s.title }} on USB
+{% endif %}
 //! board.led_on().await?;
 //! println!("{}", firmware_line(&board.firmware().await?));
 //! board.disconnect().await;
 //! # Ok(()) }
 //! ```
 //!
-//! Adding to the API: declare the item in `nucleo_g0b1re_api/src/lib.rs`, implement it in `firmware/src/ww.rs`,
-//! then add a method to [Nucleo] that calls the generated client ([Nucleo::raw]: `raw.led_on().call()`,
-//! `raw.device().label().read_name()`, ...) through [call], [call_fallible], [read] or [write], so the CLI and
-//! Python get it with the same errors. The device contract (`device`) is in `device.rs`.
+{% filter rewrap("//! ") %}
+//! Adding to the API: declare the item in `{{ A }}/src/lib.rs`, implement it in `firmware/src/ww.rs`, then add a method to [{{ T }}] that calls the generated client ([{{ T }}::raw]: `raw.led_on().call()`, `raw.device().{{ "label().read_name()" if d.label else "firmware().read_FIRMWARE()" }}`, ...) through [call], [call_fallible], [read] or [write], so the CLI and Python get it with the same errors. The device contract (`device`) is in `device.rs`.
+{% endfilter %}
 
 mod device;
 
 pub use device::*;
 
+{% if ww.rtt %}
 use std::path::PathBuf;
+{% endif %}
 use std::time::Duration;
 
 use wire_weaver::prelude::DeserializeShrinkWrapOwned;
+{% if d.label %}
 use wire_weaver::shrink_wrap::MaxLen;
+{% endif %}
 use wire_weaver_client::{
     CallError, Commander, DynClient, PreparedCall, PreparedRead, PreparedWrite,
 };
 
 pub use wire_weaver_client::{ClientConfig, DeviceApiInfo, WwClient};
-pub use ww_firmware_info::{FirmwareSummaryOwned, ResetRecordOwned};
+pub use ww_firmware_info::{FirmwareSummaryOwned{{ ", ResetRecordOwned" if d.last_reset else "" }}};
+{% if d.label %}
 pub use ww_user_info::UserInfoErrorOwned;
+{% endif %}
+{% if ww.rtt %}
 
-/// probe-rs name of the MCU on the Nucleo-G0B1RE board (`probe-rs chip list`).
-pub const PROBE_RS_CHIP: &str = "STM32G0B1RETx";
+/// probe-rs name of the MCU on the {{ s.title }} board (`probe-rs chip list`).
+pub const PROBE_RS_CHIP: &str = "{{ s.chip }}";
+{% endif %}
+{% if d.label %}
 
 /// Longest label the firmware keeps (`UserInfo::CAPABILITIES`).
 pub const MAX_LABEL_LEN: usize = ww_user_info::MAX_NAME_LEN;
+{% endif %}
 
 /// Errors of the typed methods.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+{% if ww.rtt %}
     /// Connecting failed: no probe, the chip did not answer, the RTT control block was not found, the API on the
-    /// board is not `nucleo_g0b1re_api`.
+    /// board is not `{{ A }}`.
+{% else %}
+    /// Connecting failed: no such USB device, or the API on the board is not `{{ A }}`.
+{% endif %}
     #[error("connecting failed: {0:#}")]
     Connect(#[source] anyhow::Error),
     /// The call did not go through: the link dropped, a timeout, an encoding problem.
@@ -58,35 +82,41 @@ pub enum Error {
     /// The firmware has no implementation of the item (an older firmware).
     #[error("{item} is not implemented by the firmware")]
     Unimplemented { item: &'static str },
+{% if d.label %}
     /// The firmware refused to store the label (too long, flash busy or faulted).
     #[error("label: {0:?}")]
     Label(UserInfoErrorOwned),
-    /// The firmware refused a call with its error (counters, settings, boot).
+{% endif %}
+    /// The firmware refused a call with its error{{ (" (" ~ feats("counters" if d.counters else "", "settings" if d.settings else "", "boot" if d.boot else "") | join(", ") ~ ")") if d.counters or d.settings or d.boot else "" }}.
     #[error("{item}: {message}")]
     Device { item: &'static str, message: String },
-    /// The firmware's ELF, needed to decode counters and the log, was not found or does not match.
+{% if decode %}
+    /// The firmware's ELF, needed to decode {{ feats("counters" if d.counters else "", "the log" if d.log else "") | and_join }}, was not found or does not match.
     #[error("firmware ELF: {0}")]
     Elf(String),
-    /// Counters or the log could not be decoded.
+    /// {{ feats("Counters" if d.counters else "", ("the log" if d.counters else "The log") if d.log else "") | join(" or ") }} could not be decoded.
     #[error("{0}")]
     Decode(String),
+{% endif %}
     /// A value refused before it was sent, with the reason.
     #[error("{0}")]
     Invalid(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+{% if ww.rtt %}
 
-/// USB vendor and product id of the Nucleo-64's on-board ST-LINK/V2-1: the only probes [Probe::default] looks at, so
-/// a probe of another board on the same PC is never used.
-pub const NUCLEO_PROBE: (u16, u16) = (0x0483, 0x374b);
+{% filter rewrap("/// ") %}
+/// USB vendor and product id of {{ s.probe_name }}: the only probes [Probe::default] looks at, so a probe of another board on the same PC is never used.
+{% endfilter %}
+pub const {{ s.probe_const }}: (u16, u16) = (0x{{ s.probe.split(":")[0] }}, 0x{{ s.probe.split(":")[1] }});
 
 /// How to reach the board: which probe and chip, and how to find the RTT control block.
 #[derive(Clone, Debug)]
 pub struct Probe {
     /// probe-rs chip name, [PROBE_RS_CHIP] by default.
     pub chip: String,
-    /// USB vendor and product id of the probe, [NUCLEO_PROBE] by default; `None`: any probe.
+    /// USB vendor and product id of the probe, [{{ s.probe_const }}] by default; `None`: any probe.
     pub vid_pid: Option<(u16, u16)>,
     /// Part of the probe's serial number, when several probes are attached.
     pub serial: Option<String>,
@@ -101,7 +131,7 @@ impl Default for Probe {
     fn default() -> Self {
         Self {
             chip: PROBE_RS_CHIP.to_string(),
-            vid_pid: Some(NUCLEO_PROBE),
+            vid_pid: Some({{ s.probe_const }}),
             serial: None,
             speed_hz: None,
             elf: None,
@@ -134,24 +164,78 @@ impl Probe {
         Ok(self)
     }
 }
+{% else %}
 
-/// The generated client of `NucleoG0b1reApi`: one method per item of the API tree, built by `ww_codegen!` from
-/// `nucleo_g0b1re_api/src/lib.rs`. [Nucleo] sits on top of it.
-pub struct NucleoClient {
+/// USB vendor and product id of the firmware's WireWeaver interface (`c0de:cafe` unless the firmware's `ww.rs`
+/// sets its own): [Usb::default] looks only at these, and connecting checks that the API is `{{ A }}`.
+pub const USB_ID: (u16, u16) = (0xc0de, 0xcafe);
+
+/// How to reach the board over USB: its vendor and product id, and its serial number when several are attached.
+#[derive(Clone, Debug)]
+pub struct Usb {
+    /// USB vendor and product id, [USB_ID] by default.
+    pub vid_pid: (u16, u16),
+    /// Part of the board's USB serial number (the chip's unique id in hex), when several are attached.
+    pub serial: Option<String>,
+}
+
+impl Default for Usb {
+    fn default() -> Self {
+        Self {
+            vid_pid: USB_ID,
+            serial: None,
+        }
+    }
+}
+
+impl Usb {
+    /// Takes a board as `VID:PID` or `VID:PID:SERIAL` in hex, or a serial number (or a part of it) alone, which keeps
+    /// the vendor and product id as they are.
+    pub fn select(mut self, spec: &str) -> Result<Self> {
+        let parts: Vec<&str> = spec.split(':').collect();
+        let id = |s: &str| {
+            u16::from_str_radix(s, 16)
+                .map_err(|_| Error::Invalid(format!("not a USB device VID:PID[:SERIAL]: {spec:?}")))
+        };
+        match parts.as_slice() {
+            [serial] => self.serial = Some(serial.to_string()),
+            [vid, pid] => self.vid_pid = (id(vid)?, id(pid)?),
+            [vid, pid, serial] => {
+                self.vid_pid = (id(vid)?, id(pid)?);
+                self.serial = Some(serial.to_string());
+            }
+            _ => {
+                return Err(Error::Invalid(format!(
+                    "not a USB device VID:PID[:SERIAL]: {spec:?}"
+                )));
+            }
+        }
+        Ok(self)
+    }
+}
+{% endif %}
+
+/// The generated client of `{{ TR }}`: one method per item of the API tree, built by `ww_codegen!` from
+/// `{{ A }}/src/lib.rs`. [{{ T }}] sits on top of it.
+pub struct {{ TC }} {
     cmd: Commander,
 }
 
 mod generated {
     wire_weaver::ww_codegen!(
-        nucleo_g0b1re_api :: NucleoG0b1reApi for super::NucleoClient,
+        {{ A }} :: {{ TR }} for super::{{ TC }},
         client = "std_client",
-        // debug_to_file = "../target/nucleo_g0b1re_client.rs",
+        // debug_to_file = "../target/{{ s.client }}.rs",
     );
 }
 
-impl WwClient for NucleoClient {
+impl WwClient for {{ TC }} {
     fn default_config() -> ClientConfig {
+{% if ww.rtt %}
         ClientConfig::new().rtt(PROBE_RS_CHIP.to_string(), None)
+{% else %}
+        ClientConfig::new().usb_vid_pid(USB_ID.0, USB_ID.1)
+{% endif %}
     }
 
     fn from_cmd(cmd: Commander) -> Self {
@@ -159,15 +243,15 @@ impl WwClient for NucleoClient {
     }
 }
 
-/// A connected board: [Nucleo::connect], then the typed methods; [Nucleo::raw] for the rest of the API.
-pub struct Nucleo {
-    raw: NucleoClient,
+/// A connected board: [{{ T }}::connect], then the typed methods; [{{ T }}::raw] for the rest of the API.
+pub struct {{ T }} {
+    raw: {{ TC }},
     /// Clients of the device contract's global traits on the same connection, for what `ww_report` decodes
     /// (counters, the stored log, the report)
     contract: ww_report::clients::Contract,
 }
 
-/// One line for a firmware summary: `nucleo_g0b1re 0.1.0 (a1b2c3d-dirty, built 2026-10-23 10:20 UTC, release)`.
+/// One line for a firmware summary: `{{ o.name }} 0.1.0 (a1b2c3d-dirty, built 2026-10-23 10:20 UTC, release)`.
 pub fn firmware_line(fw: &FirmwareSummaryOwned) -> String {
     let mut facts = Vec::new();
     if let Some(git) = &fw.git {
@@ -203,8 +287,9 @@ pub fn firmware_line(fw: &FirmwareSummaryOwned) -> String {
         facts.join(", ")
     )
 }
+{% if d.board %}
 
-/// One line for the board: `NUCLEO-G0B1RE rev C02 (Assumed), serial 21002200175036344B333720`.
+/// One line for the board: `{{ s.board_product }} rev {{ s.board_revision }} (Assumed), serial 21002200175036344B333720`.
 pub fn board_line(b: &BoardSummaryOwned) -> String {
     let mut line = format!(
         "{} rev {} ({:?})",
@@ -222,9 +307,11 @@ pub fn board_line(b: &BoardSummaryOwned) -> String {
     }
     line
 }
+{% endif %}
+{% if d.last_reset %}
 
 /// The last reset as lines: `Software, boot 2 since cleared`, then the panic message and the fault registers when
-/// the record has them (`g0b1re report` names the crash's addresses with the ELF).
+/// the record has them (`{{ s.cli }} report` names the crash's addresses with the ELF).
 pub fn reset_lines(r: &ResetRecordOwned, boots: u32) -> Vec<String> {
     let mut first = format!("{:?}, boot {boots} since cleared", r.cause);
     if r.boots_since_crash > 0 {
@@ -247,6 +334,8 @@ pub fn reset_lines(r: &ResetRecordOwned, boots: u32) -> Vec<String> {
     }
     lines
 }
+{% endif %}
+{% if d.dfu %}
 
 /// The update node as `name  value` lines: product, role, profile, boot state, app version, last result.
 pub fn node_lines(n: &NodeInfoOwned) -> Vec<String> {
@@ -269,8 +358,9 @@ pub fn node_lines(n: &NodeInfoOwned) -> Vec<String> {
         ),
     ]
 }
+{% endif %}
 
-/// The API a connected board serves, name and version: `nucleo_g0b1re_api 0.1.0`.
+/// The API a connected board serves, name and version: `{{ A }} 0.1.0`.
 pub fn api_line(info: &DeviceApiInfo) -> String {
     let v = &info.user_api_version;
     format!("{} {:?}", v.crate_id, v.version)
@@ -329,10 +419,11 @@ where
     })
 }
 
-impl Nucleo {
-    /// Connects through `probe` (the only Nucleo ST-LINK attached, with `Probe::default()`).
+impl {{ T }} {
+{% if ww.rtt %}
+    /// Connects through `probe` (the only {{ s.probe_kind }} attached, with `Probe::default()`).
     pub async fn connect(probe: &Probe) -> Result<Self> {
-        let raw = NucleoClient::config(|c| {
+        let raw = {{ TC }}::config(|c| {
             let mut c = c.rtt(probe.chip.clone(), probe.speed_hz);
             if let Some(elf) = &probe.elf {
                 c = c.rtt_elf(elf);
@@ -345,20 +436,31 @@ impl Nucleo {
                 None => c,
             }
         })
+{% else %}
+    /// Connects to the board on USB (the only one attached, with `Usb::default()`).
+    pub async fn connect(usb: &Usb) -> Result<Self> {
+        let raw = {{ TC }}::config(|c| {
+            let c = c.usb_vid_pid(usb.vid_pid.0, usb.vid_pid.1);
+            match &usb.serial {
+                Some(serial) => c.serial_contains(serial.clone()),
+                None => c,
+            }
+        })
+{% endif %}
         .connect()
         .await
         .map_err(Error::Connect)?;
         Ok(Self::from_raw(raw))
     }
 
-    /// Wraps a client connected another way (`NucleoClient::new().connect()`, `NucleoClient::config(..)`).
-    pub fn from_raw(raw: NucleoClient) -> Self {
+    /// Wraps a client connected another way (`{{ TC }}::new().connect()`, `{{ TC }}::config(..)`).
+    pub fn from_raw(raw: {{ TC }}) -> Self {
         let contract = ww_report::clients::Contract::new(&DynClient::from_cmd(raw.cmd.clone()));
         Self { raw, contract }
     }
 
     /// The generated client, for every item of the API tree without a typed method here.
-    pub fn raw(&self) -> &NucleoClient {
+    pub fn raw(&self) -> &{{ TC }} {
         &self.raw
     }
 
@@ -367,14 +469,15 @@ impl Nucleo {
         self.raw.cmd.info()
     }
 
-    /// Switches the user LED (LD4, PA5) on.
+{% set led = feats(s.led_name, o.led) | join(", ") %}
+    /// Switches the user LED{{ (" (" ~ led ~ ")") if led else "" }} on.
     pub async fn led_on(&self) -> Result<()> {
-        call("NucleoG0b1reApi::led_on", self.raw.led_on()).await
+        call("{{ TR }}::led_on", self.raw.led_on()).await
     }
 
     /// Switches the user LED off.
     pub async fn led_off(&self) -> Result<()> {
-        call("NucleoG0b1reApi::led_off", self.raw.led_off()).await
+        call("{{ TR }}::led_off", self.raw.led_off()).await
     }
 
     /// Blinks the LED `count` times, `period` per on-off cycle; the LED is off afterwards.
@@ -406,6 +509,7 @@ impl Nucleo {
         .await?;
         Ok(id.into_inner())
     }
+{% if d.label %}
 
     /// The name the user gave this board, kept in the board's flash.
     pub async fn label(&self) -> Result<String> {
@@ -427,6 +531,8 @@ impl Nucleo {
         )
         .await
     }
+{% endif %}
+{% if d.last_reset %}
 
     /// Why the board last reset and, after a crash, the record the fault or panic handler saved.
     pub async fn last_reset(&self) -> Result<ResetRecordOwned> {
@@ -450,8 +556,9 @@ impl Nucleo {
     pub async fn clear_last_reset(&self) -> Result<()> {
         call("LastReset::clear", self.raw.device().last_reset().clear()).await
     }
+{% endif %}
 
-    /// Closes the connection and releases the probe.
+    /// Closes the connection and releases the {{ "probe" if ww.rtt else "USB device" }}.
     pub async fn disconnect(self) {
         let _ = self.raw.cmd.disconnect().asynch().await;
     }
@@ -465,31 +572,48 @@ mod tests {
     #[test]
     fn firmware_line_without_git_and_build_time() {
         let fw = FirmwareSummaryOwned {
-            name: MaxLen::new("nucleo_g0b1re".to_string()).unwrap(),
+            name: {{ "MaxLen" if d.label else "wire_weaver::shrink_wrap::MaxLen" }}::new("{{ o.name }}".to_string()).unwrap(),
             version: VersionOwned::new(0, 1, 0),
             git: None,
             built: None,
             profile: BuildProfileOwned::Release,
         };
-        assert_eq!(firmware_line(&fw), "nucleo_g0b1re 0.1.0 (release)");
+        assert_eq!(firmware_line(&fw), "{{ o.name }} 0.1.0 (release)");
     }
+{% if ww.rtt %}
 
     #[test]
     fn probe_select() {
         let p = Probe::default().select("066AFF51").unwrap();
         assert_eq!(
             (p.vid_pid, p.serial.as_deref()),
-            (Some(NUCLEO_PROBE), Some("066AFF51"))
+            (Some({{ s.probe_const }}), Some("066AFF51"))
         );
         let p = Probe::default().select("1366:0105").unwrap();
         assert_eq!((p.vid_pid, p.serial), (Some((0x1366, 0x0105)), None));
-        let p = Probe::default().select("0483:374b:066AFF515754").unwrap();
+        let p = Probe::default().select("{{ s.probe }}:066AFF515754").unwrap();
         assert_eq!(
             (p.vid_pid, p.serial.as_deref()),
-            (Some(NUCLEO_PROBE), Some("066AFF515754"))
+            (Some({{ s.probe_const }}), Some("066AFF515754"))
         );
         assert!(Probe::default().select("x:y").is_err());
     }
+{% else %}
+
+    #[test]
+    fn usb_select() {
+        let u = Usb::default().select("066AFF51").unwrap();
+        assert_eq!((u.vid_pid, u.serial.as_deref()), (USB_ID, Some("066AFF51")));
+        let u = Usb::default().select("1209:0001").unwrap();
+        assert_eq!((u.vid_pid, u.serial), ((0x1209, 0x0001), None));
+        let u = Usb::default().select("c0de:cafe:066AFF515754").unwrap();
+        assert_eq!(
+            (u.vid_pid, u.serial.as_deref()),
+            (USB_ID, Some("066AFF515754"))
+        );
+        assert!(Usb::default().select("x:y").is_err());
+    }
+{% endif %}
 
     #[test]
     fn api_line_of_an_empty_info() {
