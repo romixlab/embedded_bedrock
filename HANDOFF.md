@@ -75,9 +75,11 @@ Plan: ~/git/tpm/maintain/P2528-embedded-bedrock/design/g0-gen-suite.md (read it 
 - G0 regenerated (`--answers /tmp/g0ref-a182/bedrock_fw.json --board nucleo_g0b1re --out /tmp/g0gen/d`): every clock part byte-identical to G0 a182dbc (firmware sync.rs, ww/clock.rs, led.rs, ww.rs, main.rs, Cargo.toml; API; client sync.rs, lib.rs, Cargo; CLI; Python; README). Firmware `cargo build --locked`, root `cargo build --locked`, evolution test pass.
 - Matrix entries added: g0clkgpio (clock, no breath, USB, host), g0clkoff (--clock-sync off), l4clk (M4). Running: `bedrock_gen.py matrix --tag ww --jobs 3 --bedrock $PWD --ww-src ../wire_weaver` (48 entries) > /home/roman/.claude-vhrd/jobs/b655eac4/tmp/matrix-clock.log, started 24 Oct ~23:00, before the README fix (builds unaffected). If the log is incomplete (the job may die with the conversation), rerun it. Known baseline failures: TPL-22/23 (xf3/xg4/xl4 rustfmt, not ww), TPL-34 (F103 64 KiB).
 
+- Matrix `--tag ww` (48): all ok but f103 (TPL-34, known) and g0brd/g0board: their `board_pins` test reads docs/board/*-pins.md, rendered only by boardmap (not installed on omarchy-m1). Rerun with `PATH=$PWD/target/release:$PATH` (built `cargo build --release -p bedrock_board_cli`): both ok. The test now says "render it with `just board`". `tpm install` refuses boardmap (no SHA in --version): FEATURES MAP-9 🐛, claimed; fix it (small build.rs) or leave it.
+
 ## Next
 
-1. Check the matrix log; fix failures; update FEATURES TPL-40 with the result (date, "only known failures").
+1. (MAP-9 optional) boardmap `--version` with SHA, then `tpm install target/release/boardmap`.
 2. Remaining G0 diff (non-clock): G0 version history (API 0.2-0.4 doc text, `#[since]`, snapshots), revisions Z/Y, "Nucleo G0B1RE" wording/reflow, docs/board SVGs + pins.md (boardmap not on PATH). Explain in the P8 report.
 3. P8: G0 upgrade from the generator through G0's AGENTS.md procedure (TPL-3), on a branch in nucleo_g0b1re_template (worktree from origin/main a182dbc, never pull into another PC's checkout); or `tpm work ready` for the generator first and P8 as its own session (parent's step 4: ask parent which).
 4. W4 (evo-current) when on wire_weaver master: `require_current(true)` + api-save via WW_API_SAVE.

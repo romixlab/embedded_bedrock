@@ -11,8 +11,9 @@ or options; purely internal refactors only need a line under the next version.
 ## [Unreleased]
 
 - `firmware/README.md`: the setup paragraph wraps at 116 columns (one line was 178 with probe-rs's installer), the
-  memory table's backup-register row stays on one line with the boot word (it broke the table). Upgrade notes: none
-  needed, take the two paragraphs if you like.
+  memory table's backup-register row stays on one line with the boot word (it broke the table); the client's
+  `tests/board_pins.rs` says to run `just board` when the rendered pin table is missing. Upgrade notes: none needed,
+  take them if you like.
 
 - Clock sync (TPL-40): `--clock-sync auto|on|off` (default `auto`: with `--wire-weaver` on embassy STM32), as
   nucleo_g0b1re_template's FW-11 / API-4 / HOST-6 / PY-3 (v0.1.7, a182dbc).
