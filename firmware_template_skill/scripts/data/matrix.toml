@@ -220,9 +220,9 @@ note = "USB v?, no CRS"
 [[entry]]
 name = "f103m"
 args = ["--chip", "STM32F103CB", "--wire-weaver", "--led", "PC13", "--embassy", "main"]
-builds = ["dev", "release"]
+builds = ["release"]
 tags = ["ww"]
-note = "USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8"
+note = "USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8; release only since the device suite (TPL-34)"
 
 [[entry]]
 name = "g0rtt"

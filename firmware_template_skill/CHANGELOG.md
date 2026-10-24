@@ -10,6 +10,9 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `--host`: the Python crate's lib has `test = false` (it is tested from Python with `just test-py`; `cargo test --workspace` no longer runs a Rust test binary that needs libpython at run time), and the CLI's `use` of the client wraps at rustfmt's 98 columns, not 100 (failed `rustfmt --check` for longer project names). Upgrade notes: add `test = false` under `[lib]` in `<name>_py/Cargo.toml`.
+- Tested matrix: `f103m` builds release only (TPL-34).
+
 - The template suite, host crates (TPL-37): `--host` generates `<name>_client`, `<name>_cli` and `<name>_py` next to
   the API crate, as nucleo_g0b1re_template (cc1c30b) has them.
   - `<name>_client`: the typed `<Board>` over the generated client with one `Error`, methods for the device items
