@@ -179,6 +179,43 @@ start says so, the lines after it are complete.
 {{ s.board_rom_boot }}
 {% endif %}
 {% endif %}
+{% if s.pins %}
+{% set P = s.pins %}
+{% set wsel = ("--rtt " ~ s.chip) if ww.rtt else ("--api " ~ s.api) %}
+
+## Pins
+
+The firmware serves `pins` ([`ww_pin_diag::PinDiag`](https://github.com/vhrdtech/wire_weaver/blob/master/docs/std_library/ww_pin_diag.md)):
+{% if P.table %}
+{% set which = "every pin [the pin table](" ~ P.table ~ ") marks free, named as there" %}
+{% elif P.board %}
+{% set which = "every pin the board map marks free, named as there" %}
+{% else %}
+{% set which = "the pins it was generated with (`--pins`)" %}
+{% endif %}
+{% set check = " (`just test` checks the list against the pin table)" if P.table and s.has_client else "" %}
+{{ ("raw access to " ~ which ~ (", plus " ~ P.ro_readme ~ " to read" if P.read_only else "") ~ ". " ~ P.readme_left_out ~ " are not in it. A pin stays in analog mode, as after reset, until a host sets or reads it, and goes back there when the host releases the pins, disconnects or goes silent; one program at a time has them (`#[claim(exclusive)]`). `firmware/src/pins.rs` has the list: take a pin out of it before using it for something else" ~ check ~ ".") | wordwrap(115, break_long_words=False, break_on_hyphens=False) }}
+
+```sh
+{% if s.boardmap %}
+just pins                # every pin live on the board's headers: 1/0 drive, u/d/n pull, x release all, q quit
+{% else %}
+just pins                # every pin live, a panel per port: 1/0 drive, u/d/n pull, x release all, q quit
+{% endif %}
+ww {{ wsel }} pins list
+{% if P.test %}
+ww {{ wsel }} pins test --plan docs/board/{{ P.test }}   # shorts and pulls, pass/fail
+{% else %}
+ww {{ wsel }} pins test   # shorts and pulls of every pin
+{% endif %}
+```
+
+{% if P.board and s.board_pins %}
+{{ s.board_pins }}
+{% else %}
+{{ ("`just pins` is `ww pins tui`: each pin with its level (`●` high, `○` low) and what was set on it. `ww pins test` drives and pulls each pin and reads it back: a pin shorted to GND, to the supply or to another pin, or one with an external pull, shows up. `ww " ~ wsel ~ " pins test --save docs/pins-test.toml` on a good board records what it shows, after which `--plan docs/pins-test.toml` is the pass/fail test of a board.") | wordwrap(118, break_long_words=False, break_on_hyphens=False) }}
+{% endif %}
+{% endif %}
 {% if s.leds and s.has_cli %}
 {% set L = s.led %}
 

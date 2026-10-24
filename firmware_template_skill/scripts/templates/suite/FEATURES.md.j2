@@ -46,6 +46,10 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% set n.i = n.i + 1 %}
 {{ row("FW-" ~ n.i, s.led.Name ~ " breathes by default: " ~ s.led.pwm.signal ~ " PWM on " ~ s.led.pin ~ " at 1 kHz through embedded_bedrock's `bedrock_led`; `led_on` / `led_off` hold it solid" ~ ("; `leds` (mode, brightness, identify)" if s.leds else "") ~ "; embassy's time driver named explicitly (" ~ s.led.pwm.driver | upper ~ ") so " ~ s.led.pwm.timer ~ " stays free", "🧪", "`firmware/src/led.rs`" ~ (", `src/ww/leds.rs`" if s.leds else "")) -}}
 {% endif %}
+{% if s.pins %}
+{% set n.i = n.i + 1 %}
+{{ row("FW-" ~ n.i, "`pins`: `ww_pin_diag::PinDiag` on " ~ (("the " ~ s.pins.free ~ " pins the board map marks free, named as there") if s.pins.board else (s.pins.free ~ " pins (`--pins`)")) ~ ((", plus " ~ s.pins.ro_readme ~ " read only") if s.pins.read_only else "") ~ "; analog until a host sets or reads a pin, back to analog on `release_all`, on a disconnect and when the host goes silent; `#[claim(exclusive)]`", "🧪", "`firmware/src/pins.rs`" ~ ("; the list is checked against the pin table by `" ~ s.client ~ "/tests/board_pins.rs`" if s.pins.table else "")) -}}
+{% endif %}
 
 ## API: `{{ s.api }}`
 
@@ -102,6 +106,10 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% if s.boardmap %}
 {% set n.i = n.i + 1 %}
 {{ row("TPL-" ~ n.i, "Board map in `docs/board/`: top and bottom views, power tree, pin and solder bridge tables, `just board`", "🧪", "boardmap (bedrock_board)") -}}
+{% endif %}
+{% if s.pins %}
+{% set n.i = n.i + 1 %}
+{{ row("TPL-" ~ n.i, "`just pins`: `ww pins tui`" ~ (" over RTT" if ww.rtt else "") ~ ((" with the board map (`docs/board/" ~ s.boardmap.toml ~ "`) as its preset, every free pin live on its header") if s.boardmap else ", every pin live") ~ ("; `docs/board/" ~ s.pins.test ~ "`, the pass/fail pin test of a bare board" if s.pins.test else "") ~ "; README \"Pins\"" ~ (" with a jumper test" if s.board_pins else ""), "🧪", "needs a `ww` with `pins tui` (wire_weaver TOOL-21)") -}}
 {% endif %}
 {% set n.i = n.i + 1 %}
 {{ row("TPL-" ~ n.i, "Logo in `docs/logo/`: WireWeaver's twisted pair into a chip, board name, chip label and subtitle as parameters of a Typst template, light and dark SVG and a social preview PNG, `just logo`", "🧪", "") -}}

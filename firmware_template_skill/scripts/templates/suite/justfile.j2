@@ -72,6 +72,12 @@ run *args:
 # Build, flash and run the dev firmware showing the defmt log plus live counters as they change (cnt run; cargo install cnt_cli)
 cnt *args:
     cd firmware && cargo build && cnt run --probe {{ L }}probe{{ R }} {{ L }}args{{ R }}
+{% if s.pins %}
+
+# Drive, pull and read every {{ "free " if s.pins.board else "" }}pin live, laid out {{ "on the headers" if s.boardmap else "per port" }} (ww pins tui{{ " over RTT" if ww.rtt else "" }}); quitting releases them
+pins *args:
+    ww {{ ("--rtt " ~ L ~ "chip" ~ R ~ " --probe " ~ L ~ "probe" ~ R) if ww.rtt else ("--api " ~ s.api) }} pins tui {{ ("--board docs/board/" ~ s.boardmap.toml ~ " ") if s.boardmap else "" }}{{ L }}args{{ R }}
+{% endif %}
 
 # Build the release firmware
 build-fw:

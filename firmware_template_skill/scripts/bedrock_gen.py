@@ -1209,9 +1209,9 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         die("--pins needs --log defmt (pins.rs and its refusals log with defmt)")
     b = o.board or {}
     # pins the firmware itself uses: never a point
-    used = {o.led: "the LED (--led)"}
+    used = {o.led: "the LED"}
     if usb:
-        used.update({usb["dp"]: f"USB DP ({usb['periph']})", usb["dm"]: f"USB DM ({usb['periph']})"})
+        used.update({usb["dp"]: "USB DP", usb["dm"]: "USB DM"})
     bp = b.get("pins", {})
     ro_info: dict[str, dict] = {}
     if spec == "board":
@@ -1254,8 +1254,8 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         bad = [n for n, _ in points if known and n not in known]
         if bad:
             die(f"--pins: {t.display} has no {', '.join(bad)}")
-        left_out = human_list([f"the SWD pins ({', '.join(SWD_PINS)})"] + [
-            f"{what} ({pin})" for pin, what in used.items()])
+        taken = [f"the SWD pins ({', '.join(SWD_PINS)})"] + [f"{what} ({pin})" for pin, what in used.items()]
+        left_out = human_list(taken)
     points.sort(key=lambda p: pin_key(p[0]))
     if not points:
         die("--pins: no pins left to serve")
@@ -1294,7 +1294,7 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         "left_out": left_out,
         # the README's: the read-only pins, what is left out (the preset's short form)
         "ro_readme": human_list([ro_info[n].get("readme", n) if n in ro_info else n for n in ro], "and") if ro else "",
-        "readme_left_out": bp.get("readme_left_out", "") if spec == "board" else left_out[:1].upper() + left_out[1:],
+        "readme_left_out": bp.get("readme_left_out", "") if spec == "board" else "T" + human_list(taken, "and")[1:],
         "test": bp.get("test", "") if spec == "board" else "",  # the pin test of a bare board, in the preset dir
         "table": table,
         "board": spec == "board",
@@ -1343,6 +1343,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "board_intro": board_text("readme-intro.md"),    # README: how the firmware reaches the PC on this board
         "board_readme": board_text("readme.md"),         # README: the board section
         "board_rom_boot": board_text("readme-rom-boot.md"),  # README: the ROM bootloader on this board
+        "board_pins": board_text("readme-pins.md"),      # README: the pins on this board's headers (--pins board)
         "client_type": b.get("board", {}).get("client", "Board"),  # the client library's typed board type
         "settings_size": f"{settings.length // 1024} KiB" if settings else "",
         "uid_bits": {"stm32": 96, "rp": 64, "nrf": 64, "esp": 48}[t.family],
@@ -1473,6 +1474,11 @@ def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
     if bm:  # boardmap's description and geometry; `just board` renders the pictures
         for key in ("toml", "geometry"):
             files[f"docs/board/{bm[key]}"] = (o.board["dir"] / bm[key]).read_text()
+    pins = s["pins"]
+    if pins.get("test"):  # the pin test of a bare board (`ww pins test --plan`)
+        files[f"docs/board/{pins['test']}"] = (o.board["dir"] / pins["test"]).read_text()
+    if pins.get("table"):  # pins.rs's list against boardmap's pin table
+        files[f"{s['client']}/tests/board_pins.rs"] = render("suite/client/tests/board_pins.rs.j2", **ctx)
     return files
 
 

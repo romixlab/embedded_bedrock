@@ -12,7 +12,8 @@ All notable changes to this project are documented here. The format follows
 {% set parts = [o.framework, o.log if o.log != "none" else None, "WireWeaver over " ~ ("USB" if ww.usb else "RTT"),
                 "settings store with the board's label" if o.settings_flash else None,
                 ("`cnt` counters" ~ (" with backup registers" if o.bkp else "")) if o.counters else None,
-                "crash capture" if o.crash else None] | select | list %}
+                "crash capture" if o.crash else None,
+                "`pins` (`ww_pin_diag::PinDiag`, `just pins`)" if s.pins else None] | select | list %}
 {% set host = ["the `" ~ s.api ~ "` API crate"] %}
 {% if s.has_client %}{% set _ = host.append("the `" ~ s.client ~ "` library") %}{% endif %}
 {% if s.has_cli %}{% set _ = host.append("the `" ~ s.cli ~ "` command line with live shell completion") %}{% endif %}
