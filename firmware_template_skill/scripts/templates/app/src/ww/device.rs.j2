@@ -33,6 +33,9 @@ use ww_log::{DefmtInfo, LogError};
 {% if d.label %}
 use ww_settings::shrink_wrap::ArrayString;
 {% endif %}
+{% if s.pins %}
+use ww_pin_diag::Point;
+{% endif %}
 use ww_uid::UniqueId;
 {% if d.label %}
 use ww_user_info::{MAX_NAME_LEN, UserInfoCaps, UserInfoError};
@@ -347,6 +350,14 @@ impl super::server_impl::{{ ww.trait }}Consts for ServerState {
         }
     }
 {% endif %}
+{% if s.pins %}
+
+    // `pins` (beside the device contract, ww.rs): the free pins, from the table in src/pins.rs
+    fn pins_points(&self) -> RefVec<'_, Point<'_>> {
+        RefVec::Slice {
+            slice: crate::pins::POINTS,
+        }
+    }
 {% if s.leds %}
 
     // ww_indication::Indication at leds: its one LED (src/ww/leds.rs)

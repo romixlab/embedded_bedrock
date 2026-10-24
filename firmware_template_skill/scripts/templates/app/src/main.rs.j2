@@ -23,6 +23,9 @@ mod led;
 {% if s.dev.log %}
 mod log;
 {% endif %}
+{% if s.pins %}
+mod pins;
+{% endif %}
 {% if o.settings_flash %}
 mod settings;
 {% endif %}

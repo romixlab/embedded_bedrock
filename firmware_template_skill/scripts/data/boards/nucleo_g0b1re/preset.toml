@@ -13,6 +13,7 @@ wire_weaver = true
 ww_transport = "rtt"  # through the ST-LINK: nothing but the board and its USB cable
 host = true
 cli_name = "g0b1re"
+pins = "board"        # PinDiag on every free pin of the board map, [pins] below
 
 [board]
 title = "Nucleo-G0B1RE"            # prose and the README title
@@ -60,6 +61,17 @@ geometry = "nucleo_g0b1re.geometry.json"
 # src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
 [led]
 essential = "LD3, the power LED, is wired to the supply"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the ones only read (a shared pin a part
+# of the board drives or pulls: what it is, and what drives it for the READ_ONLY doc), the pins left out (the doc of
+# src/pins.rs; it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "the SWD pins (PA13, PA14), the ST-LINK's virtual COM port (PA2, PA3), the LED (PA5), the clock pins (PF0, PC14, PC15) or reset (PF2)"
+readme_left_out = "The SWD pins, the virtual COM port, the LED, the clock pins and reset"
+test = "nucleo_g0b1re-pins-test.toml"
+
+[pins.read_only]
+PC13 = { what = "the USER button B1", parts = "B1 and its pull-up on PC13", readme = "PC13 (B1)" }
 
 # main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO; timer_mhz: the timers' clock (the
 # LED's PWM resolution in src/led.rs)

@@ -1,7 +1,11 @@
 {# Common tail of the embassy main() bodies; `led` is an Output created by the caller (none when it breathes,
    s.led.pwm: src/led.rs owns it), `p` the peripherals. #}
 {% if o.ww %}
-  {% set args = feats(not s.led.pwm and "led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid") %}
+  {% set args = feats(not s.led.pwm and "led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid", s.pins and "pins") %}
+  {% if s.pins %}
+    // every free pin, for `pins` (src/pins.rs): take a pin out of its list there to use it here
+    let pins = pins::Pins::new(pins::take!(p));
+  {% endif %}
 
     let state = ww::ServerState::new({{ args | join(", ") }}){{ ".await" if s.dev.log else "" }};
   {% if ww.usb %}
