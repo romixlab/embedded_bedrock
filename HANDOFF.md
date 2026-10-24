@@ -40,6 +40,7 @@ Plan: ~/git/tpm/maintain/P2528-embedded-bedrock/design/g0-gen-suite.md (read it 
 - gen-device-suite (P4) and gen-host-crates (P3) both said ready; their work is now in this branch, so they land with it (tell the user / parent: land g0-gen-suite, not them separately, or close them with tpm work done).
 - G0 regenerated from here (`--answers /tmp/g0ref-gen/bedrock_fw.json --board nucleo_g0b1re`): differences are G0's version history (API 0.2 doc text, `#[since]`, 0_1_0.ron is the old API), revisions Z/Y the generator knows, wording/reflow, board SVGs (boardmap not on PATH here).
 - P7 gen-pin-diag (TPL-46) on gpd-omarchy, told to rebase onto P3 ef42d8d; take it onto this branch when ready.
+- P1 gen-matrix (TPL-44, gpd-omarchy, s/24oct2026-gen-matrix): matrix.toml + `bedrock_gen.py matrix` done, full run not yet; told to rebase onto eda47a0, carry the new frameworks.md entries into matrix.toml, run --host entries' test/clippy, run the full matrix, then ready. Take it onto this branch when ready.
 - G5 landed in template main 467f889; G4 g0-led-sync ready (API 0.4.0), not landed: P5/P6 after. P8 reference is the template's latest main.
 
 ## Decisions / gotchas
