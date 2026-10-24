@@ -1,0 +1,23 @@
+[package]
+name = "nucleo_g0b1re_cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "g0b1re: command line for the Nucleo G0B1RE firmware, a thin layer over nucleo_g0b1re_client"
+
+[[bin]]
+name = "g0b1re"
+path = "src/main.rs"
+
+[dependencies]
+nucleo_g0b1re_client.workspace = true
+anstream.workspace = true
+anstyle.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+indicatif.workspace = true
+tokio.workspace = true
+# `--probe` completion lists the debug probes attached right now; the same probe-rs the client connects through
+probe-rs = { version = "0.32", default-features = false }

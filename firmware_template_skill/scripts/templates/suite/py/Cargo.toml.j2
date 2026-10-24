@@ -1,0 +1,18 @@
+[package]
+name = "nucleo_g0b1re_py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Python module for the Nucleo G0B1RE firmware, wrapping nucleo_g0b1re_client"
+publish = false # distributed as a Python wheel, see pyproject.toml
+
+[lib]
+name = "nucleo_g0b1re" # the Python module name
+crate-type = ["cdylib"]
+doc = false
+
+[dependencies]
+nucleo_g0b1re_client.workspace = true
+pyo3.workspace = true
+tokio.workspace = true

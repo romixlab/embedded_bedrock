@@ -1,0 +1,27 @@
+[package]
+name = "nucleo_g0b1re_client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Host library for the Nucleo G0B1RE firmware: typed access to its WireWeaver API over RTT"
+
+[dependencies]
+nucleo_g0b1re_api.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+wire_weaver.workspace = true
+wire_weaver_client.workspace = true
+ww_firmware_info.workspace = true
+ww_user_info.workspace = true
+# the device contract: types of the typed methods, and the decoding of counters and the log with the firmware's ELF
+ww_board_info.workspace = true
+ww_counters.workspace = true
+ww_dfu.workspace = true
+ww_uid.workspace = true
+ww_log.workspace = true
+ww_si.workspace = true # used by the generated client (ww_codegen!), not by name
+ww_report.workspace = true
+cnt_core.workspace = true
+defmt-decoder.workspace = true
