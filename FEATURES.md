@@ -194,7 +194,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   CLI's `leds show|mode|brightness|identify`, Python's `leds_mode`, `brightness`, `identify()` and a README "LED"
   section. A pin without a channel, `--framework` other than embassy and RP / nRF / ESP (PWM not wired yet) keep the
   plain GPIO output (`new` says so); `--led-mode breath` refuses there. The G0 answers with `--board nucleo_g0b1re`
-  regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (f3bb2a2) but for the clock (TPL-40) and pins. Builds
+  regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (v0.1.7, a182dbc) but for the clock (TPL-40) and pins. Builds
   for the tested matrix (`g0brd` PA5 TIM2_CH1, `g0ledn` PF1 TIM15_CH1N, `h7ledpb0` PB0 TIM3_CH3, `h7ledpe1` and
   `g0ledgpio` without a channel, `g0ledoff`, and every embassy STM32 entry on PB14); ran on a board only as G0's own
   firmware.
