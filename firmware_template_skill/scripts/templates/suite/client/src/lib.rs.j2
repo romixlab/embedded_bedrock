@@ -24,12 +24,18 @@
 //! ```
 //!
 {% filter rewrap("//! ") %}
-//! Adding to the API: declare the item in `{{ A }}/src/lib.rs`, implement it in `firmware/src/ww.rs`, then add a method to [{{ T }}] that calls the generated client ([{{ T }}::raw]: `raw.led_on().call()`, `raw.device().{{ "label().read_name()" if d.label else "firmware().read_FIRMWARE()" }}`, ...) through [call], [call_fallible], [read] or [write], so the CLI and Python get it with the same errors. The device contract (`device`) is in `device.rs`.
+//! Adding to the API: declare the item in `{{ A }}/src/lib.rs`, implement it in `firmware/src/ww.rs`, then add a method to [{{ T }}] that calls the generated client ([{{ T }}::raw]: `raw.led_on().call()`, `raw.device().{{ "label().read_name()" if d.label else "firmware().read_FIRMWARE()" }}`, ...) through [call], [call_fallible], [read] or [write], so the CLI and Python get it with the same errors. The device contract (`device`) is in `device.rs`{{ ', `leds` in `leds.rs`' if s.leds else '' }}.
 {% endfilter %}
 
 mod device;
+{% if s.leds %}
+mod leds;
+{% endif %}
 
 pub use device::*;
+{% if s.leds %}
+pub use leds::*;
+{% endif %}
 
 {% if ww.rtt %}
 use std::path::PathBuf;
@@ -470,17 +476,25 @@ impl {{ T }} {
     }
 
 {% set led = feats(s.led_name, o.led) | join(", ") %}
+{% if s.leds %}
+    /// The user LED{{ (" (" ~ led ~ ")") if led else "" }} solid on, until another mode (it breathes after boot).
+{% else %}
     /// Switches the user LED{{ (" (" ~ led ~ ")") if led else "" }} on.
+{% endif %}
     pub async fn led_on(&self) -> Result<()> {
         call("{{ TR }}::led_on", self.raw.led_on()).await
     }
 
+{% if s.leds %}
+    /// The user LED off, until another mode.
+{% else %}
     /// Switches the user LED off.
+{% endif %}
     pub async fn led_off(&self) -> Result<()> {
         call("{{ TR }}::led_off", self.raw.led_off()).await
     }
 
-    /// Blinks the LED `count` times, `period` per on-off cycle; the LED is off afterwards.
+    /// Blinks the LED `count` times, `period` per on-off cycle{{ ", from the host" if s.leds else "" }}; the LED is off afterwards.
     pub async fn blink(&self, count: u32, period: Duration) -> Result<()> {
         for _ in 0..count {
             self.led_on().await?;
