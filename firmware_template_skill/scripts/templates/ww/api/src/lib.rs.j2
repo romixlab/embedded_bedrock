@@ -1,3 +1,5 @@
+{% set d = s.dev %}
+{% set v = s.variant %}
 //! WireWeaver API of the {{ o.name }} firmware (`../{{ ww.api }}`), served by `../firmware/src/ww.rs`.
 //!
 //! The crate name and version identify the API on the wire (`{{ ww.gid }}`), so bump the version with every
@@ -16,14 +18,116 @@ pub trait {{ ww.trait }} {
     /// Turn the LED off
     fn led_off();
 
-    /// Which firmware runs and its build id (the device contract)
+    /// Device contract: {{ ["firmware", d.last_reset and "last reset", "board", "ids", d.label and "label", d.counters and "counters", d.log and "log", d.variant and "variant", d.settings and "settings", d.boot and "boot", d.dfu and "update node"] | select | join(", ") }}
+    ww_impl!(device: Device);
+}
+
+/// The device contract: what every WireWeaver device answers, so generic host tools (`ww info`, `ww log`) work.
+#[ww_trait]
+pub trait Device {
+    /// Which firmware runs and its build id
     ww_impl!(firmware: ww_firmware_info::FirmwareInfo);
-{% if o.crash %}
-    /// Why the device last reset, with the crash record after a fault or panic
+{% if d.last_reset %}
+    /// Why the device last reset, with the crash record after a fault or panic, and the boot count
     ww_impl!(last_reset: ww_firmware_info::LastReset);
 {% endif %}
-{% if o.settings_flash %}
+    /// Board name, revision and serial number
+    ww_impl!(board: ww_board_info::BoardInfo);
+    /// {{ s.uid.doc[:1] | upper }}{{ s.uid.doc[1:] }}
+    ww_impl!(uid: ww_uid::Uid);
+{% if d.label %}
     /// Name the user gives this unit, kept in flash
     ww_impl!(label: ww_user_info::UserInfo);
 {% endif %}
+{% if d.counters %}
+    /// `cnt` counters: {{ "RAM and backup registers" if bkp_words else "RAM" }}
+    ww_impl!(counters: ww_counters::Counters);
+{% endif %}
+{% if d.log %}
+    /// The defmt log, also kept while no host is connected
+    ww_impl!(log: ww_log::LogDefmt);
+{% endif %}
+{% if d.variant %}
+    /// The chip on this board, read from the chip itself: device id, silicon revision, flash size
+    property!(ro variant: Variant);
+{% endif %}
+{% if d.settings %}
+    /// Settings kept in flash
+    ww_impl!(settings: Settings);
+{% endif %}
+{% if d.boot %}
+    /// Boot state, confirm, revert, reboot: `reboot(Updater)` goes to the STM32 ROM bootloader. The state is always
+    /// `Confirmed`, there is no image to revert to.
+    ww_impl!(boot: ww_dfu::BootControl);
+{% endif %}
+{% if d.dfu %}
+    /// The update node: the firmware in place, written by the ROM bootloader (`Profile::InPlace`, `device.boot` only)
+    ww_impl!(dfu: Dfu);
+{% endif %}
 }
+{% if d.dfu %}
+
+/// Firmware update over the API (`ww_dfu`): here only who the node is. Updates go through the STM32 ROM bootloader
+/// (`device.boot.reboot(Updater)`, then `ww dfu stm32 flash` over USB on PA11/PA12), or through the debug probe.
+#[ww_trait]
+pub trait Dfu {
+    /// Who this node is: product, profile, boot state, last result
+    ww_impl!(node: ww_dfu::UpdateNode);
+}
+{% endif %}
+{% if d.settings %}
+
+/// Settings kept in flash across power cycles. A write is in flash before the call answers. The label is
+/// `device.label`, kept the same way.
+#[ww_trait]
+pub trait Settings {
+    /// The LED after boot: on (`true`) or off, default off
+    #[errors(Fault)]
+    property!(rw led_at_boot: bool, CommonError<'i>);
+    /// Every setting back to its default, the label too
+    #[errors(Fault)]
+    fn reset() -> Result<(), CommonError<'i>>;
+}
+{% endif %}
+{% if d.variant %}
+
+{{ ("The chip a board carries, see [`Device::variant`]: " ~ v.doc) | doc }}
+#[derive_shrink_wrap(
+    borrowed,
+    owned(feature = "std"),
+    derive(Copy, Clone, Debug, PartialEq, Eq)
+)]
+pub struct Variant {
+    /// DBGMCU_IDCODE.DEV_ID: {{ "0x%x" % v.dev_id }} for {{ v.device }}
+    pub dev_id: u16,
+    /// DBGMCU_IDCODE.REV_ID, the raw silicon revision code
+    pub rev_id: u16,
+    /// The silicon revision `rev_id` stands for ({{ v.errata }})
+    pub revision: SiliconRevision,
+    /// Flash size in KiB (FLASH_SIZE register): {{ v.flash_kib }} on the {{ v.part }}
+    pub flash_kib: u16,
+}
+
+{{ ("Silicon revision of an " ~ v.device ~ " as " ~ v.errata ~ " lists them, see [`Variant::rev_id`]. A host reads one it doesn't know as [`Other`](SiliconRevision::Other).") | doc }}
+#[derive_shrink_wrap(borrowed, owned(feature = "std"), derive(Copy, Clone, Debug, PartialEq, Eq), ww_repr = nib, future_version = Other)]
+pub enum SiliconRevision {
+{% for name, rev_id, marking in v.revisions %}
+    /// Revision {{ name }}, REV_ID {{ "0x%04X" % rev_id }}{{ ", marked " ~ marking if marking != name else "" }}
+    {{ name }},
+{% endfor %}
+    /// A REV_ID this firmware doesn't know (a revision newer than it)
+    Unknown,
+}
+
+impl SiliconRevision {
+    /// The revision of a DBGMCU_IDCODE.REV_ID value.
+    pub const fn from_rev_id(rev_id: u16) -> Self {
+        match rev_id {
+{% for name, rev_id, marking in v.revisions %}
+            {{ "0x%04X" % rev_id }} => SiliconRevision::{{ name }},
+{% endfor %}
+            _ => SiliconRevision::Unknown,
+        }
+    }
+}
+{% endif %}

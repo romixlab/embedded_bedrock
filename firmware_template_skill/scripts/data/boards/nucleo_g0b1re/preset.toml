@@ -34,6 +34,11 @@ reset = "B2"                       # the RESET button
 first_item = """The user button B1 (PC13) as
    a readable property is a good first one."""
 
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every Nucleo-G0B1RE has an STM32G0B1RET6, what can differ is
+its silicon revision (and a G0C1 fitted by hand)."""
+
 [logo]
 board = "Nucleo-G0B1RE"
 chip = "G0B1"

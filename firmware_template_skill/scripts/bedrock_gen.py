@@ -37,6 +37,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 import tomllib
 import urllib.error
 import urllib.request
@@ -699,6 +700,16 @@ def toml_list(items: list[str]) -> str:
     return "[" + ", ".join(f'"{i}"' for i in items) + "]"
 
 
+def doc_comment(text: str, indent: str = "", width: int = 116) -> str:
+    """`text` as `///` lines of at most `width` columns, a little short of 120 as the hand-wrapped comments of the
+    reference firmware (rustfmt leaves comments as they are), no newline at the end;
+    text with line breaks of its own (a preset's) keeps them."""
+    if "\n" in text.strip():
+        return "\n".join(f"{indent}/// {line.strip()}" for line in text.strip().splitlines())
+    return "\n".join(textwrap.wrap(" ".join(text.split()), width, initial_indent=indent + "/// ",
+                                    subsequent_indent=indent + "/// ", break_long_words=False, break_on_hyphens=False))
+
+
 def feats(*xs) -> list[str]:
     """Feature list without the falsy entries, for the `cond and "feature"` idiom in templates."""
     return [x for x in xs if x]
@@ -728,6 +739,7 @@ JINJA = jinja2.Environment(
 )
 JINJA.filters.update(
     toml_list=toml_list,
+    doc=doc_comment,
     hex=lambda n: f"0x{n:X}",
     hex8=lambda n: f"0x{n:08X}",
     fmt_len=fmt_len,
@@ -1026,7 +1038,9 @@ def variant_context(t: Target) -> Optional[dict]:
     v = STM32.get("variant", {}).get(f"{dev_id:x}" if dev_id else "")
     if not v:
         return None
-    return {**v, "dev_id": dev_id, "revisions": [tuple(r) for r in v["revisions"]]}
+    flash_kib = sum(m.size for m in t.memories if m.kind == "flash") // 1024
+    return {**v, "dev_id": dev_id, "revisions": [tuple(r) for r in v["revisions"]], "flash_kib": flash_kib,
+            "part": t.display[5:]}
 
 
 def probe_rs_chip(t: Target) -> str:
@@ -1103,6 +1117,9 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
     s["has_device"] = o.ww                  # `device` in the API
     s["led_at_boot"] = s["dev"]["settings"]  # device.settings.led_at_boot (every --wire-weaver firmware has the LED)
     s["variant"] = variant                  # device.variant: dev_id, device, revisions [(name, rev_id, marking)]
+    if variant:  # the Variant type's doc: what the preset knows of the board's chip, else the part this firmware is for
+        variant["doc"] = b.get("variant", {}).get("doc") or (
+            f"this firmware is built for an {t.display}, what can differ is its silicon revision.")
     s["uid"] = uid_context(t, o) if o.ww else {}
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
