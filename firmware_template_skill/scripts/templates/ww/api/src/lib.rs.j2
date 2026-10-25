@@ -138,15 +138,15 @@ pub struct Variant {
     pub flash_kib: u16,
 }
 
-{{ ("Silicon revision of an " ~ v.device ~ " as " ~ v.errata ~ " lists them, see [`Variant::rev_id`]. A host reads one it doesn't know as [`Other`](SiliconRevision::Other).") | doc }}
-#[derive_shrink_wrap(borrowed, owned(feature = "std"), derive(Copy, Clone, Debug, PartialEq, Eq), ww_repr = nib, future_version = Other)]
+{{ ("Silicon revision of an " ~ v.device ~ " as " ~ v.errata ~ " lists them, see [`Variant::rev_id`] for the raw code. The revisions keep the sheet's order and a new one is only ever added at the end, so a firmware that knows it is a compatible API change: an older host reads it as [`Newer`](SiliconRevision::Newer), with the code in `rev_id`.") | doc }}
+#[derive_shrink_wrap(borrowed, owned(feature = "std"), derive(Copy, Clone, Debug, PartialEq, Eq), ww_repr = unib32, future_version = Newer)]
 pub enum SiliconRevision {
+    /// A REV_ID this firmware doesn't know (a revision newer than it), the code is in `rev_id`
+    Unknown,
 {% for name, rev_id, marking in v.revisions %}
     /// Revision {{ name }}, REV_ID {{ "0x%04X" % rev_id }}{{ ", marked " ~ marking if marking != name else "" }}
     {{ name }},
 {% endfor %}
-    /// A REV_ID this firmware doesn't know (a revision newer than it)
-    Unknown,
 }
 
 impl SiliconRevision {

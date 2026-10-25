@@ -10,6 +10,19 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Silicon revisions that can grow (TPL-52): the API's `SiliconRevision` has `Unknown` first, then the errata sheet's
+  revisions in its order, `ww_repr = unib32` (was `nib`) and the catch-all `Newer(u32)` (was `Other`), so a revision
+  added to `stm32.toml` later is appended and an additive API change instead of renumbering `Unknown`.
+  `stm32.toml` quotes each sheet's Applicability page, Table 2 "Device variants" (ES0548 Rev 4, ES0491 Rev 9, ES0392
+  Rev 15, re-checked against the documents); ES0392's revision Y is marked "Y, W" as the sheet writes it. The matrix
+  gains an `api-evolve` build (on `g0usb` and `h743`): one more revision at the end passes `ww api check`, one in
+  front fails as breaking.
+
+  Upgrade notes: a breaking change to the API for any firmware with `device.variant` (the discriminants move):
+  regenerate into a scratch directory and take the `SiliconRevision` block of the API's `lib.rs`, bump the API's
+  breaking version and `just api-save`. Host code that matched `Other` matches `Newer`, or `_`. Firmware code
+  (`SiliconRevision::from_rev_id`) is unchanged. Take it together with the next breaking API change if there is one.
+
 - `firmware/README.md`: the setup paragraph wraps at 116 columns (one line was 178 with probe-rs's installer), the
   memory table's backup-register row stays on one line with the boot word (it broke the table); the client's
   `tests/board_pins.rs` says to run `just board` when the rendered pin table is missing. Upgrade notes: none needed,

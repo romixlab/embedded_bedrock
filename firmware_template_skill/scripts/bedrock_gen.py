@@ -2073,12 +2073,7 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
     results: dict[str, StepResult] = {}
     outdir = scratch / entry.name
     env = {**os.environ, "CARGO_BUILD_BUILD_DIR": str(build_dir / "{workspace-path-hash}")}
-    argv = [sys.executable, str(HERE / "bedrock_gen.py"), "new", entry.name, "--out", str(outdir), *entry.args]
-    if "git" not in entry.tags:
-        if bedrock:
-            argv += ["--bedrock", bedrock]
-        if ww_src:
-            argv += ["--ww-src", ww_src]
+    argv = [sys.executable, str(HERE / "bedrock_gen.py"), *matrix_new_argv(entry, outdir, bedrock, ww_src)]
     t0 = time.monotonic()
     proc = subprocess.run(argv, capture_output=True, text=True, env=env)
     results["generate"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
@@ -2123,7 +2118,7 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
             extra = ["--features", "defmt"] if b == "bootloader" else []
             ok, _, log = cargo_build(boot_root, extra, env)
             results[b] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
-        else:
+        elif b != "api-evolve":  # api-evolve: after the pool, in cmd_matrix (matrix_api_evolve)
             die(f"matrix entry {entry.name}: unknown build type {b!r}")
 
     if "host" in entry.tags:
@@ -2144,8 +2139,68 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
     return results
 
 
+def matrix_new_argv(entry: MatrixEntry, outdir: Path, bedrock: Optional[str], ww_src: Optional[str]) -> list[str]:
+    """`new`'s argv for a matrix entry, without the program."""
+    argv = ["new", entry.name, "--out", str(outdir), *entry.args]
+    if "git" not in entry.tags:
+        if bedrock:
+            argv += ["--bedrock", bedrock]
+        if ww_src:
+            argv += ["--ww-src", ww_src]
+    return argv
+
+
+# api-evolve: the revision put into the chip's table, at the end (compatible) and in front (breaking, the control)
+EVOLVE_REVISION = ["Next", 0xFFFF, "Next"]
+
+
+def matrix_api_evolve(entry: MatrixEntry, scratch: Path, bedrock: Optional[str],
+                      ww_src: Optional[str]) -> StepResult:
+    """api-evolve (TPL-52): a silicon revision added to a chip's table in stm32.toml after a firmware's release is a
+    compatible API change. The API `new` generated (and saved a snapshot of with ww) against the API generated again
+    with one more revision at the end, through `ww api check` at the next patch version: it must pass. The same with
+    the revision in front must fail as breaking, so the check can't pass by not looking. Runs in this process (the
+    patched table is ours only), one entry at a time, after the parallel builds."""
+    import contextlib
+    import copy
+    import io
+    t0 = time.monotonic()
+    outdir = scratch / entry.name
+    api = entry.args[entry.args.index("--ww-api") + 1] if "--ww-api" in entry.args else f"{entry.name}_api"
+    snaps = sorted((outdir / api / "api_snapshots").glob("*.ron"))
+    if not shutil.which("ww") or not snaps:
+        return StepResult(False, time.monotonic() - t0, f"no snapshot in {outdir / api}/api_snapshots (needs ww on PATH)")
+    saved = copy.deepcopy(STM32.get("variant", {}))
+    try:
+        for where, compatible in (("end", True), ("front", False)):
+            evolved = scratch / f"{entry.name}.evolve-{where}"
+            for v in STM32.get("variant", {}).values():
+                v["revisions"] = (v["revisions"] + [EVOLVE_REVISION]) if compatible else [EVOLVE_REVISION, *v["revisions"]]
+            log = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
+                    main(matrix_new_argv(entry, evolved, bedrock, ww_src))
+            except SystemExit:
+                return StepResult(False, time.monotonic() - t0, f"generating {evolved}:\n{log.getvalue()[-4000:]}")
+            finally:
+                STM32["variant"] = copy.deepcopy(saved)
+            cargo = evolved / api / "Cargo.toml"
+            cargo.write_text(cargo.read_text().replace('version = "0.1.0"', 'version = "0.1.1"', 1))
+            proc = subprocess.run(["ww", "api", "check", str(evolved / api), "--against", str(snaps[-1])],
+                                  capture_output=True, text=True)
+            out = proc.stdout + proc.stderr
+            if compatible and proc.returncode != 0:
+                return StepResult(False, time.monotonic() - t0, f"a revision added at the end is not compatible:\n{out[-4000:]}")
+            if not compatible and (proc.returncode == 0 or "breaking" not in out):
+                return StepResult(False, time.monotonic() - t0, f"a revision put in front is not breaking:\n{out[-4000:]}")
+            shutil.rmtree(evolved, ignore_errors=True)
+    finally:
+        STM32["variant"] = saved
+    return StepResult(True, time.monotonic() - t0, "")
+
+
 MATRIX_STEPS = ["generate", "rustfmt", "lockfile", "dev", "dev-flip-link", "release", "release-flip-link",
-               "bootloader", "bootloader-nodefmt", "host-test", "host-clippy", "host-fmt", "host-test-py"]
+               "bootloader", "bootloader-nodefmt", "api-evolve", "host-test", "host-clippy", "host-fmt", "host-test-py"]
 
 
 def cmd_matrix(args) -> None:
@@ -2178,6 +2233,10 @@ def cmd_matrix(args) -> None:
             elapsed = sum(s.elapsed for s in r.values())
             status = "ok" if all(s.ok for s in r.values()) else "FAIL"
             print(f"  {e.name:12} {status:4}  {elapsed:6.1f}s  ({'/'.join(k for k, v in r.items() if not v.ok) or 'all steps passed'})")
+    for e in selected:
+        if "api-evolve" in e.builds and results[e.name]["generate"].ok:
+            r = results[e.name]["api-evolve"] = matrix_api_evolve(e, scratch, bedrock, ww_src)
+            print(f"  {e.name:12} {'ok' if r.ok else 'FAIL':4}  {r.elapsed:6.1f}s  (api-evolve)")
 
     used_steps = [s for s in MATRIX_STEPS if any(s in r for r in results.values())]
     print(f"\n{'entry':12} " + " ".join(f"{s:>18}" for s in used_steps))

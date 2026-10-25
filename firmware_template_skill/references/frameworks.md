@@ -130,6 +130,13 @@ capture), `board`, `uid` (STM32 96-bit id, RP2040 the flash chip's id, RP2350 OT
 single-core H7 without `--bootloader`, needs `--log defmt`; `src/boot.rs`, the boot word in the last backup register,
 left out of cnt's BKPSRAM).
 
+`variant.revision` is the API's `SiliconRevision` (TPL-52): `Unknown` (a REV_ID the firmware doesn't know) first, then
+the revisions of the errata sheet's "Device variants" table in the sheet's order, `ww_repr = unib32`, with the
+catch-all `Newer(u32)` for a revision an older host doesn't know; the raw `rev_id` is beside it. A revision a newer
+errata sheet adds goes at the end of the chip's `revisions` in `stm32.toml`, never between, and none is renumbered
+or renamed, so taking it into a firmware is an additive API change (the next compatible version, `#[since]` on the
+variant). The matrix's `api-evolve` build checks it with `ww api check` (needs `ww` from wire_weaver 668483bd or newer, EVO-10).
+
 Every Cortex-M application links with `--build-id=sha1` (build.rs) and keeps `.note.gnu.build-id` in flash after
 `.rodata` (memory.x, symbols `__build_id_start` / `__build_id_end` for `ww_firmware_info::build_id()`); check with
 `readelf -n <elf>`. The bootloader doesn't.

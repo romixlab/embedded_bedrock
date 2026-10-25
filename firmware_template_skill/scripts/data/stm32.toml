@@ -223,7 +223,10 @@ chips = { l412 = ["stm32l412"], l422 = ["stm32l422"], l431 = ["stm32l431"], l432
 # device.variant (--wire-weaver): the chip read from the chip itself (DBGMCU_IDCODE and the flash size word), and the
 # silicon revisions its errata sheet's "Device variants" table lists. Key: DEV_ID (stm32-data's device_id, hex).
 # A line not listed here leaves device.variant out; add it from the reference manual and the errata sheet, quoted
-# from the documents. revisions: [name, REV_ID, marking] in the sheet's order.
+# from the documents. revisions: [name, REV_ID, marking] in the sheet's order, each quoted from the sheet's
+# "Applicability" page, Table 2 "Device variants" (REV_ID[15:0] of DBGMCU_IDCODE). They become the API's
+# SiliconRevision: a revision a newer sheet adds goes at the end of the list, never between, and never renumbers or
+# renames one, so the generated API only grows (a compatible change, `matrix` checks it with an api-evolve build).
 [variant.467]
 device = "STM32G0B1 / G0C1"
 errata = "ES0548"
@@ -237,7 +240,7 @@ clock = "pac::RCC.apbenr1().modify(|w| w.set_dbgen(true));"
 clock_note = "the DBGMCU registers need their APB clock (RCC_APBENR1.DBGEN)"
 # DEV_ID is bits 11:0; the PAC's field also takes the reserved 15:12, which read 0x6 on a G0B1
 dev_id_note = "the PAC's field also takes the reserved 15:12, which read 0x6 on a G0B1"
-# ES0548 Rev 4 (Sep 2026) Table 2
+# ES0548 Rev 4 (Sep 2026), Applicability, Table 2 Device variants: A 0x1000, "Z or 3" 0x1001, "Y or 4" 0x1003
 revisions = [["A", 0x1000, "A"], ["Z", 0x1001, "Z or 3"], ["Y", 0x1003, "Y or 4"]]
 
 [variant.483]
@@ -247,7 +250,7 @@ idcode = "idc"
 idcode_ref = "RM0468 65.5.7"
 flash_ref = "66.2"
 flash_size = 0x1FF1E880
-# ES0491 Rev 9 (Jun 2024) Table 2
+# ES0491 Rev 9 (Jun 2024), Applicability, Table 2 Device variants: A 0x1000, Z 0x1001
 revisions = [["A", 0x1000, "A"], ["Z", 0x1001, "Z"]]
 
 [variant.450]
@@ -257,5 +260,5 @@ idcode = "idc"
 idcode_ref = "RM0433 60.5.8"
 flash_ref = "61.2"
 flash_size = 0x1FF1E880
-# ES0392 Rev 15 (Sep 2025) Table 2
-revisions = [["Y", 0x1003, "Y or W"], ["X", 0x2001, "X"], ["V", 0x2003, "V"]]
+# ES0392 Rev 15 (Sep 2025), Applicability, Table 2 Device variants: "Y, W" 0x1003, X 0x2001, V 0x2003
+revisions = [["Y", 0x1003, "Y, W"], ["X", 0x2001, "X"], ["V", 0x2003, "V"]]

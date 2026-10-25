@@ -183,6 +183,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `firmware/src` byte for byte (that firmware runs on the board). Builds for the tested matrix's `--wire-weaver`
   entries but the 64 KiB F103C8 (TPL-34); parts under 64 KiB RAM get a quarter of the log buffers. The H7, RP and
   nRF code (uid, variant, rom_boot on H7) has not run on a board yet.
+- 🧪 **TPL-52 Silicon revisions that can grow**: the API's `SiliconRevision` (`ww/api/src/lib.rs.j2`) has `Unknown`
+  first and the errata sheet's revisions in its order after it (`stm32.toml` `[variant.<dev_id>]` `revisions`, quoted
+  from the sheet's Table 2 "Device variants"), `ww_repr = unib32`, catch-all `Newer(u32)`, the raw `rev_id` beside it:
+  a revision added later is appended, an additive API change. The matrix's `api-evolve` build (`matrix_api_evolve()`)
+  regenerates the API with one more revision and runs `ww api check`: at the end compatible, in front breaking. Needs a
+  `ww` from wire_weaver 668483bd or newer (EVO-10, the checker knows the catch-all).
 - 🧪 **TPL-39 The LED breathes on its timer channel** (`--led-mode auto|breath|gpio`, default auto): `led_pwm()`
   finds the LED pin's `TIMx_CHy` / `CHyN` and AF in stm32-data (`peripherals[].pins`; a plain channel before a
   complementary one, a general-purpose timer before TIM1 / TIM8) and names embassy's time driver off that timer

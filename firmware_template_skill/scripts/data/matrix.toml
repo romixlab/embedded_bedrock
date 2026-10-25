@@ -6,11 +6,14 @@
 # Per entry:
 #   args    extra argv for `new <name> --out <dir> <args...>` (no --bedrock/--ww-src: the matrix command injects
 #           them from its own --bedrock/--ww-src unless the entry is tagged "git").
-#   builds  subset of dev | release | bootloader | bootloader-nodefmt, run after generation:
+#   builds  subset of dev | release | bootloader | bootloader-nodefmt | api-evolve, run after generation:
 #             dev, release       cargo build [--release] in the app crate (firmware/ with --wire-weaver)
 #             bootloader         cd bootloader && cargo build --features defmt
 #             bootloader-nodefmt cd bootloader && cargo build (default features: compact() build-info only,
 #                                see bedrock_build; only meaningful for --build-info entries, which test both)
+#             api-evolve         TPL-52, --wire-weaver on an STM32 with a [variant] table (needs ww): the API
+#                                generated again with one more silicon revision passes `ww api check` against the
+#                                first one's snapshot as a compatible change, one put in front fails as breaking
 #   tags    subset of ww | host | git | rtt, for `--tag`:
 #             ww    --wire-weaver (needs --ww-src; crash capture needs --bedrock on every Cortex-M entry regardless)
 #             rtt   --ww-transport rtt
@@ -179,7 +182,7 @@ tags = []
 [[entry]]
 name = "g0usb"
 args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters"]
-builds = ["dev", "release"]
+builds = ["dev", "release", "api-evolve"]
 tags = ["ww"]
 note = "USB, HSI48"
 
@@ -252,7 +255,7 @@ note = "OTG_HS in FS mode"
 [[entry]]
 name = "h743"
 args = ["--chip", "STM32H743ZI", "--wire-weaver", "--led", "PE1"]
-builds = ["dev"]
+builds = ["dev", "api-evolve"]
 tags = ["ww"]
 note = "OTG_FS"
 
