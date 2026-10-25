@@ -20,7 +20,7 @@ const RED: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
 #[derive(Parser)]
 #[command(
     name = "boardmap",
-    version,
+    version = env!("BOARDMAP_VERSION"),
     after_help = "Shell completion: source <(COMPLETE=bash boardmap), COMPLETE=zsh boardmap, COMPLETE=fish boardmap | source"
 )]
 struct Cli {

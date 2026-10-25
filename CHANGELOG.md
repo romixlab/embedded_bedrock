@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `boardmap --version` names the git SHA and build time, so `tpm install` takes it (MAP-9).
+
 ### Changed
 
 - `bedrock_board`'s NUCLEO-G0B1RE example moved to the template's board preset
