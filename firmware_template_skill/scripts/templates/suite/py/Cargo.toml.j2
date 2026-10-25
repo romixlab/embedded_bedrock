@@ -13,6 +13,7 @@ publish = false # distributed as a Python wheel, see pyproject.toml
 name = "{{ s.py_module }}" # the Python module name
 crate-type = ["cdylib"]
 doc = false
+test = false # tested from Python (`just test-py`); a Rust test binary would need libpython at run time
 
 [dependencies]
 {{ s.client }}.workspace = true

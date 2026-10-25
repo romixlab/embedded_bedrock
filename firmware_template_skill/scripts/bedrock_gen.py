@@ -21,6 +21,7 @@ Subcommands:
   list-chips     list built-in (non-STM32) chips
   check-answers  compare a firmware's bedrock_fw.json answers with the options this template version knows
   compare        fuzzy (optionally 3-way) comparison of a firmware with a regenerated project, for upgrades
+  matrix         generate + build the tested matrix (data/matrix.toml, TPL-44)
 
 `new` records the template git revision and all answers in <project>/bedrock_fw.json; `new --answers
 <project>/bedrock_fw.json --out <tmp>` regenerates the same project with this template version.
@@ -30,14 +31,18 @@ Run with --help for details.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import datetime
 import difflib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import textwrap
+import time
 import tomllib
 import urllib.error
 import urllib.request
@@ -744,7 +749,7 @@ def rust_use(path: str, items: list[str], width: int = 100) -> str:
     if len(items) == 1:
         return f"use {path}::{items[0]};"
     one = f"use {path}::{{{', '.join(items)}}};"
-    if len(one) <= width:
+    if len(one) <= width - 2:  # rustfmt keeps a use list on one line up to 98 columns, not 100
         return one
     lines, line = [], "   "
     for x in items:
@@ -1714,6 +1719,266 @@ def cmd_compare(args) -> None:
 
 
 # ----------------------------------------------------------------------------
+# Tested matrix (TPL-44): data/matrix.toml as a `matrix` subcommand, see its header comment for the schema.
+# ----------------------------------------------------------------------------
+
+
+@dataclass
+class MatrixEntry:
+    name: str
+    args: list[str]
+    builds: list[str]
+    tags: list[str] = field(default_factory=list)
+    note: str = ""
+
+
+def load_matrix() -> list[MatrixEntry]:
+    return [MatrixEntry(name=e["name"], args=e.get("args", []), builds=e.get("builds", []),
+                        tags=e.get("tags", []), note=e.get("note", ""))
+            for e in load_toml("matrix.toml")["entry"]]
+
+
+def matrix_chip(args: list[str]) -> Optional[str]:
+    for i, a in enumerate(args):
+        if a == "--chip" and i + 1 < len(args):
+            return args[i + 1]
+    for i, a in enumerate(args):
+        if a == "--board" and i + 1 < len(args):
+            return load_preset(args[i + 1])["answers"].get("chip")
+    return None
+
+
+def matrix_is_cortex_m(chip: str) -> bool:
+    """stm32 / rp / nrf (arch=arm) have flip-link and take --bedrock for crash capture; esp (xtensa/riscv) does not."""
+    if chip.upper().startswith("STM32"):
+        return True
+    return BUILTIN.get(chip.lower(), {}).get("arch") == "arm"
+
+
+@dataclass
+class StepResult:
+    ok: bool
+    elapsed: float
+    message: str = ""
+
+
+def cargo_build(cwd: Path, extra: list[str], env: Optional[dict[str, str]] = None) -> tuple[bool, Optional[Path], str]:
+    """`cargo build <extra> --message-format=json-render-diagnostics`; returns (ok, built executable, readable log)."""
+    proc = subprocess.run(["cargo", "build", "--message-format=json-render-diagnostics", *extra],
+                          cwd=cwd, capture_output=True, text=True, env=env)
+    executable: Optional[Path] = None
+    rendered: list[str] = []
+    for line in proc.stdout.splitlines():
+        if not line.startswith("{"):
+            continue
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if msg.get("reason") == "compiler-artifact" and msg.get("executable"):
+            executable = Path(msg["executable"])
+        elif msg.get("reason") == "compiler-message":
+            r = msg.get("message", {}).get("rendered")
+            if r:
+                rendered.append(r)
+    return proc.returncode == 0, executable, "".join(rendered) + proc.stderr
+
+
+def cargo_plain(cwd: Path, argv: list[str], env: Optional[dict[str, str]] = None) -> tuple[bool, str]:
+    proc = subprocess.run(["cargo", *argv], cwd=cwd, capture_output=True, text=True, env=env)
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def rustfmt_check(root: Path) -> tuple[bool, str]:
+    files = sorted(str(p) for p in root.rglob("*.rs"))
+    if not files:
+        return True, ""
+    proc = subprocess.run(["rustfmt", "--edition", "2024", "--check", *files], capture_output=True, text=True)
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def flip_link_check(elf: Path) -> tuple[bool, str]:
+    """flip-link puts the stack below .data/.bss instead of at the end of RAM: _stack_start == .data's address."""
+    try:
+        syms = subprocess.run(["readelf", "-sW", str(elf)], capture_output=True, text=True, timeout=30).stdout
+        secs = subprocess.run(["readelf", "-SW", str(elf)], capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError) as e:
+        return False, f"readelf failed: {e}"
+    stack_start = None
+    for line in syms.splitlines():
+        parts = line.split()
+        if parts and parts[-1] == "_stack_start":
+            stack_start = int(parts[1], 16)
+            break
+    m = re.search(r"\]\s+\.data\s+\S+\s+([0-9a-fA-F]+)", secs)
+    data_start = int(m.group(1), 16) if m else None
+    if stack_start is None or data_start is None:
+        return False, f"could not find _stack_start / .data in {elf}"
+    ok = stack_start == data_start
+    return ok, f"_stack_start=0x{stack_start:x} .data=0x{data_start:x}" + ("" if ok else " (flip-link not in effect)")
+
+
+def matrix_build_root(scratch: Path) -> Path:
+    """Where the matrix's cargo build dirs go: a shared `build-dir` (`~/.cargo/config.toml`) would keep one per
+    scratch path for ever, a few GB per entry and run, so each entry gets its own under the cache, removed after it."""
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+    return cache / "bedrock_matrix" / scratch.name
+
+
+def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww_src: Optional[str],
+                   keep: bool = False) -> dict[str, StepResult]:
+    build_dir = matrix_build_root(scratch) / entry.name
+    try:
+        return matrix_run_entry(entry, scratch, bedrock, ww_src, build_dir)
+    finally:
+        if not keep:
+            shutil.rmtree(build_dir, ignore_errors=True)
+
+
+def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww_src: Optional[str],
+                     build_dir: Path) -> dict[str, StepResult]:
+    results: dict[str, StepResult] = {}
+    outdir = scratch / entry.name
+    env = {**os.environ, "CARGO_BUILD_BUILD_DIR": str(build_dir / "{workspace-path-hash}")}
+    argv = [sys.executable, str(HERE / "bedrock_gen.py"), "new", entry.name, "--out", str(outdir), *entry.args]
+    if "git" not in entry.tags:
+        if bedrock:
+            argv += ["--bedrock", bedrock]
+        if ww_src:
+            argv += ["--ww-src", ww_src]
+    t0 = time.monotonic()
+    proc = subprocess.run(argv, capture_output=True, text=True, env=env)
+    results["generate"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
+                                     "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
+    if not results["generate"].ok:
+        return results
+
+    t0 = time.monotonic()
+    ok, log = rustfmt_check(outdir)
+    results["rustfmt"] = StepResult(ok, time.monotonic() - t0, log[-4000:] if not ok else "")
+
+    app_root = outdir / WW_FW_DIR if (outdir / WW_FW_DIR).is_dir() else outdir
+    chip = matrix_chip(entry.args)
+    cortex_m = chip is not None and matrix_is_cortex_m(chip)
+
+    if "git" in entry.tags and "--wire-weaver" in entry.args:
+        # TPL-43: #[ww_api_root] needs a lockfile to resolve git dependencies when --ww-src stays "git"
+        if "--ww-api" in entry.args:
+            ww_api = entry.args[entry.args.index("--ww-api") + 1]
+        else:
+            ww_api = f"{entry.name}_api"
+        t0 = time.monotonic()
+        proc = subprocess.run(["cargo", "generate-lockfile"], cwd=outdir / ww_api, capture_output=True, text=True,
+                              env=env)
+        results["lockfile"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
+                                         "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-2000:])
+
+    for b in entry.builds:
+        t0 = time.monotonic()
+        if b in ("dev", "release"):
+            extra = ["--release"] if b == "release" else []
+            ok, elf, log = cargo_build(app_root, extra, env)
+            results[b] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
+            if ok and cortex_m and elf is not None:
+                fl_ok, fl_msg = flip_link_check(elf)
+                results[f"{b}-flip-link"] = StepResult(fl_ok, 0.0, fl_msg)
+        elif b in ("bootloader", "bootloader-nodefmt"):
+            boot_root = app_root / "bootloader"
+            if not boot_root.is_dir():
+                results[b] = StepResult(False, time.monotonic() - t0, f"{boot_root} does not exist")
+                continue
+            extra = ["--features", "defmt"] if b == "bootloader" else []
+            ok, _, log = cargo_build(boot_root, extra, env)
+            results[b] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
+        else:
+            die(f"matrix entry {entry.name}: unknown build type {b!r}")
+
+    if "host" in entry.tags:
+        # --host (TPL-37): what frameworks.md#tested-matrix says every --host entry also passes, from the root
+        for step, cmd in (
+            ("host-test", ["test", "--workspace"]),
+            ("host-clippy", ["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]),
+            ("host-fmt", ["fmt", "--all", "--check"]),
+        ):
+            t0 = time.monotonic()
+            ok, log = cargo_plain(outdir, cmd, env)
+            results[step] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
+        t0 = time.monotonic()
+        proc = subprocess.run(["just", "test-py"], cwd=outdir, capture_output=True, text=True, env=env)
+        results["host-test-py"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
+                                             "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
+
+    return results
+
+
+MATRIX_STEPS = ["generate", "rustfmt", "lockfile", "dev", "dev-flip-link", "release", "release-flip-link",
+               "bootloader", "bootloader-nodefmt", "host-test", "host-clippy", "host-fmt", "host-test-py"]
+
+
+def cmd_matrix(args) -> None:
+    entries = load_matrix()
+    by_name = {e.name: e for e in entries}
+    if args.names:
+        missing = [n for n in args.names if n not in by_name]
+        if missing:
+            die(f"unknown matrix entry: {', '.join(missing)} (see data/matrix.toml)")
+        selected = [by_name[n] for n in args.names]
+    elif args.tag:
+        selected = [e for e in entries if args.tag in e.tags]
+        if not selected:
+            die(f"no matrix entry tagged {args.tag!r}")
+    else:
+        selected = entries
+
+    scratch = Path(tempfile.mkdtemp(prefix="bedrock_matrix_"))
+    bedrock = str(Path(args.bedrock).resolve()) if args.bedrock else None
+    ww_src = str(Path(args.ww_src).resolve()) if args.ww_src else None
+    print(f"matrix: {len(selected)} entries, scratch {scratch}")
+
+    results: dict[str, dict[str, StepResult]] = {}
+    t_start = time.monotonic()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        futures = {pool.submit(matrix_run_one, e, scratch, bedrock, ww_src, args.keep): e for e in selected}
+        for fut in concurrent.futures.as_completed(futures):
+            e = futures[fut]
+            r = results[e.name] = fut.result()
+            elapsed = sum(s.elapsed for s in r.values())
+            status = "ok" if all(s.ok for s in r.values()) else "FAIL"
+            print(f"  {e.name:12} {status:4}  {elapsed:6.1f}s  ({'/'.join(k for k, v in r.items() if not v.ok) or 'all steps passed'})")
+
+    used_steps = [s for s in MATRIX_STEPS if any(s in r for r in results.values())]
+    print(f"\n{'entry':12} " + " ".join(f"{s:>18}" for s in used_steps))
+    any_fail = False
+    for e in selected:
+        r = results[e.name]
+        cells = []
+        for s in used_steps:
+            if s not in r:
+                cells.append(f"{'.':>18}")
+                continue
+            sr = r[s]
+            any_fail = any_fail or not sr.ok
+            cells.append(f"{('ok' if sr.ok else 'FAIL') + f' {sr.elapsed:4.0f}s':>18}")
+        note = f"   {e.note}" if e.note else ""
+        print(f"{e.name:12} " + " ".join(cells) + note)
+
+    print(f"\n{len(selected)} entries in {time.monotonic() - t_start:.0f}s"
+         + (f", kept in {scratch} (cargo build dirs in {matrix_build_root(scratch)})" if args.keep else ""))
+    if any_fail:
+        print("\n--- failures ---")
+        for e in selected:
+            for s, sr in results[e.name].items():
+                if not sr.ok:
+                    print(f"\n{e.name} / {s}:\n{sr.message}")
+
+    if not args.keep:
+        shutil.rmtree(scratch, ignore_errors=True)
+        shutil.rmtree(matrix_build_root(scratch), ignore_errors=True)
+    if any_fail:
+        sys.exit(1)
+
+
+# ----------------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------------
 
@@ -2103,6 +2368,15 @@ def main(argv=None) -> None:
     p.add_argument("--all", action="store_true", help="also list unchanged and local-only files")
     p.add_argument("--diff", action="store_true", help="print unified diffs (base->new for template changes, current->new otherwise)")
     p.set_defaults(func=cmd_compare)
+
+    p = sub.add_parser("matrix", help="generate + build the tested matrix (TPL-44, data/matrix.toml)")
+    p.add_argument("names", nargs="*", help="only these matrix entries by name (default: all)")
+    p.add_argument("--tag", choices=["ww", "host", "git", "rtt"], help="only entries carrying this tag")
+    p.add_argument("--jobs", type=int, default=4, help="entries built in parallel (each cargo build already uses every core) [4]")
+    p.add_argument("--keep", action="store_true", help="keep the scratch directory instead of deleting it when done")
+    p.add_argument("--bedrock", help="local embedded_bedrock checkout, passed as --bedrock to every entry except tag 'git' (default: each entry's own default)")
+    p.add_argument("--ww-src", help="local wire_weaver checkout, passed as --ww-src the same way")
+    p.set_defaults(func=cmd_matrix)
 
     args = apply_answers(ap, p_new, argv)
     args.func(args)

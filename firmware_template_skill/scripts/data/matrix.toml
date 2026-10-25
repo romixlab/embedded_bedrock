@@ -1,0 +1,471 @@
+# Tested matrix (TPL-44): the fenced block in ../../references/frameworks.md#tested-matrix, as data for the
+# `matrix` subcommand of bedrock_gen.py. Keep the two in sync: a chip/option combination added to one belongs in
+# the other. `name` becomes the scratch directory and the generated package name; it must be unique here even
+# where frameworks.md's prose reuses a name across its two sections (see rp2040w below).
+#
+# Per entry:
+#   args    extra argv for `new <name> --out <dir> <args...>` (no --bedrock/--ww-src: the matrix command injects
+#           them from its own --bedrock/--ww-src unless the entry is tagged "git").
+#   builds  subset of dev | release | bootloader | bootloader-nodefmt, run after generation:
+#             dev, release       cargo build [--release] in the app crate (firmware/ with --wire-weaver)
+#             bootloader         cd bootloader && cargo build --features defmt
+#             bootloader-nodefmt cd bootloader && cargo build (default features: compact() build-info only,
+#                                see bedrock_build; only meaningful for --build-info entries, which test both)
+#   tags    subset of ww | host | git | rtt, for `--tag`:
+#             ww    --wire-weaver (needs --ww-src; crash capture needs --bedrock on every Cortex-M entry regardless)
+#             rtt   --ww-transport rtt
+#             git   deliberately keeps --bedrock/--ww-src at their "git" default (not overridden): at least one
+#                   entry per release must build against the real git sources, not a sibling checkout (TPL-43:
+#                   the API crate then needs `cargo generate-lockfile` first, which the matrix command does for
+#                   any "git"-tagged --wire-weaver entry)
+#             host  --host (TPL-37): cargo test + clippy --all-targets -- -D warnings at the generated project's
+#                   workspace root, instead of (in addition to, for --wire-weaver entries) an embedded cargo build.
+#   note    free text ported from frameworks.md's parenthetical remarks, for the summary table only.
+
+[[entry]]
+name = "h7app"
+args = ["--chip", "STM32H725IG", "--bootloader", "--settings", "--counters", "--bkp-counters", "rtc", "--supply-config", "DirectSMPS"]
+builds = ["dev", "release", "bootloader"]
+tags = []
+
+[[entry]]
+name = "g0"
+args = ["--chip", "STM32G0B1RE", "--bootloader", "--settings", "--counters", "--bkp-counters", "tamp"]
+builds = ["dev", "release", "bootloader"]
+tags = []
+
+[[entry]]
+name = "g0hal"
+args = ["--chip", "STM32G0B1RE", "--framework", "stm32-hal2", "--settings", "--counters"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "h7hal"
+args = ["--chip", "STM32H725IG", "--framework", "stm32-hal2", "--supply-config", "DirectSMPS", "--counters"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xf0"
+args = ["--chip", "STM32F030C8", "--framework", "stm32xx-hal", "--log", "rtt"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xf1"
+args = ["--chip", "STM32F103C8", "--framework", "stm32xx-hal", "--counters", "--led", "PC13"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xf3"
+args = ["--chip", "STM32F303VC", "--framework", "stm32xx-hal", "--log", "none"]
+builds = ["dev"]
+tags = []
+note = "known rustfmt --check failure: into_push_pull_output(..) line too long (TPL-22, TPL-23)"
+
+[[entry]]
+name = "xf4"
+args = ["--chip", "STM32F407VG", "--framework", "stm32xx-hal", "--counters", "--settings"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xf7"
+args = ["--chip", "STM32F767ZI", "--framework", "stm32xx-hal"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xg0"
+args = ["--chip", "STM32G071RB", "--framework", "stm32xx-hal", "--counters"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xg4"
+args = ["--chip", "STM32G474RE", "--framework", "stm32xx-hal"]
+builds = ["dev"]
+tags = []
+note = "known rustfmt --check failure: init_ram.rs count line too long (TPL-22, TPL-23)"
+
+[[entry]]
+name = "xh7"
+args = ["--chip", "STM32H743ZI", "--framework", "stm32xx-hal", "--counters"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xh7s"
+args = ["--chip", "STM32H725IG", "--framework", "stm32xx-hal", "--supply-config", "DirectSMPS"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xl0"
+args = ["--chip", "STM32L073RZ", "--framework", "stm32xx-hal"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "xl4"
+args = ["--chip", "STM32L476RG", "--framework", "stm32xx-hal", "--log", "rtt"]
+builds = ["dev"]
+tags = []
+note = "known rustfmt --check failure: pb14 line too long (TPL-22, TPL-23)"
+
+[[entry]]
+name = "f4bare"
+args = ["--chip", "STM32F407VG", "--framework", "bare", "--log", "rtt"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "l4"
+args = ["--chip", "STM32L476RG", "--counters", "--log", "none"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "l4rtc"
+args = ["--chip", "STM32L476RG", "--rtc"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "rp2040"
+args = ["--chip", "rp2040", "--bootloader", "--settings", "--counters"]
+builds = ["dev", "release", "bootloader"]
+tags = []
+
+[[entry]]
+name = "rp2350"
+args = ["--chip", "rp2350", "--bootloader"]
+builds = ["dev", "bootloader"]
+tags = []
+
+[[entry]]
+name = "nrf"
+args = ["--chip", "nrf52840", "--bootloader", "--counters"]
+builds = ["dev", "bootloader"]
+tags = []
+
+[[entry]]
+name = "nrf9160"
+args = ["--chip", "nrf9160", "--counters", "--log", "rtt"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "espc3"
+args = ["--chip", "esp32c3", "--counters"]
+builds = ["dev"]
+tags = []
+note = "embassy, defmt via esp-println"
+
+[[entry]]
+name = "espc3p"
+args = ["--chip", "esp32c3", "--log", "esp-println"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "espc3b"
+args = ["--chip", "esp32c3", "--framework", "bare", "--log", "esp-println"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "g0usb"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "USB, HSI48"
+
+[[entry]]
+name = "g0usbm"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters", "--embassy", "main"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "embassy main, USB v4, ES0548 ASSERT"
+
+[[entry]]
+name = "g0m"
+args = ["--chip", "STM32G0B1RE", "--bootloader", "--settings", "--counters", "--bkp-counters", "tamp", "--embassy", "main"]
+builds = ["dev", "release", "bootloader"]
+tags = []
+
+[[entry]]
+name = "g0setm"
+args = ["--chip", "STM32G0B1CE", "--settings", "--bkp-counters", "auto", "--counters", "--led", "PF1", "--wire-weaver", "--embassy", "main"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "Donguru-like"
+
+[[entry]]
+name = "h725m"
+args = ["--chip", "STM32H725IG", "--wire-weaver", "--supply-config", "DirectSMPS", "--counters", "--bootloader", "--embassy", "main"]
+builds = ["dev", "bootloader"]
+tags = ["ww"]
+note = "OTG_HS"
+
+[[entry]]
+name = "l476m"
+args = ["--chip", "STM32L476RG", "--wire-weaver", "--led", "PA5", "--embassy", "main"]
+builds = ["dev"]
+tags = ["ww"]
+note = "USB v?, no CRS"
+
+[[entry]]
+name = "f103m"
+args = ["--chip", "STM32F103CB", "--wire-weaver", "--led", "PC13", "--embassy", "main"]
+builds = ["release"]
+tags = ["ww"]
+note = "USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8; release only since the device suite (TPL-34)"
+
+[[entry]]
+name = "g0rtt"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--counters", "--bootloader", "--settings"]
+builds = ["dev", "bootloader"]
+tags = ["ww", "rtt"]
+
+[[entry]]
+name = "g0rttn"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--log", "none"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+
+[[entry]]
+name = "g0rttr"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--log", "rtt", "--ww-api", "g0_dev"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+
+[[entry]]
+name = "h725"
+args = ["--chip", "STM32H725IG", "--wire-weaver", "--supply-config", "DirectSMPS", "--counters", "--bkp-counters", "rtc", "--bootloader"]
+builds = ["dev", "bootloader"]
+tags = ["ww"]
+note = "OTG_HS in FS mode"
+
+[[entry]]
+name = "h743"
+args = ["--chip", "STM32H743ZI", "--wire-weaver", "--led", "PE1"]
+builds = ["dev"]
+tags = ["ww"]
+note = "OTG_FS"
+
+[[entry]]
+name = "f411"
+args = ["--chip", "STM32F411CE", "--wire-weaver", "--led", "PC13"]
+builds = ["dev"]
+tags = ["ww"]
+note = "OTG_FS, no HSI48: clock TODO"
+
+[[entry]]
+name = "l476"
+args = ["--chip", "STM32L476RG", "--wire-weaver", "--led", "PA5"]
+builds = ["dev"]
+tags = ["ww"]
+note = "no CRS: clock TODO"
+
+[[entry]]
+name = "l073"
+args = ["--chip", "STM32L073RZ", "--wire-weaver", "--led", "PA5"]
+builds = ["dev"]
+tags = ["ww"]
+
+[[entry]]
+name = "f103"
+args = ["--chip", "STM32F103C8", "--wire-weaver", "--led", "PC13"]
+builds = ["release"]
+tags = ["ww"]
+note = "USB_LP_CAN1_RX0, no HSI48; 64K flash, release only (dev doesn't fit either). Known FLASH overflow on release today (TPL-34)"
+
+[[entry]]
+name = "g0rb"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters", "--bkp-counters", "tamp", "--settings"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "device suite: rom_boot stm32g0, boot word out of BKPSRAM"
+
+[[entry]]
+name = "g0rbm"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters", "--bkp-counters", "tamp", "--settings", "--embassy", "main"]
+builds = ["dev", "release"]
+tags = ["ww"]
+
+[[entry]]
+name = "g0rbl"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters", "--bkp-counters", "tamp", "--settings"]
+builds = ["dev"]
+tags = ["ww"]
+note = "ww_dfu in the [patch] (--ww-src a local wire_weaver checkout, injected by the matrix command)"
+
+[[entry]]
+name = "h725rb"
+args = ["--chip", "STM32H725IG", "--wire-weaver", "--supply-config", "DirectSMPS", "--counters", "--bkp-counters", "rtc", "--settings"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "rom_boot stm32h7"
+
+[[entry]]
+name = "g0brd"
+args = ["--board", "nucleo_g0b1re", "--host"]
+builds = ["dev", "release"]
+tags = ["ww", "rtt", "host"]
+note = "firmware/src equals nucleo_g0b1re_template's"
+
+[[entry]]
+name = "rp2040w"
+args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--bootloader"]
+builds = ["dev", "bootloader"]
+tags = ["ww"]
+note = "frameworks.md lists this as a second 'rp2040' entry in its WireWeaver section; renamed here to keep names unique"
+
+[[entry]]
+name = "rp2350r"
+args = ["--chip", "rp2350", "--wire-weaver", "--ww-transport", "rtt", "--log", "rtt"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+
+[[entry]]
+name = "nrf840"
+args = ["--chip", "nrf52840", "--wire-weaver", "--counters"]
+builds = ["dev"]
+tags = ["ww"]
+
+[[entry]]
+name = "nrf9160r"
+args = ["--chip", "nrf9160", "--wire-weaver", "--ww-transport", "rtt"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+
+[[entry]]
+name = "p2nocrash"
+args = ["--chip", "rp2350", "--wire-weaver", "--no-crash-capture"]
+builds = ["dev"]
+tags = ["ww"]
+
+[[entry]]
+name = "h7nocrash"
+args = ["--chip", "STM32H725IG", "--supply-config", "DirectSMPS", "--no-crash-capture"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "g0set"
+args = ["--chip", "STM32G0B1CE", "--settings", "--bkp-counters", "auto", "--counters", "--led", "PF1", "--wire-weaver"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "Donguru-like: EccSafeFlash, label over USB"
+
+[[entry]]
+name = "g0setrtt"
+args = ["--chip", "STM32G0B1RE", "--settings", "--wire-weaver", "--ww-transport", "rtt", "--log", "rtt"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+
+[[entry]]
+name = "g0setn"
+args = ["--chip", "STM32G0B1RE", "--settings", "--log", "none"]
+builds = ["dev"]
+tags = []
+note = "settings in the main loop"
+
+[[entry]]
+name = "g0setd"
+args = ["--chip", "STM32G0B1RE", "--settings", "--counters"]
+builds = ["dev"]
+tags = []
+
+[[entry]]
+name = "h743set"
+args = ["--chip", "STM32H743ZI", "--settings", "--wire-weaver", "--led", "PE1"]
+builds = ["dev"]
+tags = ["ww"]
+note = "EccSafeFlash stm32h7, bank 2"
+
+[[entry]]
+name = "h725set"
+args = ["--chip", "STM32H725IG", "--settings", "--supply-config", "DirectSMPS", "--counters"]
+builds = ["dev"]
+tags = []
+note = "single bank, 2 x 128K"
+
+[[entry]]
+name = "f411set"
+args = ["--chip", "STM32F411CE", "--settings", "--log", "rtt", "--led", "PC13"]
+builds = ["dev"]
+tags = []
+note = "no ECC: BlockingAsync"
+
+[[entry]]
+name = "f411setw"
+args = ["--chip", "STM32F411CE", "--settings", "--wire-weaver", "--led", "PC13"]
+builds = ["dev"]
+tags = ["ww"]
+
+[[entry]]
+name = "l4set"
+args = ["--chip", "STM32L476RG", "--settings", "--counters", "--log", "none"]
+builds = ["dev"]
+tags = []
+note = "ECC, no ww_ecc_flash family: region only"
+
+[[entry]]
+name = "g0bi"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--counters", "--bootloader", "--settings", "--build-info"]
+builds = ["dev", "release", "bootloader", "bootloader-nodefmt"]
+tags = ["ww", "rtt"]
+note = "local --bedrock and --ww-src"
+
+[[entry]]
+name = "g0bigit"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--counters", "--bootloader", "--settings", "--build-info"]
+builds = ["dev", "release", "bootloader"]
+tags = ["ww", "rtt", "git"]
+note = "git sources: at least one entry per release builds against the real git sources, not a sibling checkout"
+
+[[entry]]
+name = "g0board"
+args = ["--chip", "STM32G0B1RE", "--board", "nucleo_g0b1re"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "the G0 template's preset: host crates equal G0's, root cargo test, just lint"
+
+[[entry]]
+name = "g0rtth"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--counters", "--bootloader", "--settings", "--host"]
+builds = ["dev", "bootloader"]
+tags = ["ww", "rtt", "host"]
+note = "no preset; root cargo test, just lint"
+
+[[entry]]
+name = "g0rtthm"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--host"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "RTT client without settings, counters, BKP counters"
+
+[[entry]]
+name = "g0usbh"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "usb", "--host", "--settings", "--counters", "--led", "PA5"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "USB client: Usb target, devices subcommand"
+
+[[entry]]
+name = "rp2040h"
+args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "USB client, root cargo test, just lint"
+
+[[entry]]
+name = "rp2040hm"
+args = ["--chip", "rp2040", "--wire-weaver", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "USB client without counters: no --elf"

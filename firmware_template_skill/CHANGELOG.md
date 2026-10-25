@@ -10,6 +10,9 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `--host`: the Python crate's lib has `test = false` (it is tested from Python with `just test-py`; `cargo test --workspace` no longer runs a Rust test binary that needs libpython at run time), and the CLI's `use` of the client wraps at rustfmt's 98 columns, not 100 (failed `rustfmt --check` for longer project names). Upgrade notes: add `test = false` under `[lib]` in `<name>_py/Cargo.toml`.
+- Tested matrix: `f103m` builds release only (TPL-34).
+
 - The template suite, host crates (TPL-37): `--host` generates `<name>_client`, `<name>_cli` and `<name>_py` next to
   the API crate, as nucleo_g0b1re_template (cc1c30b) has them.
   - `<name>_client`: the typed `<Board>` over the generated client with one `Error`, methods for the device items
@@ -96,6 +99,11 @@ or options; purely internal refactors only need a line under the next version.
   CHANGELOG, LICENSE) are its own: compare, never overwrite. A firmware made by hand from nucleo_g0b1re_template
   (`--board nucleo_g0b1re`) should regenerate to the same files apart from the host crates and the device suite,
   which arrive in later entries. Nothing on the target changes.
+
+- Internal: the tested matrix of `references/frameworks.md#tested-matrix` is now data (`scripts/data/matrix.toml`)
+  and a `matrix` subcommand that generates, builds, rustfmt-checks and flip-link-checks every entry (TPL-44). Each
+  entry builds in its own cargo build dir under `~/.cache/bedrock_matrix/`, removed when the entry is done (a
+  shared `build-dir` kept one per scratch path: two full runs filled a 555 GB disk). No generated output changed.
 
 - `just setup` in every generated project (TPL-36): `scripts/setup.py` (run with uv, stdlib only) installs what the
   firmware needs on a fresh Arch, Ubuntu / Debian or Windows PC: rustup with the toolchain, targets and components of
