@@ -132,7 +132,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - 🐛 **TPL-34 `f103` (STM32F103C8, `--wire-weaver`) no longer fits 64 KiB**: the release build overflows FLASH by
   ~1.3 KiB against WireWeaver main of 19 Oct 2026, with the template of `main` (0d6bd3a, plus the `Second::milli`
   fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
-  that matrix entry uses the 128 KiB F103CB. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
+  that matrix entry uses the 128 KiB F103CB; since the device suite (TPL-41) the F103C8 release is 26.7 KiB over and the F103CB dev build 27 KiB over (its release fits); a 64 KiB part needs the suite trimmed (log, introspection docs) by an option. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
   on 64 KiB parts, or the tested part moves to F103CB.
 - ✅ **TPL-43 `--wire-weaver` with `--ww-src git`: the API crate has no `Cargo.lock`**: fixed with a host workspace
   root over the API crate (`suite/Cargo.toml.j2`, the firmware excluded), as `nucleo_g0b1re_template` has; `new`
@@ -157,6 +157,19 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `typst` runs when on PATH) and `docs/board/` with `--board`. `--cli-name` names the CLI and its env prefix. Still
   to come: the host crates (client over probe and USB, CLI, Python; P2528#24oct-1609c), behind `has_client` /
   `has_cli` / `has_py`.
+- 🧪 **TPL-41 Device suite in firmware and API**: every `--wire-weaver` firmware serves the device contract as
+  nucleo_g0b1re_template (cc1c30b) does, with the items the answers allow (`suite_context()` `s.dev`): the API crate
+  (`ww/api/src/lib.rs.j2`) has `device: Device` with `firmware`, `last_reset` (crash capture), `board`, `uid`,
+  `label` and `settings` (`--settings`, `led_at_boot`), `counters`, `log` (`--log defmt`: ww_defmt_logger, RTT tee),
+  `variant` (STM32 DBGMCU_IDCODE + FLASH_SIZE, revisions from `stm32.toml` `[variant.<dev_id>]`), `boot` and
+  `dfu.node` (bedrock_rom_boot on G0 / single-core H7 without `--bootloader`, needs `--log defmt`); the firmware
+  `src/ww.rs`, `src/ww/device.rs`, `src/log.rs`, `src/boot.rs`; the boot word is taken out of cnt's BKPSRAM
+  (`memory.x`, `CNT_BKP_BUFFER_SIZE_WORDS`). The G0 answers with `--board nucleo_g0b1re` regenerate G0's
+  `firmware/src` byte for byte (that firmware runs on the board). Builds for the tested matrix's `--wire-weaver`
+  entries but the 64 KiB F103C8 (TPL-34); parts under 64 KiB RAM get a quarter of the log buffers. The H7, RP and
+  nRF code (uid, variant, rom_boot on H7) has not run on a board yet.
+- 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
+  (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
 - ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`
   (`wire_weaver_evolution`, strict: the API's current version needs a snapshot), `just api-check` / `just api-save`,
   the CI step, and `.githooks/pre-commit` installed by `scripts/hooks.py` (`just hooks`, also a `just setup` step):

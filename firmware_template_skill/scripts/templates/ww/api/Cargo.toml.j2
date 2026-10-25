@@ -1,4 +1,5 @@
 {% from "macros.j2" import ww_dep %}
+{% set d = s.dev %}
 [package]
 name = "{{ ww.api }}"
 version = "0.1.0"
@@ -7,17 +8,33 @@ description = "WireWeaver API of the {{ o.name }} firmware"
 
 [features]
 # owned (alloc) variants of the API types, for host-side users
-std = ["wire_weaver/std", "ww_firmware_info/std"{{ ', "ww_user_info/std"' if o.settings_flash else "" }}]
-defmt = ["wire_weaver/defmt", "ww_firmware_info/defmt"{{ ', "ww_user_info/defmt"' if o.settings_flash else "" }}, "dep:defmt"]
+std = [
+{% for c in feats("wire_weaver", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", d.log and "ww_log", "ww_uid", d.label and "ww_user_info") %}
+    "{{ c }}/std",
+{% endfor %}
+]
+defmt = ["wire_weaver/defmt", "ww_firmware_info/defmt"{{ ', "ww_user_info/defmt"' if d.label else "" }}, "dep:defmt"]
 
 [dependencies]
 defmt = { version = "{{ V["defmt"] }}", optional = true }
 {{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, "../", ", default-features = false") }}
-# FirmwareInfo, LastReset (the device contract); `std` reads every architecture's fault record
+# the device contract (`device`): stdlib traits generic host tools know
+# FirmwareInfo, LastReset; `std` reads every architecture's fault record
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, "../", ', default-features = false, features = ["cortex-m"]') }}
-{% if o.settings_flash %}
+{{ ww_dep("ww_board_info", "ww_stdlib/ww_board_info", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_uid", "ww_stdlib/ww_uid", o.ww_src, "../", ", default-features = false") }}
+{% if d.label %}
 # UserInfo: the unit's name, kept in the firmware's settings store
 {{ ww_dep("ww_user_info", "ww_stdlib/ww_user_info", o.ww_src, "../", ", default-features = false") }}
+{% endif %}
+{% if d.counters %}
+{{ ww_dep("ww_counters", "ww_stdlib/ww_counters", o.ww_src, "../", ", default-features = false") }}
+{% endif %}
+{% if d.log %}
+{{ ww_dep("ww_log", "ww_stdlib/ww_log", o.ww_src, "../", ", default-features = false") }}
+{% endif %}
+{% if d.dfu %}
+{{ ww_dep("ww_dfu", "ww_stdlib/ww_dfu", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 
 [dev-dependencies]

@@ -34,6 +34,17 @@ reset = "B2"                       # the RESET button
 first_item = """The user button B1 (PC13) as
    a readable property is a good first one."""
 
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every Nucleo-G0B1RE has an STM32G0B1RET6, what can differ is
+its silicon revision (and a G0C1 fitted by hand)."""
+
+# src/boot.rs: the ROM bootloader on this board
+[rom_boot]
+usb = "PA11 / PA12 on the morpho header CN10, not wired to a connector on a Nucleo-64"
+healthy = "a Nucleo has no USB of its own to call a boot healthy earlier"
+rescue = "nothing to bring up for the ROM's USB on a Nucleo"
+
 [logo]
 board = "Nucleo-G0B1RE"
 chip = "G0B1"

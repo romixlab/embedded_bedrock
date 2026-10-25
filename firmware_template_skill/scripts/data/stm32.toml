@@ -219,3 +219,43 @@ mcus = [
 crate = "stm32l4xx-hal"
 features = ["rt"]
 chips = { l412 = ["stm32l412"], l422 = ["stm32l422"], l431 = ["stm32l431"], l432 = ["stm32l432"], l433 = ["stm32l433"], l442 = ["stm32l442"], l443 = ["stm32l443"], l451 = ["stm32l451"], l452 = ["stm32l452"], l462 = ["stm32l462"], l471 = ["stm32l471"], l475 = ["stm32l475"], l476 = ["stm32l476"], l486 = ["stm32l486"], l496 = ["stm32l496"], l4a6 = ["stm32l4a6"], l4r9 = ["stm32l4r9"], l4s9 = ["stm32l4s9"] }
+
+# device.variant (--wire-weaver): the chip read from the chip itself (DBGMCU_IDCODE and the flash size word), and the
+# silicon revisions its errata sheet's "Device variants" table lists. Key: DEV_ID (stm32-data's device_id, hex).
+# A line not listed here leaves device.variant out; add it from the reference manual and the errata sheet, quoted
+# from the documents. revisions: [name, REV_ID, marking] in the sheet's order.
+[variant.467]
+device = "STM32G0B1 / G0C1"
+errata = "ES0548"
+idcode = "idcode"           # the PAC's register name
+# the reference manual's sections: DBGMCU_IDCODE, the flash size word
+idcode_ref = "RM0444 40.4.1"
+flash_ref = "1.5"
+flash_size = 0x1FFF75E0
+# the DBGMCU registers need their APB clock: the code that turns it on, and the comment above it
+clock = "pac::RCC.apbenr1().modify(|w| w.set_dbgen(true));"
+clock_note = "the DBGMCU registers need their APB clock (RCC_APBENR1.DBGEN)"
+# DEV_ID is bits 11:0; the PAC's field also takes the reserved 15:12, which read 0x6 on a G0B1
+dev_id_note = "the PAC's field also takes the reserved 15:12, which read 0x6 on a G0B1"
+# ES0548 Rev 4 (Sep 2026) Table 2
+revisions = [["A", 0x1000, "A"], ["Z", 0x1001, "Z or 3"], ["Y", 0x1003, "Y or 4"]]
+
+[variant.483]
+device = "STM32H72x / H73x"
+errata = "ES0491"
+idcode = "idc"
+idcode_ref = "RM0468 65.5.7"
+flash_ref = "66.2"
+flash_size = 0x1FF1E880
+# ES0491 Rev 9 (Jun 2024) Table 2
+revisions = [["A", 0x1000, "A"], ["Z", 0x1001, "Z"]]
+
+[variant.450]
+device = "STM32H742 / H743 / H753 / H750"
+errata = "ES0392"
+idcode = "idc"
+idcode_ref = "RM0433 60.5.8"
+flash_ref = "61.2"
+flash_size = 0x1FF1E880
+# ES0392 Rev 15 (Sep 2025) Table 2
+revisions = [["Y", 0x1003, "Y or W"], ["X", 0x2001, "X"], ["V", 0x2003, "V"]]

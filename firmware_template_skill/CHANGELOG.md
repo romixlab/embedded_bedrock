@@ -10,6 +10,36 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- The device suite (TPL-41): every `--wire-weaver` firmware serves the device contract as nucleo_g0b1re_template
+  does, with the items the answers allow.
+  - API crate: `device: Device` with `firmware`, `last_reset` (crash capture), `board` (name, revision, serial from
+    the preset or the project), `uid` (STM32 96-bit id; RP2040 the flash chip's id, RP2350 OTP chip id, nRF FICR
+    DEVICEID), `label` and `settings` (`--settings`: `Settings` with `led_at_boot`), `counters` (`--counters`), `log`
+    (`--log defmt`), `variant` (STM32 G0B1 / G0C1, H72x / H73x, H742 / H743 / H753 / H750: DBGMCU_IDCODE, FLASH_SIZE
+    and a `SiliconRevision` table from the errata sheet), `boot` and `dfu` (below). Version 0.1.0 for new projects.
+  - Firmware: `src/ww.rs` serves it (`ServerState::new` takes the last reset, the settings and on RP2040 the uid;
+    a `select` over requests, the log pump and the settings write), `src/ww/device.rs` the `device` handlers,
+    `src/log.rs` (`--log defmt`: `ww_defmt_logger` store, `device.log.frames` stream, and with RTT transport the
+    defmt RTT tee that returns `ww_up` / `ww_down`), `src/settings.rs` gains `led_at_boot` (slot 1, the LED's state at
+    boot) and `reset_to_defaults`. The log's ring and store are 4 / 8 KiB, 1 / 2 KiB on parts with less than 64 KiB
+    of RAM.
+  - `boot` and `dfu.node` through `bedrock_rom_boot` (G0, single-core H7; needs `--log defmt`, not with
+    `--bootloader`): `src/boot.rs` (`boot::early()` first thing in `main`, the boot word in the last backup
+    register, the boot-loop rescue), `memory.x` and `CNT_BKP_BUFFER_SIZE_WORDS` leave that word out of cnt's BKPSRAM.
+    With `--ww-src` a local checkout, the `[patch]` also takes `ww_dfu` from it.
+  - `ServerState::new` on one line when it fits (rustfmt).
+
+  Upgrade notes: **breaking for the API** of existing `--wire-weaver` firmware with the flat layout (`firmware`,
+  `last_reset`, `label` at the root of the API trait): they move under `device` (`device.firmware`, ...), so bump the
+  API crate's version 0.1 -> 0.2, keep the 0.1 snapshot in `api_snapshots/` and run `just api-save`; host code that
+  calls the old paths follows. Regenerate with the firmware's answers into a scratch directory and compare
+  `<api>/src/lib.rs`, `src/ww.rs`, `src/ww/device.rs`, `src/log.rs`, `src/boot.rs`, `src/settings.rs`, `src/main.rs`,
+  `memory.x` and `Cargo.toml`; take the `device` items the firmware wants, keep its own methods. Settings: the
+  layout gains `led_at_boot` (slot 1): a firmware that already uses slot 1 picks another slot. ROM boot (G0 / H7
+  without `--bootloader`): the boot word takes the last backup register, so cnt's BKP counters lose one word;
+  test `dfu` and the boot-loop rescue on the board. A firmware made from nucleo_g0b1re_template (cc1c30b) with
+  `--board nucleo_g0b1re` regenerates to its `firmware/src` byte for byte.
+
 - The template suite, first part (TPL-37 layout, TPL-38, TPL-43, TPL-45): what nucleo_g0b1re_template proved, from
   the generator.
   - `--wire-weaver` projects get a host workspace at the root (`Cargo.toml` with the API crate as member, the

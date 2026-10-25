@@ -1,13 +1,36 @@
-{# WireWeaver server (--wire-weaver): API implementation + transport tasks. `ww` = ww_context() in the script. #}
+{# WireWeaver server (--wire-weaver): API implementation + transport tasks, the device contract in ww/device.rs.
+   `ww` = ww_context(), `s` = suite_context() (s.dev: the device items, s.uid: how the unique id is read). #}
 {% set hal = "embassy_" ~ t.family %}
 {% set defmt = o.log == "defmt" %}
+{% set d = s.dev %}
+{% set u_id = s.uid %}
+{% set streams = d.log %}
+{% set settings = o.settings_flash %}
+{% set arms = 1 + (1 if streams else 0) + (1 if settings else 0) %}
 //! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
-//! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}.
+//! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. The LED is here, the device contract (`device`) in
+//! `ww/device.rs`.
 //!
 //! To add a method, property or stream: declare it in the API trait, then implement it here, `ww_codegen!` below
 //! regenerates the dispatch code and the compiler lists what is missing. Extend [ServerState] with the peripherals
 //! and data the implementations need. See https://github.com/vhrdtech/wire_weaver (`docs/`, `examples_mcu/`).
 
+mod device;
+
+{% if o.counters %}
+use cnt::cnt;
+{% endif %}
+{% if defmt %}
+use defmt::{info, unwrap};
+{% elif o.log == "rtt" %}
+use rtt_target::rprintln;
+{% endif %}
+use embassy_executor::Spawner;
+{% if arms == 3 %}
+use embassy_futures::select::{Either3, select3};
+{% elif arms == 2 %}
+use embassy_futures::select::{Either, select};
+{% endif %}
 use {{ hal }}::gpio::Output;
 {% if ww.usb %}
   {% if t.family == "stm32" %}
@@ -21,29 +44,17 @@ use embassy_nrf::usb::vbus_detect::HardwareVbusDetect;
 use embassy_nrf::{Peri, bind_interrupts, pac, peripherals, usb};
   {% endif %}
 {% endif %}
-use embassy_executor::Spawner;
-{% if defmt %}
-use defmt::{info, unwrap};
-{% elif o.log == "rtt" %}
-use rtt_target::rprintln;
+{% if streams %}
+use embassy_time::{Instant, Timer};
+{% elif settings %}
+use embassy_time::Timer;
 {% endif %}
-{% if o.counters %}
-use cnt::cnt;
+{% if ww.rtt %}
+use rtt_target::{DownChannel, UpChannel};
 {% endif %}
 use static_cell::StaticCell;
 use wire_weaver::prelude::*;
 use wire_weaver::{MessageSink, WireWeaverAsyncApiBackend};
-use ww_firmware_info::{BUILD_ID_MAX_LEN, FirmwareSummary};
-{% if o.crash %}
-use ww_firmware_info::ResetRecord;
-{% endif %}
-{% if o.settings_flash %}
-use embassy_futures::select::{Either, select};
-use embassy_time::Timer;
-use ww_error::CommonError;
-use ww_settings::shrink_wrap::ArrayString;
-use ww_user_info::{MAX_NAME_LEN, UserInfoCaps, UserInfoError};
-{% endif %}
 {% if ww.usb %}
   {% if t.family == "stm32" and o.embassy == "main" and ww.stm32_usb and ww.stm32_usb.double_buffer %}
 use wire_weaver_usb_embassy::{
@@ -52,37 +63,177 @@ use wire_weaver_usb_embassy::{
   {% else %}
 use wire_weaver_usb_embassy::{LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init};
   {% endif %}
+  {% if streams %}
+use wire_weaver_usb_embassy::ww_device::LinkEvent;
+  {% endif %}
 {% else %}
-use rtt_target::{DownChannel, UpChannel};
 use ww_device::rtt::{RttBuffers, RttConfig, RttServer, rtt_server};
-use ww_device::{EmbassyClock, LinkConfig};
+use ww_device::{EmbassyClock, LinkConfig{{ ", LinkEvent" if streams else "" }}};
 {% endif %}
+use ww_uid::{UidKind, UidSource, UniqueId};
 
 {% if ww.usb %}
 /// Longest WireWeaver message the device accepts and can reply with (reported to the host)
 {% else %}
 /// Longest WireWeaver message the device accepts and can reply with (reported to the host). The RTT up channel
-/// (`ww_up` in main.rs) must be at least `MAX_MESSAGE_LEN + 5` bytes, better twice that.
+/// (`ww_up` in {{ "log.rs" if d.log else "main.rs" }}) must be at least `MAX_MESSAGE_LEN + 5` bytes, better twice that.
 {% endif %}
 const MAX_MESSAGE_LEN: usize = 1024;
+{% if streams %}
+
+/// Biggest item of a reliable stream: `device.log.frames`' `DefmtFrames` (512 B of frames and its length).
+const STREAM_BUF_LEN: usize = ww_log::MAX_FRAMES_LEN + 16;
+/// Bytes of stream items sent per turn of the server task (at least one event), so requests keep being served.
+const STREAM_BUDGET: usize = 2048;
+{% endif %}
 
 /// Everything the API implementation needs: peripherals, drivers, state.
 pub struct ServerState {
     pub led: Output<'static>,
 {% if o.crash %}
     /// Reset cause and crash record read at boot (src/last_reset.rs)
-    pub last_reset: bedrock_crash::Snapshot,
+    last_reset: bedrock_crash::Snapshot,
 {% endif %}
-{% if o.settings_flash %}
-    /// Settings in flash (src/settings.rs)
-    pub settings: crate::settings::SettingsStore,
+{% if settings %}
+    /// Settings in flash (src/settings.rs): `device.label`, `device.settings`
+    settings: crate::settings::SettingsStore,
+{% endif %}
+{% if streams %}
+    /// `device.log.frames`: the defmt log (src/log.rs)
+    log_frames: crate::log::Stream,
+{% endif %}
+    /// `device.uid.IDS`: the {{ u_id.doc }}
+    uid: [UniqueId<'static>; 1],
+{% if t.family != "stm32" %}
+    /// `device.board`'s serial: the unique id in hex
+    serial: &'static str,
+{% endif %}
+{% if d.counters %}
+    /// `device.counters.read`: one page of counter words, copied at once
+    counters_page: [UVlq32; ww_counters::MAX_WORDS],
+{% endif %}
+{% if streams %}
+    /// Sessions of reliable streams opened so far, see [Self::new_stream_session]
+    stream_sessions: u32,
 {% endif %}
 }
+{% if not u_id.ref %}
+
+/// The chip's unique id, read once
+static UID: StaticCell<[u8; {{ u_id.len }}]> = StaticCell::new();
+{% endif %}
+{% if t.family != "stm32" %}
+/// [UID] in hex, `device.board`'s serial
+static SERIAL: StaticCell<[u8; {{ 2 * u_id.len }}]> = StaticCell::new();
+{% endif %}
+
+impl ServerState {
+{% set params = ["led: Output<'static>"] + (["last_reset: bedrock_crash::Snapshot"] if o.crash else [])
+     + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) %}
+{% set sig = "    pub " ~ ("async " if streams else "") ~ "fn new(" %}
+{% if (sig ~ params | join(", ") ~ ") -> Self {") | length <= 100 %}
+{{ sig }}{{ params | join(", ") }}) -> Self {
+{% else %}
+{{ sig }}
+  {% for p in params %}
+        {{ p }},
+  {% endfor %}
+    ) -> Self {
+{% endif %}
+{% if streams %}
+  {% if o.crash %}
+        // the boot count in the high half: a session of this boot never takes a host's cursor of an earlier boot
+        // for its own (the boot count restarts at a power-on, the log store is lost with it then)
+        let stream_sessions = last_reset.view().boot_count << 16 | 1;
+  {% else %}
+        // no boot count without crash capture: every boot starts at session 1, a host may take its cursor of an
+        // earlier boot for this one's
+        let stream_sessions = 1;
+  {% endif %}
+{% endif %}
+{% if t.family != "stm32" %}
+        let uid = UID.init({{ u_id.expr }});
+{% endif %}
+        ServerState {
+            led,
+{% if o.crash %}
+            last_reset,
+{% endif %}
+{% if settings %}
+            settings,
+{% endif %}
+{% if streams %}
+            log_frames: crate::log::stream(stream_sessions).await,
+{% endif %}
+            uid: [UniqueId {
+                kind: UidKind::{{ u_id.kind }},
+                source: UidSource::{{ u_id.source }},
+{% if t.family == "stm32" %}
+  {% if u_id.ref %}
+                value: MaxLen::new_unchecked(RefVec::new_bytes({{ u_id.expr }})),
+  {% else %}
+                value: MaxLen::new_unchecked(RefVec::new_bytes(
+                    UID.init({{ u_id.expr }}),
+                )),
+  {% endif %}
+{% else %}
+                value: MaxLen::new_unchecked(RefVec::new_bytes(uid)),
+{% endif %}
+            }],
+{% if t.family != "stm32" %}
+            serial: hex(uid, SERIAL.init([0; {{ 2 * u_id.len }}])),
+{% endif %}
+{% if d.counters %}
+            counters_page: [UVlq32(0); ww_counters::MAX_WORDS],
+{% endif %}
+{% if streams %}
+            stream_sessions,
+{% endif %}
+        }
+    }
+{% if streams %}
+
+    /// Number of a new session of a reliable stream, when a host opens one anew.
+    fn new_stream_session(&mut self) -> u32 {
+        // the first one went to the log at boot (`ServerState::new`)
+        self.stream_sessions = self.stream_sessions.wrapping_add(1);
+        self.stream_sessions
+    }
+{% endif %}
+}
+{% if t.rp_variant and t.rp_variant != "rp2040" %}
+
+/// The RP2350's 64-bit chip id (OTP CHIPID0..3), zeros when the OTP read fails
+fn chip_id() -> [u8; 8] {
+    embassy_rp::otp::get_chipid().unwrap_or(0).to_be_bytes()
+}
+{% elif t.family == "nrf" %}
+
+/// The 64-bit device id ({{ u_id.reg }}[1] the high word)
+fn device_id() -> [u8; 8] {
+    let ficr = {{ hal }}::pac::FICR;
+    let id = (ficr.{{ u_id.reg | replace("FICR.", "") }}(1).read() as u64) << 32 | ficr.{{ u_id.reg | replace("FICR.", "") }}(0).read() as u64;
+    id.to_be_bytes()
+}
+{% endif %}
+{% if t.family != "stm32" %}
+
+/// `bytes` in upper-case hex, in `buf` (twice their length)
+fn hex(bytes: &[u8], buf: &'static mut [u8]) -> &'static str {
+    const DIGITS: &[u8; 16] = b"0123456789ABCDEF";
+    for (i, b) in bytes.iter().enumerate() {
+        buf[2 * i] = DIGITS[(b >> 4) as usize];
+        buf[2 * i + 1] = DIGITS[(b & 0xF) as usize];
+    }
+    core::str::from_utf8(buf).unwrap_or("")
+}
+{% endif %}
 
 // Implementations of the {{ ww.trait }} methods. `method_model = "_=immediate"`: they return a result right away
-// (`RpcResult` can also defer the reply, see wire_weaver::RpcResult).
+// (`RpcResult` can also defer the reply, see wire_weaver::RpcResult). Plain `fn`s unless they await
+// (`handler_model` below).
 impl ServerState {
-    async fn led_on(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {
+    fn led_on(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {
 {% if o.log != "none" %}
         {{ info }}("led on");
 {% endif %}
@@ -93,7 +244,7 @@ impl ServerState {
         Ready(())
     }
 
-    async fn led_off(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {
+    fn led_off(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {
 {% if o.log != "none" %}
         {{ info }}("led off");
 {% endif %}
@@ -105,101 +256,37 @@ impl ServerState {
     }
 }
 
-// Values of the API's `const` items, served without a handler and read once per connection by a host.
-// ww_firmware_info::FirmwareInfo (`firmware`): which firmware this is; the optional BUILD_RECORD is left out (`omit`
-// below).
-impl server_impl::{{ ww.trait }}Consts for ServerState {
-    // name, version, git commit, build time and profile, from build.rs (ww_firmware_info::build::emit())
-    const FIRMWARE_FIRMWARE: FirmwareSummary<'static> = ww_firmware_info::firmware_summary!();
-{% if o.settings_flash %}
-
-    // ww_user_info::UserInfo (`label`): the name is kept in flash, there is no room for notes (`omit` below)
-    const LABEL_CAPABILITIES: UserInfoCaps = UserInfoCaps {
-        name_max: MAX_NAME_LEN as u16,
-        notes_max: 0,
-        persistent: true,
-    };
-{% endif %}
-
-    // GNU build id, kept in flash by memory.x: a host finds this firmware's ELF by it (known at link time: a `fn`,
-    // `const_model` below)
-    fn firmware_build_id(&self) -> MaxLen<RefVec<'_, u8>, BUILD_ID_MAX_LEN> {
-        MaxLen::new_unchecked(RefVec::new_bytes(ww_firmware_info::build_id()))
-    }
-}
-{% if o.crash %}
-
-// ww_firmware_info::LastReset (`last_reset`): why the device last reset, and the crash record after a fault or panic.
-impl ServerState {
-    async fn last_reset_last_reset(
-        &mut self,
-        _cx: &mut Context<'_, impl EventOut>,
-    ) -> RpcResult<ResetRecord<'_>> {
-        Ready(crate::last_reset::record(&self.last_reset))
-    }
-
-    async fn last_reset_boot_count(
-        &mut self,
-        _cx: &mut Context<'_, impl EventOut>,
-    ) -> RpcResult<u32> {
-        Ready(self.last_reset.boot_count())
-    }
-
-    async fn last_reset_clear(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {
-        bedrock_crash::clear(&mut self.last_reset);
-        Ready(())
-    }
-}
-{% endif %}
-{% if o.settings_flash %}
-
-// ww_user_info::UserInfo (`label`): the name a user gives this unit. A write is in flash before the call answers,
-// and the flash is written only when the name changed.
-impl ServerState {
-    async fn set_label_name(
-        &mut self,
-        _cx: &mut Context<'_, impl EventOut>,
-        value: MaxLen<&'_ str, MAX_NAME_LEN>,
-    ) -> SetResult<UserInfoError<'_>> {
-        let Ok(label) = ArrayString::try_from(*value) else {
-            return SetError(UserInfoError::TooLong {
-                max: MAX_NAME_LEN as u16,
-            });
-        };
-        self.settings.set(|s| s.label = label);
-        match self.settings.persist().await {
-            Ok(()) => Set,
-            Err(_e) => {
-  {% if defmt %}
-                defmt::error!("label not saved: {}", defmt::Debug2Format(&_e));
-  {% elif o.log == "rtt" %}
-                rprintln!("label not saved: {:?}", _e);
-  {% endif %}
-                SetError(UserInfoError::Common(CommonError::Fault { code: 1 }))
-            }
-        }
-    }
-
-    async fn get_label_name(
-        &mut self,
-        _cx: &mut Context<'_, impl EventOut>,
-    ) -> GetResult<MaxLen<&'_ str, MAX_NAME_LEN>, UserInfoError<'_>> {
-        Value(MaxLen::new_unchecked(self.settings.get().label.as_str()))
-    }
-}
-{% endif %}
-
 mod server_impl {
     // Re-parses the API trait and generates request dispatch + serdes for ServerState.
     // To see the generated code, add: debug_to_file = "./target/ww_server.rs"
     wire_weaver::ww_codegen!(
         {{ ww.krate }} :: {{ ww.trait }} for super::ServerState,
         server = true, no_alloc = true, use_async = true,
+{% if settings %}
+        // handlers that await (flash writes) are async, all others plain `fn`s: an `async fn` that never awaits
+        // still costs flash as a state of the dispatcher
+        handler_model = "device.label.*|device.settings.*=async, _=sync",
+{% else %}
+        // plain `fn` handlers: none awaits (an `async fn` that never awaits still costs flash as a state of the
+        // dispatcher)
+        handler_model = "_=sync",
+{% endif %}
         method_model = "_=immediate",
         property_model = "_=get_set",
         introspect = "with_docs",
-        const_model = "BUILD_ID=fn",
-        omit = [{{ feats('"firmware.BUILD_RECORD"', o.settings_flash and '"label.notes"') | join(", ") }}],
+{{ ("the board record and the chip ids are read at run time, the build id" ~ (" and the counter buffers are" if d.counters else " is") ~ " known at link time" ~ (", the defmt encoding at run time" if d.log else "") ~ " (ww/device.rs)") | doc(indent="        ", marker="//") }}
+        const_model = "{{ feats("BOARD", "IDS", d.counters and "INFO", "BUILD_ID", d.log and "DEFMT") | join("|") }}=fn",
+{{ ("left out: the optional build record, the board's reworks list" ~ (", label notes (no room in the settings)" if d.label else "") ~ (", counters.watch (a host polls `read` over " ~ ("USB" if ww.usb else "RTT") ~ ")" if d.counters else "")) | doc(indent="        ", marker="//") }}
+        omit = [
+            "device.firmware.BUILD_RECORD",
+            "device.board.REWORKS",
+{% if d.label %}
+            "device.label.notes",
+{% endif %}
+{% if d.counters %}
+            "device.counters.watch",
+{% endif %}
+        ],
     );
 }
 
@@ -330,24 +417,7 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
 async fn usb_task(mut usb: UsbDevice<'static, UsbDriver>) {
     usb.run().await;
 }
-
-#[embassy_executor::task]
-async fn server_task(mut server: UsbServer<'static, UsbDriver>, mut state: ServerState) {
-{% if o.settings_flash %}
-    loop {
-        // also while no host is connected: a change made just before it left still reaches the flash
-        match select(server.wait(), Timer::at(state.settings.due_at())).await {
-            Either::First(ready) => {
-                server.handle(ready, &mut state).await;
-            }
-            Either::Second(()) => state.settings.persist_if_due().await,
-        }
-    }
-{% else %}
-    // Nothing else to wait for: the prepared loop. Use server.wait() / server.handle() to also react to other events.
-    server.run(&mut state).await;
-{% endif %}
-}
+  {% set server_ty = "UsbServer<'static, UsbDriver>" %}
 {% else %}
 
 static RTT_BUFFERS: StaticCell<RttBuffers<MAX_MESSAGE_LEN>> = StaticCell::new();
@@ -367,10 +437,77 @@ pub fn start(spawner: Spawner, up: UpChannel, down: DownChannel, state: ServerSt
     spawner.spawn(server_task(server, state).unwrap());
   {% endif %}
 }
+  {% set server_ty = "RttServer<'static, EmbassyClock>" %}
+{% endif %}
 
+{% if streams and settings %}
+/// Serves requests; every [PUMP_PERIOD](crate::log::PUMP_PERIOD) moves the defmt log into its store (src/log.rs) and
+/// sends what the log stream has to a host that opened it; writes the settings once they settle, also while no host
+/// is connected (a change made just before it left still reaches the flash). The log stays in its store while no
+/// host is connected, a host that comes back resumes it.
+{% elif streams %}
+/// Serves requests; every [PUMP_PERIOD](crate::log::PUMP_PERIOD) moves the defmt log into its store (src/log.rs) and
+/// sends what the log stream has to a host that opened it. The log stays in its store while no host is connected, a
+/// host that comes back resumes it.
+{% endif %}
 #[embassy_executor::task]
-async fn server_task(mut server: RttServer<'static, EmbassyClock>, mut state: ServerState) {
-{% if o.settings_flash %}
+async fn server_task(mut server: {{ server_ty }}, mut state: ServerState) {
+{% if streams %}
+    let mut stream_buf = [0u8; STREAM_BUF_LEN];
+    let mut next_pump = Instant::now() + crate::log::PUMP_PERIOD;
+    loop {
+  {% if settings %}
+        match select3(
+            server.wait(),
+            Timer::at(next_pump),
+            Timer::at(state.settings.due_at()),
+        )
+        .await
+        {
+            Either3::First(ready) => {
+                if let Some(event) = server.handle(ready, &mut state).await {
+                    info!("{:?}", event);
+                    if matches!(event, LinkEvent::Down(_)) {
+                        state.log_frames.detach();
+                    }
+                }
+            }
+            Either3::Second(()) => next_pump += crate::log::PUMP_PERIOD,
+            Either3::Third(()) => state.settings.persist_if_due().await,
+        }
+  {% else %}
+        match select(server.wait(), Timer::at(next_pump)).await {
+            Either::First(ready) => {
+                if let Some(event) = server.handle(ready, &mut state).await {
+                    info!("{:?}", event);
+                    if matches!(event, LinkEvent::Down(_)) {
+                        state.log_frames.detach();
+                    }
+                }
+            }
+            Either::Second(()) => next_pump += crate::log::PUMP_PERIOD,
+        }
+  {% endif %}
+        crate::log::pump(&mut state.log_frames).await;
+        if server.is_up()
+            && state
+                .poll_streams(
+                    &mut server.sink(),
+                    Instant::now().as_millis(),
+                    &mut stream_buf,
+                    STREAM_BUDGET,
+                )
+                .await
+                .is_err()
+        {
+  {% if o.counters %}
+            cnt!(stream_send_errors: u32);
+  {% else %}
+            // a send that failed: the stream sends it again
+  {% endif %}
+        }
+    }
+{% elif settings %}
     loop {
         // also while no host is connected: a change made just before it left still reaches the flash
         match select(server.wait(), Timer::at(state.settings.due_at())).await {
@@ -385,4 +522,3 @@ async fn server_task(mut server: RttServer<'static, EmbassyClock>, mut state: Se
     server.run(&mut state).await;
 {% endif %}
 }
-{% endif %}

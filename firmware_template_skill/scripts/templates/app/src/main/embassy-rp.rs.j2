@@ -24,7 +24,17 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
 {% include "app/src/main/_rtt_init.rs.j2" %}
     {{ info }}("{{ o.name }} starting...");
 {% include "app/src/main/_last_reset_boot.rs.j2" %}
+{% if o.ww and s.uid.arg %}
+    let mut p = embassy_rp::init(Default::default());
+    // device.uid: the flash chip's unique id (the RP2040 has none), zeros when the read fails
+    let mut uid = [0; {{ s.uid.len }}];
+    let _ = embassy_rp::flash::Flash::<_, embassy_rp::flash::Blocking, {{ flash_size | hex }}>::new_blocking(
+        p.FLASH.reborrow(),
+    )
+    .blocking_unique_id(&mut uid);
+{% else %}
     let p = embassy_rp::init(Default::default());
+{% endif %}
 {% if o.bootloader %}
 
     let flash = Flash::<_, embassy_rp::flash::Blocking, FLASH_SIZE>::new_blocking(p.FLASH);

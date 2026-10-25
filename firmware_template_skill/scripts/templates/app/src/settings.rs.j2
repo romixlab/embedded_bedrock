@@ -64,6 +64,11 @@ pub struct DeviceSettings {
 {% endif %}
     #[setting(slot = 0, default = ArrayString::new())]
     pub label: ArrayString<32>,
+{% if s.led_at_boot %}
+    /// The LED after boot, served as `device.settings.led_at_boot`
+    #[setting(slot = 1, default = false)]
+    pub led_at_boot: bool,
+{% endif %}
 }
 
 {% if ecc %}
@@ -136,6 +141,14 @@ impl SettingsStore {
     pub fn set(&mut self, f: impl FnOnce(&mut DeviceSettings)) -> bool {
         self.settings.set(now_ms(), f)
     }
+{% if s.dev.settings %}
+
+    /// Every setting back to its default in RAM; written by [Self::persist_if_due] once they settle, or by
+    /// [Self::persist].
+    pub fn reset_to_defaults(&mut self) {
+        self.settings.reset_to_defaults(now_ms());
+    }
+{% endif %}
 
     /// Writes the settings now (if they differ from what is stored): `Ok` means they survive a power cut.
     pub async fn persist(&mut self) -> Result<(), Error> {

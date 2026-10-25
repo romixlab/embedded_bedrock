@@ -1,29 +1,15 @@
 {# Common tail of the embassy main() bodies; `led` is an Output created by the caller, `p` the peripherals. #}
 {% if o.ww %}
-  {% set fields = feats("led", o.crash and "last_reset", o.settings_flash and "settings") %}
+  {% set args = feats("led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid") %}
 
-  {% if o.settings_flash %}
-    let state = ww::ServerState {
-    {% for f in fields %}
-        {{ f }},
-    {% endfor %}
-    };
-    {% set state = "state" %}
-  {% else %}
-    {% set state = "ww::ServerState { " ~ (fields | join(", ")) ~ " }" %}
-  {% endif %}
+    let state = ww::ServerState::new({{ args | join(", ") }}){{ ".await" if s.dev.log else "" }};
   {% if ww.usb %}
     let driver = ww::usb_driver({{ ww.usb_args }});
-    ww::start(spawner, driver, {{ state }});
-  {% elif o.settings_flash %}
-    ww::start(spawner, channels.up.{{ ww.rtt_up }}, channels.down.0, state);
+    ww::start(spawner, driver, state);
+  {% elif s.dev.log %}
+    ww::start(spawner, ww_up, ww_down, state);
   {% else %}
-    ww::start(
-        spawner,
-        channels.up.{{ ww.rtt_up }},
-        channels.down.0,
-        {{ state }},
-    );
+    ww::start(spawner, channels.up.{{ ww.rtt_up }}, channels.down.0, state);
   {% endif %}
 {% endif %}
 {% if o.build_info %}

@@ -1,6 +1,7 @@
 {% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep, bedrock_ww_patch, embassy_patch %}
 {% set defmt = o.log == "defmt" %}
 {% set ww_rtt = o.ww and ww.rtt %}
+{% set d = s.dev %}
 [package]
 name = "{{ o.name }}"
 version = "0.1.0"
@@ -14,7 +15,12 @@ edition = "2024"
 {% if defmt %}
 defmt = "{{ V["defmt"] }}"
   {% if t.family != "esp" %}
-    {% if ww_rtt %}
+    {% if d.log %}
+# defmt's global logger: every frame into device.log over WireWeaver, teed to the RTT channel "defmt" that probe-rs /
+# cnt run show (src/log.rs)
+{{ ww_dep("ww_defmt_logger", "ww_defmt_logger", o.ww_src, root, ', features = ["rtt"]') }}
+rtt-target = "{{ V["rtt-target"] }}" # the RTT channels: the log's tee{{ " and WireWeaver's up and down" if ww_rtt else "" }} (src/log.rs)
+    {% elif ww_rtt %}
 {{ dep("rtt-target", ["defmt"]) }} # defmt shares RTT with WireWeaver, instead of defmt-rtt
     {% elif o.rtt_buffer == 1024 %}
 defmt-rtt = "{{ V["defmt-rtt"] }}"
@@ -89,11 +95,16 @@ log = "0.4"
 {% endif %}
 {# --- optional features --- #}
 {% if o.counters %}
-cnt = "{{ V["cnt"] }}"
+cnt = "{{ V["cnt"] }}"{{ " # 0.5: used words and format version, served as device.counters (ww_counters)" if d.counters else "" }}
 {% endif %}
 {% if o.crash %}
 # crash capture: HardFault / panic record kept across reset, reset cause (src/last_reset.rs); the panic handler
 {{ bedrock_dep("bedrock_crash", o.bedrock, root, ", features = " ~ (feats("cortex-m", defmt and "defmt") | toml_list)) }}
+{% endif %}
+{% if d.boot %}
+# firmware updates through the STM32 ROM bootloader (src/boot.rs): the early boot, reboot(Updater), boot-loop rescue,
+# device.boot and device.dfu.node
+{{ bedrock_dep("bedrock_rom_boot", o.bedrock, root, ", features = " ~ (feats(o.rom_boot, "embassy", "ww-dfu", defmt and "defmt") | toml_list)) }}
 {% endif %}
 {% if o.settings_flash %}
 # settings store in the SETTINGS flash region (src/settings.rs)
@@ -121,10 +132,27 @@ embassy-sync = "{{ V["embassy-sync"] }}"
 {{ ww.api }} = { path = "../{{ ww.api }}"{{ ', features = ["defmt"]' if defmt else "" }} }
 {{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
 {{ ww_dep("ww_client_server", "ww_stdlib/ww_client_server", o.ww_src, root, ", default-features = false") }}
-  {% if o.settings_flash %}
+  {% if o.settings_flash or d.log %}
 embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/ww.rs)
   {% endif %}
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
+# the device contract's stdlib traits (`device` in the API crate): types in the handler signatures (src/ww/device.rs)
+{{ ww_dep("ww_board_info", "ww_stdlib/ww_board_info", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ', default-features = false, features = ["time"]') }}
+{{ ww_dep("ww_uid", "ww_stdlib/ww_uid", o.ww_src, root, ", default-features = false") }}
+  {% if d.counters %}
+{{ ww_dep("ww_counters", "ww_stdlib/ww_counters", o.ww_src, root, ", default-features = false") }}
+  {% endif %}
+  {% if d.log %}
+{{ ww_dep("ww_log", "ww_stdlib/ww_log", o.ww_src, root, ", default-features = false") }}
+  {% endif %}
+  {% if d.dfu %}
+{{ ww_dep("ww_dfu", "ww_stdlib/ww_dfu", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
+  {% endif %}
+  {% if d.log %}
+# reliable stream state of device.log; persistent-ram: its store in .uninit RAM, kept across a crash and reset
+{{ ww_dep("ww_stream", "ww_stream", o.ww_src, root, ', default-features = false, features = ["persistent-ram"]') }}
+  {% endif %}
   {% if ww.usb %}
 {{ ww_dep("wire_weaver_usb_embassy", "mcu/wire_weaver_usb_embassy", o.ww_src, root) }}
   {% else %}
@@ -143,8 +171,8 @@ build-info-build = "{{ V["build-info-build"] }}"
 {% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
-{% if o.build_info and o.ww_src != "git" %}
-{{ bedrock_ww_patch(o.ww_src, root) }}
+{% if (o.build_info or s.dev.boot) and o.ww_src != "git" %}
+{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot) }}
 {% endif %}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html

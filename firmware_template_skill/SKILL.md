@@ -41,7 +41,8 @@ Paths are relative to this skill directory; use the absolute path when invoking.
    - settings `--settings` [`--settings-pages N`]: a `SETTINGS` region at the end of flash (end of bank 2 on
      dual-bank parts; default 8 KiB, at least 2 erase pages) and `src/settings.rs`, a `ww_settings` store on
      embassy-stm32's `Flash` (`ww_ecc_flash::EccSafeFlash` on G0 / H7 so a power cut can't leave a word that faults
-     every boot) with one setting, `label`; with `--wire-weaver` served as `label: ww_user_info::UserInfo`. The code
+     every boot) with one setting, `label`; with `--wire-weaver` also `led_at_boot`, served as `device.label` and
+     `device.settings`. The code
      is generated for `--framework embassy` on STM32 G0 / H7 and parts without flash ECC (F0-F4, F7), without
      `--bootloader`; elsewhere only the region is reserved and the script says why. Replaces `--config-page`
      (answer `config_page` is read as `settings`).
@@ -75,7 +76,7 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      comes from `<CLI>_PROBE` in the environment or `.env`; a PC with several probes never gets an implicit one.
    - crash capture is on by default on Cortex-M (`bedrock_crash`: the HardFault and panic handlers save a record
      that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves
-     it as `ww_firmware_info::LastReset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /
+     it as `device.last_reset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /
      panic-halt as before). It takes `bedrock_crash` from `--bedrock` like `--build-info` does.
    - embassy crates `--embassy release|main` [release] (STM32 with `--framework embassy`): `release` takes the
      crates.io embassy and prints a commented-out `[patch.crates-io]` for embassy main; `main` takes embassy-rs/embassy

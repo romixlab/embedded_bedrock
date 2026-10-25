@@ -37,6 +37,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 import tomllib
 import urllib.error
 import urllib.request
@@ -493,6 +494,7 @@ class Layout:
     main_ram: Region
     bkp_words: int = 0
     bkp_region: str = CNT_BKP_DEFAULT_REGION
+    boot_word: Optional[tuple[str, int]] = None  # bedrock_rom_boot's (register, address), left out of bkp_words
 
     def by_name(self, name: str) -> Region:
         return next(r for r in self.regions if r.name == name and not r.commented_out)
@@ -628,10 +630,19 @@ def build_layout(t: Target, o) -> Layout:
         pname, addr, size = o.bkp
         if any(m.name == CNT_BKP_DEFAULT_REGION for m in t.memories):
             bkp_region = "BKP_REGS"
-        regions.append(Region(bkp_region, addr, size, "reg", f"{pname} backup registers, retained across resets (not power loss without VBAT); "
-                              "cnt.x places the BKP counters here", consts=False))
+        boot = getattr(o, "boot_word", None)  # (register, address): bedrock_rom_boot's, the region's last word
+        if boot:
+            size -= 4
+            reg = boot[0][:boot[0].index("BKP") + 3]
+            comment = (f"{reg}0R..{size // 4 - 1}R, retained across resets (not power loss without VBAT); cnt.x places the "
+                       f"BKP counters\n     here. {boot[0]} (0x{boot[1]:X}) is the boot word of bedrock_rom_boot "
+                       "(src/boot.rs), not cnt's")
+        else:
+            comment = (f"{pname} backup registers, retained across resets (not power loss without VBAT); "
+                       "cnt.x places the BKP counters here")
+        regions.append(Region(bkp_region, addr, size, "reg", comment, consts=False))
         bkp_words = size // 4
-    return Layout(regions, app, main_r, bkp_words, bkp_region)
+    return Layout(regions, app, main_r, bkp_words, bkp_region, getattr(o, "boot_word", None) if o.bkp else None)
 
 
 def errata_note(t: Target) -> str:
@@ -689,6 +700,18 @@ def toml_list(items: list[str]) -> str:
     return "[" + ", ".join(f'"{i}"' for i in items) + "]"
 
 
+def doc_comment(text: str, indent: str = "", width: int = 116, marker: str = "///", hang: str = "") -> str:
+    """`text` as `///` lines (or `marker`'s, `//!`) of at most `width` columns, a little short of 120 as the
+    hand-wrapped comments of the reference firmware (rustfmt leaves comments as they are), continuation lines indented
+    by `hang` (a list item's), no newline at the end; text with line breaks of its own (a preset's) keeps them."""
+    lead = f"{indent}{marker} "
+    if "\n" in text.strip():
+        lines = text.strip().splitlines()
+        return "\n".join([lead + lines[0].strip()] + [lead + hang + line.strip() for line in lines[1:]])
+    return "\n".join(textwrap.wrap(" ".join(text.split()), width, initial_indent=lead, subsequent_indent=lead + hang,
+                                    break_long_words=False, break_on_hyphens=False))
+
+
 def feats(*xs) -> list[str]:
     """Feature list without the falsy entries, for the `cond and "feature"` idiom in templates."""
     return [x for x in xs if x]
@@ -718,8 +741,10 @@ JINJA = jinja2.Environment(
 )
 JINJA.filters.update(
     toml_list=toml_list,
+    doc=doc_comment,
     hex=lambda n: f"0x{n:X}",
     hex8=lambda n: f"0x{n:08X}",
+    hex8_=lambda n: f"0x{n >> 16:04X}_{n & 0xFFFF:04X}",  # a Rust literal: 0x1FFF_75E0
     fmt_len=fmt_len,
     rcc_bit=lambda b: f"RCC.{b[0].upper()}.{b[1].upper()}",
 )
@@ -787,6 +812,7 @@ class Opts:
     cli_name: str = ""      # the command line binary, prefix of its env vars
     probe: str = ""         # debug probe VID:PID
     board: Optional[dict] = None  # --board preset (data/boards/<name>/preset.toml) plus its "name" and "dir"
+    rom_boot: str = ""      # bedrock_rom_boot family feature ("stm32g0", "stm32h7"): device.boot and dfu (TPL-41)
 
 
 def log_macros(o: Opts) -> tuple[str, str]:
@@ -846,11 +872,11 @@ _USE_RE = re.compile(r"^use ([^;]*);(\s*//.*)?$")
 
 
 def _version_key(seg: str) -> tuple:
-    """rustfmt (style edition 2024) "version sorting" of one path segment: self first, globs last,
+    """rustfmt (style edition 2024) "version sorting" of one path segment: self, super and crate first, globs last,
     digit runs compared numerically, otherwise byte order."""
     seg = seg.split(" as ")[0].strip()
-    if seg == "self":
-        return (0,)
+    if seg in ("self", "super", "crate"):
+        return (0, ("self", "super", "crate").index(seg))
     if seg == "*":
         return (3,)
     if seg.startswith("{"):
@@ -953,6 +979,84 @@ def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
     return ctx
 
 
+# bedrock_rom_boot's families (its `stm32g0` / `stm32h7` modules): the boot word, the family's last backup register
+# (its first register, the count, the last one's name)
+ROM_BOOT = {
+    "stm32g0": (0x4000_B100, 5, "TAMP_BKP4R"),   # RM0444 §31.6.12
+    "stm32h7": (0x5800_4050, 32, "RTC_BKP31R"),  # RM0468 §51.7.20, RM0433
+}
+# DEV_IDs of the H7 lines bedrock_rom_boot's h7 module covers: H72x/73x (RM0468) and H74x/75x single-core (RM0433)
+ROM_BOOT_H7 = (0x483, 0x450)
+
+
+def rom_boot_family(t: Target, args) -> str:
+    """The bedrock_rom_boot feature of a --wire-weaver firmware updated through the STM32 ROM bootloader
+    (device.boot, device.dfu.node), "" where it is left out: other families, and with --bootloader (embassy-boot owns
+    the boot then; an A/B BootControl gets its own id when someone needs it), and without --log defmt (src/boot.rs
+    logs bedrock_rom_boot's defmt values)."""
+    if (t.family != "stm32" or not args.wire_weaver or args.bootloader or args.framework != "embassy"
+            or (args.log or "defmt") != "defmt"):
+        return ""
+    if t.series == "G0":
+        return "stm32g0"
+    if t.series == "H7" and t.stm32.get("device_id") in ROM_BOOT_H7 and len(t.stm32.get("cores", [])) == 1:
+        return "stm32h7"
+    return ""
+
+
+def rom_boot_word(regs: Optional[Stm32Regs], rom_boot: str) -> Optional[tuple[str, int]]:
+    """(register, address) of the boot word when it is the last word of the backup registers the BKP counters take:
+    memory.x and CNT_BKP_BUFFER_SIZE_WORDS leave it out then."""
+    if not rom_boot or not regs or not regs.bkp:
+        return None
+    base, n, name = ROM_BOOT[rom_boot]
+    _, addr, size = regs.bkp
+    word = base + 4 * (n - 1)
+    if addr <= word < addr + size:
+        if word != addr + size - 4:
+            die(f"the boot word {name} (0x{word:X}) is not the last of the backup registers cnt takes")
+        return name, word
+    return None
+
+
+def uid_context(t: Target, o: Opts) -> dict:
+    """device.uid: how the firmware reads the unit's unique id (`expr` gives the `len` bytes; RP2040: main reads it
+    and hands it to ServerState::new), `serial`: device.board's serial (STM32: embassy's hex string, else ww.rs makes
+    one)."""
+    if t.family == "stm32":
+        # `ref`: embassy main's uid() is a &'static [u8; 12] already, the release's an array to keep in a cell
+        return dict(len=12, doc="STM32 96-bit unique id", kind="ChipUnique", source="InternalIc",
+                    expr="embassy_stm32::uid::uid()", serial="embassy_stm32::uid::uid_hex()",
+                    ref=o.embassy == "main")
+    if t.rp_variant == "rp2040":
+        # the RP2040 has no id of its own: the QSPI flash chip's 64-bit unique id
+        return dict(len=8, doc="the flash chip's 64-bit unique id (the RP2040 has none)", kind="ChipUnique",
+                    source="ExternalIc", expr="uid", serial="self.serial", arg=True)
+    if t.family == "rp":
+        return dict(len=8, doc="RP2350 64-bit chip id (OTP)", kind="ChipUnique", source="InternalIc",
+                    expr="chip_id()", serial="self.serial")
+    if t.family == "nrf":
+        reg = "FICR.info().deviceid" if t.chip.startswith("nrf91") else "FICR.deviceid"
+        return dict(len=8, doc="nRF 64-bit device id (FICR DEVICEID)", kind="ChipUnique", source="InternalIc", reg=reg,
+                    expr="device_id()", serial="self.serial")
+    return {}
+
+
+def variant_context(t: Target) -> Optional[dict]:
+    """device.variant: the chip's line, its revision table and registers (stm32.toml [variant]), None where unknown."""
+    if t.family != "stm32":
+        return None
+    dev_id = t.stm32.get("device_id")
+    v = STM32.get("variant", {}).get(f"{dev_id:x}" if dev_id else "")
+    if not v:
+        return None
+    flash_kib = sum(m.size for m in t.memories if m.kind == "flash") // 1024
+    # clock: the code that turns on DBGMCU's clock where it needs one (G0), dev_id_note: where DEV_ID needs a mask
+    return {"clock": "", "clock_note": "", "dev_id_note": "", **v, "dev_id": dev_id,
+            "revisions": [tuple(r) for r in v["revisions"]], "flash_kib": flash_kib,
+            "part": t.display[5:]}
+
+
 def probe_rs_chip(t: Target) -> str:
     """The probe-rs target name of the exact part (STM32G0B1RETx: `probe-rs download`, `cnt tui` and the client want
     one target, `probe-rs run --chip STM32G0B1RE` picks it from the variants itself); the LQFP package when there is a
@@ -1008,11 +1112,42 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "has_client": False,
         "has_cli": False,
         "has_py": False,
-        "has_device": False,   # `device` in the API (TPL-41)
-        "dev_variant": False,  # device.variant: chip id, revision, flash size (TPL-41)
-        "dev_log": False,      # device.log: the stored defmt log (TPL-41)
-        "rom_boot": False,     # device.boot / dfu through bedrock_rom_boot (TPL-41)
     }
+    # the device contract (TPL-41): `device` in the API with the items the answers allow, keys as the Device trait's
+    variant = variant_context(t) if o.ww else None
+    s["dev"] = {
+        "firmware": o.ww,
+        "last_reset": o.ww and o.crash,
+        "board": o.ww,
+        "uid": o.ww,
+        "label": o.ww and bool(o.settings_flash),
+        "counters": o.ww and o.counters,
+        "log": o.ww and o.log == "defmt",
+        "variant": variant is not None,
+        "settings": o.ww and bool(o.settings_flash),
+        "boot": o.ww and bool(o.rom_boot),
+        "dfu": o.ww and bool(o.rom_boot),
+    }
+    s["has_device"] = o.ww                  # `device` in the API
+    s["led_at_boot"] = s["dev"]["settings"]  # device.settings.led_at_boot (every --wire-weaver firmware has the LED)
+    s["variant"] = variant                  # device.variant: dev_id, device, revisions [(name, rev_id, marking)]
+    if variant:  # the Variant type's doc: what the preset knows of the board's chip, else the part this firmware is for
+        variant["doc"] = b.get("variant", {}).get("doc") or (
+            f"this firmware is built for an {t.display}, what can differ is its silicon revision.")
+    # src/boot.rs: the boot word, where the ROM's USB is on this board, what the rescue needs (the preset's [rom_boot])
+    rb = b.get("rom_boot", {})
+    s["boot"] = {"word": ROM_BOOT[o.rom_boot][2], "usb": rb.get("usb", "PA11 / PA12"), "healthy": rb.get("healthy", ""),
+                 "rescue": rb.get("rescue", "")} if s["dev"]["boot"] else {}
+    s["uid"] = {"arg": False, "reg": "", "ref": False, **uid_context(t, o)} if o.ww else {}
+    # src/log.rs: the logger's ring and the stream's store, a quarter of them on parts with less than 64 KiB of RAM
+    # (12 KiB of 20 on an L073 left no stack)
+    ram = next((r.length for r in lay.regions if r.kind == "ram" and r.is_main_ram), 0) if lay else 0
+    s["log"] = {"ring": 4096, "store": 8192} if not ram or ram >= 64 * 1024 else {"ring": 1024, "store": 2048}
+    s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
+    s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
+    s["dev_variant"] = s["dev"]["variant"]
+    s["dev_log"] = s["dev"]["log"]
+    s["rom_boot"] = s["dev"]["boot"]
     s["repo"] = n + ("_template" if b.get("board", {}).get("template") else "")  # AGENTS.md title
     s["feature_areas"] = ["FW", "API"] + (["HOST"] if s["has_client"] else []) + (["PY"] if s["has_py"] else []) + ["TPL"]
     s["members"] = [o.ww_api] + [c for c, on in ((s["client"], s["has_client"]), (s["cli_crate"], s["has_cli"]),
@@ -1162,6 +1297,11 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     files["src/main.rs"] = render("app/src/main.rs.j2", **ctx)
     if o.ww:
         files["src/ww.rs"] = render("app/src/ww.rs.j2", **ctx)
+        files["src/ww/device.rs"] = render("app/src/ww/device.rs.j2", **ctx)
+    if ctx["s"]["dev"]["log"]:
+        files["src/log.rs"] = render("app/src/log.rs.j2", **ctx)
+    if ctx["s"]["dev"]["boot"]:
+        files["src/boot.rs"] = render("app/src/boot.rs.j2", **ctx)
     if o.settings_flash:
         files["src/settings.rs"] = render("app/src/settings.rs.j2", **ctx)
     if o.crash:
@@ -1562,7 +1702,7 @@ def settings_pages(t: Target, args) -> int:
     return n
 
 
-def make_layout(t: Target, args, regs: Optional[Stm32Regs]) -> Optional[Layout]:
+def make_layout(t: Target, args, regs: Optional[Stm32Regs], rom_boot: str = "") -> Optional[Layout]:
     if t.family == "esp":
         return None
 
@@ -1572,6 +1712,7 @@ def make_layout(t: Target, args, regs: Optional[Stm32Regs]) -> Optional[Layout]:
         min_bootloader = args.min_bootloader
         main_ram = args.main_ram
         bkp = regs.bkp if regs else None
+        boot_word = rom_boot_word(regs, rom_boot)
     return build_layout(t, O)
 
 
@@ -1613,7 +1754,8 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     elif args.bkp_counters != "none":
         die("--bkp-counters is STM32 only")
 
-    lay = make_layout(t, args, regs)
+    rom_boot = rom_boot_family(t, args)
+    lay = make_layout(t, args, regs, rom_boot)
     led = args.led or t.default_led
     o = Opts(name=name, framework=fw, log=log, bootloader=args.bootloader, settings=args.settings,
              counters=args.counters, ram_counters=args.ram_counters, bkp=regs.bkp if regs else None, bkp_mode=args.bkp_counters,
@@ -1623,6 +1765,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
              build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
     o.embassy = args.embassy
+    o.rom_boot = rom_boot
     o.board = getattr(args, "preset", None)
     o.host = args.host
     o.cli_name = args.cli_name or name

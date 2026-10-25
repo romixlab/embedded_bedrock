@@ -121,10 +121,14 @@ same code serves every framework, cleared with `RMVF`; RP2040 / RP235x `CHIP_RES
 embassy-rp's PAC; nRF, bare RP and ESP: `Undetermined` (TODO(ROB-11)). Uptime from `embassy_time` with embassy,
 otherwise none.
 
-`--wire-weaver` adds `firmware: ww_firmware_info::FirmwareInfo` and `last_reset: ww_firmware_info::LastReset` to the
-API root. `FirmwareInfo` is served from `<Root>Consts` (no handlers, API-36): `FIRMWARE_FIRMWARE =
-firmware_summary!()` (from `ww_firmware_info::build::emit()` in `build.rs`), `firmware_build_id()` (`const_model =
-"BUILD_ID=fn"`), `BUILD_RECORD` omitted; `LastReset` has three handlers on `ServerState::last_reset`.
+`--wire-weaver` serves the device contract at `device: Device` in the API (TPL-41, `src/ww/device.rs`), with the
+items the answers allow: `firmware` (`ww_firmware_info::FirmwareInfo`, served from consts: `firmware_summary!()` from
+`ww_firmware_info::build::emit()` in `build.rs`, `BUILD_ID=fn`, `BUILD_RECORD` omitted), `last_reset` (crash
+capture), `board`, `uid` (STM32 96-bit id, RP2040 the flash chip's id, RP2350 OTP chip id, nRF FICR DEVICEID),
+`label` and `settings` (`--settings`), `counters` (`--counters`), `log` (`--log defmt`, `src/log.rs`), `variant`
+(STM32 parts with a `[variant.<dev_id>]` table in `stm32.toml`) and `boot` / `dfu` (`bedrock_rom_boot` on G0 and
+single-core H7 without `--bootloader`, needs `--log defmt`; `src/boot.rs`, the boot word in the last backup register,
+left out of cnt's BKPSRAM).
 
 Every Cortex-M application links with `--build-id=sha1` (build.rs) and keeps `.note.gnu.build-id` in flash after
 `.rodata` (memory.x, symbols `__build_id_start` / `__build_id_end` for `ww_firmware_info::build_id()`); check with
@@ -163,8 +167,8 @@ switching the default runner.
 with `compact()` (CRC'd blob in flash) and `full()` (defmt-interned, ELF only). Requires a checkout of
 `embedded_bedrock` (`--bedrock <relative path>`, default `git`); its WireWeaver crates come from git. With a local
 `--ww-src`, `Cargo.toml` and `bootloader/Cargo.toml` get a `[patch."https://github.com/vhrdtech/wire_weaver"]` that
-points bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` at that checkout, so the build has one
-WireWeaver. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
+points bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` (and bedrock_rom_boot's `ww_dfu` with
+`device.boot`) at that checkout, so the build has one WireWeaver. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
 
 ## Hubris
 
@@ -210,7 +214,7 @@ new g0m    --chip STM32G0B1RE --bootloader --settings --counters --bkp-counters 
 new g0setm --chip STM32G0B1CE --settings --bkp-counters auto --counters --led PF1 --wire-weaver --embassy main  (Donguru-like, +release)
 new h725m  --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bootloader --embassy main  (OTG_HS, +bootloader)
 new l476m  --chip STM32L476RG --wire-weaver --led PA5 --embassy main            (USB v? no CRS)
-new f103m  --chip STM32F103CB --wire-weaver --led PC13 --embassy main           (USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8) (+release)
+new f103m  --chip STM32F103CB --wire-weaver --led PC13 --embassy main           (USB v1, double-buffered; 128K: main is 5.5 KiB too big for the 64K C8; release only since the device suite, TPL-34)
 new g0rtt  --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings     (+bootloader)
 new g0rttn --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log none
 new g0rttr --chip STM32G0B1RE --wire-weaver --ww-transport rtt --log rtt --ww-api g0_dev
@@ -220,6 +224,11 @@ new f411   --chip STM32F411CE --wire-weaver --led PC13                          
 new l476   --chip STM32L476RG --wire-weaver --led PA5                            (no CRS: clock TODO)
 new l073   --chip STM32L073RZ --wire-weaver --led PA5
 new f103   --chip STM32F103C8 --wire-weaver --led PC13                           (USB_LP_CAN1_RX0, no HSI48; release only, 64K flash)
+new g0rb   --chip STM32G0B1RE --wire-weaver --counters --bkp-counters tamp --settings   (device suite: rom_boot stm32g0, boot word out of BKPSRAM, +release)
+new g0rbm  --chip STM32G0B1RE --wire-weaver --counters --bkp-counters tamp --settings --embassy main  (+release)
+new g0rbl  --chip STM32G0B1RE --wire-weaver --counters --bkp-counters tamp --settings --ww-src <wire_weaver checkout>  (ww_dfu in the [patch])
+new h725rb --chip STM32H725IG --wire-weaver --supply-config DirectSMPS --counters --bkp-counters rtc --settings  (rom_boot stm32h7, +release)
+new g0brd  --board nucleo_g0b1re --host                                         (firmware/src equals nucleo_g0b1re_template's, +release)
 new rp2040 --chip rp2040 --wire-weaver --counters --bootloader                                            (+bootloader)
 new rp2350r --chip rp2350 --wire-weaver --ww-transport rtt --log rtt
 new nrf840 --chip nrf52840 --wire-weaver --counters
