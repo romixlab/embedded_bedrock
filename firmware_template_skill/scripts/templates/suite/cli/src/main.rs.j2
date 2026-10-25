@@ -4,7 +4,7 @@
 {% set d = s.dev %}
 {% set decode = d.counters or d.log %}
 {% set elf = ww.rtt or decode %}
-{% set uses = feats("BootTarget" if d.boot else "", "CounterBuffer" if d.counters else "", "Error", T,
+{% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
                     "Usb" if ww.usb else "", "api_line", "board_line" if d.board else "", "firmware_line",
                     "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
@@ -177,9 +177,14 @@ enum Cmd {
 {% else %}
     Report,
 {% endif %}
-    /// The user LED{{ (" (" ~ s.led_name ~ ")") if s.led_name else "" }}
+    /// The user LED{{ (" (" ~ s.led_name ~ ")") if s.led_name else "" }}{{ ": solid on, off, blinked from the PC" if s.leds else "" }}
     #[command(subcommand)]
     Led(LedCmd),
+{% if s.leds %}
+    /// {{ s.led.Name }}'s indication: mode, brightness, identify ({{ s.led.name }} breathes by default)
+    #[command(subcommand)]
+    Leds(LedsCmd),
+{% endif %}
 {% if d.label %}
     /// Show the board's label, or store a new one (kept in the board's flash)
     Label {
@@ -262,6 +267,40 @@ enum LedCmd {
         period: u64,
     },
 }
+{% if s.leds %}
+
+#[derive(Subcommand)]
+enum LedsCmd {
+    /// Show mode and brightness
+    Show,
+    /// Global mode: normal shows {{ s.led.name }}, essential and off hide it
+    Mode { mode: LedsMode },
+    /// Peak brightness
+    Brightness { level: Level },
+    /// Blink {{ s.led.name }} at full brightness to find the board, then back to its mode
+    Identify {
+        /// How long, in seconds
+        #[arg(default_value_t = 5)]
+        seconds: u32,
+    },
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum LedsMode {
+    Normal,
+    Essential,
+    Off,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum Level {
+    Lowest,
+    Low,
+    Normal,
+    High,
+    Highest,
+}
+{% endif %}
 {% if ww.rtt %}
 
 /// Serials of the attached probes for `--probe`, the probe's name as help; empty on any error.
@@ -452,6 +491,41 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
             }
             board.disconnect().await;
         }
+{% if s.leds %}
+        Cmd::Leds(cmd) => {
+            let board = connect(&cli).await?;
+            match cmd {
+                LedsCmd::Show => {
+                    println!("mode        {:?}", board.leds_mode().await?);
+                    println!("brightness  {:?}", board.brightness().await?);
+                }
+                LedsCmd::Mode { mode } => {
+                    let mode = match mode {
+                        LedsMode::Normal => Mode::Normal,
+                        LedsMode::Essential => Mode::OnlyEssential,
+                        LedsMode::Off => Mode::AllOff,
+                    };
+                    board.set_leds_mode(mode).await?;
+                }
+                LedsCmd::Brightness { level } => {
+                    let level = match level {
+                        Level::Lowest => Brightness::Lowest,
+                        Level::Low => Brightness::Low,
+                        Level::Normal => Brightness::Normal,
+                        Level::High => Brightness::High,
+                        Level::Highest => Brightness::Highest,
+                    };
+                    board.set_brightness(level).await?;
+                }
+                LedsCmd::Identify { seconds } => {
+                    board
+                        .identify(Duration::from_secs(u64::from(*seconds)))
+                        .await?
+                }
+            }
+            board.disconnect().await;
+        }
+{% endif %}
 {% if d.label %}
         Cmd::Label { name } => {
             let board = connect(&cli).await?;

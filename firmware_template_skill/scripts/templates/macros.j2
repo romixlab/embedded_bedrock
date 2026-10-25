@@ -21,13 +21,16 @@
 {%- endmacro %}
 
 {#- [patch] pointing the WireWeaver crates embedded_bedrock's crates take from git (bedrock_build; bedrock_rom_boot with
-    `dfu`) at the local --ww-src checkout, so the build has one WireWeaver. Starts with a blank line, no newline at
-    the end -#}
-{% macro bedrock_ww_patch(src, prefix, dfu=false) %}
+    `dfu`; `extra`: (bedrock crate, WireWeaver crate, its subdir) of the others, bedrock_led's ww_indication) at the
+    local --ww-src checkout, so the build has one WireWeaver. Starts with a blank line, no newline at the end -#}
+{% macro bedrock_ww_patch(src, prefix, dfu=false, extra=[]) %}
+{% set takers = ["bedrock_build"] + (["bedrock_rom_boot"] if dfu else []) + extra | map(attribute=0) | list %}
 
-# {{ "bedrock_build and bedrock_rom_boot take" if dfu else "bedrock_build takes" }} WireWeaver from git: the local checkout (--ww-src) instead
+# {{ takers | and_join }} {{ "take" if takers | length > 1 else "takes" }} WireWeaver from git: the local checkout (--ww-src) instead
 [patch."{{ WW_GIT }}"]
-{% for name, subdir in [("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_version", "ww_stdlib/ww_version")] + ([("ww_dfu", "ww_stdlib/ww_dfu")] if dfu else []) %}
+{% set pairs = [("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_version", "ww_stdlib/ww_version")] + ([("ww_dfu", "ww_stdlib/ww_dfu")] if dfu else []) %}
+{% for _, name, subdir in extra %}{% set _ = pairs.append((name, subdir)) %}{% endfor %}
+{% for name, subdir in pairs %}
 {{ name }} = { path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}" }{{ "\n" if not loop.last }}
 {%- endfor %}
 {%- endmacro %}

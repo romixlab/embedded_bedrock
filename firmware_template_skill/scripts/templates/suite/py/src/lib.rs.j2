@@ -4,7 +4,7 @@
 {% set d = s.dev %}
 {% set decode = d.counters or d.log %}
 {% set elf = ww.rtt or decode %}
-{% set uses = feats("BootTarget" if d.boot else "", "CounterBuffer" if d.counters else "", "Error", T,
+{% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
                     "Usb" if ww.usb else "", "SiliconRevision" if d.variant else "", "api_line",
                     "firmware_line", "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
@@ -174,6 +174,78 @@ impl Device {
                 .blink(count, Duration::from_millis(period_ms)),
         )
     }
+{% if s.leds %}
+
+{% filter rewrap("    /// ") %}
+    /// The global indication mode: "normal" shows {{ s.led.name }}, "essential" and "off" hide it (RAM only, "normal" after a reset).
+{% endfilter %}
+    #[getter]
+    fn leds_mode(&self) -> PyResult<String> {
+        let mode = match self.block(self.{{ B }}()?.leds_mode())? {
+            Mode::Normal => "normal",
+            Mode::OnlyEssential => "essential",
+            Mode::AllOff => "off",
+            Mode::Unknown(_) => "unknown",
+        };
+        Ok(mode.to_string())
+    }
+
+    #[setter]
+    fn set_leds_mode(&self, mode: &str) -> PyResult<()> {
+        let mode = match mode {
+            "normal" => Mode::Normal,
+            "essential" => Mode::OnlyEssential,
+            "off" => Mode::AllOff,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "leds_mode is \"normal\", \"essential\" or \"off\"",
+                ));
+            }
+        };
+        self.block(self.{{ B }}()?.set_leds_mode(mode))
+    }
+
+{% filter rewrap("    /// ") %}
+    /// {{ s.led.Name }}'s peak brightness: "lowest", "low", "normal", "high" or "highest" (RAM only, "normal" after a reset).
+{% endfilter %}
+    #[getter]
+    fn brightness(&self) -> PyResult<String> {
+        let level = match self.block(self.{{ B }}()?.brightness())? {
+            Brightness::Lowest => "lowest",
+            Brightness::Low => "low",
+            Brightness::Normal => "normal",
+            Brightness::High => "high",
+            Brightness::Highest => "highest",
+            Brightness::Unknown(_) => "unknown",
+        };
+        Ok(level.to_string())
+    }
+
+    #[setter]
+    fn set_brightness(&self, level: &str) -> PyResult<()> {
+        let level = match level {
+            "lowest" => Brightness::Lowest,
+            "low" => Brightness::Low,
+            "normal" => Brightness::Normal,
+            "high" => Brightness::High,
+            "highest" => Brightness::Highest,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "brightness is \"lowest\", \"low\", \"normal\", \"high\" or \"highest\"",
+                ));
+            }
+        };
+        self.block(self.{{ B }}()?.set_brightness(level))
+    }
+
+    /// Blink {{ s.led.name }} at full brightness for `seconds` (up to 600), then show its mode again.
+    #[pyo3(signature = (seconds=5.0))]
+    fn identify(&self, seconds: f64) -> PyResult<()> {
+        let duration = Duration::try_from_secs_f64(seconds)
+            .map_err(|e| PyValueError::new_err(format!("identify for {seconds} s: {e}")))?;
+        self.block(self.{{ B }}()?.identify(duration))
+    }
+{% endif %}
 
     /// Name, version, git commit, build time and profile of the running firmware, as text.
     fn firmware(&self) -> PyResult<String> {

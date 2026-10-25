@@ -7,15 +7,24 @@
 {% set streams = d.log %}
 {% set settings = o.settings_flash %}
 {% set arms = 1 + (1 if streams else 0) + (1 if settings else 0) %}
+{% set leds = s.leds %}
 //! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
+{% if leds %}
+//! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. `led_on` / `led_off` are here, the device contract
+//! (`device`) in `ww/device.rs`, {{ s.led.name }}'s indication (`leds`) in `ww/leds.rs`.
+{% else %}
 //! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. The LED is here, the device contract (`device`) in
 //! `ww/device.rs`.
+{% endif %}
 //!
 //! To add a method, property or stream: declare it in the API trait, then implement it here, `ww_codegen!` below
 //! regenerates the dispatch code and the compiler lists what is missing. Extend [ServerState] with the peripherals
 //! and data the implementations need. See https://github.com/vhrdtech/wire_weaver (`docs/`, `examples_mcu/`).
 
 mod device;
+{% if leds %}
+mod leds;
+{% endif %}
 
 {% if o.counters %}
 use cnt::cnt;
@@ -31,7 +40,9 @@ use embassy_futures::select::{Either3, select3};
 {% elif arms == 2 %}
 use embassy_futures::select::{Either, select};
 {% endif %}
+{% if not leds %}
 use {{ hal }}::gpio::Output;
+{% endif %}
 {% if ww.usb %}
   {% if t.family == "stm32" %}
 use embassy_stm32::{Peri, bind_interrupts, peripherals, usb};
@@ -89,7 +100,9 @@ const STREAM_BUDGET: usize = 2048;
 
 /// Everything the API implementation needs: peripherals, drivers, state.
 pub struct ServerState {
+{% if not leds %}
     pub led: Output<'static>,
+{% endif %}
 {% if o.crash %}
     /// Reset cause and crash record read at boot (src/last_reset.rs)
     last_reset: bedrock_crash::Snapshot,
@@ -116,6 +129,10 @@ pub struct ServerState {
     /// Sessions of reliable streams opened so far, see [Self::new_stream_session]
     stream_sessions: u32,
 {% endif %}
+{% if leds %}
+    /// `leds`: mode, brightness and the end of a running identify (src/led.rs shows them)
+    leds: leds::LedsState,
+{% endif %}
 }
 {% if not u_id.ref %}
 
@@ -128,7 +145,7 @@ static SERIAL: StaticCell<[u8; {{ 2 * u_id.len }}]> = StaticCell::new();
 {% endif %}
 
 impl ServerState {
-{% set params = ["led: Output<'static>"] + (["last_reset: bedrock_crash::Snapshot"] if o.crash else [])
+{% set params = ([] if leds else ["led: Output<'static>"]) + (["last_reset: bedrock_crash::Snapshot"] if o.crash else [])
      + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) %}
 {% set sig = "    pub " ~ ("async " if streams else "") ~ "fn new(" %}
 {% if (sig ~ params | join(", ") ~ ") -> Self {") | length <= 100 %}
@@ -155,7 +172,9 @@ impl ServerState {
         let uid = UID.init({{ u_id.expr }});
 {% endif %}
         ServerState {
+{% if not leds %}
             led,
+{% endif %}
 {% if o.crash %}
             last_reset,
 {% endif %}
@@ -188,6 +207,9 @@ impl ServerState {
 {% endif %}
 {% if streams %}
             stream_sessions,
+{% endif %}
+{% if leds %}
+            leds: leds::LedsState::new(),
 {% endif %}
         }
     }
@@ -240,7 +262,11 @@ impl ServerState {
 {% if o.counters %}
         cnt!(led_on_calls: u32);
 {% endif %}
+{% if leds %}
+        crate::led::set(crate::led::Mode::On);
+{% else %}
         self.led.set_high();
+{% endif %}
         Ready(())
     }
 
@@ -251,7 +277,11 @@ impl ServerState {
 {% if o.counters %}
         cnt!(led_off_calls: u32);
 {% endif %}
+{% if leds %}
+        crate::led::set(crate::led::Mode::Off);
+{% else %}
         self.led.set_low();
+{% endif %}
         Ready(())
     }
 }

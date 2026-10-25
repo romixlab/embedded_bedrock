@@ -1,4 +1,7 @@
+{% set pw = s.led.pwm %}
+{% if not pw %}
 use embassy_stm32::gpio::{Level, Output, Speed};
+{% endif %}
 use embassy_time::Timer;
 use cortex_m_rt::exception;
 {% if o.supply_config %}
@@ -22,7 +25,7 @@ use embassy_sync::blocking_mutex::Mutex;
 {% endif %}
 
 #[embassy_executor::main]
-async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner) {
+async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::Spawner) {
 {% if s.dev.boot %}
     // First: may reset once (after the ROM bootloader's jump) or jump into the ROM bootloader (src/boot.rs)
     let early = boot::early();
@@ -108,7 +111,21 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
   {% endif %}
 {% endif %}
 
-{% if s.led_at_boot %}
+{% set spawn = "spawner.spawn(" ~ ("unwrap!(%s)" if o.log == "defmt" else "%s.unwrap()") ~ ");" %}
+{% if pw %}
+  {% set task = "led::led_task(p." ~ pw.timer ~ ", p." ~ o.led ~ ", " ~ ("led_mode" if s.led_at_boot else "led::DEFAULT_MODE") ~ ")" %}
+  {% if s.led_at_boot %}
+    // {{ s.led.Name }} breathes, or shines solid with led_at_boot (src/led.rs)
+    let led_mode = if settings.get().led_at_boot {
+        led::Mode::On
+    } else {
+        led::DEFAULT_MODE
+    };
+  {% else %}
+    // {{ s.led.Name }} breathes (src/led.rs)
+  {% endif %}
+    {{ spawn | format(task) }}
+{% elif s.led_at_boot %}
     let led_level = if settings.get().led_at_boot {
         Level::High
     } else {

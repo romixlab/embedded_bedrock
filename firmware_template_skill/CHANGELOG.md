@@ -10,6 +10,30 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- The LED breathes on its timer channel (TPL-39): `--led-mode auto|breath|gpio` (default `auto`: breath where the
+  LED pin has a timer channel, embassy on STM32 so far), as nucleo_g0b1re_template's FW-10 / API-4 (v0.1.7, a182dbc).
+  - The pin's `TIMx_CHy` (or `CHyN`) and AF come from stm32-data; `src/led.rs` drives it as `SimplePwm` (or
+    `ComplementaryPwm`, duty inverted) at 1 kHz through embedded_bedrock's `bedrock_led` (`embassy` feature): a
+    breath by default, `led_on` / `led_off` hold it solid on / off, `led_at_boot` starts it solid on. `main.rs`
+    spawns `led::led_task` instead of keeping an `Output`.
+  - embassy-stm32's time driver is named, `time-driver-timN` (TIM4, TIM3, ... minus the LED's timer), never
+    `time-driver-any`, which may take the LED's timer.
+  - With `--wire-weaver`: `leds: ww_indication::Indication` in the API (mode, brightness, identify), served by
+    `src/ww/leds.rs`; `ww_indication` and `ww_si`'s `u32` feature in the firmware, `ww_indication` in the API crate
+    and the root workspace, `ww_indication` in the `--ww-src` patch. With `--host`: client `src/leds.rs`
+    (`leds_mode`, `set_leds_mode`, `brightness`, `set_brightness`, `identify`), CLI `leds show|mode|brightness|identify`,
+    Python `leds_mode`, `brightness`, `identify()`, README "LED", FEATURES rows.
+  - No timer channel on the pin, another framework, RP / nRF / ESP: the plain GPIO output as before (a note from
+    `new`); `--led-mode breath` refuses there, `--led-mode gpio` keeps the old output everywhere.
+
+  Upgrade notes: existing answers have no `led_mode`, so they get `auto`, and on STM32 embassy an LED pin with a
+  timer channel now breathes. Regenerate into a scratch directory and compare `Cargo.toml` (the time driver: check
+  nothing else in the firmware uses that timer; `bedrock_led`), `src/led.rs`, `src/main.rs` (the LED task replaces
+  the `Output`), `src/ww.rs`, `src/ww/leds.rs` and the API crate; or add `"led_mode": "gpio"` to `bedrock_fw.json`
+  to keep the plain output. `leds` is an addition to the API: bump its minor version, `#[since]` on the new item and
+  `just api-save`. Host crates: `leds.rs` in the client and the CLI / Python additions. Check on the board: the LED
+  breathes, `led on|off` hold it, `leds identify` blinks it.
+
 - `--host`: the Python crate's lib has `test = false` (it is tested from Python with `just test-py`; `cargo test --workspace` no longer runs a Rust test binary that needs libpython at run time), and the CLI's `use` of the client wraps at rustfmt's 98 columns, not 100 (failed `rustfmt --check` for longer project names). Upgrade notes: add `test = false` under `[lib]` in `<name>_py/Cargo.toml`.
 - Tested matrix: `f103m` builds release only (TPL-34).
 

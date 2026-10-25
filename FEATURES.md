@@ -183,6 +183,21 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `firmware/src` byte for byte (that firmware runs on the board). Builds for the tested matrix's `--wire-weaver`
   entries but the 64 KiB F103C8 (TPL-34); parts under 64 KiB RAM get a quarter of the log buffers. The H7, RP and
   nRF code (uid, variant, rom_boot on H7) has not run on a board yet.
+- 🧪 **TPL-39 The LED breathes on its timer channel** (`--led-mode auto|breath|gpio`, default auto): `led_pwm()`
+  finds the LED pin's `TIMx_CHy` / `CHyN` and AF in stm32-data (`peripherals[].pins`; a plain channel before a
+  complementary one, a general-purpose timer before TIM1 / TIM8) and names embassy's time driver off that timer
+  (`time-driver-timN` from `TIME_DRIVERS`, never `-any`, which may take the LED's timer). `src/led.rs`
+  (`app/src/led.rs.j2`): `SimplePwm` at 1 kHz, or `ComplementaryPwm` for CHyN, through embedded_bedrock's
+  `bedrock_led` (mono, `embassy`), a 3 s breath by default, `led_on` / `led_off` hold it solid on / off, the
+  `led_at_boot` setting starts it solid on. With `--wire-weaver`: `leds: ww_indication::Indication` in the API (mode,
+  brightness, identify; `src/ww/leds.rs`), with `--host` the client's `leds_mode` / `brightness` / `identify`, the
+  CLI's `leds show|mode|brightness|identify`, Python's `leds_mode`, `brightness`, `identify()` and a README "LED"
+  section. A pin without a channel, `--framework` other than embassy and RP / nRF / ESP (PWM not wired yet) keep the
+  plain GPIO output (`new` says so); `--led-mode breath` refuses there. The G0 answers with `--board nucleo_g0b1re`
+  regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (v0.1.7, a182dbc) but for the clock (TPL-40) and pins. Builds
+  for the tested matrix (`g0brd` PA5 TIM2_CH1, `g0ledn` PF1 TIM15_CH1N, `h7ledpb0` PB0 TIM3_CH3, `h7ledpe1` and
+  `g0ledgpio` without a channel, `g0ledoff`, and every embassy STM32 entry on PB14; full run 24 Oct 2026: only the known TPL-22, TPL-23, TPL-34 fail); ran on a board only as G0's own
+  firmware.
 - 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
   (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
 - ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`

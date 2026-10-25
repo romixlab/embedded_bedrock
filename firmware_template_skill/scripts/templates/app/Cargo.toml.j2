@@ -55,7 +55,8 @@ cortex-m-rt = "{{ V["cortex-m-rt"] }}"
 {# --- framework --- #}
 {% if o.framework == "embassy" %}
   {% if t.family == "stm32" %}
-{{ dep("embassy-stm32", feats(defmt and "defmt", t.chip, "unstable-pac", "exti", "time", "time-driver-any", o.rtc and "chrono")) }}
+{% set pw = s.led.pwm %}
+{{ dep("embassy-stm32", feats(defmt and "defmt", t.chip, "unstable-pac", "exti", "time", "time-driver-" ~ (pw.driver if pw else "any"), o.rtc and "chrono")) }}{{ (" # not \"any\": it may take " ~ pw.timer ~ ", " ~ s.led.name ~ "'s PWM (src/led.rs)") if pw else "" }}
   {% elif t.family == "rp" %}
 {{ dep("embassy-rp", feats(defmt and "defmt", t.rp_variant, "unstable-pac", "time-driver", "critical-section-impl", "executor-thread", "executor-interrupt", t.rp_variant != "rp2040" and "binary-info")) }}
   {% elif t.family == "nrf" %}
@@ -106,6 +107,14 @@ cnt = "{{ V["cnt"] }}"{{ " # 0.5: used words and format version, served as devic
 # device.boot and device.dfu.node
 {{ bedrock_dep("bedrock_rom_boot", o.bedrock, root, ", features = " ~ (feats(o.rom_boot, "embassy", "ww-dfu", defmt and "defmt") | toml_list)) }}
 {% endif %}
+{% if s.led.pwm %}
+  {% if s.leds %}
+# {{ s.led.Name }} breathes, blinks, identifies on {{ s.led.pwm.signal }} PWM (src/led.rs); `leds` (src/ww/leds.rs)
+  {% else %}
+# {{ s.led.Name }} breathes on {{ s.led.pwm.signal }} PWM (src/led.rs)
+  {% endif %}
+{{ bedrock_dep("bedrock_led", o.bedrock, root, ", features = " ~ (feats("embassy", s.leds and "ww-indication", defmt and "defmt") | toml_list)) }}
+{% endif %}
 {% if o.settings_flash %}
 # settings store in the SETTINGS flash region (src/settings.rs)
 {{ ww_dep("ww_settings", "ww_settings/ww_settings", o.ww_src, root, (', features = ["defmt"]' if defmt else "")) }}
@@ -138,7 +147,13 @@ embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
 # the device contract's stdlib traits (`device` in the API crate): types in the handler signatures (src/ww/device.rs)
 {{ ww_dep("ww_board_info", "ww_stdlib/ww_board_info", o.ww_src, root, ", default-features = false") }}
-{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ', default-features = false, features = ["time"]') }}
+{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ", default-features = false, features = " ~ (feats("time", s.leds and "u32") | toml_list)) }}
+  {% if s.leds %}
+{{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, root, ", default-features = false") }}
+    {% if not o.settings_flash %}
+{{ ww_dep("ww_error", "ww_stdlib/ww_error", o.ww_src, root, ", default-features = false") }}
+    {% endif %}
+  {% endif %}
 {{ ww_dep("ww_uid", "ww_stdlib/ww_uid", o.ww_src, root, ", default-features = false") }}
   {% if d.counters %}
 {{ ww_dep("ww_counters", "ww_stdlib/ww_counters", o.ww_src, root, ", default-features = false") }}
@@ -171,8 +186,8 @@ build-info-build = "{{ V["build-info-build"] }}"
 {% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
-{% if (o.build_info or s.dev.boot) and o.ww_src != "git" %}
-{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot) }}
+{% if (o.build_info or s.dev.boot or s.leds) and o.ww_src != "git" %}
+{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot, [("bedrock_led", "ww_indication", "ww_stdlib/ww_indication")] if s.leds else []) }}
 {% endif %}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
