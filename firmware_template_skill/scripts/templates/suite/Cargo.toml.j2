@@ -50,6 +50,10 @@ cnt_core = "{{ V["cnt_core"] }}" # finds the firmware's ELF by its build id, the
 {% if d.log %}
 defmt-decoder = "{{ V["defmt-decoder"] }}" # the log, followed live
 {% endif %}
+{% if s.pins %}
+{{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, "", ', features = ["std"]') }}
+{{ ww_dep("ww_gpio", "ww_stdlib/ww_gpio", o.ww_src, "", ', features = ["std"]') }}
+{% endif %}
 # host crates
 anstream = "{{ V["anstream"] }}"
 anstyle = "{{ V["anstyle"] }}"

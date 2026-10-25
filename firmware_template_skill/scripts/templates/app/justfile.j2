@@ -46,3 +46,9 @@ flash-bootsel serial="":
 cnt *args:
     {{ cd }}cargo build && cnt run --probe {{ '{{' }}probe{{ '}}' }} {{ '{{' }}args{{ '}}' }}
 {% endif %}
+{% if s.pins %}
+
+# Drive, pull and read every pin of `pins` live (ww pins tui{{ " over RTT" if ww.rtt else "" }}); quitting releases them
+pins *args:
+    ww {{ ("--rtt " ~ s.chip ~ " --probe {{probe}}") if ww.rtt else ("--api " ~ s.api) }} pins tui {{ '{{' }}args{{ '}}' }}
+{% endif %}

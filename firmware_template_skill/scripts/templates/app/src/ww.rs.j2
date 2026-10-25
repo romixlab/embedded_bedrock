@@ -7,6 +7,7 @@
 {% set streams = d.log %}
 {% set settings = o.settings_flash %}
 {% set arms = 1 + (1 if streams else 0) + (1 if settings else 0) %}
+{% set pins = s.pins %}
 {% set leds = s.leds %}
 //! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
 {% if leds %}
@@ -30,7 +31,7 @@ mod leds;
 use cnt::cnt;
 {% endif %}
 {% if defmt %}
-use defmt::{info, unwrap};
+use defmt::{info, unwrap{{ ", warn" if pins else "" }}};
 {% elif o.log == "rtt" %}
 use rtt_target::rprintln;
 {% endif %}
@@ -81,6 +82,9 @@ use wire_weaver_usb_embassy::ww_device::LinkEvent;
 use ww_device::rtt::{RttBuffers, RttConfig, RttServer, rtt_server};
 use ww_device::{EmbassyClock, LinkConfig{{ ", LinkEvent" if streams else "" }}};
 {% endif %}
+{% if pins %}
+use ww_pin_diag::{Level, PinDiagError, PointState};
+{% endif %}
 use ww_uid::{UidKind, UidSource, UniqueId};
 
 {% if ww.usb %}
@@ -129,6 +133,10 @@ pub struct ServerState {
     /// Sessions of reliable streams opened so far, see [Self::new_stream_session]
     stream_sessions: u32,
 {% endif %}
+{% if pins %}
+    /// `pins`: the free pins (src/pins.rs)
+    pins: crate::pins::Pins,
+{% endif %}
 {% if leds %}
     /// `leds`: mode, brightness and the end of a running identify (src/led.rs shows them)
     leds: leds::LedsState,
@@ -146,7 +154,7 @@ static SERIAL: StaticCell<[u8; {{ 2 * u_id.len }}]> = StaticCell::new();
 
 impl ServerState {
 {% set params = ([] if leds else ["led: Output<'static>"]) + (["last_reset: bedrock_crash::Snapshot"] if o.crash else [])
-     + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) %}
+     + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) + (["pins: crate::pins::Pins"] if pins else []) %}
 {% set sig = "    pub " ~ ("async " if streams else "") ~ "fn new(" %}
 {% if (sig ~ params | join(", ") ~ ") -> Self {") | length <= 100 %}
 {{ sig }}{{ params | join(", ") }}) -> Self {
@@ -207,6 +215,9 @@ impl ServerState {
 {% endif %}
 {% if streams %}
             stream_sessions,
+{% endif %}
+{% if pins %}
+            pins,
 {% endif %}
 {% if leds %}
             leds: leds::LedsState::new(),
@@ -285,6 +296,46 @@ impl ServerState {
         Ready(())
     }
 }
+{% if pins %}
+
+// ww_pin_diag::PinDiag (`pins`): raw access to the free pins (src/pins.rs). A refusal is {{ "counted and " if o.counters else "" }}logged.
+impl ServerState {
+    fn pins_set(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        point: u16,
+        state: PointState,
+    ) -> RpcResult<Result<(), PinDiagError<'_>>> {
+        Ready(
+            self.pins
+                .set(point, state)
+                .inspect_err(|e| refused(point, e)),
+        )
+    }
+
+    fn pins_read(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        point: u16,
+    ) -> RpcResult<Result<Level, PinDiagError<'_>>> {
+        Ready(self.pins.read(point).inspect_err(|e| refused(point, e)))
+    }
+
+    fn pins_release_all(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {
+        if self.pins.release_all() {
+            info!("pins released");
+        }
+        Ready(())
+    }
+}
+
+fn refused(point: u16, e: &PinDiagError<'_>) {
+  {% if o.counters %}
+    cnt!(pin_requests_refused: u32);
+  {% endif %}
+    warn!("pins: point {} refused: {}", point, e);
+}
+{% endif %}
 
 mod server_impl {
     // Re-parses the API trait and generates request dispatch + serdes for ServerState.
@@ -304,8 +355,8 @@ mod server_impl {
         method_model = "_=immediate",
         property_model = "_=get_set",
         introspect = "with_docs",
-{{ ("the board record and the chip ids are read at run time, the build id" ~ (" and the counter buffers are" if d.counters else " is") ~ " known at link time" ~ (", the defmt encoding at run time" if d.log else "") ~ " (ww/device.rs)") | doc(indent="        ", marker="//") }}
-        const_model = "{{ feats("BOARD", "IDS", d.counters and "INFO", "BUILD_ID", d.log and "DEFMT") | join("|") }}=fn",
+{{ ("the board record and the chip ids are read at run time, the build id" ~ (" and the counter buffers are" if d.counters else " is") ~ " known at link time" ~ (", the defmt encoding at run time" if d.log else "") ~ " (ww/device.rs)" ~ ("; the free pins are a table in flash (src/pins.rs)" if pins else "")) | doc(indent="        ", marker="//", width=120 if pins else 116) }}
+        const_model = "{{ feats("BOARD", "IDS", d.counters and "INFO", "BUILD_ID", d.log and "DEFMT", pins and "POINTS") | join("|") }}=fn",
 {{ ("left out: the optional build record, the board's reworks list" ~ (", label notes (no room in the settings)" if d.label else "") ~ (", counters.watch (a host polls `read` over " ~ ("USB" if ww.usb else "RTT") ~ ")" if d.counters else "")) | doc(indent="        ", marker="//") }}
         omit = [
             "device.firmware.BUILD_RECORD",
@@ -499,6 +550,12 @@ async fn server_task(mut server: {{ server_ty }}, mut state: ServerState) {
                     info!("{:?}", event);
                     if matches!(event, LinkEvent::Down(_)) {
                         state.log_frames.detach();
+{% if pins %}
+                        // a host that disconnects or goes silent gives the pins back too
+                        if state.pins.release_all() {
+                            info!("pins released");
+                        }
+{% endif %}
                     }
                 }
             }
@@ -512,6 +569,12 @@ async fn server_task(mut server: {{ server_ty }}, mut state: ServerState) {
                     info!("{:?}", event);
                     if matches!(event, LinkEvent::Down(_)) {
                         state.log_frames.detach();
+{% if pins %}
+                        // a host that disconnects or goes silent gives the pins back too
+                        if state.pins.release_all() {
+                            info!("pins released");
+                        }
+{% endif %}
                     }
                 }
             }

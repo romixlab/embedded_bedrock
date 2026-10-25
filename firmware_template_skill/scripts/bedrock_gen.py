@@ -867,6 +867,7 @@ class Opts:
     board: Optional[dict] = None  # --board preset (data/boards/<name>/preset.toml) plus its "name" and "dir"
     rom_boot: str = ""      # bedrock_rom_boot family feature ("stm32g0", "stm32h7"): device.boot and dfu (TPL-41)
     led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm())
+    pins: dict = field(default_factory=dict)  # --pins: resolve_pins(), {} without
 
 
 def log_macros(o: Opts) -> tuple[str, str]:
@@ -1152,6 +1153,154 @@ def variant_context(t: Target) -> Optional[dict]:
             "part": t.display[5:]}
 
 
+# --pins (TPL-46): the points of ww_pin_diag::PinDiag in src/pins.rs
+PIN_NAME_RE = re.compile(r"P([A-K])(\d{1,2})")
+SWD_PINS = ("PA13", "PA14")  # SWDIO, SWCLK on every STM32: the probe's, never a point
+MAX_POINTS = 64              # pins.rs keeps a bit per point in a u64
+
+
+def pin_key(name: str) -> tuple[str, int]:
+    m = PIN_NAME_RE.fullmatch(name)
+    return (m[1], int(m[2])) if m else (name, 0)
+
+
+def board_pins(preset: dict) -> tuple[list[str], dict]:
+    """The MCU pins of the preset's board map that it marks free, in port and number order, and the `[pins]` roles:
+    as boardmap's pin table has them (every net on the MCU footprint's pads that is a pin, `[board] pin_nets`; a pin
+    with no role in `[pins]` is free)."""
+    bm = preset.get("boardmap") or die(f"--pins board: the {preset['name']} preset has no [boardmap] to take the "
+                                       "free pins from; pass the list (--pins PA0,PA1,...)")
+    with open(preset["dir"] / bm["toml"], "rb") as f:
+        desc = tomllib.load(f)
+    geo = json.loads((preset["dir"] / bm["geometry"]).read_text())
+    pin_re = re.compile(desc["board"].get("pin_nets", r"^P[A-K]\d+$"))
+    mcu = geo["footprints"].get(desc["board"]["mcu_ref"]) or die(f"{bm['geometry']}: no footprint "
+                                                                 f"{desc['board']['mcu_ref']} (the MCU)")
+    roles = desc.get("pins", {})
+    nets = {p["net"] for p in mcu["pads"] if p.get("net") and pin_re.search(p["net"])}
+    return sorted((n for n in nets if roles.get(n, {}).get("role", "free") == "free"), key=pin_key), roles
+
+
+def chip_pins(t: Target) -> set[str]:
+    """GPIO names of the part's packages (empty when stm32-data has none, offline)."""
+    names = set()
+    for p in t.stm32.get("packages", []):
+        for pin in p.get("pins", []):
+            for sig in pin.get("signals", []):
+                names.update(x for x in re.split(r"[^A-Z0-9]+", sig) if PIN_NAME_RE.fullmatch(x))
+    return names
+
+
+def human_list(items: list[str], last: str = "or") -> str:
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} {last} {items[-1]}"
+
+
+def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -> dict:
+    """`pins` in the suite context ({} without --pins): the points in id order as (name, caps), the lines of
+    pins.rs's `with_points!` list and the prose around them. `spec`: "board" (every pin the --board preset's board map
+    marks free, plus the preset's read-only pins) or a list `PA0,PA1,PC13:ro`."""
+    if not spec or spec == "none":
+        return {}
+    if not o.ww:
+        die("--pins needs --wire-weaver (`pins` is part of the WireWeaver API)")
+    if t.family != "stm32" or o.framework != "embassy":
+        die("--pins: embassy on STM32 so far (embassy-stm32's Flex in analog mode); RP and nRF: FEATURES.md TPL-48")
+    if o.log != "defmt":
+        die("--pins needs --log defmt (pins.rs and its refusals log with defmt)")
+    b = o.board or {}
+    # pins the firmware itself uses: never a point
+    used = {o.led: "the LED"}
+    if usb:
+        used.update({usb["dp"]: "USB DP", usb["dm"]: "USB DM"})
+    bp = b.get("pins", {})
+    ro_info: dict[str, dict] = {}
+    if spec == "board":
+        if not b:
+            die("--pins board needs --board PRESET (its board map says which pins are free); without a preset pass "
+                "the list: --pins PA0,PA1,...")
+        free, roles = board_pins(b)
+        for name in [n for n in free if n in used]:
+            t.notes.append(f"--pins board: {name} left out, it is {used[name]}")
+        points = [(n, "FREE") for n in free if n not in used and n not in SWD_PINS]
+        for name, info in bp.get("read_only", {}).items():
+            if roles.get(name, {}).get("role") != "shared":
+                die(f"{b['dir'] / 'preset.toml'}: [pins] read_only {name} is not a shared pin of the board map "
+                    "(only a pin a part of the board drives or pulls is read, never the debug port, reset or a crystal)")
+            if name in used:
+                die(f"{b['dir'] / 'preset.toml'}: [pins] read_only {name} is {used[name]}")
+            points.append((name, "READ_ONLY"))
+            ro_info[name] = info
+        left_out = bp.get("left_out", "")
+        named = set(re.findall(r"\bP[A-K]\d{1,2}\b", left_out))
+        missing = [n for n, r in roles.items() if r.get("role") != "free" and n not in ro_info and n not in named]
+        if not left_out or missing:
+            die(f"{b['dir'] / 'preset.toml'}: [pins] left_out must name every pin the board map takes "
+                f"({', '.join(missing) or 'all of them'}): it is the doc of src/pins.rs")
+    else:
+        points, seen = [], set()
+        for item in (x.strip() for x in spec.split(",") if x.strip()):
+            name, _, flag = item.partition(":")
+            if not PIN_NAME_RE.fullmatch(name) or flag not in ("", "ro"):
+                die(f"--pins {item}: expected a pin like PA0, or PC13:ro for one only read")
+            if name in seen:
+                die(f"--pins: {name} twice")
+            if name in SWD_PINS:
+                die(f"--pins {name}: an SWD pin (PA13 SWDIO, PA14 SWCLK) belongs to the probe")
+            if name in used:
+                die(f"--pins {name}: it is {used[name]}")
+            seen.add(name)
+            points.append((name, "READ_ONLY" if flag else "FREE"))
+        known = chip_pins(t)
+        bad = [n for n, _ in points if known and n not in known]
+        if bad:
+            die(f"--pins: {t.display} has no {', '.join(bad)}")
+        taken = [f"the SWD pins ({', '.join(SWD_PINS)})"] + [f"{what} ({pin})" for pin, what in used.items()]
+        left_out = human_list(taken)
+    points.sort(key=lambda p: pin_key(p[0]))
+    if not points:
+        die("--pins: no pins left to serve")
+    if len(points) > MAX_POINTS:
+        die(f"--pins: {len(points)} pins, pins.rs serves at most {MAX_POINTS}")
+    # with_points!'s list: a line per run of one port and caps, wrapped at 120 columns as rustfmt leaves it
+    lines, cur, key = [], "", None
+    for name, caps in points:
+        item = f"{name}: {caps},"
+        k = (pin_key(name)[0], caps)
+        if cur and (k != key or len(cur) + 1 + len(item) > 120):
+            lines.append(cur)
+            cur = ""
+        cur = f"{cur} {item}" if cur else " " * 12 + item
+        key = k
+    lines.append(cur)
+    ro = [n for n, c in points if c == "READ_ONLY"]
+    ro_what = [f"{ro_info[n]['what']} ({n})" if n in ro_info else n for n in ro]
+    bm = b.get("boardmap")
+    table = f"docs/board/{Path(bm['toml']).stem}-pins.md" if spec == "board" and o.host else ""  # boardmap's pin table
+    if table:
+        source = f"the pins `{table}` marks free, named as there"
+    elif spec == "board":
+        source = f"the pins the board map of the {b['name']} preset marks free, named as there"
+    else:
+        source = "the pins this firmware was generated with (`--pins`)"
+    return {
+        "points": points,
+        "lines": lines,
+        "free": len(points) - len(ro),
+        "read_only": bool(ro),
+        "source": source,
+        "ro_what": human_list(ro_what, "and") if ro else "",
+        # the READ_ONLY const's doc: what drives or pulls each of them
+        "ro_parts": "; ".join(ro_info[n]["parts"] for n in ro if n in ro_info),
+        "left_out": left_out,
+        # the README's: the read-only pins, what is left out (the preset's short form)
+        "ro_readme": human_list([ro_info[n].get("readme", n) if n in ro_info else n for n in ro], "and") if ro else "",
+        "readme_left_out": bp.get("readme_left_out", "") if spec == "board" else "T" + human_list(taken, "and")[1:],
+        "test": bp.get("test", "") if spec == "board" else "",  # the pin test of a bare board, in the preset dir
+        "table": table,
+        "board": spec == "board",
+    }
+
+
 def probe_rs_chip(t: Target) -> str:
     """The probe-rs target name of the exact part (STM32G0B1RETx: `probe-rs download`, `cnt tui` and the client want
     one target, `probe-rs run --chip STM32G0B1RE` picks it from the variants itself); the LQFP package when there is a
@@ -1169,7 +1318,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
 
     def board_text(name: str) -> str:  # a Markdown piece of the preset (data/boards/<name>/<file>), "" without
         f = b["dir"] / name if b else None
-        return f.read_text().rstrip("\n").replace("{cli}", o.cli_name) if f and f.is_file() else ""
+        return f.read_text().rstrip("\n").replace("{cli}", o.cli_name).replace("{chip}", probe_rs_chip(t)) if f and f.is_file() else ""
 
     settings = next((r for r in lay.regions if r.name == "SETTINGS" and not r.commented_out), None) if lay else None
     s = {
@@ -1194,6 +1343,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "board_intro": board_text("readme-intro.md"),    # README: how the firmware reaches the PC on this board
         "board_readme": board_text("readme.md"),         # README: the board section
         "board_rom_boot": board_text("readme-rom-boot.md"),  # README: the ROM bootloader on this board
+        "board_pins": board_text("readme-pins.md"),      # README: the pins on this board's headers (--pins board)
         "client_type": b.get("board", {}).get("client", "Board"),  # the client library's typed board type
         "settings_size": f"{settings.length // 1024} KiB" if settings else "",
         "uid_bits": {"stm32": 96, "rp": 64, "nrf": 64, "esp": 48}[t.family],
@@ -1245,6 +1395,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
                 "pin": o.led, "pwm": o.led_pwm, "essential": b.get("led", {}).get("essential", ""),
                 "timer_mhz": b.get("clock", {}).get("timer_mhz")}
     s["leds"] = o.ww and bool(o.led_pwm)
+    s["pins"] = o.pins                      # `pins` (ww_pin_diag::PinDiag) beside the device contract (TPL-46)
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
     s["dev_variant"] = s["dev"]["variant"]
@@ -1323,6 +1474,11 @@ def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
     if bm:  # boardmap's description and geometry; `just board` renders the pictures
         for key in ("toml", "geometry"):
             files[f"docs/board/{bm[key]}"] = (o.board["dir"] / bm[key]).read_text()
+    pins = s["pins"]
+    if pins.get("test"):  # the pin test of a bare board (`ww pins test --plan`)
+        files[f"docs/board/{pins['test']}"] = (o.board["dir"] / pins["test"]).read_text()
+    if pins.get("table"):  # pins.rs's list against boardmap's pin table
+        files[f"{s['client']}/tests/board_pins.rs"] = render("suite/client/tests/board_pins.rs.j2", **ctx)
     return files
 
 
@@ -1447,6 +1603,8 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
             files["src/ww/leds.rs"] = render("app/src/ww/leds.rs.j2", **ctx)
     if o.led_pwm:
         files["src/led.rs"] = render("app/src/led.rs.j2", **ctx)
+    if o.pins:
+        files["src/pins.rs"] = render("app/src/pins.rs.j2", **ctx)
     if ctx["s"]["dev"]["log"]:
         files["src/log.rs"] = render("app/src/log.rs.j2", **ctx)
     if ctx["s"]["dev"]["boot"]:
@@ -2214,6 +2372,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
             elif not t.usb:
                 die(f"{t.display} has no USB device peripheral; use --ww-transport rtt")
 
+    o.pins = resolve_pins(t, o, args.pins, usb)
     t.notes.append(errata_note(t))
     files = gen_project(t, o, lay, usb)
     files = {k: sort_uses(v) if k.endswith(".rs") and isinstance(v, str) else v for k, v in files.items()}
@@ -2393,6 +2552,11 @@ def main(argv=None) -> None:
                    help="the board's debug probe as VID:PID (e.g. 0483:374b), used by the cargo runner and every "
                         "recipe; the serial comes from <CLI>_PROBE in the environment or .env. Default: the family's "
                         f"usual on-board probe ({', '.join(f'{k} {v[1]}' for k, v in SETUP_PROBES.items())})")
+    p.add_argument("--pins", metavar="board|LIST|none",
+                   help="`pins` in the API (ww_pin_diag::PinDiag): raw access to free pins for bring-up and pin tests, "
+                        "`just pins` shows them live (ww pins tui). `board`: every pin the --board preset's board map "
+                        "marks free, plus the pins it reads only; else a list like PA0,PA1,PC13:ro (`:ro` read only). "
+                        "Never the SWD pins, the LED or USB. Needs --wire-weaver and --log defmt, embassy on STM32")
     p.add_argument("--dry-run", action="store_true", help="list files and print memory.x without writing")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")
     p.set_defaults(func=lambda a: cmd_new(a, p_new))

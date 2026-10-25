@@ -27,6 +27,11 @@ pub trait {{ ww.trait }} {
 
     /// Device contract: {{ ["firmware", d.last_reset and "last reset", "board", "ids", d.label and "label", d.counters and "counters", d.log and "log", d.variant and "variant", d.settings and "settings", d.boot and "boot", d.dfu and "update node"] | select | join(", ") }}
     ww_impl!(device: Device);
+{% if s.pins %}
+
+{{ ("Raw access to the pins the board leaves free" ~ (" (" ~ s.pins.table ~ ")" if s.pins.table else "") ~ ", for bring-up and pin tests (`ww pins tui`): one program at a time, every pin given back when it lets go or disconnects") | doc(indent="    ", width=118) }}
+    ww_impl!(pins: ww_pin_diag::PinDiag);
+{% endif %}
 {% if s.leds %}
 
     /// {{ s.led.Name }} as one indication: global mode, brightness, identify. It breathes by default.

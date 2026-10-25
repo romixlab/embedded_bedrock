@@ -50,3 +50,7 @@ cnt_core.workspace = true
 {% if d.log %}
 defmt-decoder.workspace = true
 {% endif %}
+{% if s.pins %}
+ww_pin_diag.workspace = true
+ww_gpio.workspace = true
+{% endif %}

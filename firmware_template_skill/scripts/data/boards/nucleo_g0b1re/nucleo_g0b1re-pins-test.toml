@@ -1,0 +1,8 @@
+# Pin test of a bare NUCLEO-G0B1RE (MB1360 rev C02, solder bridges as shipped, nothing on the headers), for
+# `ww --rtt STM32G0B1RETx pins test --plan docs/board/nucleo_g0b1re-pins-test.toml` (README "Pins"). Every free pin
+# floats: no pull on the board, nothing between two of them. Recorded with `--save` on a board, then grouped.
+target = "pins"
+
+[[point]]
+names = ["PA*", "PB*", "PC0..=PC12", "PD*", "PF1"]
+expect = "floating"

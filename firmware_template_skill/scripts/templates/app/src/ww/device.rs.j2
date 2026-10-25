@@ -33,6 +33,9 @@ use ww_log::{DefmtInfo, LogError};
 {% if d.label %}
 use ww_settings::shrink_wrap::ArrayString;
 {% endif %}
+{% if s.pins %}
+use ww_pin_diag::Point;
+{% endif %}
 use ww_uid::UniqueId;
 {% if d.label %}
 use ww_user_info::{MAX_NAME_LEN, UserInfoCaps, UserInfoError};
@@ -344,6 +347,15 @@ impl super::server_impl::{{ ww.trait }}Consts for ServerState {
         DefmtInfo {
             encoding: crate::log::encoding(),
             build_id: MaxLen::new_unchecked(RefVec::new_bytes(ww_firmware_info::build_id())),
+        }
+    }
+{% endif %}
+{% if s.pins %}
+
+    // `pins` (beside the device contract, ww.rs): the free pins, from the table in src/pins.rs
+    fn pins_points(&self) -> RefVec<'_, Point<'_>> {
+        RefVec::Slice {
+            slice: crate::pins::POINTS,
         }
     }
 {% endif %}

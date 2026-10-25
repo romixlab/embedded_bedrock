@@ -75,6 +75,10 @@ Paths are relative to this skill directory; use the absolute path when invoking.
    - debug probe `--probe VID:PID` [the board preset's, else the family's on-board probe: ST-LINK 0483:374b, CMSIS-DAP
      2e8a:000c on RP, J-Link 1366:1015 on nRF]: the cargo runner and every recipe select the probe by it, the serial
      comes from `<CLI>_PROBE` in the environment or `.env`; a PC with several probes never gets an implicit one.
+   - pin diagnostics `--pins board|LIST|none` [none; the `nucleo_g0b1re` preset: board] (`--wire-weaver`, embassy
+     on STM32, `--log defmt`): `pins` in the API (`ww_pin_diag::PinDiag`, `src/pins.rs`) for bring-up and pin tests,
+     `just pins` shows them live (`ww pins tui`). `board`: every pin the preset's board map marks free, plus its
+     read-only pins; a list `PA0,PB3,PC13:ro` without a preset (`:ro` only read). Never SWD, the LED or USB.
    - crash capture is on by default on Cortex-M (`bedrock_crash`: the HardFault and panic handlers save a record
      that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves
      it as `device.last_reset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /

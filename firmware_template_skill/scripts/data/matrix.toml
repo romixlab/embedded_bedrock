@@ -436,6 +436,27 @@ tags = ["ww", "rtt", "host"]
 note = "the G0 template's preset: host crates equal G0's, root cargo test, just lint"
 
 [[entry]]
+name = "g0pinsh"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--pins", "PA0,PA1,PB3,PC13:ro", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "--pins as a list without a preset, USB, no settings (TPL-46)"
+
+[[entry]]
+name = "g0pinsrtt"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--settings", "--counters", "--pins", "PA0,PB3,PC13:ro"]
+builds = ["dev", "release"]
+tags = ["ww", "rtt"]
+note = "--pins without --host: firmware/ and the app justfile's pins recipe (TPL-46)"
+
+[[entry]]
+name = "h7pins"
+args = ["--chip", "STM32H725IG", "--supply-config", "DirectSMPS", "--wire-weaver", "--pins", "PA0,PB0,PC13:ro"]
+builds = ["dev"]
+tags = ["ww"]
+note = "--pins on H7: embassy-stm32's Flex on another GPIO version (TPL-46)"
+
+[[entry]]
 name = "g0rtth"
 args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--counters", "--bootloader", "--settings", "--host"]
 builds = ["dev", "bootloader"]

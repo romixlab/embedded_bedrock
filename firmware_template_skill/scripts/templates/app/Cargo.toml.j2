@@ -115,6 +115,11 @@ cnt = "{{ V["cnt"] }}"{{ " # 0.5: used words and format version, served as devic
   {% endif %}
 {{ bedrock_dep("bedrock_led", o.bedrock, root, ", features = " ~ (feats("embassy", s.leds and "ww-indication", defmt and "defmt") | toml_list)) }}
 {% endif %}
+{% set pins_deps %}
+# raw access to the free pins (src/pins.rs)
+{{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
+{{ ww_dep("ww_gpio", "ww_stdlib/ww_gpio", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }} # its Level, Pull
+{% endset %}
 {% if o.settings_flash %}
 # settings store in the SETTINGS flash region (src/settings.rs)
 {{ ww_dep("ww_settings", "ww_settings/ww_settings", o.ww_src, root, (', features = ["defmt"]' if defmt else "")) }}
@@ -126,6 +131,9 @@ embassy-embedded-hal = "{{ V["embassy-embedded-hal"] }}" # BlockingAsync: the fl
   {% endif %}
   {% if o.ww %}
 {{ ww_dep("ww_user_info", "ww_stdlib/ww_user_info", o.ww_src, root, ", default-features = false") }}
+    {% if s.pins %}
+{{ pins_deps }}
+    {%- endif %}
 {{ ww_dep("ww_error", "ww_stdlib/ww_error", o.ww_src, root, ", default-features = false") }}
   {% endif %}
 {% endif %}
@@ -164,6 +172,9 @@ embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/
   {% if d.dfu %}
 {{ ww_dep("ww_dfu", "ww_stdlib/ww_dfu", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
   {% endif %}
+  {% if s.pins and not o.settings_flash %}
+{{ pins_deps }}
+  {%- endif %}
   {% if d.log %}
 # reliable stream state of device.log; persistent-ram: its store in .uninit RAM, kept across a crash and reset
 {{ ww_dep("ww_stream", "ww_stream", o.ww_src, root, ', default-features = false, features = ["persistent-ram"]') }}
