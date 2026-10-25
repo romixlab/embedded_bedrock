@@ -134,11 +134,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
   that matrix entry uses the 128 KiB F103CB. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
   on 64 KiB parts, or the tested part moves to F103CB.
-- 🐛 **TPL-43 `--wire-weaver` with `--ww-src git`: the API crate has no `Cargo.lock`**: `#[ww_api_root]` (wire_weaver_core
-  `transform/cargo_source.rs`) needs a lockfile in `<name>_api/` or above it to find git dependencies, and the
-  generator writes none there, so the firmware build fails until `cargo generate-lockfile` runs in `<name>_api/`.
-  Found building `g0bigit` (23 Oct 2026). Fix in wire_weaver (take the consumer's lockfile) or here (a host
-  workspace root over the API crate, as `nucleo_g0b1re_template` has).
+- ✅ **TPL-43 `--wire-weaver` with `--ww-src git`: the API crate has no `Cargo.lock`**: fixed with a host workspace
+  root over the API crate (`suite/Cargo.toml.j2`, the firmware excluded), as `nucleo_g0b1re_template` has; `new`
+  runs `cargo generate-lockfile` there (`post_steps()`), so `#[ww_api_root]` (wire_weaver_core
+  `transform/cargo_source.rs`) finds the git dependencies. Found building `g0bigit` (23 Oct 2026).
 - 🧪 **TPL-36 `just setup` in every generated project**: `scripts/setup.py` (`app/setup.py.j2`, run with uv, stdlib
   only) sets up a fresh Arch, Ubuntu / Debian or Windows (winget) PC: build tools, rustup with the toolchain, targets
   and components of `rust-toolchain.toml` (Xtensa: espup's `esp`), probe-rs (its installer), and per answers
@@ -149,6 +148,27 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (RP's `flash-bootsel` moves into it, `cd firmware` with `--wire-weaver`). Built first in nucleo_g0b1re_template
   (its TPL-10), run there in an Ubuntu 24.04 container; `ww` from git needs wire_weaver P2401#23oct-1313. No git
   hooks step: it comes with the hooks (TPL-37) and chains to the hooks a repository already has.
+- 🚧 **TPL-37 Template suite: the host side next to the firmware** (`--host`, needs `--wire-weaver`; what
+  nucleo_g0b1re_template proved): `suite_files()` / `suite_context()` and `scripts/templates/suite/`: a root `justfile`
+  for building, flashing and checking all of it (probe-rs / cnt recipes with the probe, `api-check`, `hooks`, `logo`,
+  `setup`), `.github/workflows/ci.yml` (lint, test, firmware and bootloader build, evolution check) and `setup.yml`,
+  `scripts/rename.py`, README (board prose from the preset), AGENTS (layout and procedures before the upgrade
+  section), FEATURES and CHANGELOG skeletons from the options, LICENSE, `docs/logo/` (Typst, board name and chip label;
+  `typst` runs when on PATH) and `docs/board/` with `--board`. `--cli-name` names the CLI and its env prefix. Still
+  to come: the host crates (client over probe and USB, CLI, Python; P2528#24oct-1609c), behind `has_client` /
+  `has_cli` / `has_py`.
+- ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`
+  (`wire_weaver_evolution`, strict: the API's current version needs a snapshot), `just api-check` / `just api-save`,
+  the CI step, and `.githooks/pre-commit` installed by `scripts/hooks.py` (`just hooks`, also a `just setup` step):
+  chained after the hooks already in `.git/hooks/`, never `core.hooksPath`. The first snapshot is wire_weaver's
+  format, so `new` says to run `just api-save`.
+- ✅ **TPL-45 Board presets and the probe by VID:PID**: `--board PRESET` (`scripts/data/boards/<preset>/`:
+  `preset.toml` with `[answers]`, `[board]`, `[readme]`, `[logo]`, `[clock]` (a Rust snippet for `main.rs`),
+  `[boardmap]`, plus the README board sections and the boardmap TOML and geometry for `docs/board/`); answers layer
+  parser defaults < preset < `--answers` < flags. First preset `nucleo_g0b1re` (the boardmap example moved here from
+  `bedrock_board/examples/`). `--probe VID:PID` (default the preset's, else the family's on-board probe) goes into the
+  cargo runner, every probe-rs / cnt recipe and setup.py's udev check; the serial from `<CLI>_PROBE` (env or `.env`).
+  A preset's store_true answer can't be turned off by a flag: edit the answers.
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -343,7 +363,7 @@ A scriptable command-line tool next to RockFace (the GUI). `bedrock/` has a prob
 Board infographics for the firmware templates and any dev board: `bedrock_board` (library) and `boardmap`
 (`bedrock_board_cli`). The facts come from the board's PCB file (a vendor's Altium or Allegro board through
 `kicad-cli pcb import`) and a TOML description (what to draw, what every pin does); the pictures are SVG (PNG on
-request, resvg). Example: `bedrock_board/examples/nucleo_g0b1re/` (NUCLEO-G0B1RE, MB1360 rev C).
+request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0b1re/` (NUCLEO-G0B1RE, MB1360 rev C), the board preset (TPL-45).
 
 - ✅ **MAP-1 Geometry from a `.kicad_pcb`**: `boardmap extract` keeps the footprints of interest (connectors,
   jumpers, solder bridges, LEDs, buttons, chips, crystals) with their pads at absolute positions, nets and side,

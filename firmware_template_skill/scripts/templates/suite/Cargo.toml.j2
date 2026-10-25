@@ -1,0 +1,29 @@
+{% if o.host %}
+# Host workspace: the API crate{{ ", the client library, the command line and the Python wrapper" if s.has_client else "" }}. The firmware
+# (firmware/) is a standalone crate for {{ t.rust_target }}: build it from its own directory (or `just run`).
+{% else %}
+# Workspace of the API crate, so it has a Cargo.lock: #[ww_api_root] finds its git dependencies through the nearest
+# Cargo.lock above it. The firmware (firmware/) is a standalone crate for {{ t.rust_target }}: build it from its own
+# directory.
+{% endif %}
+[workspace]
+resolver = "3"
+members = {{ s.members | toml_list }}
+exclude = ["firmware"]
+{% if o.host %}
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+{% if s.repository %}
+repository = "{{ s.repository }}"
+{% endif %}
+{% if s.has_cli %}
+
+# just install: release, but incremental, so a rebuild after a small change is quick
+[profile.deploy]
+inherits = "release"
+incremental = true
+{% endif %}
+{% endif %}

@@ -7,16 +7,18 @@ This firmware ({{ t.display }}, `{{ o.framework }}`) was generated from the **em
 
 ## Layout: WireWeaver API crate + firmware
 
-The firmware serves a [WireWeaver]({{ WW_GIT }}) API over {{ "USB" if ww.usb else "RTT" }}. This directory holds two
-standalone crates (not a Cargo workspace, they build for different targets):
+The firmware serves a [WireWeaver]({{ WW_GIT }}) API over {{ "USB" if ww.usb else "RTT" }}. The root `Cargo.toml` is a
+Cargo workspace of the host side (with its `Cargo.lock`, which `#[ww_api_root]` needs to find the API's git
+dependencies); the firmware is a standalone crate next to it, excluded from the workspace because it builds for
+`{{ t.rust_target }}` with its own `.cargo/config.toml` and `Cargo.lock`:
 
-- `{{ ww.api }}/` — `#![no_std]` API crate: the `{{ ww.trait }}` trait (`#[ww_api_root]`) and its data types
-  (`#[derive_shrink_wrap]`). Its name + version identify the API on the wire: bump the version with every change and
+- `{{ ww.api }}/` — `#![no_std]` API crate, a workspace member and the firmware's path dependency: the
+  `{{ ww.trait }}` trait (`#[ww_api_root]`) and its data types (`#[derive_shrink_wrap]`). Its name + version identify the API on the wire: bump the version with every change and
   follow WireWeaver's `docs/evolution/rules.md` so deployed devices and hosts keep working together.
 - `firmware/` — the firmware; `src/ww.rs` implements the API on `ServerState` (`ww_codegen!`) and runs the transport.
   All firmware commands (`cargo build`, `cargo run`) run there{{ ", the bootloader is in `firmware/bootloader/`" if o.bootloader else "" }}.
 
-WireWeaver crates come from {{ "git (`" ~ WW_GIT ~ "`, pinned by `firmware/Cargo.lock`)" if o.ww_src == "git" else "the local checkout `" ~ o.ww_src ~ "`" }}.
+WireWeaver crates come from {{ "git (`" ~ WW_GIT ~ "`, pinned by `firmware/Cargo.lock` and the root's)" if o.ww_src == "git" else "the local checkout `" ~ o.ww_src ~ "`" }}.
 Its `AGENTS.md` and `docs/` explain the API DSL (methods, properties, streams) and the wire format.
 
 The trait, `ServerState` and the method implementations were blinky stubs; after generation they are this

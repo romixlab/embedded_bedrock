@@ -1,0 +1,66 @@
+{% set B = s.board.get("board", {}) %}
+# AGENTS.md — {{ s.repo }}
+
+{{ ("Guidance for agents and contributors. [FEATURES.md](FEATURES.md) is the only status tracker (areas " ~ s.feature_areas | join(", ") ~ " with stable IDs; update it in the same commit as the code, never renumber), [CHANGELOG.md](CHANGELOG.md) records changes under `[Unreleased]` until a release. [README.md](README.md) explains the project to a user.") | wordwrap(117, break_long_words=False, break_on_hyphens=False) }}
+
+## Layout
+
+The repo is a Cargo workspace of host crates plus the firmware as a standalone crate (`firmware/`, excluded from the
+workspace: it builds for `{{ t.rust_target }}` with its own `.cargo/config.toml` and `Cargo.lock`):
+
+- `{{ s.api }}/` — the API trait, shared by the firmware and the hosts (a workspace member and the firmware's
+  path dependency).
+{% if s.has_client %}
+- `{{ s.client }}/` — the library: the generated WireWeaver client (`{{ s.client_type }}Client`) and the typed `{{ s.client_type }}` on
+  top with one `Error`. Everything that talks to the board lives here; the CLI and the Python module only parse and
+  print.
+{% endif %}
+{% if s.has_cli %}
+- `{{ s.cli_crate }}/` — `{{ s.cli }}` (clap, anstream colour, dynamic completion with live probe serials, `--version`
+  with git SHA and build time from `build.rs`).
+{% endif %}
+{% if s.has_py %}
+- `{{ s.py }}/` — the `{{ s.py_module }}` Python module (PyO3, maturin; `uv` drives it: `just py`, `just test-py`).
+{% endif %}
+- `scripts/rename.py` — `just rename NAME [SHORT]`, run once by a user of the template.
+{% if s.boardmap %}
+- `docs/board/` — the board map: `{{ s.boardmap.toml }}` (what to draw, what every pin does) and the geometry JSON
+  extracted from ST's board file; the SVGs and `{{ s.board.name }}-pins.md` are rendered from them by `just board`
+  (boardmap from embedded_bedrock) and committed, so GitHub shows them. Edit the TOML, never the pictures.
+{% endif %}
+- `docs/logo/` — the logo: `template_logo.typ` (the same for every template repo), `logo.typ` (this board's name, chip
+  label and subtitle), `pair.svg` (WireWeaver's twisted pair, fixed artwork), JetBrains Mono Bold (printable ASCII
+  subset) in `fonts/`; `just logo` renders `logo.svg`, `logo-dark.svg` and `social-preview.png`, committed. Edit the
+  `.typ`, never the pictures.
+
+WireWeaver and embedded_bedrock crates come from git, pinned by the lock files; a change there is made upstream,
+not worked around here.
+
+## Commands
+
+```sh
+just test          # host tests
+just lint          # fmt check, clippy (host and firmware), release firmware build
+just run           # dev firmware with its defmt log
+just flash         # release firmware through the probe
+{% if s.has_cli %}
+just install       # {{ s.cli }} on this PC
+{% endif %}
+{% if s.has_py %}
+just py / just py-example / just test-py
+{% endif %}
+```
+
+## Conventions
+
+- Adding to the API: trait first (`{{ s.api }}`), then the firmware (`firmware/src/ww.rs`), {{ "then a typed\n  method in the client, then the CLI" ~ (" and Python" if s.has_py else "") ~ "." if s.has_client else "`ww` calls it\n  without generated code." }} Bump the API crate's version: `just api-check` (also in `just test`,
+  CI and `.githooks/pre-commit`) compares it with `{{ s.api }}/api_snapshots/` and names the bump a change needs;
+  `just api-save` records a released version. Never edit or re-save a committed snapshot to make the check pass.
+- Conventional Commits with a scope: `feat(fw): ...`, {{ "`feat(client): ...`, " if s.has_client else "" }}{{ "`feat(cli): ...`, " if s.has_cli else "" }}{{ "`feat(py): ...`," if s.has_py else "`feat(api): ...`," }}
+  `docs: ...`, `build: ...`; one CHANGELOG entry per change a user notices.
+- Public wording: the README, docs and recipe comments say what happens in neutral words.
+
+The rest of this file is the firmware template's own guidance, generated with the firmware.
+
+---
+

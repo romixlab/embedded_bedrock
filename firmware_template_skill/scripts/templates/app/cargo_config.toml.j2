@@ -11,8 +11,10 @@ rustflags = [
   {% endif %}
 ]
 {% else %}
-runner = "probe-rs run --chip {{ t.probe_chip }}{{ t.runner_extra }}"
-# runner = "cnt run --chip {{ t.probe_chip }}" # adds the defmt log plus live counters (cargo install cnt_cli), `just cnt`
+# Only {{ s.probe_name }} ({{ s.probe }}), never another probe on the PC: one with someone else's board
+# would be flashed. `just {{ 'run' if o.host else 'cnt' }}` adds the serial of {{ s.probe_env }} for a PC with two {{ s.board.get("readme", {}).get("plural", "of them") }}.
+runner = "probe-rs run --chip {{ t.probe_chip }} --probe {{ s.probe }}{{ t.runner_extra }}"
+# runner = "cnt run --chip {{ t.probe_chip }} --probe {{ s.probe }}" # adds the defmt log plus live counters (cargo install cnt_cli), `just cnt`
   {% if o.flip_link and t.cortex_m %}
 # Stack overflow protection: the stack goes below .data/.bss and overflows fault (cargo install flip-link)
 linker = "flip-link"

@@ -8,7 +8,9 @@ Firmware for **{{ t.display }}** with a [WireWeaver]({{ WW_GIT }}) device API se
 | `{{ ww.api }}/` | `#![no_std]` API crate: the `{{ ww.trait }}` trait and its data types. Shared by the firmware and host-side clients |
 | `firmware/` | the firmware (see `firmware/README.md`); `src/ww.rs` implements the API{{ ", `bootloader/` inside" if o.bootloader else "" }} |
 
-Both are standalone crates, not a Cargo workspace: they build for different targets.
+The root `Cargo.toml` is a workspace of the API crate (with a `Cargo.lock`, which `#[ww_api_root]` needs to find the
+API's git dependencies); the firmware is a standalone crate next to it, excluded from the workspace: it builds for
+`{{ t.rust_target }}` with its own `.cargo/config.toml` and `Cargo.lock`.
 
 ## Build and run
 
@@ -44,3 +46,12 @@ the WireWeaver repository.
    in the WireWeaver repository).
 2. Implement them on `ServerState` in `firmware/src/ww.rs`; the compiler lists what is missing.
 3. Bump the `{{ ww.api }}` version: the name + version identify the API to hosts.
+
+Every released version of `{{ ww.api }}` has a snapshot of its traits and types in `{{ ww.api }}/api_snapshots/`, and
+a test of the API crate (`{{ ww.api }}/tests/evolution.rs`, `just api-check`, part of `just test`) compares the source
+with the newest one ([WireWeaver's evolution rules]({{ WW_GIT }}/blob/master/docs/evolution/rules.md)): it fails
+when the API changed without the version bump the change needs, and names the version to put into
+`{{ ww.api }}/Cargo.toml`. A missing snapshot fails it too: record the first one, and each released version, with
+`just api-save` (`ww api save`) and commit the file. `just hooks` (also run by `just setup`) turns on
+`.githooks/pre-commit`, which runs the check when a commit touches the API crate; it chains after the hooks already in
+`.git/hooks/` and leaves `core.hooksPath` alone.

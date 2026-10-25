@@ -4,8 +4,14 @@
 """Set up this PC for the project: `just setup` (or `uv run scripts/setup.py`).
 
 Installs what building{{ ", flashing" if t.family != "esp" else "" }} and talking to the board needs: rustup with the firmware's toolchain and target,
+{% if o.ww %}
+{{ tool_list }}, and turns on the project's git hooks (`scripts/hooks.py`, chained to the hooks already there). Before
+it changes anything it prints its plan, naming every script it fetches from the internet and runs (rustup's{{ " and probe-rs's" if probe_rs else "" }}
+installers, probe-rs's udev rules file).
+{% else %}
 {{ tool_list }}. Before it changes anything it prints its plan, naming every script it fetches from the internet and
 runs (rustup's{{ " and probe-rs's" if probe_rs else "" }} installers, probe-rs's udev rules file).
+{% endif %}
 Steps that need root or an administrator (system packages, the probe's udev rule{{ ", the " ~ probe[0] ~ " driver" if windows_driver else "" }}) are printed
 for you to run; `--root` runs them too, each shown before it runs. `--check` only reports what is missing and exits
 with 1 if anything is (also a CI step); `--skip TOOL` leaves a step out.
@@ -422,6 +428,18 @@ def prerequisite_step(tool: str, how: str) -> Step:
     return Step(tool, lambda: version_of(tool), manual=how)
 
 
+{% if o.ww %}
+def git_hooks_step() -> Step:
+    hooks = [sys.executable, str(ROOT / "scripts" / "hooks.py")]
+
+    def check() -> Status:
+        out = subprocess.run([*hooks, "--check"], capture_output=True, text=True, check=False)
+        return Status(out.returncode == 0, out.stdout.strip())
+
+    return Step("git hooks", check, lambda: run(hooks))
+
+
+{% endif %}
 def steps_for(p: Platform, probe: bool, skip: set[str]) -> list[Step]:
     win = p.kind == "windows"
     steps = [
@@ -443,6 +461,9 @@ def steps_for(p: Platform, probe: bool, skip: set[str]) -> list[Step]:
         probe_rs_step(p),
 {% endif %}
         *(cargo_tool_step(*t) for t in CARGO_TOOLS),
+{% endif %}
+{% if o.ww %}
+        git_hooks_step(),
 {% endif %}
     ]
     access = probe_access_step(p) if probe else None

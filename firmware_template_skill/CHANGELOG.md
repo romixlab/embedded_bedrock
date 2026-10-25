@@ -10,6 +10,41 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- The template suite, first part (TPL-37 layout, TPL-38, TPL-43, TPL-45): what nucleo_g0b1re_template proved, from
+  the generator.
+  - `--wire-weaver` projects get a host workspace at the root (`Cargo.toml` with the API crate as member, the
+    firmware excluded, `Cargo.lock` from `cargo generate-lockfile` in `new`); the API crate loses its own
+    `[workspace]`. Fixes the missing lockfile `#[ww_api_root]` needs with `--ww-src git` (TPL-43).
+  - API evolution check (TPL-38): the API crate's dev-dependency `wire_weaver_evolution` and `tests/evolution.rs`
+    (strict: the current version needs a snapshot in `api_snapshots/`), recipes `api-check`, `api-save`, `hooks`,
+    `test`, `.githooks/pre-commit` and `scripts/hooks.py` (chained after the hooks already in `.git/hooks/`, never
+    `core.hooksPath`), and a hooks step in `scripts/setup.py`.
+  - `--probe VID:PID` (TPL-45): `.cargo/config.toml`'s runner (`probe-rs run --probe`, `cnt run --probe`) and every
+    probe-rs / cnt recipe select the probe by it; the serial is appended from `<CLI>_PROBE` (environment or `.env`,
+    `set dotenv-load`). Default: the board preset's, else the family's on-board probe (ST-LINK 0483:374b, RP's
+    CMSIS-DAP 2e8a:000c, which replaces the udev needle `cmsis-dap` as the id; J-Link OB 1366:1015 on nRF).
+  - `--board PRESET` (TPL-45): `scripts/data/boards/<preset>/`, answers plus the board's clock tree (replaces the
+    clock TODO in `main.rs`), README board section, `docs/board/` and logo values. First preset `nucleo_g0b1re`.
+  - `--host` (TPL-37, needs `--wire-weaver`): root `justfile` for the whole project, `.github/workflows/ci.yml` and
+    `setup.yml` (actions/checkout@v5), `scripts/rename.py`, README, AGENTS (layout and procedures, then the upgrade
+    section), FEATURES and CHANGELOG skeletons, LICENSE (MIT, holder vhrd.tech unless the preset names one), `docs/logo/` (Typst;
+    `new` renders it when `typst` is on PATH) and `docs/board/` with `--board` (rendered when `boardmap` is on
+    PATH). `--cli-name` names the CLI and the env prefix. The client, CLI and Python crates follow in the next
+    entry.
+  - embassy-stm32 `main.rs`: `let config` without `mut` when nothing changes it (an `unused_mut` warning failed
+    `just lint`).
+
+  Upgrade notes: existing `--wire-weaver` firmware: add the root `Cargo.toml` (regenerate and compare), drop the
+  `[workspace]` table from `<api>/Cargo.toml`, move or create `Cargo.lock` at the root (`cargo generate-lockfile`),
+  add `tests/evolution.rs` and the dev-dependency, run `just api-save` once to record the current API, then
+  `just hooks`. Answer `probe` (new): the board's probe as `VID:PID`; take it into `.cargo/config.toml`'s runner
+  and the recipes, and put the serial in `.env` (`<CLI>_PROBE=VID:PID:SERIAL`, not committed) on PCs with more than
+  one probe. `host`, `board`, `cli_name` (new answers) default to off / none: say yes only when the firmware wants
+  the host side or matches a preset; the files `--host` adds that a project already has (README, FEATURES,
+  CHANGELOG, LICENSE) are its own: compare, never overwrite. A firmware made by hand from nucleo_g0b1re_template
+  (`--board nucleo_g0b1re`) should regenerate to the same files apart from the host crates and the device suite,
+  which arrive in later entries. Nothing on the target changes.
+
 - `just setup` in every generated project (TPL-36): `scripts/setup.py` (run with uv, stdlib only) installs what the
   firmware needs on a fresh Arch, Ubuntu / Debian or Windows PC: rustup with the toolchain, targets and components of
   `rust-toolchain.toml` (Xtensa: espup), probe-rs, and as the answers need flip-link, espflash, cnt, ww. Steps that

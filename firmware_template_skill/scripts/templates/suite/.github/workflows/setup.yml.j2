@@ -1,0 +1,49 @@
+name: Setup
+
+# `just setup` on fresh runners, then `just setup --check`: keeps scripts/setup.py from rotting. Weekly, because what
+# it installs changes upstream, and on changes to the script.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+  pull_request:
+    paths: [scripts/setup.py, justfile, {{ fw_dir }}rust-toolchain.toml, .github/workflows/setup.yml]
+  push:
+    branches: [main]
+    paths: [scripts/setup.py, justfile, {{ fw_dir }}rust-toolchain.toml, .github/workflows/setup.yml]
+
+permissions:
+  contents: read
+
+env:
+{% if s.boardmap %}
+  # ww and boardmap cannot be installed from git yet: their workspaces take sibling repositories by path. Drop these
+  # once `cargo install --git` works for wire_weaver_cli and bedrock_board_cli.
+  SKIP: --skip ww --skip boardmap
+  SKIP_REASON: ww and boardmap skipped, their workspaces take sibling repositories by path (no cargo install --git yet)
+{% else %}
+  # ww cannot be installed from git yet: its workspace takes sibling repositories by path. Drop this once
+  # `cargo install --git` works for wire_weaver_cli.
+  SKIP: --skip ww
+  SKIP_REASON: ww skipped, its workspace takes sibling repositories by path (no cargo install --git yet)
+{% endif %}
+
+jobs:
+  setup:
+    name: just setup ({% raw %}${{ matrix.os }}{% endraw %})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            flags: --root # runs the root steps too (passwordless sudo): packages and the udev rule
+          - os: windows-latest
+            flags: --no-probe # {{ "the ST-LINK driver is a download from st.com" if t.family == "stm32" else "the probe's driver is not installed by the script" }}
+    runs-on: {% raw %}${{ matrix.os }}{% endraw +%}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - uses: extractions/setup-just@v3
+      - run: echo "::notice::{% raw %}${{ env.SKIP_REASON }}{% endraw %}"
+      - run: just setup {% raw %}${{ matrix.flags }}{% endraw %} {% raw %}${{ env.SKIP }}{% endraw +%}
+      - run: just setup --check {% raw %}${{ matrix.flags == '--no-probe' && '--no-probe' || '' }}{% endraw %} {% raw %}${{ env.SKIP }}{% endraw +%}

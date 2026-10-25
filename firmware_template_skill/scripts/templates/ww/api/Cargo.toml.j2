@@ -5,9 +5,6 @@ version = "0.1.0"
 edition = "2024"
 description = "WireWeaver API of the {{ o.name }} firmware"
 
-# standalone crate: keeps an enclosing Cargo workspace from claiming it
-[workspace]
-
 [features]
 # owned (alloc) variants of the API types, for host-side users
 std = ["wire_weaver/std", "ww_firmware_info/std"{{ ', "ww_user_info/std"' if o.settings_flash else "" }}]
@@ -22,3 +19,7 @@ defmt = { version = "{{ V["defmt"] }}", optional = true }
 # UserInfo: the unit's name, kept in the firmware's settings store
 {{ ww_dep("ww_user_info", "ww_stdlib/ww_user_info", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
+
+[dev-dependencies]
+# the evolution check (tests/evolution.rs): this crate compared with its snapshots in api_snapshots/
+{{ ww_dep("wire_weaver_evolution", "wire_weaver_evolution", o.ww_src, "../") }}

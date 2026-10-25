@@ -74,7 +74,7 @@ so a missing entry means work nobody sees.
   it by path, like `bedrock_led`.
 - `bedrock_board/`, `bedrock_board_cli/` — board infographics (`boardmap`: top and bottom views, power tree, pin
   table) from a `.kicad_pcb` and a TOML description, for the templates' `docs/board/`; FEATURES.md area `MAP`,
-  example `bedrock_board/examples/nucleo_g0b1re/`.
+  example in the template's board preset `firmware_template_skill/scripts/data/boards/nucleo_g0b1re/`.
 - `bedrock/` — host-side prototype: reads targets through probe-rs, ELF symbol scan (`nm.rs`).
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md

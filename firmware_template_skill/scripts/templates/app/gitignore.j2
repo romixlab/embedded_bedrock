@@ -1,0 +1,13 @@
+target/
+{% if py | default(false) %}
+.venv/
+__pycache__/
+*.pyc
+{% endif %}
+{% if host | default(false) %}
+.idea/
+.vscode/
+{% endif %}
+{% if root | default(false) %}
+.env
+{% endif %}

@@ -10,6 +10,10 @@ use embassy_stm32::rcc::SMPSSupplyVoltage;
 {% if o.ww and ww.usb and ww.stm32_usb.hsi48 %}
 use embassy_stm32::rcc::{Hsi48Config, mux};
 {% endif %}
+{% set clock = o.board.clock if o.board and o.board.clock else None %}
+{% if clock %}
+use {{ clock.use }};
+{% endif %}
 {% if o.bootloader %}
 use core::cell::RefCell;
 use embassy_boot_stm32::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
@@ -25,11 +29,15 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
 {% include "app/src/main/_rtt_init.rs.j2" %}
     {{ info }}("{{ o.name }} starting...");
 {% include "app/src/main/_last_reset_boot.rs.j2" %}
-    let mut config = embassy_stm32::Config::default();
+    let {{ "mut " if o.supply_config or clock or (o.ww and ww.usb and ww.stm32_usb.hsi48) else "" }}config = embassy_stm32::Config::default();
 {% if o.supply_config %}
     config.rcc.supply_config = SupplyConfig::{{ o.supply_config }}{{ "(SMPSSupplyVoltage::%s)" % o.smps_voltage if o.smps_voltage else "" }}; // from schematic: how VCORE is supplied
 {% endif %}
+{% if clock %}
+{{ clock.code }}
+{%- else %}
     // TODO: configure config.rcc (clock tree) for your board
+{% endif %}
 {% if o.ww and ww.usb %}
   {% set u = ww.stm32_usb %}
   {% if u.hsi48 %}
