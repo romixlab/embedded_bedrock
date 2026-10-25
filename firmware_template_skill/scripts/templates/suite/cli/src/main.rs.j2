@@ -6,7 +6,7 @@
 {% set elf = ww.rtt or decode %}
 {% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
-                    "Usb" if ww.usb else "", "api_line", "board_line" if d.board else "", "firmware_line",
+                    "Usb" if ww.usb else "", "api_line", "board_line" if d.board else "", "clock_line" if s.clock else "", "firmware_line",
                     "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
 {% set about = feats("the LED", "the firmware", "the board" if d.board else "", "its label" if d.label else "",
                      ("counters and log" if d.log else "counters") if d.counters else ("its log" if d.log else ""),
@@ -184,6 +184,18 @@ enum Cmd {
     /// {{ s.led.Name }}'s indication: mode, brightness, identify ({{ s.led.name }} breathes by default)
     #[command(subcommand)]
     Leds(LedsCmd),
+{% endif %}
+{% if s.clock %}
+    /// The board's clock against this PC's UTC: the connection steers it, this waits for the lock and prints the
+    /// residual (the board's shared time minus UTC) and the round trip it is known to
+    Clock {
+        /// Keep checking every second for this many seconds
+        #[arg(short, long, value_name = "SECONDS", default_value_t = 0)]
+        watch: u64,
+        /// Give up waiting for the lock after this many seconds
+        #[arg(long, value_name = "SECONDS", default_value_t = 30)]
+        timeout: u64,
+    },
 {% endif %}
 {% if d.label %}
     /// Show the board's label, or store a new one (kept in the board's flash)
@@ -522,6 +534,32 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
                         .identify(Duration::from_secs(u64::from(*seconds)))
                         .await?
                 }
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if s.clock %}
+        Cmd::Clock { watch, timeout } => {
+            let board = connect(&cli).await?;
+            let spinner = std::io::stderr().is_terminal().then(|| {
+                let s = ProgressBar::new_spinner().with_message("waiting for the clock to lock");
+                s.set_style(ProgressStyle::with_template("{spinner} {msg}").expect("template"));
+                s.enable_steady_tick(Duration::from_millis(80));
+                s
+            });
+            let locked = board.wait_clock_locked(Duration::from_secs(*timeout)).await;
+            if let Some(s) = spinner {
+                s.finish_and_clear();
+            }
+            locked?;
+            let steering = board.clock_steering();
+            for i in 0..=*watch {
+                if i > 0 {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                let check = board.clock_check().await?;
+                let status = steering.as_ref().map(|s| s.status());
+                println!("{}", clock_line(&check, status.as_ref()));
             }
             board.disconnect().await;
         }

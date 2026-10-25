@@ -11,11 +11,9 @@ just setup           # rustup with {{ t.rust_target }}, {{ tool_list }}{{ "; the
 just setup --check   # only report what is missing
 ```
 
-`scripts/setup.py` runs on Arch, Ubuntu / Debian and Windows (winget) and skips what is already there. It prints
-its plan first, naming each script it fetches from the internet and runs, the way these tools are meant to be
-installed: probe-rs's udev rules file (pinned to a commit) and rustup's installer{{ "; probe-rs's installer, on Windows through `irm | iex` with `-ExecutionPolicy Bypass`" if probe_rs else "" }}. Steps that
-need root or an administrator (system packages, the probe's udev rule{{ ", the " ~ probe[0] ~ " driver on Windows" if windows_driver else "" }}) are
-printed for you; `just setup --root` runs them too, each shown first.
+{% filter rewrap("") %}
+`scripts/setup.py` runs on Arch, Ubuntu / Debian and Windows (winget) and skips what is already there. It prints its plan first, naming each script it fetches from the internet and runs, the way these tools are meant to be installed: probe-rs's udev rules file (pinned to a commit) and rustup's installer{{ "; probe-rs's installer, on Windows through `irm | iex` with `-ExecutionPolicy Bypass`" if probe_rs else "" }}. Steps that need root or an administrator (system packages, the probe's udev rule{{ ", the " ~ probe[0] ~ " driver on Windows" if windows_driver else "" }}) are printed for you; `just setup --root` runs them too, each shown first.
+{% endfilter %}
 {% if o.counters %}
 `cnt tui{{ "" if t.cortex_m else " --chip " ~ t.probe_chip }}` shows the event counters (also `cnt read`, `cnt reset`).
 {% endif %}
@@ -44,7 +42,7 @@ See `memory.x`. Summary:
 | region | origin | size | |
 |---|---|---|---|
   {% for r in lay.regions %}
-| {{ r.name }}{{ " (ref)" if r.commented_out else "" }} | {{ r.origin | hex8 }} | {{ r.length | fmt_len }} | {{ r.comment }} |
+| {{ r.name }}{{ " (ref)" if r.commented_out else "" }} | {{ r.origin | hex8 }} | {{ r.length | fmt_len }} | {{ r.comment | replace("\n     ", " ") }} |
   {% endfor %}
 
 {% endif %}

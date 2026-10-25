@@ -27,7 +27,8 @@ fn firmware_points() -> Vec<(String, String)> {
 
 /// Pin and role of every row of the board map's pin table
 fn board_pins() -> Vec<(String, String)> {
-    let md = std::fs::read_to_string(format!("{ROOT}/{{ s.pins.table }}")).unwrap();
+    let md = std::fs::read_to_string(format!("{ROOT}/{{ s.pins.table }}"))
+        .expect("{{ s.pins.table }}: render it with `just board` (boardmap)");
     md.lines()
         .filter(|l| l.starts_with("| `P"))
         .map(|l| {

@@ -38,7 +38,7 @@ incremental = true
 {{ ww_dep("wire_weaver_client", "wire_weaver_client", o.ww_src, "", ', features = ["' ~ ("rtt" if ww.rtt else "usb") ~ '"]') }}
 {% for c, on in [("ww_firmware_info", True), ("ww_user_info", d.label), ("ww_board_info", d.board), ("ww_counters", d.counters),
                  ("ww_dfu", d.boot or d.dfu), ("ww_uid", d.uid), ("ww_log", d.log),
-                 ("ww_indication", s.leds)] if on %}
+                 ("ww_indication", s.leds), ("ww_timebase", s.clock), ("ww_date_time", s.clock)] if on %}
 {{ ww_dep(c, "ww_stdlib/" ~ c, o.ww_src, "", ', features = ["std"]') }}
 {% endfor %}
 {{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, "", ', features = ["std", "time"]') }}

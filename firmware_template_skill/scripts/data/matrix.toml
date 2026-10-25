@@ -529,3 +529,27 @@ args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--le
 builds = ["dev"]
 tags = ["ww", "rtt", "host"]
 note = "--led-mode gpio on a pin with a channel"
+
+# --clock-sync (TPL-40): every --wire-weaver entry on embassy STM32 above serves `clock` (auto), the LED breathing on
+# shared time where it breathes; g0brd is G0's (RTT, lock within 10 ms) with the host crates, g0usbh one over USB.
+
+[[entry]]
+name = "g0clkgpio"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--led", "PA5", "--led-mode", "gpio", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "clock without leds (plain GPIO LED), over USB, host crates' sync.rs clock-only"
+
+[[entry]]
+name = "g0clkoff"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--ww-transport", "rtt", "--led", "PA5", "--clock-sync", "off", "--host"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "--clock-sync off: leds without clock, the client's leds.rs"
+
+[[entry]]
+name = "l4clk"
+args = ["--chip", "STM32L476RG", "--wire-weaver", "--ww-transport", "rtt", "--led", "PA5", "--host"]
+builds = ["dev"]
+tags = ["ww", "rtt", "host"]
+note = "clock on a Cortex-M4 (no M0+ width note), breath on TIM2_CH1"

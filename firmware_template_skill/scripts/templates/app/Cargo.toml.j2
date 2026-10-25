@@ -109,11 +109,15 @@ cnt = "{{ V["cnt"] }}"{{ " # 0.5: used words and format version, served as devic
 {% endif %}
 {% if s.led.pwm %}
   {% if s.leds %}
-# {{ s.led.Name }} breathes, blinks, identifies on {{ s.led.pwm.signal }} PWM (src/led.rs); `leds` (src/ww/leds.rs)
+# {{ s.led.Name }} breathes, blinks, identifies on {{ s.led.pwm.signal }} PWM (src/led.rs){{ ", aligned to shared time" if s.clock }}; `leds` (src/ww/leds.rs)
   {% else %}
 # {{ s.led.Name }} breathes on {{ s.led.pwm.signal }} PWM (src/led.rs)
   {% endif %}
 {{ bedrock_dep("bedrock_led", o.bedrock, root, ", features = " ~ (feats("embassy", s.leds and "ww-indication", defmt and "defmt") | toml_list)) }}
+{% endif %}
+{% if s.clock %}
+# the shared clock a host steers onto UTC (src/sync.rs), served as `clock` (src/ww/clock.rs)
+{{ bedrock_dep("bedrock_sync", o.bedrock, root, ", features = " ~ (feats("embassy", "ww-timebase", defmt and "defmt") | toml_list)) }}
 {% endif %}
 {% set pins_deps %}
 # raw access to the free pins (src/pins.rs)
@@ -155,12 +159,16 @@ embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
 # the device contract's stdlib traits (`device` in the API crate): types in the handler signatures (src/ww/device.rs)
 {{ ww_dep("ww_board_info", "ww_stdlib/ww_board_info", o.ww_src, root, ", default-features = false") }}
-{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ", default-features = false, features = " ~ (feats("time", s.leds and "u32") | toml_list)) }}
+{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ", default-features = false, features = " ~ (feats("time", (s.leds or s.clock) and "u32") | toml_list)) }}
   {% if s.leds %}
 {{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, root, ", default-features = false") }}
-    {% if not o.settings_flash %}
+  {% endif %}
+  {% if s.clock %}
+{{ ww_dep("ww_timebase", "ww_stdlib/ww_timebase", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_date_time", "ww_stdlib/ww_date_time", o.ww_src, root, ", default-features = false") }} # clock.set_time_of_day
+  {% endif %}
+  {% if (s.leds or s.clock) and not o.settings_flash %}
 {{ ww_dep("ww_error", "ww_stdlib/ww_error", o.ww_src, root, ", default-features = false") }}
-    {% endif %}
   {% endif %}
 {{ ww_dep("ww_uid", "ww_stdlib/ww_uid", o.ww_src, root, ", default-features = false") }}
   {% if d.counters %}
@@ -197,8 +205,9 @@ build-info-build = "{{ V["build-info-build"] }}"
 {% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
-{% if (o.build_info or s.dev.boot or s.leds) and o.ww_src != "git" %}
-{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot, [("bedrock_led", "ww_indication", "ww_stdlib/ww_indication")] if s.leds else []) }}
+{% if (o.build_info or s.dev.boot or s.leds or s.clock) and o.ww_src != "git" %}
+{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot, ([("bedrock_led", "ww_indication", "ww_stdlib/ww_indication")] if s.leds else [])
+                   + ([("bedrock_sync", "ww_timebase", "ww_stdlib/ww_timebase"), ("bedrock_sync", "ww_si", "ww_stdlib/ww_si")] if s.clock else [])) }}
 {% endif %}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html

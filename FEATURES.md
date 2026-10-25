@@ -194,10 +194,28 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   CLI's `leds show|mode|brightness|identify`, Python's `leds_mode`, `brightness`, `identify()` and a README "LED"
   section. A pin without a channel, `--framework` other than embassy and RP / nRF / ESP (PWM not wired yet) keep the
   plain GPIO output (`new` says so); `--led-mode breath` refuses there. The G0 answers with `--board nucleo_g0b1re`
-  regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (v0.1.7, a182dbc) but for the clock (TPL-40) and pins. Builds
+  regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (v0.1.7, a182dbc); the clock is TPL-40. Builds
   for the tested matrix (`g0brd` PA5 TIM2_CH1, `g0ledn` PF1 TIM15_CH1N, `h7ledpb0` PB0 TIM3_CH3, `h7ledpe1` and
   `g0ledgpio` without a channel, `g0ledoff`, and every embassy STM32 entry on PB14; full run 24 Oct 2026: only the known TPL-22, TPL-23, TPL-34 fail); ran on a board only as G0's own
   firmware.
+- 🧪 **TPL-40 Clock sync: `clock` steered by the host** (`--clock-sync auto|on|off`, default auto: with
+  `--wire-weaver` on embassy STM32; `clock_sync()`): the firmware serves `clock: ww_timebase::Clock` through
+  embedded_bedrock's `bedrock_sync` (`ClockServer`, U32 µs, no sync line), as nucleo_g0b1re_template FW-11 / API-4 /
+  HOST-6 / PY-3 (v0.1.7, a182dbc). `src/sync.rs` holds the static shared clock (`Config` locks within 10 ms over
+  RTT, bedrock_sync's 2 ms default over USB), `src/ww/clock.rs` the handlers (`clock.steer` async for its
+  `time_map` point, `clock.info` names the time driver's timer), the LED's breath and blink follow shared time
+  (`run_with`) where it breathes. API crate `ww_impl!(clock: ww_timebase::Clock)`; with `--host` the client's
+  `src/sync.rs` (`clock_steering`, `wait_clock_locked`, `clock_check`, `clock_line`; `leds` beside it, `leds.rs`
+  without the clock), the CLI's `clock [--watch N] [--timeout S]`, Python's `wait_clock_locked()` / `clock_check()`
+  and `examples/clock.py`, README "LED and clock" (a preset's `readme-clock.md` adds what was measured on that
+  board). The G0 answers with `--board nucleo_g0b1re` regenerate G0's clock parts byte for byte (firmware, API,
+  client, CLI, Python, README). Matrix: `g0brd` (RTT), `g0usbh` (USB), `g0clkgpio` (clock without the LED's
+  breath), `g0clkoff` (`--clock-sync off`), `l4clk` (Cortex-M4) and every embassy STM32 `--wire-weaver` entry.
+  Matrix run 24 Oct 2026 (`--tag ww`, 48 entries): all pass but the known TPL-34 (f103 release); `g0brd` / `g0board`
+  need `boardmap` on PATH for the pin table their `board_pins` test reads. Ran on a board only as G0's own firmware.
+- 📋 **TPL-50 Clock sync on RP and nRF**: `--clock-sync on` refuses outside embassy STM32. `bedrock_sync`'s
+  `embassy` feature is chip-independent; what is missing is `clock.info`'s source name and a check on a board
+  (embassy-rp's and embassy-nrf's time drivers, USB round trips).
 - 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
   (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
 - 🧪 **TPL-46 `--pins`: `ww_pin_diag::PinDiag` beside the device suite**: `--pins board|LIST|none` (`resolve_pins()`;
@@ -448,6 +466,8 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   next to them (CN8 on the Nucleo); a general placement pass would.
 - 📋 **MAP-8 Highlight a peripheral**: colour the pins of one function (an SPI, the USB pair) on request, for a
   wiring picture in a docs page.
+- 🐛 **MAP-9 `boardmap --version` names no git SHA**: it prints `boardmap 0.1.0`, so `tpm install` refuses it
+  (AGENTS.md *Versions*: version, SHA and build time from a small `build.rs`); install it with `cargo install` until then.
 
 ## Dropped and superseded
 

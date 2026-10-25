@@ -34,8 +34,21 @@ pub trait {{ ww.trait }} {
 {% endif %}
 {% if s.leds %}
 
+{% if s.clock %}
+    /// {{ s.led.Name }} as one indication: global mode, brightness, identify. It breathes by default, in phase with other boards
+    /// once `clock` is steered.
+{% else %}
     /// {{ s.led.Name }} as one indication: global mode, brightness, identify. It breathes by default.
+{% endif %}
     ww_impl!(leds: ww_indication::Indication);
+{% endif %}
+{% if s.clock %}
+{% if not s.leds %}
+
+{% endif %}
+    /// Device clock: local time (U32 µs, wraps every 71.6 minutes), a host's steer points onto UTC (`host_sync`).
+    /// No sync line.
+    ww_impl!(clock: ww_timebase::Clock);
 {% endif %}
 }
 

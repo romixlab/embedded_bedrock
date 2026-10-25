@@ -29,6 +29,9 @@ mod pins;
 {% if o.settings_flash %}
 mod settings;
 {% endif %}
+{% if s.clock %}
+mod sync;
+{% endif %}
 {% if o.ww %}
 mod ww;
 {% endif %}

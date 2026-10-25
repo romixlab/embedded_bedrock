@@ -9,10 +9,19 @@
 {% set arms = 1 + (1 if streams else 0) + (1 if settings else 0) %}
 {% set pins = s.pins %}
 {% set leds = s.leds %}
+{% set clock = s.clock %}
 //! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
 {% if leds %}
 //! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. `led_on` / `led_off` are here, the device contract
+{% if clock %}
+//! (`device`) in `ww/device.rs`, {{ s.led.name }}'s indication (`leds`) in `ww/leds.rs`, the clock a host steers (`clock`) in
+//! `ww/clock.rs`.
+{% else %}
 //! (`device`) in `ww/device.rs`, {{ s.led.name }}'s indication (`leds`) in `ww/leds.rs`.
+{% endif %}
+{% elif clock %}
+//! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. The LED is here, the device contract (`device`) in
+//! `ww/device.rs`, the clock a host steers (`clock`) in `ww/clock.rs`.
 {% else %}
 //! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. The LED is here, the device contract (`device`) in
 //! `ww/device.rs`.
@@ -22,6 +31,9 @@
 //! regenerates the dispatch code and the compiler lists what is missing. Extend [ServerState] with the peripherals
 //! and data the implementations need. See https://github.com/vhrdtech/wire_weaver (`docs/`, `examples_mcu/`).
 
+{% if clock %}
+mod clock;
+{% endif %}
 mod device;
 {% if leds %}
 mod leds;
@@ -141,6 +153,11 @@ pub struct ServerState {
     /// `leds`: mode, brightness and the end of a running identify (src/led.rs shows them)
     leds: leds::LedsState,
 {% endif %}
+{% if clock %}
+    /// `clock`: the sync line's configuration (always `Off`) and whether `time_map` is subscribed; the shared clock
+    /// itself is `crate::sync::SYNC`{{ ", read by the LED task too" if s.led.pwm }}
+    clock: clock::ClockState,
+{% endif %}
 }
 {% if not u_id.ref %}
 
@@ -221,6 +238,9 @@ impl ServerState {
 {% endif %}
 {% if leds %}
             leds: leds::LedsState::new(),
+{% endif %}
+{% if clock %}
+            clock: clock::ClockState::new(),
 {% endif %}
         }
     }
@@ -343,10 +363,18 @@ mod server_impl {
     wire_weaver::ww_codegen!(
         {{ ww.krate }} :: {{ ww.trait }} for super::ServerState,
         server = true, no_alloc = true, use_async = true,
-{% if settings %}
+{% if settings and clock %}
+        // handlers that await (flash writes, clock.steer's time_map point) are async, all others plain `fn`s: an
+        // `async fn` that never awaits still costs flash as a state of the dispatcher
+        handler_model = "device.label.*|device.settings.*|clock.steer=async, _=sync",
+{% elif settings %}
         // handlers that await (flash writes) are async, all others plain `fn`s: an `async fn` that never awaits
         // still costs flash as a state of the dispatcher
         handler_model = "device.label.*|device.settings.*=async, _=sync",
+{% elif clock %}
+        // clock.steer awaits (its time_map point), all others are plain `fn`s: an `async fn` that never awaits still
+        // costs flash as a state of the dispatcher
+        handler_model = "clock.steer=async, _=sync",
 {% else %}
         // plain `fn` handlers: none awaits (an `async fn` that never awaits still costs flash as a state of the
         // dispatcher)

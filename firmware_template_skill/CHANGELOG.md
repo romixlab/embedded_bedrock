@@ -10,6 +10,34 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `firmware/README.md`: the setup paragraph wraps at 116 columns (one line was 178 with probe-rs's installer), the
+  memory table's backup-register row stays on one line with the boot word (it broke the table); the client's
+  `tests/board_pins.rs` says to run `just board` when the rendered pin table is missing. Upgrade notes: none needed,
+  take them if you like.
+
+- Clock sync (TPL-40): `--clock-sync auto|on|off` (default `auto`: with `--wire-weaver` on embassy STM32), as
+  nucleo_g0b1re_template's FW-11 / API-4 / HOST-6 / PY-3 (v0.1.7, a182dbc).
+  - Firmware: `src/sync.rs` (the static `bedrock_sync::Sync`; over RTT it locks within 10 ms, over USB bedrock_sync's
+    default 2 ms), `src/ww/clock.rs` (`ww_timebase::Clock` through `bedrock_sync::clock::ClockServer`, U32 µs, no
+    sync line; `clock.info` names the time driver's timer), `mod sync` in `main.rs`, `clock` in `ServerState`,
+    `clock.steer` in `handler_model` as async; with the LED breathing, `src/led.rs` runs `LEDS.run_with` on shared
+    time. `firmware/Cargo.toml`: `bedrock_sync` (`embassy`, `ww-timebase`), `ww_timebase`, `ww_date_time`, `ww_si`'s
+    `u32`; the `--ww-src` patch adds `ww_timebase` and `ww_si`.
+  - API crate: `ww_impl!(clock: ww_timebase::Clock)`, `ww_timebase` dependency and features. Root workspace:
+    `ww_timebase`, `ww_date_time`.
+  - Host (`--host`): the client's `src/leds.rs` becomes `src/sync.rs` with `ClockCheck`, `clock_steering`,
+    `wait_clock_locked`, `clock_check`, `clock_line` (and `ClockPhase` / `ClockStatus` re-exported); CLI `clock
+    [--watch N] [--timeout S]`; Python `wait_clock_locked()`, `clock_check()`, `examples/clock.py`; README
+    "LED and clock" (a preset's `readme-clock.md`: the measured residual on that board), FEATURES rows.
+  - The G0 answers with `--board nucleo_g0b1re` regenerate all of G0's clock parts byte for byte.
+
+  Upgrade notes: existing answers have no `clock_sync`, so they get `auto`: a `--wire-weaver` firmware on embassy
+  STM32 gains `clock`. Regenerate into a scratch directory and take `src/sync.rs`, `src/ww/clock.rs` and the clock
+  parts of `ww.rs`, `main.rs`, `led.rs`, both `Cargo.toml`s, the API's `lib.rs` and the host crates; or add
+  `"clock_sync": "off"` to `bedrock_fw.json` to stay without it. `clock` is an addition to the API: bump its minor
+  version, `#[since]` on the new item and `just api-save`. A firmware that took TPL-39's client `leds.rs` renames it
+  to `sync.rs`. Check on the board: `<cli> clock --watch 30` locks within a few seconds.
+
 - The LED breathes on its timer channel (TPL-39): `--led-mode auto|breath|gpio` (default `auto`: breath where the
   LED pin has a timer channel, embassy on STM32 so far), as nucleo_g0b1re_template's FW-10 / API-4 (v0.1.7, a182dbc).
   - The pin's `TIMx_CHy` (or `CHyN`) and AF come from stm32-data; `src/led.rs` drives it as `SimplePwm` (or
