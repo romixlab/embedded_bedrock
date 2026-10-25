@@ -115,7 +115,7 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% set n.i = n.i + 1 %}
 {{ row("TPL-" ~ n.i, "Template upgrades from embedded_bedrock (`bedrock_fw.json`, procedure in AGENTS.md)", "🧪", "") -}}
 {% set n.i = n.i + 1 %}
-{{ row("TPL-" ~ n.i, "API evolution check: committed `api_snapshots/`, strict test of the API crate, `just api-check` / `just api-save`, CI step, pre-commit hook (`.githooks/`, turned on by `just hooks` / `just setup`, chained after the hooks already in `.git/hooks/`)", "🧪", "`wire_weaver_evolution`, `scripts/hooks.py`; README \"Changing the API\"") -}}
+{{ row("TPL-" ~ n.i, "API evolution check: committed `api_snapshots/`, the current version's snapshot required, `just api-check` / `just api-save`, CI step, pre-commit hook (`.githooks/`, turned on by `just hooks` / `just setup`, chained after the hooks already in `.git/hooks/`)", "🧪", "`wire_weaver_evolution`, `scripts/hooks.py`; README \"Changing the API\"") -}}
 {% if s.boardmap %}
 {% set n.i = n.i + 1 %}
 {{ row("TPL-" ~ n.i, "Board map in `docs/board/`: top and bottom views, power tree, pin and solder bridge tables, `just board`", "🧪", "boardmap (bedrock_board)") -}}

@@ -47,11 +47,12 @@ the WireWeaver repository.
 2. Implement them on `ServerState` in `firmware/src/ww.rs`; the compiler lists what is missing.
 3. Bump the `{{ ww.api }}` version: the name + version identify the API to hosts.
 
-Every released version of `{{ ww.api }}` has a snapshot of its traits and types in `{{ ww.api }}/api_snapshots/`, and
-a test of the API crate (`{{ ww.api }}/tests/evolution.rs`, `just api-check`, part of `just test`) compares the source
-with the newest one ([WireWeaver's evolution rules]({{ WW_GIT }}/blob/master/docs/evolution/rules.md)): it fails
-when the API changed without the version bump the change needs, and names the version to put into
-`{{ ww.api }}/Cargo.toml`. A missing snapshot fails it too: record the first one, and each released version, with
-`just api-save` (`ww api save`) and commit the file. `just hooks` (also run by `just setup`) turns on
-`.githooks/pre-commit`, which runs the check when a commit touches the API crate; it chains after the hooks already in
-`.git/hooks/` and leaves `core.hooksPath` alone.
+`{{ ww.api }}/api_snapshots/` keeps a snapshot of its traits and types per version, and a test of the API crate
+(`{{ ww.api }}/tests/evolution.rs`, `just api-check`, part of `just test`) requires the snapshot of the version in
+`Cargo.toml`, comparing the source with it and that snapshot with the previous version's
+([WireWeaver's evolution rules]({{ WW_GIT }}/blob/master/docs/evolution/rules.md)): it fails when the current
+version has no snapshot yet, when the source differs from it, or when the API changed without the version bump the
+change needs, and names the version to put into `{{ ww.api }}/Cargo.toml`. Save (or refresh) the current version's
+snapshot with `just api-save` and commit the file; once a version is released, its snapshot never changes again.
+`just hooks` (also run by `just setup`) turns on `.githooks/pre-commit`, which runs the check when a commit touches
+the API crate; it chains after the hooks already in `.git/hooks/` and leaves `core.hooksPath` alone.

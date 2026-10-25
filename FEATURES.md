@@ -219,6 +219,16 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   breath), `g0clkoff` (`--clock-sync off`), `l4clk` (Cortex-M4) and every embassy STM32 `--wire-weaver` entry.
   Matrix run 24 Oct 2026 (`--tag ww`, 48 entries): all pass but the known TPL-34 (f103 release); `g0brd` / `g0board`
   need `boardmap` on PATH for the pin table their `board_pins` test reads. Ran on a board only as G0's own firmware.
+- ✅ **TPL-51 API evolution check requires the current version's snapshot** (wire_weaver EVO-12, 94a6b3a2):
+  `tests/evolution.rs` calls `Check::require_current(true)` instead of `strict(true)` (TPL-38), failing until the
+  version in the API crate's `Cargo.toml` has its own snapshot in `api_snapshots/` matching the source — the gap
+  that let nucleo_g0b1re_template 0.1.5 ship API 0.2.0 without `..._0_2_0.ron`. `just api-save` now saves (or
+  refreshes) the current version's snapshot by running the same test with `WW_API_SAVE=1`
+  (`cargo test -p <api> --test evolution --config "env.WW_API_SAVE.value='1'"`, cross-shell on Windows too)
+  instead of shelling out to `ww api save`, so saving needs no `ww` install. README "Changing the API", AGENTS.md,
+  `scripts/rename.py` and the pre-commit hook message updated to match. Matrix run 25 Oct 2026 (`--tag ww`, 48
+  entries): all pass but the known TPL-34; a scratch project's deliberate API change without a new snapshot was
+  confirmed to fail `.githooks/pre-commit`.
 - 📋 **TPL-50 Clock sync on RP and nRF**: `--clock-sync on` refuses outside embassy STM32. `bedrock_sync`'s
   `embassy` feature is chip-independent; what is missing is `clock.info`'s source name and a check on a board
   (embassy-rp's and embassy-nrf's time drivers, USB round trips).
@@ -243,10 +253,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - 📋 **TPL-49 `--pins` without embassy**: the STM32 HAL crates (`stm32-hal2`, `stm32xx-hal`) and bare firmware have no
   `pins.rs` yet (it is written against embassy-stm32's `Flex`); `--wire-weaver` there serves the device suite only.
 - ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`
-  (`wire_weaver_evolution`, strict: the API's current version needs a snapshot), `just api-check` / `just api-save`,
-  the CI step, and `.githooks/pre-commit` installed by `scripts/hooks.py` (`just hooks`, also a `just setup` step):
-  chained after the hooks already in `.git/hooks/`, never `core.hooksPath`. The first snapshot is wire_weaver's
-  format, so `new` says to run `just api-save`.
+  (`wire_weaver_evolution`, require_current since TPL-51: the API's current version needs its own snapshot),
+  `just api-check` / `just api-save`, the CI step, and `.githooks/pre-commit` installed by `scripts/hooks.py`
+  (`just hooks`, also a `just setup` step): chained after the hooks already in `.git/hooks/`, never
+  `core.hooksPath`. The first snapshot is wire_weaver's format, so `new` says to run `just api-save`.
 - ✅ **TPL-45 Board presets and the probe by VID:PID**: `--board PRESET` (`scripts/data/boards/<preset>/`:
   `preset.toml` with `[answers]`, `[board]`, `[readme]`, `[logo]`, `[clock]` (a Rust snippet for `main.rs`),
   `[boardmap]`, plus the README board sections and the boardmap TOML and geometry for `docs/board/`); answers layer

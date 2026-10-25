@@ -347,10 +347,11 @@ Python module" if s.has_py else " and the firmware (dev and release build)" }}.{
 
 Firmware already on boards and hosts built against an older API keep working together as long as the API only
 changes in compatible ways ([WireWeaver's evolution rules](https://github.com/vhrdtech/wire_weaver/blob/master/docs/evolution/rules.md)).
-Every released version of `{{ s.api }}` has a snapshot of its traits and types in
-`{{ s.api }}/api_snapshots/`, committed with the release, and a test of the API crate
-(`{{ s.api }}/tests/evolution.rs`) compares the source with the newest snapshot. It fails when the API changed
-without the version bump the change needs, and names the version to put into `{{ s.api }}/Cargo.toml`:
+`{{ s.api }}/api_snapshots/` keeps a snapshot of its traits and types per version, and a test of the API crate
+(`{{ s.api }}/tests/evolution.rs`) requires the snapshot of the version in `Cargo.toml` and compares the source with
+it, and that snapshot with the previous version's. It fails when the current version has no snapshot yet, when the
+source differs from it, or when the API changed without the version bump the change needs, and names the version to
+put into `{{ s.api }}/Cargo.toml`:
 
 - a compatible change (a new method, property or stream at the end of the trait, a new type) needs the compatible
   position: `0.1.0` -> `0.1.1` before 1.0, the minor after;
@@ -359,17 +360,17 @@ without the version bump the change needs, and names the version to put into `{{
 
 The flow:
 
-1. Change the trait in `{{ s.api }}/src/lib.rs` and bump the crate's version; `just api-check` runs the check
-   on its own (`just test` and CI run it too).
+1. Change the trait in `{{ s.api }}/src/lib.rs` and bump the crate's version; `just api-save` saves (or refreshes)
+   the current version's snapshot, refusing a bump that is not enough; commit `api_snapshots/` with the change.
+   `just api-check` runs the same check without saving (also part of `just test` and CI).
 2. Commit. With the hooks on (`just setup` or `just hooks`), `.githooks/pre-commit` runs `just api-check` whenever
    the commit touches `{{ s.api }}/` and refuses the commit while the check fails. `git commit --no-verify`
    skips it for a work-in-progress commit; CI still checks.
-3. When the version is released (flashed to boards, a host tool shipped), record it with `just api-save`
-   (`ww api save`, which refuses a version that is not bumped enough) and commit the new file in `api_snapshots/`.
-   Until then the check compares with the previous release, so the version can stay bumped while you work.
+3. Once a version is released (flashed to boards, a host tool shipped), its snapshot never changes again: a later
+   change to the same API needs the next version, saved as its own snapshot.
 
-A missing snapshot fails the check too, so it is never skipped by accident; `just rename` removes the template's
-snapshot and saves the renamed crate's first one.
+A missing snapshot of the current version fails the check too, so a release can't ship without one; `just rename`
+removes the template's snapshot and saves the renamed crate's first one.
 
 ## Template upgrades
 

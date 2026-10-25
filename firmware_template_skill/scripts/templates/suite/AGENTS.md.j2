@@ -55,7 +55,8 @@ just py / just py-example / just test-py
 
 - Adding to the API: trait first (`{{ s.api }}`), then the firmware (`firmware/src/ww.rs`), {{ "then a typed\n  method in the client, then the CLI" ~ (" and Python" if s.has_py else "") ~ "." if s.has_client else "`ww` calls it\n  without generated code." }} Bump the API crate's version: `just api-check` (also in `just test`,
   CI and `.githooks/pre-commit`) compares it with `{{ s.api }}/api_snapshots/` and names the bump a change needs;
-  `just api-save` records a released version. Never edit or re-save a committed snapshot to make the check pass.
+  `just api-save` saves (or refreshes) the current version's snapshot. Never edit or re-save a committed snapshot
+  of a released version to make the check pass; bump the version instead.
 - Conventional Commits with a scope: `feat(fw): ...`, {{ "`feat(client): ...`, " if s.has_client else "" }}{{ "`feat(cli): ...`, " if s.has_cli else "" }}{{ "`feat(py): ...`," if s.has_py else "`feat(api): ...`," }}
   `docs: ...`, `build: ...`; one CHANGELOG entry per change a user notices.
 - Public wording: the README, docs and recipe comments say what happens in neutral words.

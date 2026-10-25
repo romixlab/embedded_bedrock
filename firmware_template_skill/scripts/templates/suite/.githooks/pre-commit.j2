@@ -4,6 +4,7 @@
 git diff --cached --quiet -- {{ s.api }} && exit 0
 just api-check && exit 0
 echo >&2
-echo >&2 "pre-commit: the API evolution check failed, see above. A change to {{ s.api }} needs the version bump"
-echo >&2 "the report names (in {{ s.api }}/Cargo.toml; commit Cargo.lock with it); then commit again."
+echo >&2 "pre-commit: the API evolution check failed, see above. Either bump the version {{ s.api }}/Cargo.toml"
+echo >&2 "needs (commit Cargo.lock with it) or save the current version's snapshot with \`just api-save\`;"
+echo >&2 "then commit again."
 exit 1

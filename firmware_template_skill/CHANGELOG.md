@@ -23,6 +23,19 @@ or options; purely internal refactors only need a line under the next version.
   breaking version and `just api-save`. Host code that matched `Other` matches `Newer`, or `_`. Firmware code
   (`SiliconRevision::from_rev_id`) is unchanged. Take it together with the next breaking API change if there is one.
 
+- API evolution check requires the current version's snapshot (TPL-51, wire_weaver EVO-12): `tests/evolution.rs`
+  calls `wire_weaver_evolution::Check::require_current(true)` instead of `strict(true)`, so the test (and
+  `just api-check`, CI, `.githooks/pre-commit`) fails until the version in the API crate's `Cargo.toml` has its own
+  snapshot in `api_snapshots/` and the source matches it — the gap that let nucleo_g0b1re_template 0.1.5 ship API
+  0.2.0 without `..._0_2_0.ron`. `just api-save` now saves (or refreshes) the current version's snapshot by running
+  the same test with `WW_API_SAVE=1` (`cargo test -p <api> --test evolution --config "env.WW_API_SAVE.value='1'"`,
+  works under the Windows `cmd.exe` shell too) instead of shelling out to `ww api save`, so saving needs no `ww`
+  install. README "Changing the API", `AGENTS.md`, `scripts/rename.py` and the pre-commit hook's message updated
+  to match. Upgrade notes: regenerate `<api>/tests/evolution.rs`, the root and `firmware/` `justfile`'s `api-save`
+  recipe, `.githooks/pre-commit`'s message and README "Changing the API" from a scratch directory; run
+  `just api-save` once to save the snapshot `require_current` now needs for the version already in `Cargo.toml`
+  (a no-op if it was already saved) and commit `api_snapshots/` with it.
+
 - `firmware/README.md`: the setup paragraph wraps at 116 columns (one line was 178 with probe-rs's installer), the
   memory table's backup-register row stays on one line with the boot word (it broke the table); the client's
   `tests/board_pins.rs` says to run `just board` when the rendered pin table is missing. Upgrade notes: none needed,

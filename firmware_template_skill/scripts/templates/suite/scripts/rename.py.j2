@@ -7,7 +7,8 @@ Renames the crates and their directories (`{{ s.api }}` -> `{{ s.api.replace(s.n
 (`{{ ww.trait }}` -> `{{ ww.trait.replace(ww.trait[:-3], "MyBoard") }}`), the generated GID constant, the Python module, the command line binary (`{{ s.cli }}`
 -> SHORT, the new name itself when SHORT is left out) and its environment variables (`{{ s.probe_env }}` -> `MY_BOARD_PROBE`).
 The API snapshots in `{{ s.api }}/api_snapshots/` describe the template's API crate, not the renamed one: they
-are removed, and the renamed crate's first snapshot is saved with `ww api save` (or left to `just api-save`).
+are removed, and the renamed crate's first snapshot is saved with `ww api save` (or left to `just api-save`, which
+the renamed crate's test now requires before it passes).
 Prose that names the board ("{{ s.title }}", the chip, the LED pin) stays: it is listed at the end for a look.
 Run it once, in a clean checkout, before changing anything else.
 """
