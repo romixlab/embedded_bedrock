@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-10-25
+
 ### Added
 
 - `boardmap --version` names the git SHA and build time, so `tpm install` takes it (MAP-9).
