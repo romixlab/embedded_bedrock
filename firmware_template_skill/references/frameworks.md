@@ -246,10 +246,16 @@ new f411setw --chip STM32F411CE --settings --wire-weaver --led PC13
 new l4set  --chip STM32L476RG --settings --counters --log none               (ECC, no ww_ecc_flash family: region only)
 new g0bi   --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --build-info  (local --bedrock and --ww-src, +bootloader with and without defmt, release)
 new g0bigit --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --build-info (git sources, see below; +bootloader, release)
-new g0board --chip STM32G0B1RE --board nucleo_g0b1re                          (the G0 template's preset: --host, root cargo test, just lint)
+new g0board --chip STM32G0B1RE --board nucleo_g0b1re                          (the G0 template's preset: --host, host crates equal G0's, root cargo test, just lint)
 new g0rtth --chip STM32G0B1RE --wire-weaver --ww-transport rtt --counters --bootloader --settings --host  (no preset; +bootloader, root cargo test, just lint)
-new rp2040h --chip rp2040 --wire-weaver --counters --host                       (root cargo test, just lint)
+new g0rtthm --chip STM32G0B1RE --wire-weaver --ww-transport rtt --host           (RTT client without settings, counters, BKP counters)
+new g0usbh --chip STM32G0B1RE --wire-weaver --ww-transport usb --host --settings --counters --led PA5  (USB client: Usb target, devices subcommand)
+new rp2040h --chip rp2040 --wire-weaver --counters --host                       (USB client, root cargo test, just lint)
+new rp2040hm --chip rp2040 --wire-weaver --host                                  (USB client without counters: no --elf)
 ```
+
+`--host` entries also pass, from the root: `cargo test --workspace`, `cargo clippy --workspace --all-targets --
+-D warnings`, `cargo fmt --all --check` and `just test-py` (maturin build of `<name>_py`, pytest).
 
 Crash capture is on in every Cortex-M entry, built with `--bedrock <embedded_bedrock checkout>`
 (`bedrock_crash` is not on crates.io).

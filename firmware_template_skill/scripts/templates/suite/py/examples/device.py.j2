@@ -1,0 +1,43 @@
+{% set d = s.dev %}
+{% set arg = "PROBE_SERIAL" if ww.rtt else "SERIAL" %}
+{% set kw = "probe_serial" if ww.rtt else "serial" %}
+{% set items = feats("board" if d.board else "", "ids" if d.uid else "", "chip" if d.variant else "", "counters" if d.counters else "", "log" if d.log else "", "settings" if s.led_at_boot else "", "boot state" if d.boot else "", "the update node" if d.dfu else "") %}
+{% filter rewrap("") %}
+"""Read everything the board's device contract serves: {{ items | and_join }}. From the repo root: `just py-example device [{{ arg }}]`, or `uv run --project {{ s.py }} python {{ s.py }}/examples/device.py [{{ arg }}]`.{{ " " ~ (feats("Counters" if d.counters else "", ("the log" if d.counters else "The log") if d.log else "") | and_join) ~ " " ~ ("are" if d.counters and d.log else "is") ~ " decoded with the firmware's ELF: `just flash` or `just run` puts it where it is found by its build id." if d.counters or d.log else "" }}"""
+{% endfilter %}
+
+import sys
+
+import {{ s.py_module }}
+
+serial = sys.argv[1] if len(sys.argv) > 1 else None
+with {{ s.py_module }}.Device({{ kw }}=serial) as dev:
+{% if d.board %}
+    print("board:", dev.board())
+{% endif %}
+{% if d.uid %}
+    print("uid:", dev.uid())
+{% endif %}
+{% if d.variant %}
+    print("variant:", dev.variant())
+{% endif %}
+{% if d.last_reset %}
+    print("last reset:", dev.last_reset())
+{% endif %}
+{% if d.counters %}
+    print("counters:", dev.counters())
+{% endif %}
+{% if s.led_at_boot %}
+    print("led at boot:", dev.led_at_boot)
+{% endif %}
+{% if d.boot %}
+    print("boot state:", dev.boot_state())
+{% endif %}
+{% if d.dfu %}
+    print(dev.dfu_node())
+{% endif %}
+{% if d.log %}
+    print("last log lines:")
+    for line in dev.log()[-5:]:
+        print("  ", line)
+{% endif %}

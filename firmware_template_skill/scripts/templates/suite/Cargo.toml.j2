@@ -1,3 +1,5 @@
+{% from "macros.j2" import ww_dep %}
+{% set d = s.dev %}
 {% if o.host %}
 # Host workspace: the API crate{{ ", the client library, the command line and the Python wrapper" if s.has_client else "" }}. The firmware
 # (firmware/) is a standalone crate for {{ t.rust_target }}: build it from its own directory (or `just run`).
@@ -13,7 +15,7 @@ exclude = ["firmware"]
 {% if o.host %}
 
 [workspace.package]
-version = "0.1.0"
+version = "{{ s.version }}"
 edition = "2024"
 license = "MIT"
 {% if s.repository %}
@@ -25,5 +27,37 @@ repository = "{{ s.repository }}"
 [profile.deploy]
 inherits = "release"
 incremental = true
+{% endif %}
+{% if s.has_client %}
+
+[workspace.dependencies]
+{{ ww.krate }} = { path = "{{ ww.api }}", features = ["std"] }
+{{ s.client }} = { path = "{{ s.client }}" }
+# WireWeaver from {{ "git" if o.ww_src == "git" else "the local checkout (--ww-src)" }}, the same source the firmware builds against (firmware/Cargo.toml)
+{{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, "", ', features = ["std"]') }}
+{{ ww_dep("wire_weaver_client", "wire_weaver_client", o.ww_src, "", ', features = ["' ~ ("rtt" if ww.rtt else "usb") ~ '"]') }}
+{% for c, on in [("ww_firmware_info", True), ("ww_user_info", d.label), ("ww_board_info", d.board), ("ww_counters", d.counters),
+                 ("ww_dfu", d.boot or d.dfu), ("ww_uid", d.uid), ("ww_log", d.log)] if on %}
+{{ ww_dep(c, "ww_stdlib/" ~ c, o.ww_src, "", ', features = ["std"]') }}
+{% endfor %}
+{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, "", ', features = ["std", "time"]') }}
+# {{ feats("counters" if d.counters else "", "the stored log" if d.log else "", "the bug report") | and_join }} decoded with the firmware's ELF, as `ww report` does
+{{ ww_dep("ww_report", "ww_report", o.ww_src, "") }}
+{% if d.counters or d.log %}
+cnt_core = "{{ V["cnt_core"] }}" # finds the firmware's ELF by its build id, the same as ww_report
+{% endif %}
+{% if d.log %}
+defmt-decoder = "{{ V["defmt-decoder"] }}" # the log, followed live
+{% endif %}
+# host crates
+anstream = "{{ V["anstream"] }}"
+anstyle = "{{ V["anstyle"] }}"
+anyhow = "{{ V["anyhow"] }}"
+clap = { version = "{{ V["clap"] }}", features = ["derive", "env", "wrap_help"] }
+clap_complete = { version = "{{ V["clap_complete"] }}", features = ["unstable-dynamic"] }
+indicatif = "{{ V["indicatif"] }}"
+pyo3 = "{{ V["pyo3"] }}"
+thiserror = "{{ V["thiserror"] }}"
+tokio = { version = "{{ V["tokio"] }}", features = ["rt-multi-thread", "time", "macros", "signal"] }
 {% endif %}
 {% endif %}

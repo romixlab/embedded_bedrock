@@ -1,0 +1,13 @@
+"""Checks that need no board: the module loads and carries its facts. Tests with a board live with the firmware."""
+
+import {{ s.py_module }}
+
+
+def test_module_facts():
+{% if ww.rtt %}
+    assert {{ s.py_module }}.PROBE_RS_CHIP == "{{ s.chip }}"
+{% else %}
+    assert {{ s.py_module }}.USB_ID == (0xC0DE, 0xCAFE)
+{% endif %}
+    assert {{ s.py_module }}.__version__
+    assert callable({{ s.py_module }}.Device)

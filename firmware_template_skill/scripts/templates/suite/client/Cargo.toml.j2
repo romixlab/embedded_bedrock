@@ -1,0 +1,46 @@
+{% set d = s.dev %}
+[package]
+name = "{{ s.client }}"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+{% if s.repository %}
+repository.workspace = true
+{% endif %}
+description = "Host library for the {{ s.title }} firmware: typed access to its WireWeaver API over {{ "RTT" if ww.rtt else "USB" }}"
+
+[dependencies]
+{{ ww.krate }}.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+wire_weaver.workspace = true
+wire_weaver_client.workspace = true
+ww_firmware_info.workspace = true
+{% if d.label %}
+ww_user_info.workspace = true
+{% endif %}
+# the device contract: types of the typed methods, and the decoding of counters and the log with the firmware's ELF
+{% if d.board %}
+ww_board_info.workspace = true
+{% endif %}
+{% if d.counters %}
+ww_counters.workspace = true
+{% endif %}
+{% if d.boot or d.dfu %}
+ww_dfu.workspace = true
+{% endif %}
+{% if d.uid %}
+ww_uid.workspace = true
+{% endif %}
+{% if d.log %}
+ww_log.workspace = true
+{% endif %}
+ww_si.workspace = true # used by the generated client (ww_codegen!), not by name
+ww_report.workspace = true
+{% if d.counters or d.log %}
+cnt_core.workspace = true
+{% endif %}
+{% if d.log %}
+defmt-decoder.workspace = true
+{% endif %}

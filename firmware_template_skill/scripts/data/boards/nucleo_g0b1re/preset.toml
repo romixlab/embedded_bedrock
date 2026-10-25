@@ -22,6 +22,8 @@ url = "https://www.st.com/en/evaluation-tools/nucleo-g0b1re.html"
 core = "Cortex-M0+"
 client = "Nucleo"                  # the client library's typed board type
 probe_name = "the Nucleo-64's own ST-LINK/V2-1"
+probe_kind = "Nucleo ST-LINK"           # the host crates' "the only Nucleo ST-LINK attached"
+probe_kind_a = "a Nucleo ST-LINK"
 template = true                    # a GitHub template repository: the README says how to make it yours
 repository = "https://github.com/vhrdtech/nucleo_g0b1re_template"  # the template's own repository (Cargo.toml)
 

@@ -1,0 +1,20 @@
+{% set arg = "PROBE_SERIAL" if ww.rtt else "SERIAL" %}
+{% set kw = "probe_serial" if ww.rtt else "serial" %}
+"""Blink the {{ s.board_short }}'s LED and print what runs on it. From the repo root: `just py-example`, or
+`uv run --project {{ s.py }} python {{ s.py }}/examples/blink.py [{{ arg }}]`."""
+
+import sys
+
+import {{ s.py_module }}
+
+serial = sys.argv[1] if len(sys.argv) > 1 else None
+with {{ s.py_module }}.Device({{ kw }}=serial) as dev:
+    print(dev.api())
+    print(dev.firmware())
+{% if s.dev.label %}
+    print("label:", dev.label or "(none)")
+{% endif %}
+{% if s.dev.last_reset %}
+    print("boot count:", dev.boot_count())
+{% endif %}
+    dev.blink(count=3, period_ms=400)
