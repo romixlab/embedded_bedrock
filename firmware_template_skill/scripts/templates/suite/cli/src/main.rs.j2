@@ -88,7 +88,7 @@ struct Cli {
     speed_hz: Option<u32>,
 {% else %}
 {% filter rewrap("    /// ") %}
-    /// The board on USB: a serial number (or a part of it), or VID:PID[:SERIAL] (default: the only board with the firmware's USB id, c0de:cafe, that serves this API)
+    /// The board on USB: a serial number (or a part of it), or VID:PID[:SERIAL] (default: the only board with the firmware's USB id, {{ "%04x:%04x" | format(*s.usb_id) }}, that serves this API)
 {% endfilter %}
     #[arg(short, long, env = "{{ E }}_DEVICE", global = true, value_name = "DEVICE", add = ArgValueCandidates::new(usb_serials))]
     device: Option<String>,

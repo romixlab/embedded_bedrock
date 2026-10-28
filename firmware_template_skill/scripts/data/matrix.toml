@@ -599,4 +599,4 @@ name = "h7ulpi"
 args = ["--board", "matrix_presets/h7ulpi"]
 builds = ["dev", "release"]
 tags = ["ww"]
-note = "--usb-phy ulpi: USB_OTG_HS high speed, NXT on PH4, USB clock from the preset's PLL3Q (TPL-54)"
+note = "--usb-phy ulpi: USB_OTG_HS high speed, NXT on PH4, USB clock from the preset's PLL3Q, VID:PID 1209:0001 through usb_init_with_ids (TPL-54, TPL-18; needs wire_weaver TR-17)"

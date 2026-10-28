@@ -1316,9 +1316,11 @@ def preset_hw(preset: Optional[dict], leds: list[dict]) -> dict:
     usb = preset.get("usb", {})
     if usb:
         keys(usb, "[usb]", {"product", "manufacturer", "vid", "pid", "ulpi"}, set())
-        if "vid" in usb or "pid" in usb:
-            die(f"{where}: [usb] vid / pid: wire_weaver_usb_embassy's usb_init can't set them until wire_weaver TR-17 (embassy-usb 0.6 "
-                "keeps Config's vendor_id / product_id crate-private); product and manufacturer work")
+        if ("vid" in usb) != ("pid" in usb):
+            die(f"{where}: [usb] vid and pid go together")
+        for k in ("vid", "pid"):
+            if k in usb and not (isinstance(usb[k], int) and not isinstance(usb[k], bool) and 0 <= usb[k] <= 0xFFFF):
+                die(f"{where}: [usb] {k} = a 16-bit number, e.g. 0x1209")
     return {"buttons": buttons, "init": init, "bring_up": bring_up, "usb": usb}
 
 
@@ -1791,6 +1793,8 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "probe_env": f"{env}_PROBE",        # the probe's serial, when several of its kind are attached
         "elf_env": f"{env}_ELF",
         "probe": o.probe,                   # VID:PID
+        # the firmware's USB VID:PID: the preset's [usb] vid / pid, else wire_weaver_usb_embassy's default
+        "usb_id": (o.hw.get("usb", {}).get("vid", 0xC0DE), o.hw.get("usb", {}).get("pid", 0xCAFE)),
         # prose: the probe's name, for the README and the comments next to its VID:PID
         "probe_name": b.get("board", {}).get("probe_name") or (
             f"the {SETUP_PROBES[t.family][0]}" if o.probe == SETUP_PROBES[t.family][1] else "the board's probe"),

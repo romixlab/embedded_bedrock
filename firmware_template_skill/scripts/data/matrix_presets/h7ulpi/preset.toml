@@ -19,6 +19,8 @@ pin = "PE3"
 
 [usb]
 product = "H7 ULPI test"
+vid = 0x1209  # pid.codes test VID:PID through usb_init_with_ids (wire_weaver TR-17)
+pid = 0x0001
 ulpi = { NXT = "PH4" }
 
 [clock]

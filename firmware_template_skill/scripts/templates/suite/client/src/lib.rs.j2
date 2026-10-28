@@ -185,9 +185,9 @@ impl Probe {
 }
 {% else %}
 
-/// USB vendor and product id of the firmware's WireWeaver interface (`c0de:cafe` unless the firmware's `ww.rs`
-/// sets its own): [Usb::default] looks only at these, and connecting checks that the API is `{{ A }}`.
-pub const USB_ID: (u16, u16) = (0xc0de, 0xcafe);
+/// USB vendor and product id of the firmware's WireWeaver interface (`{{ "%04x:%04x" | format(*s.usb_id) }}`, set in
+/// the firmware's `ww.rs`): [Usb::default] looks only at these, and connecting checks that the API is `{{ A }}`.
+pub const USB_ID: (u16, u16) = ({{ "0x%04x, 0x%04x" | format(*s.usb_id) }});
 
 /// How to reach the board over USB: its vendor and product id, and its serial number when several are attached.
 #[derive(Clone, Debug)]
@@ -633,7 +633,7 @@ mod tests {
         assert_eq!((u.vid_pid, u.serial.as_deref()), (USB_ID, Some("066AFF51")));
         let u = Usb::default().select("1209:0001").unwrap();
         assert_eq!((u.vid_pid, u.serial), ((0x1209, 0x0001), None));
-        let u = Usb::default().select("c0de:cafe:066AFF515754").unwrap();
+        let u = Usb::default().select("{{ "%04x:%04x" | format(*s.usb_id) }}:066AFF515754").unwrap();
         assert_eq!(
             (u.vid_pid, u.serial.as_deref()),
             (USB_ID, Some("066AFF515754"))

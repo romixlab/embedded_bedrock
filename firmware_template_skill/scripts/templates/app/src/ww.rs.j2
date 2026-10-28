@@ -93,9 +93,21 @@ use static_cell::StaticCell;
 use wire_weaver::prelude::*;
 use wire_weaver::{MessageSink, WireWeaverAsyncApiBackend};
 {% if ww.usb %}
+  {% set usb_ids = "vid" in o.hw.get("usb", {}) %}
   {% if t.family == "stm32" and o.embassy == "main" and ww.stm32_usb and ww.stm32_usb.double_buffer %}
+    {% if usb_ids %}
+use wire_weaver_usb_embassy::{
+    LinkConfig, UsbBuffers, UsbDevice, UsbIds, UsbServer, UsbTimings,
+    usb_init_with_endpoints_with_ids,
+};
+    {% else %}
 use wire_weaver_usb_embassy::{
     LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init_with_endpoints,
+};
+    {% endif %}
+  {% elif usb_ids %}
+use wire_weaver_usb_embassy::{
+    LinkConfig, UsbBuffers, UsbDevice, UsbIds, UsbServer, UsbTimings, usb_init_with_ids,
 };
   {% else %}
 use wire_weaver_usb_embassy::{LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init};
@@ -582,14 +594,22 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
     // Double-buffered bulk endpoints (embassy-rs/embassy#7275): {{ u.periph }} takes the next packet while the last one
     // is processed instead of making the host retry, ~2x the throughput behind a USB hub (Donguru FW-24).
   {% endif %}
-    let (usb, server) = {{ "usb_init_with_endpoints" if db else "usb_init" }}(
+    let (usb, server) = {{ "usb_init_with_endpoints" if db else "usb_init" }}{{ "_with_ids" if usb_ids }}(
         driver,
         USB_BUFFERS.init(UsbBuffers::default()),
         UsbTimings::{{ "hs" if hs else "fs" }}_higher_speed(),
         link_config(),
         server_impl::API_ID,
+{% if usb_ids %}
+        UsbIds {
+            vid: {{ "0x%04x" | format(o.hw.usb.vid) }},
+            pid: {{ "0x%04x" | format(o.hw.usb.pid) }},
+        },
+{% endif %}
         |config| {
-            // VID:PID is c0de:cafe unless set here
+{% if not usb_ids %}
+            // VID:PID is c0de:cafe; usb_init_with_ids() takes others ([usb] vid / pid in the board preset)
+{% endif %}
 {% if o.hw.usb.get("manufacturer") %}
             config.manufacturer = Some({{ o.hw.usb.manufacturer | tojson }});
 {% endif %}

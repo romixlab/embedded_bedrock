@@ -27,7 +27,7 @@ straight through PICOBOOT (`ww dfu rp flash`), no picotool/elf2uf2/objcopy step.
 ## Talk to the device
 
 {% if ww.usb %}
-Connect the MCU's USB (VID:PID `c0de:cafe`). `ww list` shows it with its API name, `ww introspect` prints the API
+Connect the MCU's USB (VID:PID `{{ "%04x:%04x" | format(*s.usb_id) }}`). `ww list` shows it with its API name, `ww introspect` prints the API
 tree read from the device. `ww` is the WireWeaver CLI:
 `cargo install --git {{ WW_GIT }} wire_weaver_cli` (on Linux USB access needs a udev rule, see its `docs/cli.md`).
 {% else %}

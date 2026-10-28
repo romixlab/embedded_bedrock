@@ -105,8 +105,14 @@ or options; purely internal refactors only need a line under the next version.
   `embassy_stm32::init` and held for good; `[bring_up]` (`use`, `code`, `takes`, `[bring_up.dependencies]`) is board
   set-up code placed after them in `main` with its crates in the firmware's `Cargo.toml`; `[usb]` `product` and
   `manufacturer` name the USB device. With `--pins` every one of these pins is left out. Every pin of the preset is
-  checked to be used once. `[usb]` `vid` / `pid` are refused until wire_weaver TR-17 lets `usb_init` set them.
-  Upgrade notes: none for existing firmware; a board that sets these up by hand can move them into its preset.
+  checked to be used once. `[usb]` `vid` / `pid` (both, 16-bit) set the device's USB id through
+  `usb_init_with_ids` / `usb_init_with_endpoints_with_ids` and `UsbIds` (wire_weaver TR-17: a preset with them builds
+  once that is in wire_weaver's master, or with `--ww-src` on a checkout that has it); the host crates' `USB_ID`, the
+  CLI help and the README take the same id. Without them the output is as before, but for the comment above the
+  `usb_init` closure in `src/ww.rs`, which said VID:PID could be set there (embassy-usb 0.6 doesn't allow it).
+  Upgrade notes: none for existing firmware; a board that sets these up by hand can move them into its preset; one
+  that needs its own VID:PID adds `[usb] vid` / `pid` and takes `start()` of `src/ww.rs` and `USB_ID` of the
+  client from a scratch directory.
 
 - `scripts/setup.py`: the module docstring is wrapped by the generator at 118 columns whatever the tool list is
   (it had lines of 122 and 134 on G0), and the four section rulers are 120 columns instead of 121. Upgrade notes:
