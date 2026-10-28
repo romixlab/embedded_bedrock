@@ -29,12 +29,34 @@ fn firmware_points() -> Vec<(String, String)> {
 fn board_pins() -> Vec<(String, String)> {
     let md = std::fs::read_to_string(format!("{ROOT}/{{ s.pins.table }}"))
         .expect("{{ s.pins.table }}: render it with `just board` (boardmap)");
+    fn cells(l: &str) -> Vec<&str> {
+        l.split('|').map(str::trim).collect()
+    }
+    // the Role column moves: boardmap adds an alias column (a Nucleo's Arduino names) only where the TOML has any
+    let header = md
+        .lines()
+        .find(|l| l.starts_with("| Pin |"))
+        .expect("the pin table's header");
+    let role_col = cells(header)
+        .iter()
+        .position(|c| *c == "Role")
+        .expect("a Role column");
     md.lines()
         .filter(|l| l.starts_with("| `P"))
         .map(|l| {
-            let cells: Vec<&str> = l.split('|').map(str::trim).collect();
-            let pin = cells[1].trim_matches('`').to_string();
-            let role = cells[5].split_whitespace().last().unwrap().to_string();
+            let cells = cells(l);
+            // "`PA11` USB_N": the pin, then the name KiCad's symbol gives it
+            let pin = cells[1]
+                .split_whitespace()
+                .next()
+                .unwrap()
+                .trim_matches('`')
+                .to_string();
+            let role = cells[role_col]
+                .split_whitespace()
+                .last()
+                .unwrap()
+                .to_string();
             (pin, role)
         })
         .collect()

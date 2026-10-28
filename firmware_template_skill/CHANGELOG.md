@@ -68,6 +68,17 @@ or options; purely internal refactors only need a line under the next version.
   with `--host` the client, CLI, Python module and README. Needs a board run: settings across a reset and power
   cut, `variant` on the board's silicon, `boot reboot --updater` then `ww dfu rp flash`.
 
+- `--pins board`: the client's `tests/board_pins.rs` finds the pin table's Role column by its header and takes the
+  pin from the first word of the Pin cell. It read column 5, which is Role only where boardmap adds the alias
+  column (a Nucleo's Arduino names), and since MAP-10 the Pin cell also carries KiCad's pin name (`` `PA11` USB_N ``).
+  Upgrade notes: firmware with `--pins board` takes the new `board_pins()` of `<name>_client/tests/board_pins.rs`;
+  until then a board without aliases fails the test, and a re-rendered pin table with pin names may too.
+
+- The `matrix` renders `docs/board/` (step `board`) before a `--host` entry's `cargo test` when `new` left it
+  unrendered: `new` draws it only with a `boardmap` on PATH, and without the pin table the `--pins board` test
+  `board_pins` fails (g0brd, g0board, g0cannify). It runs the `--bedrock` checkout's boardmap, else the one on PATH.
+  Upgrade notes: none, generated output is unchanged.
+
 - Board preset `b129a_cannify` (TPL-58): `--board b129a_cannify` generates firmware for the B129A CANnify Micro HV
   Pico-Lock (STM32G0B1CET6, LQFP48): WireWeaver over the board's own USB-C, settings, counters, backup counters, the
   host crates with the CLI `cannify`, `pins` on every free pin of J1 / J2, the 12 MHz HSE through the PLL to 64 MHz

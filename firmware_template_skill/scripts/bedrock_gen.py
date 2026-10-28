@@ -2605,6 +2605,19 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
         elif b != "api-evolve":  # api-evolve: after the pool, in cmd_matrix (matrix_api_evolve)
             die(f"matrix entry {entry.name}: unknown build type {b!r}")
 
+    boards = [t for t in sorted((outdir / "docs" / "board").glob("*.toml")) if not t.stem.endswith("-pins-test")]
+    if "host" in entry.tags and boards and not (outdir / "docs" / "board" / f"{boards[0].stem}-pins.md").exists():
+        # `new` renders docs/board/ only with a boardmap on PATH; the pins test reads its pin table: render it with
+        # the --bedrock checkout's boardmap (in its own target dir), else the one on PATH
+        if bedrock and bedrock != "git":
+            cmd = ["cargo", "run", "-q", "--release", "--manifest-path", str(outdir / bedrock / "Cargo.toml"),
+                   "-p", "bedrock_board_cli", "--bin", "boardmap", "--"]
+        else:
+            cmd = ["boardmap"]
+        t0 = time.monotonic()
+        proc = subprocess.run([*cmd, "render", str(boards[0])], cwd=outdir, capture_output=True, text=True)
+        results["board"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
+                                      "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
     if "host" in entry.tags:
         # --host (TPL-37): what frameworks.md#tested-matrix says every --host entry also passes, from the root. The
         # API's evolution test needs the current version's snapshot (TPL-51): saved first, as `new` tells a user to
@@ -2691,7 +2704,8 @@ def matrix_api_evolve(entry: MatrixEntry, scratch: Path, bedrock: Optional[str],
 
 
 MATRIX_STEPS = ["generate", "rustfmt", "lockfile", "dev", "dev-flip-link", "release", "release-flip-link",
-               "bootloader", "bootloader-nodefmt", "api-evolve", "host-test", "host-clippy", "host-fmt", "host-test-py"]
+               "bootloader", "bootloader-nodefmt", "api-evolve", "board", "host-test", "host-clippy", "host-fmt",
+               "host-test-py"]
 
 
 def cmd_matrix(args) -> None:
