@@ -255,9 +255,11 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   confirmed to fail `.githooks/pre-commit`. The matrix itself regressed after this landed (every `--host`
   `--wire-weaver` entry failed `host-test` on a fresh project's missing snapshot): fixed, see TPL-65.
 - ✅ **TPL-65 Matrix regression from TPL-51's `require_current`**: every `--host` `--wire-weaver` matrix entry
-  (g0brd, g0board and the rest) failed `host-test` on a freshly generated project, which has no API snapshot yet
-  until `just api-save` runs. `matrix_run_entry` now runs `just api-save` first for such an entry, as `new` already
-  tells a user to.
+  (g0brd, g0board and the rest) failed `host-test` on a freshly generated project with no API snapshot, on a PC
+  without `ww` on PATH — `new`'s `post_steps` already runs `ww api save` right after generation when `ww` is there,
+  so the gap only showed up where it is missing. `matrix_run_entry` now runs `just api-save` first for such an
+  entry regardless, as `new` already tells a user without `ww` to; it only refreshes an existing snapshot where
+  `ww` already made one, so this is harmless on either kind of PC.
 - ✅ **TPL-66 `sort_uses` ordered two brace-group `use` lines of one path unlike rustfmt**: two `use a::{...}` lines
   of the same path compared equal in `sort_uses`, so it kept the templates' emission order; rustfmt orders them by
   their items. Seen on a board preset's clock (`use embassy_stm32::rcc::{Hse, ...}` next to

@@ -33,7 +33,10 @@ or options; purely internal refactors only need a line under the next version.
 
 - The `matrix` runs `just api-save` before a `--host` `--wire-weaver` entry's `cargo test`: since TPL-51 the
   evolution test fails on a fresh project without the current version's snapshot, so every such entry failed
-  `host-test` (g0brd, g0board and the rest). Upgrade notes: none, generated output is unchanged.
+  `host-test` (g0brd, g0board and the rest) on a PC without `ww` on PATH — `new`'s `post_steps` already runs
+  `ww api save` at generation time when `ww` is there, saving the snapshot before the matrix gets to it. `just
+  api-save` only refreshes the same snapshot in that case, so the fix is harmless either way. Upgrade notes: none,
+  generated output is unchanged.
 
 - `sort_uses` orders two `use a::{...}` groups of one path by their items, as rustfmt does: they kept the order the
   templates emitted them in, so a preset's clock `use` beside the HSI48 one (`embassy_stm32::rcc::{Hse, ...}` and
