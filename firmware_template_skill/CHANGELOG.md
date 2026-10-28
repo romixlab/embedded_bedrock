@@ -31,6 +31,10 @@ or options; purely internal refactors only need a line under the next version.
   with `--host` the client, CLI, Python module and README. Needs a board run: settings across a reset and power
   cut, `variant` on the board's silicon, `boot reboot --updater` then `ww dfu rp flash`.
 
+- `sort_uses` orders two `use a::{...}` groups of one path by their items, as rustfmt does: they kept the order the
+  templates emitted them in, so a preset's clock `use` beside the HSI48 one (`embassy_stm32::rcc::{Hse, ...}` and
+  `embassy_stm32::rcc::{Hsi48Config, mux}`) failed `cargo fmt --check`. Upgrade notes: none (`cargo fmt` fixes it).
+
 - Silicon revisions that can grow (TPL-52): the API's `SiliconRevision` has `Unknown` first, then the errata sheet's
   revisions in its order, `ww_repr = unib32` (was `nib`) and the catch-all `Newer(u32)` (was `Other`), so a revision
   added to `stm32.toml` later is appended and an additive API change instead of renumbering `Unknown`.

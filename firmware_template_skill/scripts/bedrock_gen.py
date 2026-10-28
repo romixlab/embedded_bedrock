@@ -936,8 +936,17 @@ def _version_key(seg: str) -> tuple:
         return (0, ("self", "super", "crate").index(seg))
     if seg == "*":
         return (3,)
-    if seg.startswith("{"):
-        return (2,)
+    if seg.startswith("{"):  # a group sorts after plain names, groups among themselves by their sorted items
+        items, depth, cur = [], 0, ""
+        for ch in seg[1:-1]:
+            depth += (ch == "{") - (ch == "}")
+            if ch == "," and depth == 0:
+                items.append(cur.strip())
+                cur = ""
+            else:
+                cur += ch
+        items.append(cur.strip())
+        return (2, sorted(_use_key(x) for x in items if x))
     return (1, tuple((0, int(x), "") if x.isdigit() else (1, 0, x) for x in re.findall(r"\d+|\D+", seg)))
 
 
