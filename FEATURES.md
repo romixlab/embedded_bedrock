@@ -189,6 +189,21 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `firmware/src` byte for byte (that firmware runs on the board). Builds for the tested matrix's `--wire-weaver`
   entries but the 64 KiB F103C8 (TPL-34); parts under 64 KiB RAM get a quarter of the log buffers. The H7, RP and
   nRF code (uid, variant, rom_boot on H7) has not run on a board yet.
+- 🧪 **TPL-53 CAN: FDCAN channels as `can[]`** (`--can board|LIST|none`, default none; `resolve_can()`): embassy
+  STM32G0 / H7 with `--wire-weaver`, `--log defmt`, `--counters`; ported from B135 (`b135_fw/src/{can.rs,ww/can.rs}`,
+  `b135_client/src/can.rs`). Channels from the preset's `[[can]]` (`instance`, `tx`, `rx`, `transceiver`,
+  `standby`, `standby_active`, `fdcansel`) or a list `FDCAN1:PD1,PB8,stby=PC13,FDCAN3:PG9,PD12`, checked in
+  stm32-data. Firmware `src/can.rs` (`app/src/can.rs.j2`: mcan from git or `--mcan-src`, a CAN task on an
+  `InterruptExecutor`, queues and transmit credit per channel, bus-off recovery, standby pin held inactive; H7 kernel
+  clock PLL2_Q 80 MHz unless `fdcansel`, two instances at most on `Controller::h7_half`) and `src/ww/can.rs`
+  (`ww_can_bus::Can`: the six required items plus set_mode, recover, tx_abort, protocol_status, set_filters), the
+  HAL-free logic in `bedrock_can` (DEV-17). With `--host` the client's `can` module, CLI `can status|configure|send|dump`,
+  Python `can_*`, `examples/can_loopback.py` and README "CAN" with an internal-loopback test. Matrix run 28 Oct 2026:
+  `g0can` (STM32G0B1CE, FDCAN1 PD1 / PB8, standby PC13) and `h7can` (STM32H725IG, FDCAN1 + FDCAN3) pass every step
+  (dev, release, flip-link, host test, clippy, fmt, Python); non-CAN output unchanged. Not yet: a run on hardware
+  (the loopback test first), G0 filter elements (mcan has none on G0: only the global filter), ES0491 2.22.3 (DAR
+  transmission lost on arbitration, the `one_shot` option) not worked around, other families, the optional
+  `ww_can_bus` items (tx_events, bus_errors, bus_load, transceiver, termination, ...).
 - 🧪 **TPL-52 Silicon revisions that can grow**: the API's `SiliconRevision` (`ww/api/src/lib.rs.j2`) has `Unknown`
   first and the errata sheet's revisions in its order after it (`stm32.toml` `[variant.<dev_id>]` `revisions`, quoted
   from the sheet's Table 2 "Device variants"), `ww_repr = unib32`, catch-all `Newer(u32)`, the raw `rev_id` beside it:
@@ -391,7 +406,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   fixed 3 / 3 / 3 RAM and no filter elements, which the `mcan` driver lacks on G0 so far): bit timing from a rate and
   sample point (exact rates only), configuration checks (`resolve`), filters onto elements (`HwFilters::map`),
   frames to send (`tx_plan`), error state (`status`), capabilities with the board's terminators. Host-tested,
-  no_std (clippy for thumbv6m). For the template's `--can` (TPL-53) and its host client; B135 could move onto it
+  no_std (clippy for thumbv6m). Used by the template's `--can` (TPL-53, matrix `g0can` / `h7can`) and its host client; B135 could move onto it
   (its firmware keeps `b135_board::can` until its owner decides).
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
