@@ -9,6 +9,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- boardmap names MCU pins after the pads' KiCad pin functions where the nets carry functional labels (`LED` is
+  `PB14`), and drops KiCad's root-sheet `/` from net names; the pin table shows the label next to the pin (MAP-10).
+
+### Changed
+
+- boardmap: the pin table leaves out the Arduino column on a board without aliases, "taken" also covers a pin wired
+  to a part of the board for good, `+5V0`-style rails get their power colour, and a narrow board's bottom view
+  shortens its title (MAP-10).
+
 ## [0.2.23] - 2026-10-29
 
 ### Fixed

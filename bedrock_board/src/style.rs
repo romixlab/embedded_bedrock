@@ -60,7 +60,8 @@ pub fn classify(desc: &Desc, pin_re: &regex_lite::Regex, net: Option<&str>) -> N
     if pin_re.is_match(net) {
         return NetClass::Pin(Role::Free);
     }
-    let up = net.to_ascii_uppercase();
+    // KiCad's power symbols are `+5V0`, `+VIN_CAN`: the `+` says nothing of the rail
+    let up = net.trim_start_matches('+').to_ascii_uppercase();
     if up == "GND" || up == "AGND" || up == "VSS" || up.ends_with("GND") {
         NetClass::Gnd
     } else if up.starts_with("AVDD") || up.starts_with("VREF") || up.starts_with("AIN") {
@@ -81,5 +82,23 @@ pub fn classify(desc: &Desc, pin_re: &regex_lite::Regex, net: Option<&str>) -> N
         NetClass::Unconnected
     } else {
         NetClass::Other
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_plus_in_front_of_a_rail_keeps_its_class() {
+        let desc: Desc = toml::from_str(
+            "[board]\nname = \"b\"\npcb = \"p\"\nmcu = \"m\"\nmcu_ref = \"U1\"\ngeometry = \"g.json\"\n",
+        )
+        .unwrap();
+        let re = regex_lite::Regex::new(r"^P[A-K]\d+$").unwrap();
+        assert_eq!(classify(&desc, &re, Some("+VIN_CAN")), NetClass::Vin);
+        assert_eq!(classify(&desc, &re, Some("+VDDIO2")), NetClass::V3);
+        assert_eq!(classify(&desc, &re, Some("+5V0_DCDC")), NetClass::V5);
+        assert_eq!(classify(&desc, &re, Some("+3V3_DCDC")), NetClass::V3);
     }
 }

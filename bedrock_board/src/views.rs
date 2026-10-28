@@ -81,13 +81,22 @@ pub fn render(desc: &Desc, geo: &Geometry, side: Side) -> anyhow::Result<Rendere
         Side::F => "top view",
         Side::B => "bottom view (mirrored, as the board lies on its face)",
     };
+    let mut title = format!("{} · {side_name}", desc.board.name);
+    if MARGIN_SIDE + crate::svg::text_width(&title, 20.0) > svg.width {
+        // a narrow board: the legend's last line says the view is mirrored
+        title = format!(
+            "{} · {}",
+            desc.board.name,
+            &side_name[..side_name.find(" (").unwrap_or(side_name.len())]
+        );
+    }
     svg.text(
         MARGIN_SIDE,
         30.0,
         20.0,
         Anchor::Start,
         &format!("fill:{};font-weight:600", style::INK),
-        &format!("{} · {side_name}", desc.board.name),
+        &title,
     );
     svg.text(
         MARGIN_SIDE,
@@ -524,7 +533,7 @@ fn legend(svg: &mut Svg, m: &Mapper, geo: &Geometry, desc: &Desc, sb_count: usiz
             style::SHARED,
             "shared: board function by default, a solder bridge or jumper frees it",
         ),
-        (style::TAKEN, "taken: debug port, reset"),
+        (style::TAKEN, "taken: debug port, reset, a board part"),
         (style::FUNCTION, "function: crystal, VBAT, VREF"),
         (style::V3, "3.3 V / VDD"),
         (style::V5, "5 V"),

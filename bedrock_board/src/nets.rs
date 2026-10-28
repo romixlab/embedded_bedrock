@@ -15,8 +15,9 @@ pub fn is_anonymous(net: &str) -> bool {
 }
 
 impl Nets {
-    /// Joins the nets across every fitted solder bridge (reference `SB*`, value containing `ON`) and picks one
-    /// name per group: an MCU pin name first, then a schematic label, then the shortest.
+    /// Joins the nets across every fitted solder bridge (reference `SB*`, value containing `ON`) and every pad's pin
+    /// name that is an MCU pin (`pin_re`) with the pad's net, and picks one name per group: an MCU pin name first,
+    /// then a schematic label, then the shortest.
     pub fn new(geo: &Geometry, pin_re: &regex_lite::Regex) -> Self {
         let mut parent: BTreeMap<String, String> = BTreeMap::new();
         fn find(parent: &mut BTreeMap<String, String>, n: &str) -> String {
@@ -40,11 +41,30 @@ impl Nets {
                 }
             }
         }
+        // an MCU pad's pin name (KiCad's pinfunction) joins its net, so a net labelled `LED` is the pin `PB14`
+        for fp in geo.footprints.values() {
+            for pad in &fp.pads {
+                if let (Some(net), Some(pin)) = (&pad.net, &pad.pin)
+                    && pin_re.is_match(pin)
+                {
+                    let (a, b) = (find(&mut parent, net), find(&mut parent, pin));
+                    if a != b {
+                        parent.insert(a, b);
+                    }
+                }
+            }
+        }
         let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
         let all: Vec<String> = geo
             .footprints
             .values()
-            .flat_map(|fp| fp.pads.iter().filter_map(|p| p.net.clone()))
+            .flat_map(|fp| fp.pads.iter())
+            .flat_map(|p| {
+                p.net
+                    .iter()
+                    .chain(p.pin.iter().filter(|n| pin_re.is_match(n)))
+            })
+            .cloned()
             .collect();
         for n in all {
             let root = find(&mut parent, &n);
@@ -104,6 +124,7 @@ mod tests {
                     shape: Shape::Rect,
                     through: false,
                     net: Some(n.to_string()),
+                    pin: None,
                 })
                 .collect(),
         }
@@ -132,5 +153,32 @@ mod tests {
             "AGND",
             "a pad keeps its own schematic label"
         );
+    }
+
+    #[test]
+    fn a_pads_pin_name_names_its_labelled_net() {
+        let mut mcu = fp("STM32", &["LED", "PA0", "GND"]);
+        mcu.pads[0].pin = Some("PB14".into());
+        mcu.pads[1].pin = Some("PA0".into());
+        mcu.pads[2].pin = Some("VSS".into());
+        let mut footprints = BTreeMap::new();
+        footprints.insert("U1".to_string(), mcu);
+        footprints.insert("D14".to_string(), fp("LED", &["LED", "GND"]));
+        let geo = Geometry {
+            source: String::new(),
+            bbox: [0.0; 4],
+            outline: vec![],
+            footprints,
+        };
+        let re = regex_lite::Regex::new(r"^P[A-K]\d+$").unwrap();
+        let nets = Nets::new(&geo, &re);
+        assert_eq!(nets.canonical("LED"), "PB14");
+        assert_eq!(
+            nets.display("LED"),
+            "LED",
+            "a pad keeps its own schematic label"
+        );
+        assert_eq!(nets.canonical("PA0"), "PA0");
+        assert_eq!(nets.canonical("GND"), "GND", "VSS is no MCU pin");
     }
 }

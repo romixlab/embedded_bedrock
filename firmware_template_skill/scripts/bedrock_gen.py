@@ -1490,8 +1490,8 @@ def pin_key(name: str) -> tuple[str, int]:
 
 def board_pins(preset: dict) -> tuple[list[str], dict]:
     """The MCU pins of the preset's board map that it marks free, in port and number order, and the `[pins]` roles:
-    as boardmap's pin table has them (every net on the MCU footprint's pads that is a pin, `[board] pin_nets`; a pin
-    with no role in `[pins]` is free)."""
+    as boardmap's pin table has them (every MCU pad whose pin name or net is a pin, `[board] pin_nets`; a pin with
+    no role in `[pins]` is free)."""
     bm = preset.get("boardmap") or die(f"--pins board: the {preset['name']} preset has no [boardmap] to take the "
                                        "free pins from; pass the list (--pins PA0,PA1,...)")
     with open(preset["dir"] / bm["toml"], "rb") as f:
@@ -1501,7 +1501,9 @@ def board_pins(preset: dict) -> tuple[list[str], dict]:
     mcu = geo["footprints"].get(desc["board"]["mcu_ref"]) or die(f"{bm['geometry']}: no footprint "
                                                                  f"{desc['board']['mcu_ref']} (the MCU)")
     roles = desc.get("pins", {})
-    nets = {p["net"] for p in mcu["pads"] if p.get("net") and pin_re.search(p["net"])}
+    # a pad's pin name (KiCad's pinfunction, MAP-10) wins over a net labelled by function (`LED` on PB14)
+    nets = {n for p in mcu["pads"] if p.get("net")
+            for n in [p["pin"] if p.get("pin") and pin_re.search(p["pin"]) else p["net"]] if pin_re.search(n)}
     return sorted((n for n in nets if roles.get(n, {}).get("role", "free") == "free"), key=pin_key), roles
 
 

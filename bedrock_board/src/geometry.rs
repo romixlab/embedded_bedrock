@@ -67,6 +67,10 @@ pub struct Pad {
     /// Through-hole pads reach both sides.
     pub through: bool,
     pub net: Option<String>,
+    /// The part's pin on this pad, from KiCad's `pinfunction` up to the first `/` (`PA11/PA9` → `PA11`): names an
+    /// MCU pin whose net carries a functional label (`LED`, `FDCAN_TX`). Imported vendor boards have none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pin: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -222,7 +226,17 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
             n.arg(2)
                 .or_else(|| n.arg(1))
                 .filter(|s| s.parse::<u32>().is_err())
+                // a root-sheet label of KiCad's own files: `/LED` is the schematic's `LED`
+                .map(|s| match s.strip_prefix('/') {
+                    Some(rest) if !rest.contains('/') => rest,
+                    _ => s,
+                })
         });
+        let pin = pad
+            .child("pinfunction")
+            .and_then(|f| f.arg(1))
+            .and_then(|f| f.split('/').next())
+            .filter(|f| !f.is_empty());
         pads.push(Pad {
             number,
             at: [x, y],
@@ -230,6 +244,7 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
             shape,
             through: kind == "thru_hole" || kind == "np_thru_hole",
             net: net.map(str::to_string),
+            pin: pin.map(str::to_string),
         });
     }
     Ok(Some((
@@ -256,6 +271,7 @@ mod tests {
     (property "Reference" "CN7") (property "Value" "Header")
     (pad "1" thru_hole rect (at -22.86 1.27 270) (size 1.85 1.85) (net "PC10"))
     (pad "2" thru_hole circle (at -22.86 -1.27 270) (size 1.85 1.85) (net "PC11"))
+    (pad "3" smd rect (at 0 1) (size 1 1) (net 7 "/LED") (pinfunction "PA11/PA9"))
     (pad "" smd custom (at 0 0) (size 0.000001 0.000001)))
   (gr_line (start 0 0) (end 10 0) (layer "Edge.Cuts"))
   (gr_arc (start 10 0) (mid 11 1) (end 10 2) (layer "Edge.Cuts"))
@@ -267,7 +283,15 @@ mod tests {
         let geo = Geometry::extract(&path, "test", |_| true).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
         let cn7 = &geo.footprints["CN7"];
-        assert_eq!(cn7.pads.len(), 2, "the zero-size helper pad is dropped");
+        assert_eq!(cn7.pads.len(), 3, "the zero-size helper pad is dropped");
+        let p3 = cn7.pad("3").unwrap();
+        assert_eq!(
+            p3.net.as_deref(),
+            Some("LED"),
+            "a root-sheet label loses its /"
+        );
+        assert_eq!(p3.pin.as_deref(), Some("PA11"));
+        assert_eq!(cn7.pad("1").unwrap().pin, None);
         let p1 = cn7.pad("1").unwrap();
         assert!(
             (p1.at[0] - 116.751).abs() < 0.01 && (p1.at[1] - 95.4936).abs() < 0.01,

@@ -47,12 +47,14 @@ pub fn render(desc: &Desc, geo: &Geometry) -> Result<String> {
 
     let mut rows: Vec<(String, String, String, String, String, String)> = Vec::new();
     let mut seen = std::collections::BTreeSet::new();
-    let mut pads: Vec<_> = mcu.pads.iter().filter(|p| p.net.is_some()).collect();
-    pads.sort_by(|a, b| {
-        pin_key(a.net.as_deref().unwrap()).cmp(&pin_key(b.net.as_deref().unwrap()))
-    });
-    for pad in pads {
-        let net = pad.net.as_deref().unwrap();
+    // a pin by its group's name: `PB14` for a pad on the net labelled `LED` (the pad's pin name, MAP-10)
+    let mut pads: Vec<_> = mcu
+        .pads
+        .iter()
+        .filter_map(|p| p.net.as_deref().map(|n| (nets.canonical(n), n)))
+        .collect();
+    pads.sort_by_key(|(name, _)| pin_key(name));
+    for (net, label) in pads {
         if !pin_re.is_match(net) || !seen.insert(net.to_string()) {
             continue;
         }
@@ -75,7 +77,11 @@ pub fn render(desc: &Desc, geo: &Geometry) -> Result<String> {
         let pin = desc.pins.get(net);
         let note = pin.map(|p| p.note.clone()).unwrap_or_default();
         rows.push((
-            format!("`{net}`"),
+            if label == net || crate::nets::is_anonymous(label) {
+                format!("`{net}`")
+            } else {
+                format!("`{net}` {label}")
+            },
             alias,
             on_headers,
             others.join(", "),
@@ -88,14 +94,21 @@ pub fn render(desc: &Desc, geo: &Geometry) -> Result<String> {
     let _ = writeln!(out, "# {} · pins\n", desc.board.name);
     let _ = writeln!(
         out,
-        "Every MCU pin of the {} ({}): where it is on the headers, what else sits on its net, and whether an application may use it. Roles: **free** reaches the headers and nothing else; **shared** has a board job by default that a solder bridge or jumper removes; **taken** is the debug port or reset; **function** is a crystal, VBAT or VREF pin.\n",
+        "Every MCU pin of the {} ({}): where it is on the headers, what else sits on its net, and whether an application may use it. Roles: **free** reaches the headers and nothing else; **shared** has a board job by default that a solder bridge or jumper removes; **taken** is the debug port, reset or wired to a part of the board for good; **function** is a crystal, VBAT or VREF pin.\n",
         desc.board.mcu, desc.board.pcb
+    );
+    // the alias column only where the description names any (a Nucleo's Arduino names)
+    let aliases = !desc.aliases.is_empty();
+    let _ = writeln!(
+        out,
+        "| Pin |{} Headers | Also on the net | Role | What it does on the board |",
+        if aliases { " Arduino |" } else { "" }
     );
     let _ = writeln!(
         out,
-        "| Pin | Arduino | Headers | Also on the net | Role | What it does on the board |"
+        "|---|{}---|---|---|---|",
+        if aliases { "---|" } else { "" }
     );
-    let _ = writeln!(out, "|---|---|---|---|---|---|");
     for (pin, alias, headers, others, role, note) in &rows {
         let role_cell = match role.as_str() {
             "free" => "🟢 free",
@@ -104,9 +117,14 @@ pub fn render(desc: &Desc, geo: &Geometry) -> Result<String> {
             "function" => "🟣 function",
             _ => "",
         };
+        let alias = if aliases {
+            format!(" {alias} |")
+        } else {
+            String::new()
+        };
         let _ = writeln!(
             out,
-            "| {pin} | {alias} | {headers} | {others} | {role_cell} | {note} |"
+            "| {pin} |{alias} {headers} | {others} | {role_cell} | {note} |"
         );
     }
     if !desc.sb.is_empty() {

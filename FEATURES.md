@@ -557,6 +557,12 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   wiring picture in a docs page.
 - ✅ **MAP-9 `boardmap --version` names the git SHA**: version, SHA (`-dirty`) and build time from a small
   `build.rs` (AGENTS.md *Versions*), so `tpm install` takes it: `bedrock_board_cli/build.rs`.
+- ✅ **MAP-10 MCU pins named from KiCad's pin functions**: on a board whose nets carry functional labels (`LED`,
+  `FDCAN_TX`, B129A CANnify), `extract` keeps each pad's `pinfunction` (`PA11/PA9` → `PA11`) and drops the
+  root-sheet `/` of KiCad's net names; the pad's pin name joins its net, so the views colour it by the pin's role
+  and the pin table lists `PB14` with its label `LED` (the generator's `--pins board` reads the same); the alias
+  column only where a description names any; a `+` in front of a rail (`+VIN_CAN`) keeps its class; the bottom
+  view's title drops "(mirrored ...)" when a narrow board has no room for it · `geometry.rs`, `nets.rs`, `pins.rs`.
 
 ## Dropped and superseded
 
