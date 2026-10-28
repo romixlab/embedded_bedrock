@@ -252,7 +252,17 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   instead of shelling out to `ww api save`, so saving needs no `ww` install. README "Changing the API", AGENTS.md,
   `scripts/rename.py` and the pre-commit hook message updated to match. Matrix run 25 Oct 2026 (`--tag ww`, 48
   entries): all pass but the known TPL-34; a scratch project's deliberate API change without a new snapshot was
-  confirmed to fail `.githooks/pre-commit`.
+  confirmed to fail `.githooks/pre-commit`. The matrix itself regressed after this landed (every `--host`
+  `--wire-weaver` entry failed `host-test` on a fresh project's missing snapshot): fixed, see TPL-65.
+- ✅ **TPL-65 Matrix regression from TPL-51's `require_current`**: every `--host` `--wire-weaver` matrix entry
+  (g0brd, g0board and the rest) failed `host-test` on a freshly generated project, which has no API snapshot yet
+  until `just api-save` runs. `matrix_run_entry` now runs `just api-save` first for such an entry, as `new` already
+  tells a user to.
+- ✅ **TPL-66 `sort_uses` ordered two brace-group `use` lines of one path unlike rustfmt**: two `use a::{...}` lines
+  of the same path compared equal in `sort_uses`, so it kept the templates' emission order; rustfmt orders them by
+  their items. Seen on a board preset's clock (`use embassy_stm32::rcc::{Hse, ...}` next to
+  `use embassy_stm32::rcc::{Hsi48Config, mux}`) failing the matrix's `cargo fmt --check` (found while building the
+  B129A CANnify preset, TPL-58).
 - 📋 **TPL-50 Clock sync on RP and nRF**: `--clock-sync on` refuses outside embassy STM32. `bedrock_sync`'s
   `embassy` feature is chip-independent; what is missing is `clock.info`'s source name and a check on a board
   (embassy-rp's and embassy-nrf's time drivers, USB round trips).
