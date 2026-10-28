@@ -68,6 +68,9 @@ so a missing entry means work nobody sees.
 - `bedrock_sync/` — the shared clock (local clock disciplined onto UTC by host steer points or a sync line, holdover,
   slewing, scheduled actions, an optional oscillator backend; `embassy` and `ww-timebase` features); host side is
   wire_weaver's `ww_clock_sync`. Firmware takes it by path, like `bedrock_led`, which aligns its animations to it.
+- `bedrock_can/` — an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL (bit timing, configuration and
+  filter checks against a `Controller` layout, frames to send, error state), from B135; the template's `--can`
+  firmware and its host client use it. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_rom_boot/` — firmware updates through the STM32 ROM bootloader (G0, H7): boot word in a backup
   register, `early()` before the HAL (jump to system memory, reset after the ROM's leave, boot-loop rescue),
   reboots, ROM USB serial; `embassy` and `ww-dfu` features (`BootControl` / `UpdateNode` in place). Firmware takes

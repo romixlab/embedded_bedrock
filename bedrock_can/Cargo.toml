@@ -1,0 +1,19 @@
+[package]
+name = "bedrock_can"
+version = "0.1.0"
+edition = "2024"
+description = "FDCAN (M_CAN) as ww_can_bus::Can without a HAL: bit timing from a rate, configuration and filter checks against the controller's layout, frames to send, error state; shared by firmware and host"
+license = "MIT OR Apache-2.0"
+
+# WireWeaver comes from git (the workspace dependencies), like bedrock_led; firmware on a local WireWeaver checkout
+# points that git source at it with a [patch].
+
+[features]
+defmt = ["dep:defmt", "wire_weaver/defmt", "ww_can_bus/defmt", "ww_si/defmt"]
+
+[dependencies]
+defmt = { version = "1.0", optional = true }
+wire_weaver = { workspace = true }
+ww_can_bus = { workspace = true }
+# number types a host may send a bit rate or a time in
+ww_si = { workspace = true, features = ["time", "electrical", "u16", "u32", "uvlq32", "f32"] }

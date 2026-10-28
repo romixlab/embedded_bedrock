@@ -1,13 +1,19 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_rom_boot`, `bedrock_board`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_can`, `bedrock_rom_boot`, `bedrock_board`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_can` 0.1.0: an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL, from B135's `b135_board::can`
+  with the kernel clock and message RAM layout as parameters (`Controller::h7`, `h7_half`, `g0`): bit timing,
+  configuration and filter checks, frames to send, error state (DEV-17)
 
 ## [0.2.21] - 2026-10-28
 

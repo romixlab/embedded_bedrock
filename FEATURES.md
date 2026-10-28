@@ -385,6 +385,14 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   yet: Donguru and B135 run the code it came from; first user nucleo_g0b1re_template's device suite (P2528#23oct-1258g).
   Not yet: H7A3/7B3 (other RCC offsets, ROM at 0x1FF0_A000), dual-core H745/H755, other families; B135's A/B
   bootloader path (feature `ab`) and its LED codes stay in B135 (`early_with` takes a closure for the code).
+- 🚧 **DEV-17 FDCAN channel crate** (`bedrock_can`): an FDCAN (Bosch M_CAN) channel as `ww_can_bus::Can` without a
+  HAL, ported from B135's `b135_board::can` (CAN-1) with the kernel clock and the message RAM layout as a
+  `Controller` (`h7`: 64 / 32 filters, FIFOs 64 / 32, TX 32 as B135; `h7_half` for a second H7 instance; `g0`: the
+  fixed 3 / 3 / 3 RAM and no filter elements, which the `mcan` driver lacks on G0 so far): bit timing from a rate and
+  sample point (exact rates only), configuration checks (`resolve`), filters onto elements (`HwFilters::map`),
+  frames to send (`tx_plan`), error state (`status`), capabilities with the board's terminators. Host-tested,
+  no_std (clippy for thumbv6m). For the template's `--can` (TPL-53) and its host client; B135 could move onto it
+  (its firmware keeps `b135_board::can` until its owner decides).
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).

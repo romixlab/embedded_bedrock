@@ -3,6 +3,7 @@
 # file: firmware and `cargo install --git` take WireWeaver from git.
 [patch."https://github.com/vhrdtech/wire_weaver"]
 wire_weaver = { path = "../wire_weaver/wire_weaver" }
+ww_can_bus = { path = "../wire_weaver/ww_stdlib/ww_can_bus" }
 ww_clock_sync = { path = "../wire_weaver/ww_clock_sync" }
 ww_date_time = { path = "../wire_weaver/ww_stdlib/ww_date_time" }
 ww_dfu = { path = "../wire_weaver/ww_stdlib/ww_dfu" }

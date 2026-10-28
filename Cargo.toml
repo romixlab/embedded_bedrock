@@ -7,6 +7,7 @@ edition = "2024"
 members = [
     "bedrock",
     "bedrock_build",
+    "bedrock_can",
     "bedrock_crash",
     "bedrock_led",
     "bedrock_rom_boot",
@@ -23,6 +24,7 @@ members = [
 # `cargo install --git ... bedrock_board_cli`). Local work takes the sibling checkout ../wire_weaver instead, through
 # the [patch] in .cargo/config.toml.
 wire_weaver = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_can_bus = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_clock_sync = { git = "https://github.com/vhrdtech/wire_weaver" }
 ww_date_time = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_dfu = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
