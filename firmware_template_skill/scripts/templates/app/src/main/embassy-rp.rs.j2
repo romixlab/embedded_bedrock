@@ -46,5 +46,24 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
     updater.mark_booted().unwrap();
 {% endif %}
 
+{% if o.settings_flash %}
+
+    let {{ "" if o.ww else "mut " }}settings = settings::SettingsStore::load(p.FLASH).await;
+  {% if o.log == "defmt" %}
+    info!("label: {}", settings.get().label);
+  {% elif o.log == "rtt" %}
+    rprintln!("label: {}", settings.get().label);
+  {% endif %}
+{% endif %}
+
+{% if s.led_at_boot %}
+    let led_level = if settings.get().led_at_boot {
+        Level::High
+    } else {
+        Level::Low
+    };
+    let led = Output::new(p.{{ o.led }}, led_level);
+{% else %}
     let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::Low);
+{% endif %}
 {% include "app/src/main/_embassy_loop.rs.j2" %}

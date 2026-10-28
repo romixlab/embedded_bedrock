@@ -1,6 +1,8 @@
-{# Settings store (--settings): ww_settings on embassy-stm32's Flash, in the SETTINGS region of memory.x.
-   o.settings_flash: "g0" / "h7" (ww_ecc_flash in between), "plain" (flash without ECC). #}
+{# Settings store (--settings): ww_settings on embassy-stm32's or embassy-rp's Flash, in the SETTINGS region of
+   memory.x. o.settings_flash: "g0" / "h7" (ww_ecc_flash in between), "plain" (STM32 flash without ECC), "rp" (the
+   RP2040 / RP2350 QSPI flash, flash_size: its size for embassy-rp's Flash). #}
 {% set ecc = o.settings_flash in ("g0", "h7") %}
+{% set rp = o.settings_flash == "rp" %}
 {% set settings_region = lay.by_name("SETTINGS") %}
 //! Settings kept in flash: [DeviceSettings] in the `SETTINGS` region of `memory.x` ({{ settings_region.length | fmt_len }}{{ ", the end of bank 2" if "BANK_2" in settings_region.comment else "" }}),
 //! through `ww_settings`: a record of the fields that differ from their default, power-cut safe at any point of a
@@ -26,7 +28,17 @@
 //! it as zeros instead (the store skips it like any cut write). Keep `SETTINGS` out of the D-cache (MPU,
 //! non-cacheable) when the D-cache is enabled.
 {% endif %}
-{% if "BANK_2" not in settings_region.comment %}
+{% if rp %}
+//!
+//! A write or an erase stops execute-in-place from the QSPI flash until it is done. embassy-rp's `Flash` runs it
+//! from RAM with interrupts off, on core 0 only (core 1 gets `Error::InvalidCore`), with core 1 paused when it was
+//! started by `embassy_rp::multicore::spawn_core1` (its FIFO handler parks it in RAM) and after every DMA channel
+//! reading flash has finished; start no DMA from flash in an interrupt-free path of your own while it runs. So every
+//! interrupt, USB and the executor wait: a 4 KiB sector erase takes tens of ms, hundreds at most (tSE in the flash
+//! chip's datasheet), a 256-byte page write about a millisecond. [SettingsStore::persist_if_due] erases the next
+//! sector right after a write (`Store::maintain`), so the stall comes at a time this firmware picks, not inside a
+//! later write.
+{% elif "BANK_2" not in settings_region.comment %}
 //!
 //! An erase stops code fetches from flash until it is done: every interrupt, USB and the executor wait. [SettingsStore::persist_if_due] erases the next page right after a write
 //! (`Store::maintain`), so the stall comes at a time this firmware picks, not inside a later write.
@@ -36,9 +48,15 @@
 //! flash) stalls like on a single-bank part.
 {% endif %}
 
+{% if rp %}
+use embassy_rp::Peri;
+use embassy_rp::flash::{Blocking, Flash};
+use embassy_rp::peripherals::FLASH;
+{% else %}
 use embassy_stm32::Peri;
 use embassy_stm32::flash::{Blocking, Flash{{ ", FLASH_BASE" if ecc else "" }}};
 use embassy_stm32::peripherals::FLASH;
+{% endif %}
 use embassy_time::Instant;
 {% if not ecc %}
 use embassy_embedded_hal::adapter::BlockingAsync;
@@ -75,6 +93,12 @@ pub struct DeviceSettings {
 /// embassy-stm32's flash, read through `EccSafeFlash` (a word with an ECC error reads as zeros)
 pub type SettingsFlash = EccSafeFlash<Flash<'static, Blocking>>;
 type FlashError = ww_ecc_flash::Error<embassy_stm32::flash::Error>;
+{% elif rp %}
+/// Size of the QSPI flash chip, embassy-rp checks offsets against it
+const FLASH_SIZE: usize = {{ flash_size | hex }};
+/// embassy-rp's flash (blocking: no DMA channel taken), with the async `NorFlash` interface ww_settings uses
+pub type SettingsFlash = BlockingAsync<Flash<'static, FLASH, Blocking, FLASH_SIZE>>;
+type FlashError = embassy_rp::flash::Error;
 {% else %}
 /// embassy-stm32's flash (no ECC on this part), with the async `NorFlash` interface ww_settings uses
 pub type SettingsFlash = BlockingAsync<Flash<'static, Blocking>>;

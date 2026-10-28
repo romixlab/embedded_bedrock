@@ -2308,19 +2308,22 @@ STM32_FLASH_NO_ECC = {"F0", "F1", "F2", "F3", "F4", "F7"}
 
 
 def settings_flash(t: Target, fw: str, bootloader: bool) -> str:
-    """Flash driver of the settings store: "g0" / "h7" (ww_ecc_flash's family feature) or "plain"; "" where the
-    store isn't wired up yet (the SETTINGS region is still reserved)."""
+    """Flash driver of the settings store: "g0" / "h7" (ww_ecc_flash's family feature), "plain" (STM32 without
+    flash ECC) or "rp" (embassy-rp's QSPI flash); "" where the store isn't wired up yet (the SETTINGS region is still
+    reserved)."""
     why = None
-    if fw != "embassy" or t.family != "stm32":
-        why = "src/settings.rs is generated for --framework embassy on STM32 so far (TPL-25)"
+    if fw != "embassy" or t.family not in ("stm32", "rp"):
+        why = "src/settings.rs is generated for --framework embassy on STM32 and RP so far (TPL-25)"
     elif bootloader:
         why = "the bootloader's updater and the settings store both need the FLASH peripheral, not shared yet (TPL-24)"
-    elif t.series not in ("G0", "H7") and t.series not in STM32_FLASH_NO_ECC:
+    elif t.family == "stm32" and t.series not in ("G0", "H7") and t.series not in STM32_FLASH_NO_ECC:
         why = (f"STM32{t.series} flash has ECC and ww_ecc_flash supports only G0 and H7 so far: with a plain driver a "
                f"word whose write a power cut interrupted would fault on every boot (TPL-26)")
     if why:
         warn(f"--settings: SETTINGS region reserved, no settings code: {why}")
         return ""
+    if t.family == "rp":
+        return "rp"
     return t.series.lower() if t.series in ("G0", "H7") else "plain"
 
 
