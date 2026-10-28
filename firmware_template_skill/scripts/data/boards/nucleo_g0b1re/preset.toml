@@ -17,6 +17,7 @@ pins = "board"        # PinDiag on every free pin of the board map, [pins] below
 
 [board]
 title = "Nucleo-G0B1RE"            # prose and the README title
+maker = "ST"                       # the README's link text: "ST Nucleo-G0B1RE board"
 product = "NUCLEO-G0B1RE"          # ww_board_info product
 revision = "C02"                   # MB1360 PCB revision
 url = "https://www.st.com/en/evaluation-tools/nucleo-g0b1re.html"

@@ -71,15 +71,15 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      4. *Also the host side (a client, CLI and Python package next to the firmware, justfile, CI, git hooks, README /
         AGENTS / FEATURES / CHANGELOG / LICENSE, logo)?* → `--host` (needs `--wire-weaver`); `--cli-name SHORT` names
         the command line and its env prefix [project name].
-   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`, e.g. `nucleo_g0b1re`, or a
-     directory with a `preset.toml`): answers for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...) plus
-     what only the board knows (clock tree, `[[leds]]`, `[[buttons]]`, `[[init]]` pins, `[bring_up]` code, `[usb]`
+   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`: `nucleo_g0b1re`, `b129a_cannify`;
+     or a directory with a `preset.toml`): answers for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...)
+     plus what only the board knows (clock tree, `[[leds]]`, `[[buttons]]`, `[[init]]` pins, `[bring_up]` code, `[usb]`
      names, README board section, `docs/board/`, logo; test presets in `scripts/data/matrix_presets/`). Explicit flags override it. Ask which board first: a preset
      answers most of the questions above.
    - debug probe `--probe VID:PID` [the board preset's, else the family's on-board probe: ST-LINK 0483:374b, CMSIS-DAP
      2e8a:000c on RP, J-Link 1366:1015 on nRF]: the cargo runner and every recipe select the probe by it, the serial
      comes from `<CLI>_PROBE` in the environment or `.env`; a PC with several probes never gets an implicit one.
-   - pin diagnostics `--pins board|LIST|none` [none; the `nucleo_g0b1re` preset: board] (`--wire-weaver`, embassy
+   - pin diagnostics `--pins board|LIST|none` [none; both presets: board] (`--wire-weaver`, embassy
      on STM32, `--log defmt`): `pins` in the API (`ww_pin_diag::PinDiag`, `src/pins.rs`) for bring-up and pin tests,
      `just pins` shows them live (`ww pins tui`). `board`: every pin the preset's board map marks free, plus its
      read-only pins; a list `PA0,PB3,PC13:ro` without a preset (`:ro` only read). Never SWD, the LED or USB.

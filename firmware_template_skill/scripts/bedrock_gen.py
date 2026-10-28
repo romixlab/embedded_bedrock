@@ -1779,7 +1779,10 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
 
     def board_text(name: str) -> str:  # a Markdown piece of the preset (data/boards/<name>/<file>), "" without
         f = b["dir"] / name if b else None
-        return f.read_text().rstrip("\n").replace("{cli}", o.cli_name).replace("{chip}", probe_rs_chip(t)) if f and f.is_file() else ""
+        if not (f and f.is_file()):
+            return ""
+        text = f.read_text().rstrip("\n")
+        return text.replace("{cli}", o.cli_name).replace("{chip}", probe_rs_chip(t)).replace("{api}", o.ww_api or "")
 
     settings = next((r for r in lay.regions if r.name == "SETTINGS" and not r.commented_out), None) if lay else None
     s = {

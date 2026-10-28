@@ -321,6 +321,13 @@ tags = ["ww", "rtt", "host"]
 note = "firmware/src equals nucleo_g0b1re_template's"
 
 [[entry]]
+name = "g0cannify"
+args = ["--board", "b129a_cannify"]
+builds = ["dev", "release"]
+tags = ["ww", "host"]
+note = "the B129A CANnify Micro preset (TPL-58): USB, HSE 12 MHz clock tree, LQFP48, --pins board; firmware/src equals cannify_micro_template's"
+
+[[entry]]
 name = "rp2040w"
 args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--bootloader"]
 builds = ["dev", "bootloader"]

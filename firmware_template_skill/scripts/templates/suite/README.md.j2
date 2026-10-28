@@ -12,7 +12,7 @@
 
 {% if B.get("template") %}
 A complete, working starting point for a [WireWeaver](https://github.com/vhrdtech/wire_weaver) device on the
-[ST {{ s.title }}]({{ B.url }}) board ({{ t.display }}, {{ B.core }}):
+[{{ B.maker ~ " " if B.maker else "" }}{{ s.title }}]({{ B.url }}) board ({{ t.display }}, {{ B.core }}):
 firmware, a typed API{{ ", a Rust client library, a command line and a Python module" if s.has_py else (", a Rust client library and a command line" if s.has_cli else "") }}, all from one API definition.
 Use it as a GitHub template ("Use this template"), rename it, add your own methods, properties and streams.
 {% else %}
@@ -161,7 +161,7 @@ Each part of the device contract (`device` in the API, the same traits as other 
 {% if o.settings_flash %}
 {{ (s.cli ~ ' settings show').ljust(24) }} # {{ "led-at-boot" if o.led else "the settings" }}
 {% if o.led %}
-{{ (s.cli ~ ' settings led-at-boot on').ljust(32) }} # {{ R.get("led", "the LED") }} lights at boot (try it: press RESET{{ ", " ~ R.get("reset") if R.get("reset") else "" }})
+{{ (s.cli ~ ' settings led-at-boot on').ljust(32) }} # {{ R.get("led", "the LED") }} lights at boot (try it: {{ R.get("reset_how") or "press RESET" ~ (", " ~ R.get("reset") if R.get("reset") else "") }})
 {% endif %}
 {{ (s.cli ~ ' settings reset').ljust(24) }} # every setting back to its default, the label too
 {% endif %}

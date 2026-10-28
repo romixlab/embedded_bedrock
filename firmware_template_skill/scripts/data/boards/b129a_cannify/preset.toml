@@ -1,0 +1,100 @@
+# Board preset for `bedrock_gen.py new --board b129a_cannify`: B129A CANnify Micro HV Pico-Lock (rev A), the board of
+# cannify_micro_template. [answers] are defaults for `new`'s options (explicit flags and --answers win), the rest is
+# what only the board knows. Facts: the B129A KiCad schematic and board (hw/b129_cannify_micro/source/b129a, rev A),
+# mcan's hil/b129 (clock tree, FDCAN pins), DS13560 Rev 6.
+
+[answers]
+chip = "STM32G0B1CE"  # U1 STM32G0B1CETxN, LQFP48
+led = "PB14"          # D14 (blue) through R27, high lights it; TIM15_CH1 for a PWM breathe
+probe = "0483:374b"   # an ST-LINK/V2-1 on J2 (SWD on J2-8..10, reset on J1-6); which ST-LINK is to be confirmed
+settings = true
+counters = true
+bkp_counters = "auto"
+wire_weaver = true
+ww_transport = "usb"  # the board's own USB-C (J3): the probe only flashes
+host = true
+cli_name = "cannify"
+pins = "board"        # PinDiag on every free pin of the board map, [pins] below
+
+[board]
+title = "CANnify Micro"            # prose and the README title
+maker = "B129A"                    # the README's link text: "B129A CANnify Micro board"
+product = "B129A CANnify Micro HV Pico-Lock"  # ww_board_info product
+revision = "A"                     # B129A
+url = "https://github.com/vhrdtech/hw/tree/main/b129_cannify_micro"
+core = "Cortex-M0+"
+client = "Cannify"                 # the client library's typed board type
+probe_name = "the ST-LINK on J2"
+probe_kind = "ST-LINK"             # the host crates' "the only ST-LINK attached"
+probe_kind_a = "an ST-LINK"
+template = true                    # a GitHub template repository: the README says how to make it yours
+repository = "https://github.com/vhrdtech/cannify_micro_template"  # the template's own repository (Cargo.toml)
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "CANnify boards"          # "with two CANnify boards attached"
+variant = "STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash"
+led = "D14"
+reset_how = "plug the USB-C cable in again"  # no reset button: reset is J1-6 or a power cycle
+first_item = """The CAN bus voltage on PB10 (+VIN_CAN ÷ 24.2) as a
+   readable property is a good first one."""
+
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every B129A has an STM32G0B1CET6 (LQFP48), what can differ is its
+silicon revision."""
+
+# src/boot.rs: the ROM bootloader on this board
+[rom_boot]
+usb = "PA11 / PA12, the board's own USB-C J3"
+healthy = "the USB host configuring the board would call it healthy earlier, `bedrock_rom_boot::usb_configured`; not wired in yet"
+rescue = "nothing to bring up for the ROM's USB: J3 is wired straight to PA11 / PA12"
+
+[logo]
+board = "CANnify Micro"
+chip = "G0B1"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from the KiCad board
+[boardmap]
+toml = "b129a_cannify.toml"
+geometry = "b129a_cannify.geometry.json"
+
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "the board has no power LED, D14 is its only one"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
+# it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "the SWD pins (PA13, PA14), USB (PA11, PA12), the LED (PB14), the CAN transceiver (PD1, PB8, PC13), the supply dividers (PB2, PB10), the crystals (PF0, PF1, PC14, PC15) or reset (PF2)"
+readme_left_out = "The SWD pins, USB, the LED, the CAN transceiver, the supply dividers, the crystals and reset"
+test = "b129a_cannify-pins-test.toml"
+
+# main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO; timer_mhz: the timers' clock (the
+# LED's PWM resolution in src/led.rs)
+[clock]
+timer_mhz = 64
+# where the core clock comes from (src/sync.rs, with --clock-sync)
+oscillator = "the 64 MHz comes from the 12 MHz crystal Y2 through the PLL"
+use = "embassy_stm32::rcc::{Hse, HseMode, Pll, PllMul, PllPreDiv, PllRDiv, PllSource, Sysclk}"
+code = """
+    // Clock tree: the 12 MHz crystal Y2 (HSE) feeds the PLL: 12 MHz / 1 * 16 = 192 MHz VCO, R divider 3 = 64 MHz
+    // system clock, the chip's maximum. AHB and APB run at 64 MHz too (embassy's default prescalers). The FDCAN
+    // kernel clock is the crystal itself, as mcan's hil/b129 runs it: 12 MHz gives exact bit times for the usual
+    // rates.
+    config.rcc.hse = Some(Hse {
+        freq: embassy_stm32::time::Hertz::mhz(12),
+        mode: HseMode::Oscillator,
+    });
+    config.rcc.pll = Some(Pll {
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV1,
+        mul: PllMul::MUL16,
+        divp: None,
+        divq: None,
+        divr: Some(PllRDiv::DIV3),
+    });
+    config.rcc.sys = Sysclk::PLL1_R;
+    config.rcc.mux.fdcansel = embassy_stm32::rcc::mux::Fdcansel::HSE;
+"""

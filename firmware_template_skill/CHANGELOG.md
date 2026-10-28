@@ -68,6 +68,18 @@ or options; purely internal refactors only need a line under the next version.
   with `--host` the client, CLI, Python module and README. Needs a board run: settings across a reset and power
   cut, `variant` on the board's silicon, `boot reboot --updater` then `ww dfu rp flash`.
 
+- Board preset `b129a_cannify` (TPL-58): `--board b129a_cannify` generates firmware for the B129A CANnify Micro HV
+  Pico-Lock (STM32G0B1CET6, LQFP48): WireWeaver over the board's own USB-C, settings, counters, backup counters, the
+  host crates with the CLI `cannify`, `pins` on every free pin of J1 / J2, the 12 MHz HSE through the PLL to 64 MHz
+  with the FDCAN kernel clock on the HSE, the LED D14 on PB14 breathing on TIM15, ROM boot over the same USB-C, the
+  board map (top and bottom view, power tree, pin table) from the B129A KiCad board, and README board sections. The
+  probe defaults to `0483:374b` (an ST-LINK/V2-1 on J2), to be confirmed on hardware. CAN itself is not in it yet.
+  New preset keys: `[board] maker` (the template README's link text, "ST" for the Nucleo, was fixed) and
+  `[readme] reset_how` (the README's "try it" for `led-at-boot` on a board without a reset button); a preset's
+  README pieces take `{api}` (the API crate's name) besides `{cli}` and `{chip}`. Matrix entry `g0cannify`.
+
+  Upgrade notes: none for existing firmware; the Nucleo's output is unchanged.
+
 - The `matrix` runs `just api-save` before a `--host` `--wire-weaver` entry's `cargo test`: since TPL-51 the
   evolution test fails on a fresh project without the current version's snapshot, so every such entry failed
   `host-test` (g0brd, g0board and the rest) on a PC without `ww` on PATH — `new`'s `post_steps` already runs

@@ -329,6 +329,19 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `bedrock_board/examples/`). `--probe VID:PID` (default the preset's, else the family's on-board probe) goes into the
   cargo runner, every probe-rs / cnt recipe and setup.py's udev check; the serial from `<CLI>_PROBE` (env or `.env`).
   A preset's store_true answer can't be turned off by a flag: edit the answers.
+- 🧪 **TPL-58 Board preset `b129a_cannify`**: B129A CANnify Micro HV Pico-Lock (STM32G0B1CET6 LQFP48, rev A) in
+  `scripts/data/boards/b129a_cannify/`: answers (WireWeaver over its own USB-C, settings, counters, backup counters,
+  host crates, CLI `cannify`, `--pins board`, probe `0483:374b` for an ST-LINK on J2), the 12 MHz HSE through the PLL
+  to 64 MHz with the FDCAN kernel on the HSE (as mcan's `hil/b129`), the LED D14 on PB14 (TIM15_CH1 breathe), ROM
+  boot over J3, the board map from the KiCad board (`boardmap extract`, MAP-10 pin names) and README board sections.
+  `[board] maker` (the README's link text, was a fixed "ST") and `[readme] reset_how` are new preset keys; board
+  README pieces take `{api}`. Matrix entry `g0cannify`; generated as cannify_micro_template. To do on hardware:
+  which ST-LINK sits on J2 (VID:PID), flash, the README's device steps, ROM boot over J3, the pin test of a bare board
+  (`--save`), the ES0548 read for HSE / PLL / USB on the silicon revision fitted. CAN (FDCAN1 TX PD1, RX PB8, STB
+  PC13 low) comes in with TPL-53 through a template upgrade of cannify_micro_template.
+- 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
+  firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
+  when the USB device is configured (wire_weaver_usb_embassy's state).
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
