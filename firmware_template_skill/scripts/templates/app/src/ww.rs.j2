@@ -492,13 +492,52 @@ bind_interrupts!(struct Irqs {
 pub type UsbDriver = Driver<'static, HardwareVbusDetect>;
   {% endif %}
 
+  {% set hs = t.family == "stm32" and u.hs %}
+  {% if hs %}
+const MAX_USB_PACKET_LEN: usize = 512; // High Speed bulk
+  {% else %}
 const MAX_USB_PACKET_LEN: usize = 64; // Full Speed
+  {% endif %}
 static USB_BUFFERS: StaticCell<UsbBuffers<MAX_USB_PACKET_LEN, MAX_MESSAGE_LEN>> = StaticCell::new();
-  {% if t.family == "stm32" and u.otg %}
+  {% if hs %}
+// OUT packets of all endpoints land here: control (64) and the bulk OUT (512)
+static EP_OUT_BUFFER: StaticCell<[u8; 1024]> = StaticCell::new();
+  {% elif t.family == "stm32" and u.otg %}
 static EP_OUT_BUFFER: StaticCell<[u8; 256]> = StaticCell::new();
   {% endif %}
 
-  {% if t.family == "stm32" %}
+  {% if hs %}
+/// {{ u.periph }} at high speed through the external ULPI PHY (the pins in ULPI signal order: CK, DIR, NXT, STP, D0-D7)
+#[allow(clippy::too_many_arguments)]
+pub fn usb_driver(
+    usb: Peri<'static, peripherals::{{ u.periph }}>,
+    {% for sig in ["clk", "dir", "nxt", "stp", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"] %}
+    {{ sig }}: Peri<'static, peripherals::{{ u.ulpi[loop.index0] }}>,
+    {% endfor %}
+) -> UsbDriver {
+    let mut config = usb::Config::default();
+    // TODO: true if VBUS is wired to the VBUS sense pin, lets the device detect unplugging
+    config.vbus_detection = false;
+    usb::Driver::new_hs_ulpi(
+        usb,
+        Irqs,
+        clk,
+        dir,
+        nxt,
+        stp,
+        d0,
+        d1,
+        d2,
+        d3,
+        d4,
+        d5,
+        d6,
+        d7,
+        EP_OUT_BUFFER.init([0; 1024]),
+        config,
+    )
+}
+  {% elif t.family == "stm32" %}
 pub fn usb_driver(
     usb: Peri<'static, peripherals::{{ u.periph }}>,
     dp: Peri<'static, peripherals::{{ u.dp }}>,
@@ -546,7 +585,7 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
     let (usb, server) = {{ "usb_init_with_endpoints" if db else "usb_init" }}(
         driver,
         USB_BUFFERS.init(UsbBuffers::default()),
-        UsbTimings::fs_higher_speed(),
+        UsbTimings::{{ "hs" if hs else "fs" }}_higher_speed(),
         link_config(),
         server_impl::API_ID,
         |config| {

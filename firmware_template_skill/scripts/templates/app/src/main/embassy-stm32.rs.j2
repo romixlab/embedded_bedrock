@@ -63,7 +63,7 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
         sync_from_usb: true,
     });
     config.rcc.mux.{{ u.mux }} = mux::{{ u.mux_enum }}::{{ "Hsi48" if o.embassy == "main" else "HSI48" }};
-  {% else %}
+  {% elif not u.preset_clock %}
     // TODO: {{ u.periph }} needs an accurate 48 MHz clock (no HSI48 + CRS on this chip): HSE + PLL{{ ", config.rcc.mux." ~ u.mux if u.mux else "" }}
   {% endif %}
 {% endif %}

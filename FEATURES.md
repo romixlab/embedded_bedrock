@@ -208,6 +208,13 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (the loopback test first), G0 filter elements (mcan has none on G0: only the global filter), ES0491 2.22.3 (DAR
   transmission lost on arbitration, the `one_shot` option) not worked around, other families, the optional
   `ww_can_bus` items (tx_events, bus_errors, bus_load, transceiver, termination, ...).
+- 🧪 **TPL-54 USB high speed through a ULPI PHY on H7**: `--usb-phy ulpi` (default `fs`) puts WireWeaver's USB on
+  `USB_OTG_HS` with an external ULPI PHY: `stm32_usb()` takes its 12 pins from stm32-data (the preset's `[usb] ulpi =
+  { NXT = "PH4" }` where there are several), `src/ww.rs` calls embassy-stm32 0.6 `usb::Driver::new_hs_ulpi` with
+  512-byte bulk packets and `UsbTimings::hs_higher_speed()`; the preset's `[clock] usb = true` says its snippet sets
+  the USB kernel clock (PLL3Q 48 MHz, which embassy checks also with a ULPI PHY), else HSI48 + CRS as for FS. Embassy
+  STM32 release only (`--embassy main` refuses). Matrix `h7ulpi` (H725, NXT on PH4, HSE bypass + PLL3Q preset) builds;
+  ES0491 Rev 9 has no device-mode OTG_HS erratum (`references/errata.md`). Not run on a board yet (Donguru).
 - 🧪 **TPL-52 Silicon revisions that can grow**: the API's `SiliconRevision` (`ww/api/src/lib.rs.j2`) has `Unknown`
   first and the errata sheet's revisions in its order after it (`stm32.toml` `[variant.<dev_id>]` `revisions`, quoted
   from the sheet's Table 2 "Device variants"), `ww_repr = unib32`, catch-all `Newer(u32)`, the raw `rev_id` beside it:

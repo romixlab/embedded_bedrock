@@ -32,7 +32,15 @@
   {% endif %}
     let state = ww::ServerState::new({{ args | join(", ") }}){{ ".await" if s.dev.log else "" }};
   {% if ww.usb %}
-    let driver = ww::usb_driver({{ ww.usb_args }});
+  {% if ww.usb_args_wrap %}
+    let driver = ww::usb_driver(
+    {% for a in ww.usb_args %}
+        {{ a }},
+    {% endfor %}
+    );
+  {% else %}
+    let driver = ww::usb_driver({{ ww.usb_args | join(", ") }});
+  {% endif %}
     ww::start(spawner, driver, state);
   {% elif s.dev.log %}
     ww::start(spawner, ww_up, ww_down, state);

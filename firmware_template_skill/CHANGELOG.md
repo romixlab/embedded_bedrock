@@ -76,6 +76,17 @@ or options; purely internal refactors only need a line under the next version.
   templates emitted them in, so a preset's clock `use` beside the HSI48 one (`embassy_stm32::rcc::{Hse, ...}` and
   `embassy_stm32::rcc::{Hsi48Config, mux}`) failed `cargo fmt --check`. Upgrade notes: none (`cargo fmt` fixes it).
 
+- USB high speed through an external ULPI PHY (TPL-54): `--usb-phy ulpi` (default `fs`, the on-chip full-speed PHY
+  as before) serves WireWeaver over `USB_OTG_HS` at high speed on STM32 with embassy release: the 12 ULPI pins come
+  from stm32-data, a board preset's `[usb] ulpi = { NXT = "PH4" }` picks a pin where there are several (the
+  generator notes each choice), `src/ww.rs` gets `usb_driver()` with the ULPI pins and `usb::Driver::new_hs_ulpi`,
+  512-byte bulk packets, a 1024-byte OUT buffer and `UsbTimings::hs_higher_speed()`; with `--pins` the ULPI pins are
+  left out. A preset's `[clock] usb = true` means its clock snippet sets the USB kernel clock itself (e.g. PLL3Q
+  48 MHz): the generator then adds no HSI48 / CRS lines. The `ww::usb_driver(...)` call in `main` is one argument
+  per line when it gets long (only the ULPI one does). Upgrade notes: none for FS firmware (unchanged output); a
+  board with a ULPI PHY regenerates with `--usb-phy ulpi` in a scratch directory and takes `usb_driver()`, the
+  packet length and the timings in `src/ww.rs` and the `usb_driver` call in `src/main.rs`.
+
 - Several LEDs and RGB LEDs from the board preset (TPL-18): a preset's `[[leds]]` list (`name`, `pin` or
   `rgb = [R, G, B]`, `active = "high" | "low"`, `role = status | heartbeat | activity | power | fault | user`)
   replaces `[answers] led`. Each pin gets a timer channel from stm32-data (no channel used twice, plain CHy before

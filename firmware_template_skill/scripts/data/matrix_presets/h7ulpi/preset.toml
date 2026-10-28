@@ -1,0 +1,59 @@
+# Test preset for the matrix (TPL-54): USB high speed on an H725 through an external ULPI PHY (a USB3300-like part
+# clocking the 60 MHz ULPI_CK), NXT on PH4 instead of stm32-data's first choice PC3, and the USB kernel clock from
+# PLL3Q instead of HSI48 + CRS. Not a real board: `--board matrix_presets/h7ulpi`.
+
+[answers]
+chip = "STM32H725IG"
+supply_config = "DirectSMPS"
+counters = true
+wire_weaver = true
+usb_phy = "ulpi"
+
+[board]
+title = "H7 ULPI test board"
+product = "H7ULPI"
+
+[[leds]]
+name = "D1"
+pin = "PE3"
+
+[usb]
+product = "H7 ULPI test"
+ulpi = { NXT = "PH4" }
+
+[clock]
+usb = true  # the snippet sets the USB kernel clock: the generator adds no HSI48 / CRS lines
+use = "embassy_stm32::rcc::{self, Hse, HseMode, Pll, PllDiv, PllMul, PllPreDiv, PllSource, mux}"
+code = """
+    // Clock tree: a 25 MHz oscillator into HSE (bypass), PLL1 400 MHz core at VOS1, PLL3Q 48 MHz for USB
+    // (embassy-stm32 checks the USB kernel clock is 48 MHz also with a ULPI PHY, which brings its own 60 MHz)
+    config.rcc.hse = Some(Hse {
+        freq: embassy_stm32::time::Hertz(25_000_000),
+        mode: HseMode::Bypass,
+    });
+    config.rcc.pll1 = Some(Pll {
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV5,
+        mul: PllMul::MUL160,
+        divp: Some(PllDiv::DIV2),
+        divq: None,
+        divr: None,
+    });
+    config.rcc.pll3 = Some(Pll {
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV5,
+        mul: PllMul::MUL48,
+        divp: None,
+        divq: Some(PllDiv::DIV5),
+        divr: None,
+    });
+    config.rcc.sys = rcc::Sysclk::PLL1_P;
+    config.rcc.ahb_pre = rcc::AHBPrescaler::DIV2;
+    config.rcc.apb1_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.apb2_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.apb3_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.apb4_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.voltage_scale = rcc::VoltageScale::Scale1;
+    config.rcc.hsi48 = None;
+    config.rcc.mux.usbsel = mux::Usbsel::PLL3_Q;
+"""

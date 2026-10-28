@@ -16,6 +16,12 @@ prints where the sheet is (`note: errata: ...`, also in the generated `README.md
 
 ## Errata the template handles
 
+- **ES0491 (STM32H72x/73x, Rev 9) for USB_OTG_HS** (`--usb-phy ulpi`, TPL-54): its only OTG_HS item is 2.23.1 "Host
+  packet transmission may hang when connecting the full speed interface through a hub to a low-speed device",
+  status N on revisions Z and A, workaround "None. However, increasing the capacitance on the data lines may reduce
+  the occurrence." It is about host mode on the DP/DM full-speed interface; the template's device mode, FS or ULPI,
+  is not affected and needs nothing. The PC2 / PC3 ULPI pins (DIR, NXT) are `PC2_C` / `PC3_C` on LQFP176 packages:
+  embassy-stm32 leaves the analog switches closed unless its `split-pc2` / `split-pc3` features are on, so they work.
 - **ES0548 2.2.10 "Prefetch failure when branching across flash memory banks"** (STM32G0B1, also check G0C1's sheet):
   status N (not fixed) on revisions A, Z/3 and Y/4; "In rare cases, the code prefetch may fail upon branching and
   function calls across flash memory banks, when the device operates in dual-bank mode. The failing prefetch then

@@ -593,3 +593,10 @@ args = ["--board", "matrix_presets/h7rgb"]
 builds = ["dev"]
 tags = ["ww", "rtt"]
 note = "[[leds]]: an RGB LED lit low on TIM3 CH2 / CH1 and TIM8_CH1N, clock sync (TPL-18)"
+
+[[entry]]
+name = "h7ulpi"
+args = ["--board", "matrix_presets/h7ulpi"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "--usb-phy ulpi: USB_OTG_HS high speed, NXT on PH4, USB clock from the preset's PLL3Q (TPL-54)"

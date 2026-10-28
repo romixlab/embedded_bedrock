@@ -435,9 +435,17 @@ def smps_present(t: Target) -> bool:
 STM32_USB_PERIPHS = ["USB", "USB_DRD_FS", "USB_OTG_FS", "USB_OTG_HS"]
 
 
-def stm32_usb(t: Target, data: Stm32Data) -> dict:
+# ULPI signals in embassy-stm32's usb::Driver::new_hs_ulpi argument order
+ULPI_SIGNALS = ["CK", "DIR", "NXT", "STP", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
+
+
+def stm32_usb(t: Target, data: Stm32Data, phy: str = "fs", ulpi_pins: Optional[dict] = None,
+              preset_clock: bool = False) -> dict:
     """USB device peripheral for WireWeaver over USB: embassy-stm32 driver flavour, interrupt, pins and how to get
-    its 48 MHz clock (HSI48 synced by CRS from USB SOF when the chip has both, otherwise left as a TODO)."""
+    its 48 MHz clock (HSI48 synced by CRS from USB SOF when the chip has both, otherwise left as a TODO).
+    phy "ulpi": the high-speed OTG with an external ULPI PHY (TPL-54), its 12 pins in u["ulpi"] (ULPI_SIGNALS order),
+    the preset's [usb] ulpi = { NXT = "PH4" } choosing where stm32-data has several. preset_clock: the preset's
+    [clock] snippet sets the USB kernel clock itself ([clock] usb = true, e.g. PLL3Q 48 MHz), u["preset_clock"]."""
     if not t.stm32.get("cores"):
         die("chip data unavailable (offline?), cannot find the USB peripheral for --ww-transport usb")
     for name in STM32_USB_PERIPHS:
@@ -445,10 +453,17 @@ def stm32_usb(t: Target, data: Stm32Data) -> dict:
         if not p or p.get("registers", {}).get("kind") not in ("usb", "otg"):
             continue
         pins: dict[str, str] = {}
+        ulpi: dict[str, list[str]] = {}
         for pin in p.get("pins", []):
             if pin["signal"] in ("DP", "DM"):
                 pins.setdefault(pin["signal"], pin["pin"])
-        if len(pins) != 2:
+            elif pin["signal"].startswith("ULPI_"):
+                ulpi.setdefault(pin["signal"][5:], []).append(pin["pin"])
+        if phy == "ulpi":
+            if any(sig not in ulpi for sig in ULPI_SIGNALS):
+                continue
+            pins = {"DP": "", "DM": ""}
+        elif len(pins) != 2:
             continue  # e.g. OTG_HS with an external ULPI PHY only
         irqs = {i["signal"]: i["interrupt"] for i in p.get("interrupts", [])}
         irq = irqs.get("LP") or irqs.get("GLOBAL") or next(iter(irqs.values()), None)
@@ -457,7 +472,24 @@ def stm32_usb(t: Target, data: Stm32Data) -> dict:
         u = {"periph": name, "otg": p["registers"]["kind"] == "otg", "irq": irq, "dp": pins["DP"], "dm": pins["DM"],
              "mux": None, "mux_enum": None, "hsi48": False,
              # embassy main double-buffers bulk endpoints on USB v1 (F1, F3, L1) and v4 (C0, G0, H5, U0, U3, U5)
-             "double_buffer": p["registers"]["kind"] == "usb" and p["registers"]["version"] in ("v1", "v4")}
+             "double_buffer": p["registers"]["kind"] == "usb" and p["registers"]["version"] in ("v1", "v4"),
+             "ulpi": [], "hs": False, "preset_clock": preset_clock}
+        if phy == "ulpi":
+            want = {k.upper(): v for k, v in (ulpi_pins or {}).items()}
+            for sig in want:
+                if sig not in ULPI_SIGNALS:
+                    die(f"[usb] ulpi: {sig} is no ULPI signal (one of {', '.join(ULPI_SIGNALS)})")
+            for sig in ULPI_SIGNALS:
+                if sig in want and want[sig] not in ulpi[sig]:
+                    die(f"[usb] ulpi: {name} ULPI_{sig} is on {' or '.join(ulpi[sig])}, not {want[sig]}")
+                pin = want.get(sig) or ulpi[sig][0]
+                if len(ulpi[sig]) > 1:
+                    how = "from the board preset's [usb] ulpi" if sig in want else \
+                        f"choose with [usb] ulpi = {{ {sig} = \"...\" }} in the board preset"
+                    others = ", ".join(x for x in ulpi[sig] if x != pin)
+                    t.notes.append(f"{name} ULPI_{sig} on {pin} (also on {others}): {how}")
+                u["ulpi"].append(pin)
+            u["hs"] = True
         kc = p.get("rcc", {}).get("kernel_clock")
         if isinstance(kc, dict):
             u["mux"] = kc["field"].lower()
@@ -470,12 +502,23 @@ def stm32_usb(t: Target, data: Stm32Data) -> dict:
                 u["mux_enum"] = fld["enum"].capitalize()  # stm32-metapac naming: USBSEL -> Usbsel
                 # the RCC enum is shared by a whole series, CRS tells whether this part really has HSI48 (L476: no)
                 u["hsi48"] = periph(t, "CRS") is not None and any(v["name"] == "HSI48" for v in enum["variants"])
-        if not u["hsi48"]:
+        if preset_clock:
+            u["hsi48"] = False
+        elif not u["hsi48"]:
             t.notes.append(f"{name} needs an accurate 48 MHz clock and {t.display} has no HSI48 + CRS: configure HSE + PLL "
                            "for USB in main.rs (TODO there), it will not enumerate otherwise")
         return u
+    if phy == "ulpi":
+        die(f"{t.display} has no USB peripheral with ULPI pins; use --usb-phy fs")
     die(f"{t.display} has no USB device peripheral with DP/DM pins; use --ww-transport rtt")
     return {}
+
+
+def usb_pins(usb: dict) -> dict[str, str]:
+    """{pin: what} of the pins the USB device takes (DP / DM, or the ULPI PHY's 12)."""
+    if usb["ulpi"]:
+        return {pin: f"USB ULPI_{sig}" for sig, pin in zip(ULPI_SIGNALS, usb["ulpi"])}
+    return {usb["dp"]: "USB DP", usb["dm"]: "USB DM"}
 
 
 # ----------------------------------------------------------------------------
@@ -876,6 +919,7 @@ class Opts:
     ww_transport: str = ""  # usb | rtt
     ww_api: str = ""        # API crate name
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
+    usb_phy: str = "fs"     # --usb-phy: fs (on-chip PHY, DP/DM) | ulpi (external high-speed PHY, TPL-54)
     crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
     settings_flash: str = ""  # --settings code: "g0" / "h7" (ww_ecc_flash family), "plain" (no ECC), "" none
     embassy: str = "release"  # embassy crates: "release" (crates.io) or "main" (upstream git at EMBASSY_MAIN_REV)
@@ -1064,8 +1108,10 @@ def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
         "rtt_up": 0 if o.log == "none" else 1,
     }
     if o.ww_transport == "usb":
-        ctx["usb_args"] = {"stm32": f"p.{usb['periph']}, p.{usb['dp']}, p.{usb['dm']}" if usb else "",
-                           "rp": "p.USB", "nrf": "p.USBD"}[t.family]
+        args = {"stm32": [usb["periph"], *usb_pins(usb)] if usb else [], "rp": ["USB"], "nrf": ["USBD"]}[t.family]
+        ctx["usb_args"] = [f"p.{x}" for x in args]
+        # rustfmt puts the arguments one per line past fn_call_width (60)
+        ctx["usb_args_wrap"] = len(", ".join(ctx["usb_args"])) > 60
     return ctx
 
 
@@ -1490,7 +1536,7 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
     used.update({x["pin"]: x["what"] for x in o.hw["init"]})
     used.update({x: "taken by [bring_up]" for x in o.hw["bring_up"].get("takes", []) if PIN_NAME_RE.fullmatch(x)})
     if usb:
-        used.update({usb["dp"]: "USB DP", usb["dm"]: "USB DM"})
+        used.update(usb_pins(usb))
     used.update({k: v for k, v in o.can.get("used", {}).items() if k not in SWD_PINS})
     bp = b.get("pins", {})
     ro_info: dict[str, dict] = {}
@@ -2886,6 +2932,8 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
         o.ww_src = args.ww_src  # ww_settings comes from wire_weaver
 
     usb = None
+    if args.usb_phy != "fs" and not args.wire_weaver:
+        die(f"--usb-phy {args.usb_phy} needs --wire-weaver (the USB device is WireWeaver's transport)")
     if o.ww:
         o.ww_transport = args.ww_transport
         o.ww_api = args.ww_api = args.ww_api or f"{name}_api"  # recorded resolved in bedrock_fw.json
@@ -2894,14 +2942,26 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
             die(f"--ww-api {o.ww_api}: must be a snake_case crate name, different from the firmware's")
         if fw != "embassy" or t.family not in ("stm32", "rp", "nrf"):
             die("--wire-weaver needs --framework embassy on STM32, RP or nRF (the server runs on embassy-time)")
+        o.usb_phy = args.usb_phy
+        if o.usb_phy == "ulpi" and (o.ww_transport != "usb" or t.family != "stm32" or args.embassy != "release"):
+            die("--usb-phy ulpi needs --ww-transport usb on STM32 with --embassy release (embassy main's "
+                "usb::Driver::new_hs_ulpi is unchecked)")
         if o.ww_transport == "usb":
             if log != "defmt":
                 die("--ww-transport usb needs --log defmt (wire_weaver_usb_embassy logs with defmt)")
             if t.family == "stm32":
-                usb = stm32_usb(t, Stm32Data(Path(args.cache), args.offline))
+                usb = stm32_usb(t, Stm32Data(Path(args.cache), args.offline), args.usb_phy, o.hw["usb"].get("ulpi"),
+                                bool((o.board or {}).get("clock", {}).get("usb")))
+                taken = usb_pins(usb)
                 for pin in [x for led in leds for x in led["pins"]] or [led]:
-                    if pin in (usb["dp"], usb["dm"]):
-                        die(f"LED pin {pin} is a USB pin ({usb['periph']} DP/DM), pass another --led or edit [[leds]]")
+                    if pin in taken:
+                        die(f"LED pin {pin} is a USB pin ({usb['periph']} {taken[pin][4:]}), pass another --led or "
+                            "edit [[leds]]")
+                hw_pins = {x["pin"]: f"the button {x['name']}" for x in o.hw["buttons"]}
+                hw_pins.update({x["pin"]: f"[[init]] {x['what']}" for x in o.hw["init"]})
+                for pin, what in hw_pins.items():
+                    if pin in taken:
+                        die(f"{what} is on {pin}, a USB pin ({usb['periph']} {taken[pin][4:]})")
             elif not t.usb:
                 die(f"{t.display} has no USB device peripheral; use --ww-transport rtt")
 
@@ -3078,6 +3138,11 @@ def main(argv=None) -> None:
                         f"{WW_FW_DIR}/, serving it over --ww-transport (embassy on stm32/rp/nrf)")
     p.add_argument("--ww-transport", choices=["usb", "rtt"], default="usb",
                    help="WireWeaver transport: usb (embassy-usb, needs --log defmt) or rtt (debug probe)")
+    p.add_argument("--usb-phy", choices=["fs", "ulpi"], default="fs",
+                   help="USB PHY for --ww-transport usb on STM32: fs (default; the on-chip full-speed PHY on DP/DM) or "
+                        "ulpi (USB_OTG_HS at high speed through an external ULPI PHY such as the USB3300; its 12 pins "
+                        "from stm32-data, the board preset's [usb] ulpi = { NXT = \"PH4\" } chooses where there are "
+                        "several)")
     p.add_argument("--ww-api", help="WireWeaver API crate name (default <name>_api)")
     p.add_argument("--ww-src", default="git",
                    help="'git' (default) or path to a local wire_weaver checkout, relative to the output directory")

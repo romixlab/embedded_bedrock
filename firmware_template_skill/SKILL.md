@@ -60,7 +60,10 @@ Paths are relative to this skill directory; use the absolute path when invoking.
         is not supported and skip the rest.
      2. Only if yes: *Which transport?* → `--ww-transport usb` (the MCU's own USB, needs `--log defmt` and a chip
         with a USB device peripheral: STM32 parts are checked in stm32-data, RP2040/RP235x, nRF52833/52840) or
-        `rtt` (through the debug probe, no extra hardware, works next to defmt/rtt logging).
+        `rtt` (through the debug probe, no extra hardware, works next to defmt/rtt logging). With `usb` on an STM32
+        whose board has an external ULPI PHY (USB3300-like, on `USB_OTG_HS`): `--usb-phy ulpi` [fs] for high
+        speed (embassy release; the preset's `[usb] ulpi = { NXT = "PH4" }` picks pins, `[clock] usb = true` when
+        its clock snippet sets the 48 MHz USB clock).
      3. *Name of the API crate?* → `--ww-api <name>` [`<project>_api`], snake_case. Its name + version identify
         the API on the wire.
      `--ww-src <path>` uses a local WireWeaver checkout (relative to the output directory) instead of git.
@@ -68,9 +71,10 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      4. *Also the host side (a client, CLI and Python package next to the firmware, justfile, CI, git hooks, README /
         AGENTS / FEATURES / CHANGELOG / LICENSE, logo)?* → `--host` (needs `--wire-weaver`); `--cli-name SHORT` names
         the command line and its env prefix [project name].
-   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`, e.g. `nucleo_g0b1re`): answers
-     for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...) plus what only the board knows (clock tree,
-     README board section, `docs/board/`, logo). Explicit flags override it. Ask which board first: a preset
+   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`, e.g. `nucleo_g0b1re`, or a
+     directory with a `preset.toml`): answers for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...) plus
+     what only the board knows (clock tree, `[[leds]]`, `[[buttons]]`, `[[init]]` pins, `[bring_up]` code, `[usb]`
+     names, README board section, `docs/board/`, logo; test presets in `scripts/data/matrix_presets/`). Explicit flags override it. Ask which board first: a preset
      answers most of the questions above.
    - debug probe `--probe VID:PID` [the board preset's, else the family's on-board probe: ST-LINK 0483:374b, CMSIS-DAP
      2e8a:000c on RP, J-Link 1366:1015 on nRF]: the cargo runner and every recipe select the probe by it, the serial
