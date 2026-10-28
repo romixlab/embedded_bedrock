@@ -10,6 +10,40 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- CAN (TPL-53): `--can board|LIST|none` (default `none`) serves FDCAN channels as `can[]: ww_can_bus::Can` on
+  embassy STM32G0 and H7 (needs `--wire-weaver`, `--log defmt`, `--counters`), ported from B135's firmware
+  (`b135_fw/src/{can.rs,ww/can.rs}`, `b135_client/src/can.rs`).
+  - `board` takes the preset's `[[can]]` tables (`instance`, `tx`, `rx`, `transceiver`, `standby`, `standby_active`
+    `high|low`, H7 `fdcansel`); a list `FDCAN1:PD1,PB8,stby=PC13[:high|low],FDCAN3:PG9,PD12` works without a preset.
+    Pins and instances are checked in stm32-data (TX / RX signals; the AF comes from embassy's pin traits). H7 takes
+    two instances at most, each with half the message RAM (`bedrock_can::Controller::h7_half`; one instance gets
+    `h7`, B135's layout); G0 has mcan's fixed RAM (3 / 3 / 3, no filter elements yet). CAN pins are left out of
+    `--pins`. `--mcan-src git|PATH` [git] takes mcan from github.com/romixlab/mcan or a local checkout.
+  - Firmware: `src/can.rs` (the CAN task on an `InterruptExecutor`, SWPMI1 / CEC / SPDIF_RX, whichever the chip has
+    first; FDCAN interrupts one level below; RX and TX queues per channel, transmit credit, configure / filters /
+    recover / abort commands, bus-off recovery, the transceiver's standby pin held inactive from boot; H7 runs the
+    kernel clock off PLL2_Q at 80 MHz unless the preset's `fdcansel` names another, G0 off PCLK) and `src/ww/can.rs`
+    (capabilities, configure, config, status, rx, tx, set_mode, recover, tx_abort, protocol_status, set_filters; the
+    rest of `ww_can_bus::Can` is omitted). `firmware/Cargo.toml` gains `mcan` (`g0` / `h7`, `embassy`, `defmt`, no
+    `rcc`), `bedrock_can` (from `--bedrock` like `bedrock_led`) and `ww_can_bus`; `src/ww.rs` the state, the
+    `handler_model` entries and a `can_pump` arm in the server loop. Edge filtering stays off (ES0548 2.15.1 /
+    ES0491 2.22.1), the Tx FIFO is used alone (2.15.2 / 2.22.2); ES0491 2.22.3 (DAR, `one_shot`) is not worked
+    around (`references/errata.md`).
+  - API crate: `ww_impl!(can[]: ww_can_bus::Can)` and the `ww_can_bus` dependency.
+  - With `--host`: the client's `can` module (`Setup`, `CanRx`, `CanTx`, `can_*` methods, candump-style
+    `frame_text`; host tests against `bedrock_can`), `<cli> can status|configure|send|dump [--index N]`, Python
+    `can_configure`, `can_status`, `can_send`, `can_rx` and `examples/can_loopback.py`, and a README *CAN* section
+    with an internal-loopback test (no bus, no transceiver).
+  - Matrix: `g0can` (STM32G0B1CE, FDCAN1 PD1 / PB8, standby PC13) and `h7can` (STM32H725IG, FDCAN1 PB9 / PB8 and
+    FDCAN3 PG9 / PD12).
+
+  Upgrade notes: opt-in, nothing changes without `--can`. To add CAN to an existing firmware, regenerate it with its
+  answers plus `--can ...` into a scratch directory and take `firmware/src/can.rs`, `firmware/src/ww/can.rs`, the
+  `can` lines of `src/ww.rs`, `src/main.rs` (the clock mux, `can::start`) and `firmware/Cargo.toml`, the API's
+  `can[]` (an additive API change: bump the API's minor version and `just api-save`) and, with `--host`, the client's
+  `src/can.rs` and `src/can/`, the CLI's `can` command, the Python `can_*` functions and the README section. Check
+  the transceiver's standby level against the schematic; nothing has run on hardware yet.
+
 - The RP device suite, part 1 (TPL-25, TPL-55, TPL-56), for `--chip rp2040` / `rp2350` with `--wire-weaver` and
   without `--bootloader`:
   - Settings on RP flash: `--settings` writes `src/settings.rs` for embassy on RP (was region only): `ww_settings` on

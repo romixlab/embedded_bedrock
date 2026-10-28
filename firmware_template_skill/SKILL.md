@@ -79,6 +79,14 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      on STM32, `--log defmt`): `pins` in the API (`ww_pin_diag::PinDiag`, `src/pins.rs`) for bring-up and pin tests,
      `just pins` shows them live (`ww pins tui`). `board`: every pin the preset's board map marks free, plus its
      read-only pins; a list `PA0,PB3,PC13:ro` without a preset (`:ro` only read). Never SWD, the LED or USB.
+   - CAN `--can board|LIST|none` [none] (`--wire-weaver`, `--log defmt`, `--counters`, embassy on STM32G0 / H7):
+     FDCAN channels as `can[]` in the API (`ww_can_bus::Can` over `mcan` and `bedrock_can`, `src/can.rs`,
+     `src/ww/can.rs`), with `--host` the client's `can` module, `<cli> can status|configure|send|dump` and Python
+     `can_*`. `board`: the preset's `[[can]]` tables (`instance`, `tx`, `rx`, `transceiver` text, `standby` pin and
+     `standby_active` `high|low`, held inactive from boot; H7 `fdcansel` kernel clock, default PLL2_Q at 80 MHz); a
+     list `FDCAN1:PD1,PB8,stby=PC13:high,FDCAN3:PG9,PD12` without a preset, pins checked against stm32-data. H7 takes
+     two instances at most (message RAM split in half). `--mcan-src git|PATH` [git] picks mcan from GitHub or a
+     local checkout. The generated README's *CAN* section has an internal-loopback test that needs no bus.
    - crash capture is on by default on Cortex-M (`bedrock_crash`: the HardFault and panic handlers save a record
      that survives the reset, the next boot logs it with the reset cause and a boot counter, `--wire-weaver` serves
      it as `device.last_reset`); `--no-crash-capture` leaves it out (panic-probe / panic-rtt-target /

@@ -26,3 +26,19 @@ prints where the sheet is (`note: errata: ...`, also in the generated `README.md
   a dual-bank G0B1 / G0C1, adds `ASSERT(__etext <= <bank 2 base>)` to `memory.x`, so code reaching bank 2 fails to
   link instead of faulting at run time; the fix then is prefetch off in `src/main.rs` (and dropping the ASSERT) or a
   smaller image (`opt-level = "s"`).
+
+- **FDCAN, `--can`** (`src/can.rs`): ES0548 Rev 4 2.15 (STM32G0B1/G0C1) and ES0491 Rev 9 2.22 (STM32H72x/H73x), status
+  A (workaround available) on every revision the sheets list:
+  - ES0548 2.15.1 / ES0491 2.22.1 "Desynchronization under specific condition with edge filtering enabled": "FDCAN
+    may desynchronize and incorrectly receive the first bit of the frame if the edge filtering is enabled (the EFBI
+    bit of the FDCAN_CCCR register is set), and the end of the integration phase coincides with a falling edge
+    detected on the FDCAN_Rx input pin"; workaround "Disable edge filtering or wait for frame retransmission". Edge
+    filtering stays off unless the host configures it.
+  - ES0548 2.15.2 / ES0491 2.22.2 "Tx FIFO messages inverted under specific buffer usage and priority setting": only
+    when "FDCAN uses both a dedicated Tx buffer and a Tx FIFO (the TFQM bit of the FDCAN_TXBC register is cleared)".
+    The firmware uses the Tx FIFO alone, which is the sheets' second workaround ("Use only a Tx FIFO").
+  - ES0491 2.22.3 "DAR mode transmission failure due to lost arbitration": "In DAR mode, the transmission may fail
+    due to lost arbitration at the first two identifier bits"; workaround "clear the corresponding Tx buffer
+    transmission request bit TRPx of the FDCAN_TXBRP register and set the corresponding cancellation finished bit
+    CFx of the FDCAN_TXBCF register, then restart the transmission". **Not handled**: DAR is the API's `one_shot`
+    option, a frame lost this way is dropped (comment in `src/can.rs`, FEATURES TPL-53).
