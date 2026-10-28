@@ -3112,7 +3112,7 @@ def post_steps(o: Opts, out: Path) -> list[str]:
     if o.host and not post_step("the Python module's lock file", ["uv", "lock"], out / f"{o.name.replace('-', '_')}_py"):
         nexts.append(f"cd {out}/{o.name.replace('-', '_')}_py && uv lock (the Python module's lock file)")
     if o.ww and not post_step("the API's first snapshot, for the evolution check", ["ww", "api", "save", o.ww_api], out):
-        nexts.append(f"cd {out} && just api-save (needs ww), then commit {o.ww_api}/api_snapshots/ (the evolution "
+        nexts.append(f"cd {out} && just api-save, then commit {o.ww_api}/api_snapshots/ (the evolution "
                      "check needs a snapshot of the API's first version)")
     if o.ww:  # not run here: hooks belong to a git repository, which the user makes
         nexts.append(f"cd {out} && just hooks (or just setup): the API check before each commit")

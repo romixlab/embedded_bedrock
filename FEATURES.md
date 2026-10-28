@@ -246,7 +246,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `bedrock_led` mono, the same `led_task`, `led_at_boot`, `leds: ww_indication::Indication` and host side as TPL-39;
   the breath follows shared time with TPL-50. New option `--led-active high|low` (default high; `low` inverts the PWM
   output or the GPIO level, for an LED from 3V3 to the pin; RP only, TPL-67). Matrix: every embassy RP entry on GP25,
-  `rp2350bled` (GP38, slice 11, active low), `rp2040gpio` (`--led-mode gpio --led-active low`). Not run on a board.
+  `rp2350bled` (GP38, slice 11, active low), `rp2040gpio` (`--led-mode gpio --led-active low`). Matrix run 28 Oct 2026, all 12 RP entries pass. Not run on a board.
 - 📋 **TPL-67 `--led-active low` outside RP**: the option refuses on STM32 (embassy `SimplePwm` /
   `ComplementaryPwm` output polarity, the HAL crates' GPIO), nRF and ESP; boards with an LED from 3V3 to the pin
   invert by hand there.

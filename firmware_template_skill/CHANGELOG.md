@@ -62,6 +62,7 @@ or options; purely internal refactors only need a line under the next version.
     buffer off between reads (RP2350-E9). Board presets on RP default their pin nets to `GPn`.
   - Host docs: README "Pins" says "is" for a single left-out pin and drops "a panel per port" on RP; the `--pins`
     help names RP. Matrix: `rp2040pins`, `rp2350bled`, `rp2040gpio`, `rp2350clkoff`.
+  - `new`'s hint no longer says `just api-save` needs `ww` (it doesn't since TPL-51).
 
   Upgrade notes: an embassy RP firmware regenerated with its answers now breathes and, with `--wire-weaver`, serves
   `leds` and `clock` (additive API items: a minor API version bump and `just api-save`); answer `--led-mode gpio`
