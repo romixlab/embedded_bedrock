@@ -1,0 +1,110 @@
+{# The LED breathing on its PWM slice (--led-mode breath on RP, TPL-57): bedrock_led's Indication on embassy-rp PWM,
+   as usb_io_fw's b200_usb_io/src/led.rs. `l` = s.led (name, pin, low, pwm: slice, ch, gpio, signal), `s.leds`:
+   served as `leds` (src/ww/leds.rs). #}
+{% set l = s.led %}
+{% set pw = l.pwm %}
+{% set wiring = ", active low" if l.low else "" %}
+{% if s.leds %}
+//! {{ l.Name }} (GPIO{{ pw.gpio }}, {{ pw.signal }}{{ wiring }}): breathes by default, solid on or off through `led_on` / `led_off`, shown
+//! through one indication (`leds` in the API, src/ww/leds.rs): visible or not, a peak brightness, and [`identify`],
+//! which blinks it for a while and then returns to the mode. The animation, its math and the task loop are
+{% if s.clock %}
+//! embedded_bedrock's `bedrock_led` (host-tested there); this module sets up the PWM slice. While `crate::sync::SYNC`
+//! has shared time (a host steers it, src/ww/clock.rs), breath and blink are aligned to it, so two boards on hosts
+//! with NTP breathe in phase; free-running from the last mode change otherwise.
+{% else %}
+//! embedded_bedrock's `bedrock_led` (host-tested there); this module sets up the PWM slice.
+{% endif %}
+{% else %}
+//! {{ l.Name }} (GPIO{{ pw.gpio }}, {{ pw.signal }}{{ wiring }}) breathes. The animation, its math and the task loop are
+//! embedded_bedrock's `bedrock_led` (host-tested there); this module sets up the PWM slice. `LEDS.set(0, mode)`
+//! changes what it shows (`bedrock_led::Mode`: breath, blink, solid on or off).
+{% endif %}
+
+{# rustfmt orders the two by their braces: {Channel before {DEFAULT_PEAK and {Mode #}
+use bedrock_led::{Channel, Indication{{ ", SharedTime" if s.clock }}};
+pub use bedrock_led::{{ "{DEFAULT_PEAK, Mode, look};" if s.leds else "{Mode, look};" }}
+use embassy_rp::Peri;
+use embassy_rp::peripherals::{{ "{" }}{{ l.pin }}, {{ pw.slice }}{{ "}" }};
+use embassy_rp::pwm::{Config, Pwm, SetDutyCycle};
+
+{% if s.led_at_boot %}
+/// What {{ l.name }} shows after boot unless `device.settings.led_at_boot` says solid on.
+{% else %}
+/// What {{ l.name }} shows after boot.
+{% endif %}
+pub const DEFAULT_MODE: Mode = look::OK.mode;
+
+static LEDS: Indication<1> = Indication::new();
+{% if s.leds %}
+
+{% if s.clock %}
+/// Change {{ l.name }}'s mode. Takes effect on the next animation tick; breath and blink restart from dark (or at their
+/// place in shared time).
+{% else %}
+/// Change {{ l.name }}'s mode. Takes effect on the next animation tick; breath and blink restart from dark.
+{% endif %}
+pub fn set(mode: Mode) {
+    LEDS.set(0, mode);
+}
+
+/// Show or hide {{ l.name }} (default shown); its animation keeps running hidden.
+pub fn set_visible(visible: bool) {
+    LEDS.set_visible(0, visible);
+}
+
+/// Peak brightness (default [`DEFAULT_PEAK`]), without restarting the animation.
+pub fn set_peak(peak: u8) {
+    LEDS.set_peak(peak);
+}
+
+/// Blink {{ l.name }} at full brightness for `ms` (restarts a running identify, 0 ends it), then show the mode again.
+pub fn identify(ms: u32) {
+    LEDS.identify(ms);
+}
+{% endif %}
+
+/// {{ pw.slice }} with TOP 0xffff: fully on is a compare of TOP + 1 = 65536, one more than embassy-rp's
+/// `max_duty_cycle` (TOP), so the duty comes out of the full 16 bits.
+struct Led(Pwm<'static>);
+
+impl Channel for Led {
+    fn max_duty(&self) -> u32 {
+        0x1_0000
+    }
+
+    fn set_duty(&mut self, duty: u32) {
+        // at most 65534 from bedrock_led::duty, within TOP: no error
+        let _ = self.0.set_duty_cycle(duty.min(0xffff) as u16);
+    }
+}
+
+#[embassy_executor::task]
+pub async fn led_task(slice: Peri<'static, {{ pw.slice }}>, pin: Peri<'static, {{ l.pin }}>, mode: Mode) {
+{% if l.low %}
+    // clk_sys / 65536 (about 2 kHz): no flicker, full 16-bit resolution. Inverted: the LED is on while the pin is low.
+{% else %}
+    // clk_sys / 65536 (about 2 kHz): no flicker, full 16-bit resolution
+{% endif %}
+    let mut config = Config::default();
+{% if l.low %}
+    config.invert_{{ pw.ch | lower }} = true;
+{% endif %}
+    config.top = 0xffff;
+    let mut {{ l.var }} = Led(Pwm::new_output_{{ pw.ch | lower }}(slice, pin, config));
+{% if s.clock %}
+    LEDS.run_with(
+        [mode],
+        || {
+            crate::sync::SYNC.shared_now().map(|s| SharedTime {
+                us: s.us,
+                generation: s.generation,
+            })
+        },
+        |leds| {{ l.var }}.set_level(leds.level(0)),
+    )
+    .await
+{% else %}
+    LEDS.run([mode], |leds| {{ l.var }}.set_level(leds.level(0))).await
+{% endif %}
+}

@@ -1,0 +1,263 @@
+{# --pins on RP (TPL-48): ww_pin_diag::PinDiag on the points of `s.pins` (resolve_pins()) through embassy-rp's Flex,
+   pins.rs.j2's twin. The RP2350-E9 pull-down workaround from the RP2350 datasheet, appendix D.5.1. #}
+{% set p = s.pins %}
+{% set e9 = t.rp_variant != "rp2040" %}
+{{ ("`pins` part of the API (`ww_pin_diag::PinDiag`): raw access to every pin the board leaves free, for bring-up and pin tests (`just pins` shows them live). The points are " ~ p.source ~ ((", plus " ~ p.ro_what ~ ", read only") if p.ro_what else "") ~ ". Never " ~ p.left_out ~ ": they are not in the list.") | doc(marker="//!", width=118) }}
+//!
+//! The pins stay disconnected (input buffer off, no pulls, output off: the RP's equivalent of analog mode) until a
+//! host sets or reads them; `release_all` puts every pin it touched back there, and so does a host that disconnects
+//! or goes silent (`ww.rs`). The trait is `#[claim(exclusive)]`: through the hub, one program has the pins at a time.
+{% if e9 %}
+//!
+//! RP2350-E9 (RP2350 datasheet, appendix D.5.1, "Increased leakage current on Bank 0 GPIO when pad input is
+//! enabled", affects A2, fixed in A3): with the input buffer on, a pad between VIL and VIH sources about 120 µA and
+//! holds itself at about 2.2 V, which the pad pull-down "isn't strong enough" to overcome. The datasheet's workaround,
+//! used here on every revision: a pin pulled down keeps its input buffer off, and a read turns it on "immediately
+//! before reading, and then re-disable[s it] immediately afterwards". The pull-up is not affected.
+{% endif %}
+//!
+//! A pin used by the firmware for something else leaves the list in [with_points]: its peripheral is then free for
+//! `main.rs` again.
+
+use embassy_rp::gpio::{Drive, Flex, Pull};
+use ww_pin_diag::{Interned, Level, PinDiagError, Point, PointCaps, PointState};
+
+/// Calls `$m!(args.., NAME = PERIPHERAL: CAPS, ...)` with every point, in id order: the one list of the pins `pins`
+/// serves. Names are the GPIO numbers as the Pico's silkscreen writes them (`GP5`), as the board description and
+/// `ww pins tui` know them; the peripheral is embassy-rp's.
+macro_rules! with_points {
+    ($($m:ident)::+!($($args:tt)*)) => {
+        $($m)::+! {$($args)*
+{% for line in p.lines %}
+{{ line }}
+{% endfor %}
+        }
+    };
+}
+pub(crate) use with_points;
+
+/// A free pin: an input with either pull, or an output at 4 mA, or at 2 mA for a weak drive.
+const FREE: PointCaps = PointCaps {
+    read: true,
+    pull_up: true,
+    pull_down: true,
+    drive_low: true,
+    drive_high: true,
+    weak_drive: true,
+};
+
+{% if p.read_only %}
+/// A pin a part of the board drives or pulls{{ (" (" ~ p.ro_parts ~ ")") if p.ro_parts else "" }}: only read.
+const READ_ONLY: PointCaps = PointCaps {
+    read: true,
+    pull_up: false,
+    pull_down: false,
+    drive_low: false,
+    drive_high: false,
+    weak_drive: false,
+};
+
+{% endif %}
+macro_rules! points_table {
+    ($($name:ident = $pin:ident: $caps:ident),* $(,)?) => {
+        /// Every point, a point's index is its id
+        pub const POINTS: &[Point<'static>] = &[$(Point {
+            name: Interned::Text(stringify!($name)),
+            group: Interned::Text("mcu"),
+            caps: $caps,
+        }),*];
+
+        /// The GPIO number of every point, for its pad register
+        const GPIO: [usize; POINTS.len()] = [$(gpio(stringify!($name))),*];
+    };
+}
+with_points!(points_table!());
+
+/// Number of points
+pub const COUNT: usize = POINTS.len();
+
+/// `n` of a point name `GPn`
+const fn gpio(name: &str) -> usize {
+    let b = name.as_bytes();
+    let mut n = 0;
+    let mut i = 2;
+    while i < b.len() {
+        n = n * 10 + (b[i] - b'0') as usize;
+        i += 1;
+    }
+    n
+}
+
+/// Takes the pins of [with_points] out of embassy's `Peripherals` (`pins::take!(p)` in main.rs), in id order.
+macro_rules! take {
+    ($p:ident) => {
+        $crate::pins::with_points!(crate::pins::take_flex!($p,))
+    };
+}
+pub(crate) use take;
+
+macro_rules! take_flex {
+    ($p:ident, $($name:ident = $pin:ident: $caps:ident),* $(,)?) => {
+        [$(embassy_rp::gpio::Flex::new($p.$pin)),*]
+    };
+}
+pub(crate) use take_flex;
+
+/// The pins and which of them a host touched since the last release.
+pub struct Pins {
+    pins: [Flex<'static>; COUNT],
+    /// Bit per point: not disconnected any more, `release_all` puts it back
+    touched: u64,
+{% if e9 %}
+    /// Bit per point: an input pulled down, its input buffer off between reads (RP2350-E9)
+    pulled_down: u64,
+{% endif %}
+}
+
+impl Pins {
+    /// The pins of [take], disconnected: `Flex::new` turns the input buffer on, so it goes off again here.
+    pub fn new(pins: [Flex<'static>; COUNT]) -> Self {
+{% if e9 %}
+        let mut pins = Pins {
+            pins,
+            touched: 0,
+            pulled_down: 0,
+        };
+{% else %}
+        let mut pins = Pins { pins, touched: 0 };
+{% endif %}
+        for i in 0..COUNT {
+            pins.disconnect(i);
+        }
+        pins
+    }
+
+    pub fn set(&mut self, point: u16, state: PointState) -> Result<(), PinDiagError<'static>> {
+        let (pin, caps) = self.point(point)?;
+        match state {
+            PointState::Input { pull } => {
+                let pull = match pull {
+                    ww_pin_diag::Pull::None => Pull::None,
+                    ww_pin_diag::Pull::Up if caps.pull_up => Pull::Up,
+                    ww_pin_diag::Pull::Down if caps.pull_down => Pull::Down,
+                    // pulls it doesn't have, the firmware's own (`Custom`) and ones from a newer host
+                    _ => return Err(PinDiagError::NotCapable),
+                };
+                pin.set_as_input();
+                // turns the input buffer on too
+                pin.set_pull(pull);
+{% if e9 %}
+                if pull == Pull::Down {
+                    // RP2350-E9: off again, or the pad holds itself at 2.2 V against the pull-down
+                    input_buffer(point as usize, false);
+                    self.pulled_down |= 1 << point;
+                } else {
+                    self.pulled_down &= !(1 << point);
+                }
+{% endif %}
+            }
+            PointState::Output { level, drive } => {
+                let level = match level {
+                    Level::Low if caps.drive_low => embassy_rp::gpio::Level::Low,
+                    Level::High if caps.drive_high => embassy_rp::gpio::Level::High,
+                    _ => return Err(PinDiagError::NotCapable),
+                };
+                let drive = match drive {
+                    ww_pin_diag::Drive::Normal => Drive::_4mA,
+                    ww_pin_diag::Drive::Weak if caps.weak_drive => Drive::_2mA,
+                    // a drive from a newer host
+                    _ => return Err(PinDiagError::NotCapable),
+                };
+                // level and pad first, then the output: no glitch to the other level on the way
+                pin.set_pull(Pull::None);
+                pin.set_drive_strength(drive);
+                pin.set_level(level);
+                pin.set_as_output();
+{% if e9 %}
+                self.pulled_down &= !(1 << point);
+{% endif %}
+            }
+            // a state from a newer host
+            PointState::Unknown(_) => return Err(PinDiagError::NotCapable),
+        }
+        self.touched |= 1 << point;
+        Ok(())
+    }
+
+    pub fn read(&mut self, point: u16) -> Result<Level, PinDiagError<'static>> {
+        let untouched = self.touched & (1 << point) == 0;
+{% if e9 %}
+        let pulled_down = self.pulled_down & (1 << point) != 0;
+{% endif %}
+        let (pin, caps) = self.point(point)?;
+        if !caps.read {
+            return Err(PinDiagError::NotCapable);
+        }
+        if untouched {
+            // a disconnected pin reads 0: one nobody set becomes an input without pulls, until the release
+            pin.set_as_input();
+            pin.set_pull(Pull::None);
+        }
+{% if e9 %}
+        let high = if pulled_down {
+            // RP2350-E9: the input buffer on just for the read, through the input synchronizer (two clk_sys cycles)
+            input_buffer(point as usize, true);
+            cortex_m::asm::delay(8);
+            let high = pin.is_high();
+            input_buffer(point as usize, false);
+            high
+        } else {
+            pin.is_high()
+        };
+{% else %}
+        let high = pin.is_high();
+{% endif %}
+        self.touched |= 1 << point;
+        Ok(if high { Level::High } else { Level::Low })
+    }
+
+    /// Every pin touched since the last release back to disconnected; true when there was one.
+    pub fn release_all(&mut self) -> bool {
+        let touched = self.touched;
+        for i in 0..COUNT {
+            if touched & (1 << i) != 0 {
+                self.disconnect(i);
+            }
+        }
+        self.touched = 0;
+        touched != 0
+    }
+
+    /// Output off, no pulls, input buffer off: no current through the pad whatever the board does with it
+    fn disconnect(&mut self, i: usize) {
+        let pin = &mut self.pins[i];
+        pin.set_as_input();
+        pin.set_pull(Pull::None);
+        input_buffer(i, false);
+{% if e9 %}
+        self.pulled_down &= !(1 << i);
+{% endif %}
+    }
+
+    fn point(
+        &mut self,
+        point: u16,
+    ) -> Result<(&mut Flex<'static>, PointCaps), PinDiagError<'static>> {
+        let i = point as usize;
+        match (self.pins.get_mut(i), POINTS.get(i)) {
+            (Some(pin), Some(p)) => Ok((pin, p.caps)),
+            _ => Err(PinDiagError::NoSuchPoint),
+        }
+    }
+}
+
+/// The input buffer (pad IE) of point `i`: embassy-rp's Flex turns it on in `new` and `set_pull`, with no call to
+/// turn it off
+fn input_buffer(i: usize, on: bool) {
+    embassy_rp::pac::PADS_BANK0
+        .gpio(GPIO[i])
+        .modify(|w| w.set_ie(on));
+}
+
+// one bit per point in `touched`
+const _: () = assert!(COUNT <= 64);

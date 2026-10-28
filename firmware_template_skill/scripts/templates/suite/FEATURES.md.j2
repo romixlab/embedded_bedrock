@@ -44,7 +44,7 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% endif %}
 {% if s.led.pwm %}
 {% set n.i = n.i + 1 %}
-{{ row("FW-" ~ n.i, s.led.Name ~ " breathes by default: " ~ s.led.pwm.signal ~ " PWM on " ~ s.led.pin ~ " at 1 kHz through embedded_bedrock's `bedrock_led`; `led_on` / `led_off` hold it solid" ~ ("; `leds` (mode, brightness, identify)" if s.leds else "") ~ "; embassy's time driver named explicitly (" ~ s.led.pwm.driver | upper ~ ") so " ~ s.led.pwm.timer ~ " stays free", "🧪", "`firmware/src/led.rs`" ~ (", `src/ww/leds.rs`" if s.leds else "")) -}}
+{{ row("FW-" ~ n.i, s.led.Name ~ " breathes by default: " ~ s.led.pwm.signal ~ " PWM on " ~ s.led.pin ~ " at " ~ s.led.pwm.freq ~ " through embedded_bedrock's `bedrock_led`; `led_on` / `led_off` hold it solid" ~ ("; `leds` (mode, brightness, identify)" if s.leds else "") ~ (("; embassy's time driver named explicitly (" ~ s.led.pwm.driver | upper ~ ") so " ~ s.led.pwm.timer ~ " stays free") if s.led.pwm.driver else ""), "🧪", "`firmware/src/led.rs`" ~ (", `src/ww/leds.rs`" if s.leds else "")) -}}
 {% endif %}
 {% if s.clock %}
 {% set n.i = n.i + 1 %}

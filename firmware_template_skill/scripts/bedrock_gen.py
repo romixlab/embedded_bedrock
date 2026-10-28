@@ -934,6 +934,7 @@ class Opts:
     # or with several LEDs / RGB every LED's (leds_pwm(), "multi")
     leds: list = field(default_factory=list)  # the --board preset's [[leds]] (preset_leds()), [] without
     hw: dict = field(default_factory=dict)  # the preset's [[buttons]], [[init]], [bring_up], [usb] (preset_hw())
+    led_low: bool = False   # --led-active low: the LED lights while its pin is low (TPL-57)
     pins: dict = field(default_factory=dict)  # --pins: resolve_pins(), {} without
     clock: bool = False     # --clock-sync: `clock` (ww_timebase::Clock) through bedrock_sync (TPL-40)
     can: dict = field(default_factory=dict)  # --can: resolve_can(), {} without (TPL-53)
@@ -1198,8 +1199,10 @@ def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
     if mode == "gpio":
         return None
     why, chans = "", []
+    if t.family == "rp" and framework == "embassy":
+        return rp_led_pwm(t, led)
     if t.family != "stm32" or framework != "embassy":
-        why = "breath is generated for --framework embassy on STM32 so far (RP and nRF PWM are not wired yet)"
+        why = "breath is generated for --framework embassy on STM32 and RP so far (nRF PWM is not wired yet)"
     else:
         timers = stm32_timers(t)
         chans = timer_channels(timers, led)
@@ -1214,7 +1217,7 @@ def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
         if t.family == "stm32" and framework == "embassy":
             t.notes.append(f"LED {led}: plain GPIO output, {why} (--led-mode gpio)")
         return None
-    return {**chans[0], "driver": driver.lower(), "multi": False}
+    return {**chans[0], "driver": driver.lower(), "multi": False, "freq": "1 kHz"}
 
 
 # A [[leds]] role (TPL-18): the bedrock look the LED shows at boot (src/led.rs `LOOKS`, a Rust expression whose colour
@@ -1409,12 +1412,37 @@ def rust_stmt_lines(stmts: list[str], indent: str, width: int = 100) -> list[str
     return out
 
 
+def rp_gpio(t: Target, led: str) -> int:
+    """GPIO number of an embassy-rp pin name (PIN_25), checked against the package's GPIOs."""
+    m = re.fullmatch(r"PIN_(\d{1,2})", led)
+    if not m or int(m[1]) >= rp_gpio_count(t):
+        die(f"--led {led}: expected an embassy-rp pin like PIN_25 (GPIO 0..{rp_gpio_count(t) - 1} on {t.display})")
+    return int(m[1])
+
+
+def rp_gpio_count(t: Target) -> int:
+    """Bank 0 GPIOs of the package: 48 on the RP2350B (QFN-80), 30 on the RP2040 and the QFN-60 RP2350A / RP2354A."""
+    return 48 if t.rp_variant == "rp235xb" else 30
+
+
+def rp_led_pwm(t: Target, led: str) -> dict:
+    """The PWM slice and channel of an RP LED pin (TPL-57): every GPIO has one, GPIO n is channel A when n is even.
+    GPIO 0-31 take slices 0-7 twice over, the RP2350B's GPIO 32-47 slices 8-11 (RP2350 datasheet 1.2.3 "GPIO
+    functions (Bank 0)", embassy-rp's `impl_pin!` table in pwm.rs)."""
+    n = rp_gpio(t, led)
+    sl = (n >> 1) & 7 if n < 32 else 8 + ((n >> 1) & 3)
+    ch = "B" if n & 1 else "A"
+    return dict(slice=f"PWM_SLICE{sl}", ch=ch, gpio=n, signal=f"PWM {sl}{ch}", timer=f"PWM_SLICE{sl}",
+                freq="about 2 kHz", driver="", multi=False)
+
+
 def clock_sync(t: Target, framework: str, ww: bool, mode: str) -> bool:
     """--clock-sync (TPL-40): `clock` (ww_timebase::Clock) served through bedrock_sync, the LED's breath aligned to
-    it. `auto` turns it on with --wire-weaver on embassy STM32, the combination it ran on (nucleo_g0b1re_template)."""
+    it. `auto` turns it on with --wire-weaver on embassy STM32 (it ran on nucleo_g0b1re_template) and RP (usb_io_fw's
+    rePort runs the same bedrock_sync)."""
     why = ("" if ww else "needs --wire-weaver (the host steers the clock through the API)") or (
-        "" if t.family == "stm32" and framework == "embassy" else
-        "generated for --framework embassy on STM32 so far (RP and nRF: TPL-50)")
+        "" if t.family in ("stm32", "rp") and framework == "embassy" else
+        "generated for --framework embassy on STM32 and RP so far (nRF: TPL-50)")
     if mode == "on" and why:
         die(f"--clock-sync on: {why}")
     return mode != "off" and not why
@@ -1477,18 +1505,20 @@ def variant_context(t: Target) -> Optional[dict]:
             "part": t.display[5:]}
 
 
-# --pins (TPL-46): the points of ww_pin_diag::PinDiag in src/pins.rs
+# --pins (TPL-46): the points of ww_pin_diag::PinDiag in src/pins.rs. STM32 pins are PA0..PK15, RP GPIOs GP0..GP47
+# (the Pico's silkscreen names; SWD and USB have pins of their own there)
 PIN_NAME_RE = re.compile(r"P([A-K])(\d{1,2})")
+RP_PIN_NAME_RE = re.compile(r"GP()(\d{1,2})")
 SWD_PINS = ("PA13", "PA14")  # SWDIO, SWCLK on every STM32: the probe's, never a point
 MAX_POINTS = 64              # pins.rs keeps a bit per point in a u64
 
 
 def pin_key(name: str) -> tuple[str, int]:
-    m = PIN_NAME_RE.fullmatch(name)
+    m = PIN_NAME_RE.fullmatch(name) or RP_PIN_NAME_RE.fullmatch(name)
     return (m[1], int(m[2])) if m else (name, 0)
 
 
-def board_pins(preset: dict) -> tuple[list[str], dict]:
+def board_pins(preset: dict, rp: bool = False) -> tuple[list[str], dict]:
     """The MCU pins of the preset's board map that it marks free, in port and number order, and the `[pins]` roles:
     as boardmap's pin table has them (every MCU pad whose pin name or net is a pin, `[board] pin_nets`; a pin with
     no role in `[pins]` is free)."""
@@ -1497,7 +1527,7 @@ def board_pins(preset: dict) -> tuple[list[str], dict]:
     with open(preset["dir"] / bm["toml"], "rb") as f:
         desc = tomllib.load(f)
     geo = json.loads((preset["dir"] / bm["geometry"]).read_text())
-    pin_re = re.compile(desc["board"].get("pin_nets", r"^P[A-K]\d+$"))
+    pin_re = re.compile(desc["board"].get("pin_nets", r"^GP\d+$" if rp else r"^P[A-K]\d+$"))
     mcu = geo["footprints"].get(desc["board"]["mcu_ref"]) or die(f"{bm['geometry']}: no footprint "
                                                                  f"{desc['board']['mcu_ref']} (the MCU)")
     roles = desc.get("pins", {})
@@ -1509,6 +1539,8 @@ def board_pins(preset: dict) -> tuple[list[str], dict]:
 
 def chip_pins(t: Target) -> set[str]:
     """GPIO names of the part's packages (empty when stm32-data has none, offline)."""
+    if t.family == "rp":
+        return {f"GP{n}" for n in range(rp_gpio_count(t))}
     names = set()
     for p in t.stm32.get("packages", []):
         for pin in p.get("pins", []):
@@ -1529,13 +1561,17 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         return {}
     if not o.ww:
         die("--pins needs --wire-weaver (`pins` is part of the WireWeaver API)")
-    if t.family != "stm32" or o.framework != "embassy":
-        die("--pins: embassy on STM32 so far (embassy-stm32's Flex in analog mode); RP and nRF: FEATURES.md TPL-48")
+    if t.family not in ("stm32", "rp") or o.framework != "embassy":
+        die("--pins: embassy on STM32 and RP so far (embassy's Flex); nRF: FEATURES.md TPL-48")
     if o.log != "defmt":
         die("--pins needs --log defmt (pins.rs and its refusals log with defmt)")
     b = o.board or {}
+    rp = t.family == "rp"
+    name_re, example = (RP_PIN_NAME_RE, "GP0") if rp else (PIN_NAME_RE, "PA0")
+    swd = () if rp else SWD_PINS
     # pins the firmware itself uses: never a point
-    used = {pin: f"the LED {led['name']}" for led in o.leds for pin in led["pins"]} or {o.led: "the LED"}
+    used = {pin: f"the LED {led['name']}" for led in o.leds for pin in led["pins"]} or \
+        {f"GP{rp_gpio(t, o.led)}" if rp else o.led: "the LED"}
     used.update({b["pin"]: f"the button {b['name']}" for b in o.hw["buttons"]})
     used.update({x["pin"]: x["what"] for x in o.hw["init"]})
     used.update({x: "taken by [bring_up]" for x in o.hw["bring_up"].get("takes", []) if PIN_NAME_RE.fullmatch(x)})
@@ -1548,10 +1584,10 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         if not b:
             die("--pins board needs --board PRESET (its board map says which pins are free); without a preset pass "
                 "the list: --pins PA0,PA1,...")
-        free, roles = board_pins(b)
+        free, roles = board_pins(b, rp)
         for name in [n for n in free if n in used]:
             t.notes.append(f"--pins board: {name} left out, it is {used[name]}")
-        points = [(n, "FREE") for n in free if n not in used and n not in SWD_PINS]
+        points = [(n, "FREE") for n in free if n not in used and n not in swd]
         for name, info in bp.get("read_only", {}).items():
             if roles.get(name, {}).get("role") != "shared":
                 die(f"{b['dir'] / 'preset.toml'}: [pins] read_only {name} is not a shared pin of the board map "
@@ -1561,7 +1597,7 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
             points.append((name, "READ_ONLY"))
             ro_info[name] = info
         left_out = bp.get("left_out", "")
-        named = set(re.findall(r"\bP[A-K]\d{1,2}\b", left_out))
+        named = set(re.findall(r"\bGP\d{1,2}\b" if rp else r"\bP[A-K]\d{1,2}\b", left_out))
         missing = [n for n, r in roles.items() if r.get("role") != "free" and n not in ro_info and n not in named]
         if not left_out or missing:
             die(f"{b['dir'] / 'preset.toml'}: [pins] left_out must name every pin the board map takes "
@@ -1570,11 +1606,11 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         points, seen = [], set()
         for item in (x.strip() for x in spec.split(",") if x.strip()):
             name, _, flag = item.partition(":")
-            if not PIN_NAME_RE.fullmatch(name) or flag not in ("", "ro"):
-                die(f"--pins {item}: expected a pin like PA0, or PC13:ro for one only read")
+            if not name_re.fullmatch(name) or flag not in ("", "ro"):
+                die(f"--pins {item}: expected a pin like {example}, or {example}:ro for one only read")
             if name in seen:
                 die(f"--pins: {name} twice")
-            if name in SWD_PINS:
+            if name in swd:
                 die(f"--pins {name}: an SWD pin (PA13 SWDIO, PA14 SWCLK) belongs to the probe")
             if name in used:
                 die(f"--pins {name}: it is {used[name]}")
@@ -1584,7 +1620,7 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         bad = [n for n, _ in points if known and n not in known]
         if bad:
             die(f"--pins: {t.display} has no {', '.join(bad)}")
-        taken = [f"the SWD pins ({', '.join(SWD_PINS)})"] + [f"{what} ({pin})" for pin, what in used.items()]
+        taken = ([] if rp else [f"the SWD pins ({', '.join(SWD_PINS)})"]) + [f"{what} ({pin})" for pin, what in used.items()]
         left_out = human_list(taken)
     points.sort(key=lambda p: pin_key(p[0]))
     if not points:
@@ -1594,7 +1630,8 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
     # with_points!'s list: a line per run of one port and caps, wrapped at 120 columns as rustfmt leaves it
     lines, cur, key = [], "", None
     for name, caps in points:
-        item = f"{name}: {caps},"
+        # RP: the name and embassy-rp's peripheral (GP5 = PIN_5), macro_rules can't make one from the other
+        item = f"{name} = PIN_{pin_key(name)[1]}: {caps}," if rp else f"{name}: {caps},"
         k = (pin_key(name)[0], caps)
         if cur and (k != key or len(cur) + 1 + len(item) > 120):
             lines.append(cur)
@@ -1875,11 +1912,15 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
     s["led"] = {"name": name or "the LED", "Name": name or "The LED", "var": name.lower() or "led",
                 "first": led_name or "the LED", "First": led_name or "The LED",
                 "pin": o.led, "pwm": o.led_pwm, "essential": b.get("led", {}).get("essential", ""),
-                "timer_mhz": b.get("clock", {}).get("timer_mhz")}
+                "timer_mhz": b.get("clock", {}).get("timer_mhz"), "low": o.led_low,
+                # GPIO levels that light it and leave it dark (--led-active)
+                "on": "Low" if o.led_low else "High", "off": "High" if o.led_low else "Low"}
     s["leds"] = o.ww and bool(o.led_pwm)
     # the clock a host steers (TPL-40): `source` names the local clock in clock.info, `m0`: no 64-bit ww_numeric
     # `oscillator`: where the core clock comes from, for src/sync.rs (the preset's [clock] oscillator)
-    s["clock"] = {"source": o.led_pwm["driver"].upper() if o.led_pwm else "embassy-time",
+    # embassy-rp's time driver runs on TIMER (RP2040) or TIMER0 (RP235x), whatever the LED does
+    rp_timer = ("TIMER" if t.rp_variant == "rp2040" else "TIMER0") if t.family == "rp" else ""
+    s["clock"] = {"source": rp_timer or (o.led_pwm["driver"].upper() if o.led_pwm else "embassy-time"),
                   "m0": t.rust_target.startswith("thumbv6m"), "rtt": o.ww and o.ww_transport == "rtt",
                   "oscillator": b.get("clock", {}).get("oscillator", "")} if o.clock else {}
     s["pins"] = o.pins                      # `pins` (ww_pin_diag::PinDiag) beside the device contract (TPL-46)
@@ -2102,12 +2143,13 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
         if ctx["s"]["buttons"]:
             files["src/ww/buttons.rs"] = render("app/src/ww/buttons.rs.j2", **ctx)
     if o.led_pwm:
-        files["src/led.rs"] = render("app/src/led_multi.rs.j2" if o.led_pwm.get("multi") else "app/src/led.rs.j2", **ctx)
+        files["src/led.rs"] = render("app/src/led-rp.rs.j2" if t.family == "rp" else
+                                     "app/src/led_multi.rs.j2" if o.led_pwm.get("multi") else "app/src/led.rs.j2", **ctx)
     if o.clock:
         files["src/sync.rs"] = render("app/src/sync.rs.j2", **ctx)
         files["src/ww/clock.rs"] = render("app/src/ww/clock.rs.j2", **ctx)
     if o.pins:
-        files["src/pins.rs"] = render("app/src/pins.rs.j2", **ctx)
+        files["src/pins.rs"] = render(f"app/src/pins{'-rp' if t.family == 'rp' else ''}.rs.j2", **ctx)
     if o.can:
         files["src/can.rs"] = render("app/src/can.rs.j2", **ctx)
         files["src/ww/can.rs"] = render("app/src/ww/can.rs.j2", **ctx)
@@ -2938,6 +2980,9 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
         t.notes.append("[[buttons]]: served as `buttons` with --wire-weaver; without it nothing reads them")
     o.led_pwm = leds_pwm(t, fw, leds, args.led_mode) if leds and not single_led(leds) else \
         led_pwm(t, fw, led, args.led_mode)
+    o.led_low = getattr(args, "led_active", "high") == "low"
+    if o.led_low and (t.family != "rp" or fw != "embassy"):
+        die("--led-active low: generated for embassy on RP so far (STM32 needs the timer channel's polarity)")
     o.clock = clock_sync(t, fw, args.wire_weaver, args.clock_sync)
     if o.host and not args.wire_weaver:
         die("--host needs --wire-weaver (the host crates talk to the firmware through its WireWeaver API)")
@@ -3149,11 +3194,15 @@ def main(argv=None) -> None:
     p.add_argument("--led-mode", choices=["auto", "breath", "gpio"], default="auto",
                    help="the LED: 'breath' (PWM on the pin's timer channel through bedrock_led: breathes, `leds` in "
                         "the API with --wire-weaver, embassy's time driver named off that timer), 'gpio' (a plain "
-                        "output), 'auto' (default: breath where the pin has a timer channel; embassy on STM32 so far)")
+                        "output), 'auto' (default: breath where the pin has a timer channel or, on RP, its PWM slice; "
+                        "embassy on STM32 and RP so far)")
+    p.add_argument("--led-active", choices=["high", "low"], default="high",
+                   help="the LED's active level: 'high' (default: the pin drives it, pin -> LED -> ground) or 'low' "
+                        "(3V3 -> LED -> pin; the PWM output or the GPIO level inverted; RP so far)")
     p.add_argument("--clock-sync", choices=["auto", "on", "off"], default="auto",
                    help="`clock` in the API (ww_timebase::Clock through bedrock_sync): a host steers the board's shared "
                         "clock onto UTC, the LED breathes on it in phase with other boards; 'auto' (default): with "
-                        "--wire-weaver on embassy STM32")
+                        "--wire-weaver on embassy STM32 and RP")
     p.add_argument("--bedrock", default="git", help="'git' (default) or path to a local embedded_bedrock checkout, relative to the output directory")
     p.add_argument("--build-info", action="store_true", help="embed build info via bedrock_build (needs a buildable embedded_bedrock, see --bedrock)")
     p.add_argument("--wire-weaver", action="store_true",

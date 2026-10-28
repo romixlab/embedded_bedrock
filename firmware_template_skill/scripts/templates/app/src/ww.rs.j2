@@ -340,7 +340,7 @@ impl ServerState {
 {% if leds %}
         crate::led::set(crate::led::Mode::On);
 {% else %}
-        self.led.set_high();
+        self.led.set_{{ s.led.on | lower }}();
 {% endif %}
         Ready(())
     }
@@ -355,7 +355,7 @@ impl ServerState {
 {% if leds %}
         crate::led::set(crate::led::Mode::Off);
 {% else %}
-        self.led.set_low();
+        self.led.set_{{ s.led.off | lower }}();
 {% endif %}
         Ready(())
     }

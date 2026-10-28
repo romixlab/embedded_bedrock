@@ -228,7 +228,7 @@ ww {{ wsel }} pins test   # shorts and pulls of every pin
 {% if s.leds and s.has_cli %}
 
 {% filter rewrap("") %}
-{{ L.Name }} breathes (a 3 s breath, PWM on {{ L.pwm.signal }} at 1 kHz, embedded_bedrock's `bedrock_led`). `{{ s.cli }} led on|off|blink` hold it solid on or off until the next reset{{ ("; `" ~ s.cli ~ " settings led-at-boot on` starts it solid on instead") if s.led_at_boot else "" }}.
+{{ L.Name }} breathes (a 3 s breath, PWM on {{ L.pwm.signal }} at {{ L.pwm.freq }}, embedded_bedrock's `bedrock_led`). `{{ s.cli }} led on|off|blink` hold it solid on or off until the next reset{{ ("; `" ~ s.cli ~ " settings led-at-boot on` starts it solid on instead") if s.led_at_boot else "" }}.
 {% endfilter %}
 
 ```sh

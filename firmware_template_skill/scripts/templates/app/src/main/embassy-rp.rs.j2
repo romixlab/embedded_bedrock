@@ -1,4 +1,7 @@
+{% set pw = s.led.pwm %}
+{% if not pw %}
 use embassy_rp::gpio::{Level, Output};
+{% endif %}
 use embassy_time::Timer;
 use cortex_m_rt::exception;
 {% if o.bootloader %}
@@ -17,7 +20,7 @@ const FLASH_SIZE: usize = {{ flash_size | hex }};
     executor = "embassy_rp::executor::Executor",
     entry = "cortex_m_rt::entry"
 )]
-async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner) {
+async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::Spawner) {
 {% if have_init_ram %}
     init_ram::init_ram();
 {% endif %}
@@ -58,14 +61,37 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
   {% endif %}
 {% endif %}
 
-{% if s.led_at_boot %}
-    let led_level = if settings.get().led_at_boot {
-        Level::High
+{% set spawn = "spawner.spawn(" ~ ("unwrap!(%s)" if o.log == "defmt" else "%s.unwrap()") ~ ");" %}
+{% if pw %}
+  {% set task = "led::led_task(p." ~ pw.slice ~ ", p." ~ o.led ~ ", " ~ ("led_mode" if s.led_at_boot else "led::DEFAULT_MODE") ~ ")" %}
+  {% if s.led_at_boot %}
+    // {{ s.led.Name }} breathes, or shines solid with led_at_boot (src/led.rs)
+    let led_mode = if settings.get().led_at_boot {
+        led::Mode::On
     } else {
-        Level::Low
+        led::DEFAULT_MODE
+    };
+  {% else %}
+    // {{ s.led.Name }} breathes (src/led.rs)
+  {% endif %}
+  {% if ("unwrap!(" ~ task ~ ")") | length > 60 and o.log == "defmt" %}
+    {# as rustfmt breaks it (spawn's argument past fn_call_width): one argument a line #}
+    spawner.spawn(unwrap!(led::led_task(
+        p.{{ pw.slice }},
+        p.{{ o.led }},
+        {{ "led_mode" if s.led_at_boot else "led::DEFAULT_MODE" }}
+    )));
+  {% else %}
+    {{ spawn | format(task) }}
+  {% endif %}
+{% elif s.led_at_boot %}
+    let led_level = if settings.get().led_at_boot {
+        Level::{{ s.led.on }}
+    } else {
+        Level::{{ s.led.off }}
     };
     let led = Output::new(p.{{ o.led }}, led_level);
 {% else %}
-    let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::Low);
+    let {{ "" if o.ww else "mut " }}led = Output::new(p.{{ o.led }}, Level::{{ s.led.off }});{{ " // active low: dark while high" if s.led.low else "" }}
 {% endif %}
 {% include "app/src/main/_embassy_loop.rs.j2" %}
