@@ -31,6 +31,10 @@ or options; purely internal refactors only need a line under the next version.
   with `--host` the client, CLI, Python module and README. Needs a board run: settings across a reset and power
   cut, `variant` on the board's silicon, `boot reboot --updater` then `ww dfu rp flash`.
 
+- The `matrix` runs `just api-save` before a `--host` `--wire-weaver` entry's `cargo test`: since TPL-51 the
+  evolution test fails on a fresh project without the current version's snapshot, so every such entry failed
+  `host-test` (g0brd, g0board and the rest). Upgrade notes: none, generated output is unchanged.
+
 - `sort_uses` orders two `use a::{...}` groups of one path by their items, as rustfmt does: they kept the order the
   templates emitted them in, so a preset's clock `use` beside the HSI48 one (`embassy_stm32::rcc::{Hse, ...}` and
   `embassy_stm32::rcc::{Hsi48Config, mux}`) failed `cargo fmt --check`. Upgrade notes: none (`cargo fmt` fixes it).

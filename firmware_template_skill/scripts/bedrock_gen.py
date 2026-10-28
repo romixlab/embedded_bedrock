@@ -2175,12 +2175,19 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
             die(f"matrix entry {entry.name}: unknown build type {b!r}")
 
     if "host" in entry.tags:
-        # --host (TPL-37): what frameworks.md#tested-matrix says every --host entry also passes, from the root
+        # --host (TPL-37): what frameworks.md#tested-matrix says every --host entry also passes, from the root. The
+        # API's evolution test needs the current version's snapshot (TPL-51): saved first, as `new` tells a user to
+        if "ww" in entry.tags:
+            proc = subprocess.run(["just", "api-save"], cwd=outdir, capture_output=True, text=True, env=env)
+            if proc.returncode != 0:
+                results["host-test"] = StepResult(False, 0.0, "just api-save: " + (proc.stdout + proc.stderr)[-4000:])
         for step, cmd in (
             ("host-test", ["test", "--workspace"]),
             ("host-clippy", ["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]),
             ("host-fmt", ["fmt", "--all", "--check"]),
         ):
+            if step in results:  # api-save failed
+                continue
             t0 = time.monotonic()
             ok, log = cargo_plain(outdir, cmd, env)
             results[step] = StepResult(ok, time.monotonic() - t0, "" if ok else log[-4000:])
