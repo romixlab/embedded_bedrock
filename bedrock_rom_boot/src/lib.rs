@@ -102,7 +102,7 @@ pub enum Start {
 pub enum Reboot {
     /// The firmware again.
     App,
-    /// The STM32 ROM bootloader (USB DFU).
+    /// The ROM bootloader: STM32 USB DFU; on RP2040 / RP2350 the firmware's own `boot.rs` enters BOOTSEL (PICOBOOT).
     Rom,
 }
 

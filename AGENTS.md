@@ -71,7 +71,7 @@ so a missing entry means work nobody sees.
 - `bedrock_rom_boot/` — firmware updates through the STM32 ROM bootloader (G0, H7): boot word in a backup
   register, `early()` before the HAL (jump to system memory, reset after the ROM's leave, boot-loop rescue),
   reboots, ROM USB serial; `embassy` and `ww-dfu` features (`BootControl` / `UpdateNode` in place). Firmware takes
-  it by path, like `bedrock_led`.
+  it by path, like `bedrock_led`. RP firmware uses `Reboot` and the `dfu` module for BOOTSEL updates.
 - `bedrock_board/`, `bedrock_board_cli/` — board infographics (`boardmap`: top and bottom views, power tree, pin
   table) from a `.kicad_pcb` and a TOML description, for the templates' `docs/board/`; FEATURES.md area `MAP`,
   example in the template's board preset `firmware_template_skill/scripts/data/boards/nucleo_g0b1re/`.

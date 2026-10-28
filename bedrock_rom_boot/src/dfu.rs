@@ -1,6 +1,7 @@
 //! `device.boot` (`ww_dfu::BootControl`) and `device.dfu.node` (`ww_dfu::UpdateNode`) for a firmware the ROM
 //! bootloader updates in place (feature `ww-dfu`): the boot state is always `Confirmed`, there is nothing to revert
-//! to, `reboot(Updater)` enters the ROM bootloader. The server's handlers forward here:
+//! to, `reboot(Updater)` enters the ROM bootloader. The `dfu` module needs no STM32 family feature, so RP firmware
+//! (BOOTSEL, `ww dfu rp flash`) uses it too. The server's handlers forward here:
 //!
 //! ```ignore
 //! fn device_boot_boot_state(&mut self, _cx: ..) -> RpcResult<BootState> {
