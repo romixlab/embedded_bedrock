@@ -56,7 +56,15 @@ cnt_core.workspace = true
 {% if d.log %}
 defmt-decoder.workspace = true
 {% endif %}
+{% if s.can %}
+ww_can_bus.workspace = true
+{% endif %}
 {% if s.pins %}
 ww_pin_diag.workspace = true
 ww_gpio.workspace = true
+{% endif %}
+{% if s.can %}
+
+[dev-dependencies]
+bedrock_can.workspace = true # the firmware's checks, in can.rs's tests
 {% endif %}

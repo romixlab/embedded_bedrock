@@ -1,4 +1,4 @@
-{% from "macros.j2" import ww_dep %}
+{% from "macros.j2" import ww_dep, bedrock_dep %}
 {% set d = s.dev %}
 {% if o.host %}
 # Host workspace: the API crate{{ ", the client library, the command line and the Python wrapper" if s.has_client else "" }}. The firmware
@@ -38,7 +38,7 @@ incremental = true
 {{ ww_dep("wire_weaver_client", "wire_weaver_client", o.ww_src, "", ', features = ["' ~ ("rtt" if ww.rtt else "usb") ~ '"]') }}
 {% for c, on in [("ww_firmware_info", True), ("ww_user_info", d.label), ("ww_board_info", d.board), ("ww_counters", d.counters),
                  ("ww_dfu", d.boot or d.dfu), ("ww_uid", d.uid), ("ww_log", d.log),
-                 ("ww_indication", s.leds), ("ww_timebase", s.clock), ("ww_date_time", s.clock)] if on %}
+                 ("ww_indication", s.leds), ("ww_timebase", s.clock), ("ww_date_time", s.clock), ("ww_can_bus", s.can)] if on %}
 {{ ww_dep(c, "ww_stdlib/" ~ c, o.ww_src, "", ', features = ["std"]') }}
 {% endfor %}
 {{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, "", ', features = ["std", "time"]') }}
@@ -54,6 +54,10 @@ defmt-decoder = "{{ V["defmt-decoder"] }}" # the log, followed live
 {{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, "", ', features = ["std"]') }}
 {{ ww_dep("ww_gpio", "ww_stdlib/ww_gpio", o.ww_src, "", ', features = ["std"]') }}
 {% endif %}
+{% if s.can %}
+# the firmware's CAN checks (bit timing, filters), in the client's tests
+{{ bedrock_dep("bedrock_can", o.bedrock) }}
+{% endif %}
 # host crates
 anstream = "{{ V["anstream"] }}"
 anstyle = "{{ V["anstyle"] }}"
@@ -64,5 +68,13 @@ indicatif = "{{ V["indicatif"] }}"
 pyo3 = "{{ V["pyo3"] }}"
 thiserror = "{{ V["thiserror"] }}"
 tokio = { version = "{{ V["tokio"] }}", features = ["rt-multi-thread", "time", "macros", "signal"] }
+{% if s.can and o.ww_src != "git" %}
+
+# bedrock_can takes WireWeaver from git: the local checkout (--ww-src) instead, so the build has one WireWeaver
+[patch."{{ WW_GIT }}"]
+{% for name, subdir in [("wire_weaver", "wire_weaver"), ("ww_can_bus", "ww_stdlib/ww_can_bus"), ("ww_si", "ww_stdlib/ww_si")] %}
+{{ name }} = { path = "{{ o.ww_src }}/{{ subdir }}" }
+{% endfor %}
+{% endif %}
 {% endif %}
 {% endif %}

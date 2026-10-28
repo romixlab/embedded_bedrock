@@ -4,7 +4,7 @@
 {% set d = s.dev %}
 {% set decode = d.counters or d.log %}
 {% set elf = ww.rtt or decode %}
-{% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
+{% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "can" if s.can else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
                     "Usb" if ww.usb else "", "api_line", "board_line" if d.board else "", "clock_line" if s.clock else "", "firmware_line",
                     "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
@@ -201,6 +201,11 @@ enum Cmd {
         timeout: u64,
     },
 {% endif %}
+{% if s.can %}
+    /// The CAN channels ({% for ch in s.can.chans %}{{ ch.index }}: {{ ch.instance }}{{ ", " if not loop.last }}{% endfor %}): configure, status, send frames, dump what comes in
+    #[command(subcommand)]
+    Can(CanCmd),
+{% endif %}
 {% if d.label %}
     /// Show the board's label, or store a new one (kept in the board's flash)
     Label {
@@ -320,6 +325,86 @@ enum Level {
     Normal,
     High,
     Highest,
+}
+{% endif %}
+{% if s.can %}
+
+#[derive(Subcommand)]
+enum CanCmd {
+    /// Configuration, error state and protocol state of a channel
+    Status {
+        #[command(flatten)]
+        channel: CanChannel,
+    },
+    /// Configure a channel from bit rates (classic CAN, or CAN FD with --fd-rate)
+    Configure {
+        #[command(flatten)]
+        channel: CanChannel,
+        /// Nominal bit rate: 500000, 500k, 1M
+        #[arg(long, default_value = "500k")]
+        rate: String,
+        /// Nominal sample point in percent
+        #[arg(long, default_value = "87.5", value_name = "PERCENT")]
+        sample_point: String,
+        /// CAN FD with this data-phase bit rate (sampled at 75 %): 2M, 5M
+        #[arg(long, value_name = "RATE")]
+        fd_rate: Option<String>,
+        /// internal-loopback: frames sent come back on the receive stream, nothing goes on the bus
+        #[arg(long, value_enum, default_value_t = CanMode::Normal)]
+        mode: CanMode,
+    },
+    /// Send frames, in cansend syntax: 123#DEADBEEF, 1F334455#11 (extended), 123#R (remote), 123##1AABB (CAN FD,
+    /// flags 1: bit rate switch)
+    Send {
+        #[command(flatten)]
+        channel: CanChannel,
+        #[arg(required = true, value_name = "FRAME")]
+        frames: Vec<String>,
+    },
+    /// Print received frames as candump -L lines (device time, channel, frame) until Ctrl-C
+    Dump {
+        #[command(flatten)]
+        channel: CanChannel,
+        /// Stop after this many frames
+        #[arg(short = 'n', long)]
+        count: Option<u64>,
+    },
+}
+
+#[derive(clap::Args)]
+struct CanChannel {
+    /// The channel, its index in can[]
+    #[arg(short, long, default_value_t = 0, value_parser = clap::value_parser!(u32).range(0..{{ s.can.count }}), add = ArgValueCandidates::new(can_channels))]
+    index: u32,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum CanMode {
+    Normal,
+    ListenOnly,
+    Restricted,
+    InternalLoopback,
+    ExternalLoopback,
+}
+
+impl From<CanMode> for can::Mode {
+    fn from(m: CanMode) -> can::Mode {
+        match m {
+            CanMode::Normal => can::Mode::Normal,
+            CanMode::ListenOnly => can::Mode::ListenOnly,
+            CanMode::Restricted => can::Mode::Restricted,
+            CanMode::InternalLoopback => can::Mode::InternalLoopback,
+            CanMode::ExternalLoopback => can::Mode::ExternalLoopback,
+        }
+    }
+}
+
+/// The channels for `--index`, the FDCAN instance as help.
+fn can_channels() -> Vec<CompletionCandidate> {
+    can::CHANNELS
+        .iter()
+        .map(|(i, name)| CompletionCandidate::new(i.to_string()).help(Some((*name).into())))
+        .collect()
 }
 {% endif %}
 {% if ww.rtt %}
@@ -569,6 +654,75 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
                 let check = board.clock_check().await?;
                 let status = steering.as_ref().map(|s| s.status());
                 println!("{}", clock_line(&check, status.as_ref()));
+            }
+            board.disconnect().await;
+        }
+{% endif %}
+{% if s.can %}
+        Cmd::Can(cmd) => {
+            let board = connect(&cli).await?;
+            match cmd {
+                CanCmd::Status { channel } => {
+                    let i = channel.index;
+                    let clock = board.can_capabilities(i).await?.clock.to_f64() as u32;
+                    println!("{BOLD}can{i}{BOLD:#}  {}", can::CHANNELS[i as usize].1);
+                    let config = board.can_config(i).await?;
+                    println!("config    {}", can::config_line(&config, clock));
+                    let status = board.can_status(i).await?;
+                    println!("status    {}", can::status_line(&status));
+                    println!("protocol  {:?}", board.can_protocol_status(i).await?);
+                }
+                CanCmd::Configure {
+                    channel,
+                    rate,
+                    sample_point,
+                    fd_rate,
+                    mode,
+                } => {
+                    let i = channel.index;
+                    let rate = can::parse_rate(rate)?;
+                    let mut setup = match fd_rate {
+                        Some(fd) => can::Setup::fd(rate, can::parse_rate(fd)?),
+                        None => can::Setup::classic(rate),
+                    };
+                    setup.sample_point = can::parse_sample_point(sample_point)?;
+                    setup.mode = (*mode).into();
+                    let set = board.can_setup(i, &setup).await?;
+                    let clock = board.can_capabilities(i).await?.clock.to_f64() as u32;
+                    println!("{GREEN}can{i}{GREEN:#}  {}", can::config_line(&set, clock));
+                }
+                CanCmd::Send { channel, frames } => {
+                    let frames = frames
+                        .iter()
+                        .map(|f| {
+                            can::frame_text::parse(f).map_err(|e| anyhow::anyhow!("{f:?}: {e}"))
+                        })
+                        .collect::<anyhow::Result<Vec<_>>>()?;
+                    let mut tx = board.can_tx(channel.index).await?;
+                    for f in frames {
+                        tx.send(f).await?;
+                    }
+                    tx.close().await?;
+                }
+                CanCmd::Dump { channel, count } => {
+                    let i = channel.index;
+                    let mut rx = board.can_rx(i).await?;
+                    let mut seen = 0;
+                    // Ctrl-C ends the dump with the stream closed on the board and a clean disconnect
+                    while count.is_none_or(|n| seen < n) {
+                        tokio::select! {
+                            event = rx.recv() => match event? {
+                                can::RxEvent::Frame(r) => {
+                                    println!("{}", can::rx_line(i, &r));
+                                    seen += 1;
+                                }
+                                can::RxEvent::Lost(n) => println!("{YELLOW}lost {n} frames{YELLOW:#}"),
+                            },
+                            _ = tokio::signal::ctrl_c() => break,
+                        }
+                    }
+                    rx.close().await?;
+                }
             }
             board.disconnect().await;
         }

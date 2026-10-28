@@ -1,0 +1,593 @@
+{# `can[]` (TPL-53): the FDCAN channels of --can, as ww_can_bus::Can; modelled on B135's b135_client/src/can.rs.
+   Rendered to src/can.rs with --can. #}
+{% set T = s.client_type %}
+{% set c = s.can %}
+{% filter rewrap("//! ", 118) %}
+//! `can[]`: the board's CAN FD channels ({% for ch in c.chans %}`can[{{ ch.index }}]` {{ ch.instance }}{{ (" through a " ~ ch.transceiver) if ch.transceiver }}{{ ", " if not loop.last }}{% endfor %}), each a `ww_can_bus::Can`.
+//!
+//! [Setup] builds a configuration from bit rates, the way most people ask for one; [{{ T }}::can_configure] takes a full `CanConfig` for everything else. [CanRx] and [CanTx] are the frame stream and the flow-controlled sink. [frame_text] reads and writes frames as `cansend` / `candump -L` lines.
+{% endfilter %}
+
+pub mod frame_text;
+
+use std::time::Duration;
+
+use wire_weaver::prelude::*;
+use wire_weaver_client::{PositionedStream, Sink, StreamEvent};
+pub use ww_can_bus::{
+    BitTiming, CanConfig, CanErrorOwned, CanId, CapabilitiesOwned, ErrorState, FdConfig, Filter,
+    FilterConfigOwned, FrameKind, FrameOwned, Mode, Options, ProtocolStatus, RxOverflow, Status,
+    Tdc, Timing, TxFrameOwned, TxOrder,
+};
+use ww_si::{Baud, Second};
+
+use crate::{ {{- T }}, Error, Result, call, call_fallible, read};
+
+/// The channels in `can[]` order: index, FDCAN instance{{ ", transceiver" if c.chans | selectattr("transceiver") | list }}.
+pub const CHANNELS: [(u32, &str); {{ c.count }}] = [{% for ch in c.chans %}({{ ch.index }}, "{{ ch.instance }}{{ (" (" ~ ch.transceiver ~ ")") if ch.transceiver }}"){{ ", " if not loop.last }}{% endfor %}];
+
+/// A configuration from bit rates: classic or FD, sample points, mode, TDC, recovery.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Setup {
+    /// Nominal (arbitration) bit rate in bit/s.
+    pub rate: u32,
+    /// Nominal sample point in tenths of a percent (875 = 87.5 %).
+    pub sample_point: u16,
+    /// CAN FD data phase: bit rate and sample point; `None` for classic CAN.
+    pub data: Option<(u32, u16)>,
+    pub mode: Mode,
+    /// Transceiver delay compensation of the data phase (auto from about 1 Mbit/s up is usual).
+    pub tdc: Tdc,
+    /// ISO CAN FD (with the stuff count), `false` for Bosch non-ISO.
+    pub iso: bool,
+    /// Send each frame once, no retransmission.
+    pub one_shot: bool,
+    /// Leave bus-off by itself after this long (zero: at once); `None`: stay bus-off until `recover`.
+    pub recovery: Option<Duration>,
+}
+
+impl Setup {
+    /// Classic CAN at `rate` bit/s, sampled at 87.5 %, normal mode, recovery after 100 ms.
+    pub fn classic(rate: u32) -> Setup {
+        Setup {
+            rate,
+            sample_point: 875,
+            data: None,
+            mode: Mode::Normal,
+            tdc: Tdc::Off,
+            iso: true,
+            one_shot: false,
+            recovery: Some(Duration::from_millis(100)),
+        }
+    }
+
+    /// CAN FD at `rate` nominal and `data_rate` in the data phase (sampled at 75 %, TDC auto from 1 Mbit/s up).
+    pub fn fd(rate: u32, data_rate: u32) -> Setup {
+        Setup {
+            data: Some((data_rate, 750)),
+            tdc: if data_rate >= 1_000_000 {
+                Tdc::Auto
+            } else {
+                Tdc::Off
+            },
+            ..Setup::classic(rate)
+        }
+    }
+
+    /// The `CanConfig` to send.
+    pub fn to_config(&self) -> CanConfig {
+        let timing = |rate: u32, sample_point: u16| Timing::Rate {
+            rate: Baud::base(rate),
+            sample_point,
+        };
+        CanConfig {
+            mode: self.mode,
+            nominal: timing(self.rate, self.sample_point),
+            fd: self.data.map(|(rate, sp)| FdConfig {
+                data: timing(rate, sp),
+                tdc: self.tdc,
+                iso: self.iso,
+            }),
+            options: Options {
+                one_shot: self.one_shot,
+                presume_ack: false,
+                triple_sample: false,
+                tx_pause: false,
+                tx_order: TxOrder::Fifo,
+                rx_overflow: RxOverflow::KeepOldest,
+                edge_filtering: false,
+                protocol_exception: true,
+                wake_on_bus: false,
+            },
+            bus_off_recovery: self
+                .recovery
+                .map(|d| Second::milli(u32::try_from(d.as_millis()).unwrap_or(u32::MAX))),
+        }
+    }
+}
+
+/// A received frame.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Received {
+    /// Device time it was received at, in µs (counts on across the device's 32-bit wrap).
+    pub t_us: Option<u64>,
+    pub frame: FrameOwned,
+    /// Index of the filter that accepted it, `None` when it came in as non-matching.
+    pub filter: Option<u32>,
+}
+
+/// What [CanRx::recv] gives.
+#[derive(Debug, Clone, PartialEq)]
+pub enum RxEvent {
+    Frame(Received),
+    /// Frames lost before the next one: on the device (a full controller FIFO or queue) or on the link.
+    Lost(u64),
+}
+
+/// The received frames of a channel.
+pub struct CanRx {
+    stream: PositionedStream<ww_can_bus::RxFrameOwned>,
+}
+
+impl CanRx {
+    /// The next frame or loss; an error when the link went down or the device closed the stream.
+    pub async fn recv(&mut self) -> Result<RxEvent> {
+        loop {
+            match self.stream.recv_event().await? {
+                StreamEvent::Item { t, value, .. } => {
+                    return Ok(RxEvent::Frame(Received {
+                        t_us: t
+                            .and_then(|t| t.to_i128_in(ww_si::Prefix::Micro))
+                            .and_then(|us| u64::try_from(us).ok()),
+                        frame: value.frame,
+                        filter: value.filter.map(|f| f.0),
+                    }));
+                }
+                StreamEvent::Gap { units, .. } => return Ok(RxEvent::Lost(units)),
+                StreamEvent::Disconnected | StreamEvent::Closed => {
+                    return Err(Error::Invalid("the CAN frame stream ended".into()));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Stops the stream on the device.
+    pub async fn close(self) -> Result<()> {
+        Ok(self.stream.close().await?)
+    }
+}
+
+/// Frames to send, flow-controlled: [CanTx::send] waits while the device's queue is full.
+pub struct CanTx {
+    sink: Sink<TxFrameOwned>,
+}
+
+impl CanTx {
+    /// Queues a frame. Frames the channel can't send as configured (FD with FD off, any frame in listen-only) are
+    /// dropped by the device and counted (`can_tx_rejected`).
+    pub async fn send(&mut self, frame: FrameOwned) -> Result<()> {
+        Ok(self
+            .sink
+            .send_owned(TxFrameOwned {
+                frame,
+                marker: None,
+            })
+            .await?)
+    }
+
+    /// Waits until the device took everything sent so far (into its queue, not yet on the bus).
+    pub async fn flush(&mut self) -> Result<()> {
+        Ok(self.sink.flush().await?)
+    }
+
+    /// Flushes and closes the session.
+    pub async fn close(mut self) -> Result<()> {
+        Ok(self.sink.close().await?)
+    }
+}
+
+impl {{ T }} {
+    /// What channel `index` supports: clock, bit timing limits, modes, filters, queues.
+    pub async fn can_capabilities(&self, index: u32) -> Result<CapabilitiesOwned> {
+        call("Can::capabilities", self.raw.can(index).capabilities()).await
+    }
+
+    /// Configures channel `index` and answers what was set (bit timing as segments).
+    pub async fn can_configure(&self, index: u32, config: CanConfig) -> Result<CanConfig> {
+        call_fallible("Can::configure", self.raw.can(index).configure(config)).await
+    }
+
+    /// Configures channel `index` from bit rates.
+    pub async fn can_setup(&self, index: u32, setup: &Setup) -> Result<CanConfig> {
+        self.can_configure(index, setup.to_config()).await
+    }
+
+    /// The configuration in effect.
+    pub async fn can_config(&self, index: u32) -> Result<CanConfig> {
+        call("Can::config", self.raw.can(index).config()).await
+    }
+
+    /// Switches the mode alone, keeping bit timing and filters.
+    pub async fn can_set_mode(&self, index: u32, mode: Mode) -> Result<Mode> {
+        call_fallible("Can::set_mode", self.raw.can(index).set_mode(mode)).await
+    }
+
+    /// Error state, counters and the last errors since the last read.
+    pub async fn can_status(&self, index: u32) -> Result<Status> {
+        read("Can::status", self.raw.can(index).read_status()).await
+    }
+
+    /// The controller's raw protocol state.
+    pub async fn can_protocol_status(&self, index: u32) -> Result<ProtocolStatus> {
+        call(
+            "Can::protocol_status",
+            self.raw.can(index).protocol_status(),
+        )
+        .await
+    }
+
+    /// Starts the bus-off recovery now; an error when not bus-off.
+    pub async fn can_recover(&self, index: u32) -> Result<()> {
+        call_fallible("Can::recover", self.raw.can(index).recover()).await
+    }
+
+    /// Drops every frame queued for sending; answers how many.
+    pub async fn can_tx_abort(&self, index: u32) -> Result<u32> {
+        call("Can::tx_abort", self.raw.can(index).tx_abort()).await
+    }
+
+{% if c.family == "g0" %}
+{% filter rewrap("    /// ") %}
+    /// Replaces the acceptance filters. The G0's FDCAN takes no filter elements yet (the `mcan` driver lacks them), only the global filter: `filters` empty, non-matching frames accepted into a FIFO or rejected, remote frames rejected or not.
+{% endfilter %}
+{% else %}
+    /// Replaces the acceptance filters.
+{% endif %}
+    pub async fn can_set_filters(&self, index: u32, filters: FilterConfigOwned) -> Result<()> {
+        call_fallible("Can::set_filters", self.raw.can(index).set_filters(filters)).await
+    }
+
+    /// Opens the stream of frames received on channel `index`.
+    pub async fn can_rx(&self, index: u32) -> Result<CanRx> {
+        Ok(CanRx {
+            stream: self
+                .raw
+                .can(index)
+                .rx()
+                .call()
+                .await
+                .map_err(|source| Error::Link {
+                    item: "Can::rx",
+                    source,
+                })?,
+        })
+    }
+
+    /// Opens the sink of frames to send on channel `index`.
+    pub async fn can_tx(&self, index: u32) -> Result<CanTx> {
+        Ok(CanTx {
+            sink: self
+                .raw
+                .can(index)
+                .tx()
+                .await
+                .map_err(|source| Error::Link {
+                    item: "Can::tx",
+                    source,
+                })?,
+        })
+    }
+}
+
+/// A bit rate as people write it: `500000`, `500k`, `2M`, `1.5M`.
+pub fn parse_rate(s: &str) -> Result<u32> {
+    let bad = || Error::Invalid(format!("'{s}' is no bit rate (500000, 500k, 2M)"));
+    let s = s.trim();
+    let (num, scale) = match s.char_indices().last() {
+        Some((i, 'k' | 'K')) => (&s[..i], 1e3),
+        Some((i, 'M' | 'm')) => (&s[..i], 1e6),
+        _ => (s, 1.0),
+    };
+    let rate = num.parse::<f64>().map_err(|_| bad())? * scale;
+    if !(1.0..=u32::MAX as f64).contains(&rate) || rate.fract() != 0.0 {
+        return Err(bad());
+    }
+    Ok(rate as u32)
+}
+
+/// A sample point in percent (`87.5`) as tenths of a percent (875).
+pub fn parse_sample_point(s: &str) -> Result<u16> {
+    let pct: f64 = s
+        .trim()
+        .trim_end_matches('%')
+        .parse()
+        .map_err(|_| Error::Invalid(format!("'{s}' is no sample point in percent (87.5)")))?;
+    if !(0.0..100.0).contains(&pct) || pct == 0.0 {
+        return Err(Error::Invalid(format!("sample point {pct} % out of range")));
+    }
+    Ok((pct * 10.0).round() as u16)
+}
+
+/// An ID in the frame syntax of [frame_text]: 3 hex digits standard, 8 extended.
+pub fn parse_id(s: &str) -> Result<CanId> {
+    let raw = u32::from_str_radix(s, 16).ok();
+    match (s.len(), raw) {
+        (3, Some(r)) if r <= 0x7FF => CanId::standard(r as u16),
+        (8, Some(r)) => CanId::extended(r),
+        _ => None,
+    }
+    .ok_or_else(|| {
+        Error::Invalid(format!(
+            "'{s}': an ID is 3 (standard) or 8 (extended) hex digits"
+        ))
+    })
+}
+
+/// A filter accepting into FIFO 0: `123` (one ID), `120:7F0` (ID and mask, as candump), `100-1FF` (a range); IDs as
+/// in [frame_text].
+pub fn parse_filter(s: &str) -> Result<Filter> {
+    use ww_can_bus::{FilterAction, FilterMatch};
+    let matching = if let Some((id, mask)) = s.split_once(':') {
+        let id = parse_id(id)?;
+        let mask = u32::from_str_radix(mask, 16)
+            .ok()
+            .and_then(U29::new)
+            .ok_or_else(|| Error::Invalid(format!("'{mask}' is no mask (hex, 29 bits)")))?;
+        FilterMatch::Mask { id, mask }
+    } else if let Some((from, to)) = s.split_once('-') {
+        FilterMatch::Range {
+            from: parse_id(from)?,
+            to: parse_id(to)?,
+        }
+    } else {
+        FilterMatch::Exact(parse_id(s)?)
+    };
+    Ok(Filter {
+        matching,
+        action: FilterAction::Fifo {
+            fifo: 0,
+            high_priority: false,
+        },
+    })
+}
+
+/// Filters accepting what `filters` match (all frames when empty), and the rest unless `reject_others`.
+pub fn filter_config(
+    filters: Vec<Filter>,
+    reject_others: bool,
+    reject_remote: bool,
+) -> Result<FilterConfigOwned> {
+    use ww_can_bus::NonMatching;
+    let non_matching = if reject_others && !filters.is_empty() {
+        NonMatching::Reject
+    } else {
+        NonMatching::Accept { fifo: 0 }
+    };
+    Ok(FilterConfigOwned {
+        filters: MaxLen::new(filters).map_err(|_| Error::Invalid("too many filters".into()))?,
+        non_matching_standard: non_matching,
+        non_matching_extended: non_matching,
+        reject_remote,
+    })
+}
+
+/// A mode by its name: `normal`, `listen-only`, `restricted`, `internal-loopback` (frames sent come back, nothing on
+/// the bus), `external-loopback`, `config`, `sleep`, `off`.
+pub fn parse_mode(s: &str) -> Result<Mode> {
+    let name = s.trim().to_ascii_lowercase().replace('_', "-");
+    Ok(match name.as_str() {
+        "normal" => Mode::Normal,
+        "listen-only" | "listen" => Mode::ListenOnly,
+        "restricted" => Mode::Restricted,
+        "internal-loopback" | "loopback" => Mode::InternalLoopback,
+        "external-loopback" => Mode::ExternalLoopback,
+        "config" => Mode::Config,
+        "sleep" => Mode::Sleep,
+        "off" => Mode::Off,
+        _ => {
+            return Err(Error::Invalid(format!(
+                "'{s}' is no mode (normal, listen-only, restricted, internal-loopback, \
+                 external-loopback, config, sleep, off)"
+            )));
+        }
+    })
+}
+
+/// A bit timing as `500 kbit/s at 87.5 %` (segments with the controller clock `clock_hz`).
+pub fn timing_text(t: &Timing, clock_hz: u32) -> String {
+    let (rate, sp) = match t {
+        Timing::Rate { rate, sample_point } => (Some(rate.to_f64() as u32), *sample_point),
+        Timing::Segments(bt) => (bt.bit_rate(clock_hz), bt.sample_point()),
+        _ => (None, 0),
+    };
+    let rate = match rate {
+        Some(r) if r >= 1_000_000 && r % 1000 == 0 => format!("{} Mbit/s", r as f64 / 1e6),
+        Some(r) if r >= 1000 => format!("{} kbit/s", r as f64 / 1e3),
+        Some(r) => format!("{r} bit/s"),
+        None => "no rate".into(),
+    };
+    format!("{rate} at {}.{} %", sp / 10, sp % 10)
+}
+
+/// A configuration as one line: `Normal, 500 kbit/s at 87.5 %, FD 2 Mbit/s at 75.0 % (TDC Auto, ISO)`.
+pub fn config_line(c: &CanConfig, clock_hz: u32) -> String {
+    let mut line = format!("{:?}, {}", c.mode, timing_text(&c.nominal, clock_hz));
+    if let Some(fd) = &c.fd {
+        line.push_str(&format!(
+            ", FD {} (TDC {:?}, {})",
+            timing_text(&fd.data, clock_hz),
+            fd.tdc,
+            if fd.iso { "ISO" } else { "non-ISO" }
+        ));
+    }
+    if c.options.one_shot {
+        line.push_str(", one shot");
+    }
+    match &c.bus_off_recovery {
+        Some(t) => line.push_str(&format!(
+            ", bus-off recovery after {} ms",
+            (t.to_f64() * 1e3).round()
+        )),
+        None => line.push_str(", bus-off until recovered"),
+    }
+    line
+}
+
+/// The error state as one line: `Active, TEC 0, REC 0`, with the last errors.
+pub fn status_line(s: &Status) -> String {
+    let mut line = format!("{:?}, TEC {}, REC {}", s.state, s.tec, s.rec);
+    if let Some(e) = &s.last_error {
+        line.push_str(&format!(", last error {e:?}"));
+    }
+    if let Some(e) = &s.last_data_error {
+        line.push_str(&format!(", last data-phase error {e:?}"));
+    }
+    line
+}
+
+/// A received frame as a `candump -L` style line: `(12.345678) can0 123#DEADBEEF`, the time in device seconds.
+pub fn rx_line(index: u32, r: &Received) -> String {
+    let t = r.t_us.map_or_else(String::new, |us| {
+        format!("({}.{:06}) ", us / 1_000_000, us % 1_000_000)
+    });
+    format!("{t}can{index} {}", frame_text::display(&r.frame))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bedrock_can::{Controller, Recovery};
+
+{% if c.family == "g0" %}
+    /// The firmware's controller at the G0's default kernel clock (PCLK, 16 MHz from HSI); the board reports its own
+    /// in [{{ T }}::can_capabilities].
+    const CONTROLLER: Controller = Controller::g0(16_000_000);
+{% else %}
+    /// The firmware's controller at {{ "the default kernel clock (PLL2 Q, 80 MHz)" if c.pll2 else "a typical kernel clock (80 MHz)" }}; the board reports its own in
+    /// [{{ T }}::can_capabilities].
+    const CONTROLLER: Controller = Controller::{{ c.layout }}(80_000_000);
+{% endif %}
+
+    #[test]
+    fn rates_and_sample_points() {
+        assert_eq!(parse_rate("500k").unwrap(), 500_000);
+        assert_eq!(parse_rate("2M").unwrap(), 2_000_000);
+        assert_eq!(parse_rate("1.5M").unwrap(), 1_500_000);
+        assert_eq!(parse_rate("125000").unwrap(), 125_000);
+        assert!(parse_rate("fast").is_err());
+        assert!(parse_rate("0").is_err());
+        assert!(parse_rate("0.5").is_err());
+        assert_eq!(parse_sample_point("87.5").unwrap(), 875);
+        assert_eq!(parse_sample_point("75%").unwrap(), 750);
+        assert!(parse_sample_point("100").is_err());
+    }
+
+    #[test]
+    fn filters_and_the_device_mapping() {
+        let list: Vec<_> = ["123", "120:7F0", "100-1FF", "18FF0000:1FFF0000"]
+            .iter()
+            .map(|s| parse_filter(s).unwrap())
+            .collect();
+        assert!(parse_filter("12345").is_err());
+        assert!(parse_filter("800").is_err());
+        assert!(parse_filter("123:FFFFFFFF").is_err());
+        let config = filter_config(list, true, false).unwrap();
+        assert_eq!(
+            config.non_matching_standard,
+            ww_can_bus::NonMatching::Reject
+        );
+        // what the firmware maps it to
+        let slice = config.filters.clone().into_inner();
+        let borrowed = ww_can_bus::FilterConfig {
+            filters: MaxLen::new_unchecked(RefVec::Slice { slice: &slice }),
+            non_matching_standard: config.non_matching_standard,
+            non_matching_extended: config.non_matching_extended,
+            reject_remote: false,
+        };
+{% if c.family == "g0" %}
+        // no filter elements on the G0 (yet): refused
+        assert!(bedrock_can::HwFilters::map(&borrowed, &CONTROLLER).is_err());
+{% else %}
+        // 3 standard elements, 1 extended
+        let hw = bedrock_can::HwFilters::map(&borrowed, &CONTROLLER).unwrap();
+        assert!(hw.standard[2].is_some() && hw.standard[3].is_none());
+        assert!(hw.extended[0].is_some());
+        // "120:7F0" is the second host filter and the second standard element
+        assert_eq!(hw.host_index(false, 1), Some(1));
+        assert_eq!(hw.host_index(true, 0), Some(3));
+{% endif %}
+        // no filters: everything, whatever reject_others says
+        let all = filter_config(vec![], true, false).unwrap();
+        assert_eq!(
+            all.non_matching_standard,
+            ww_can_bus::NonMatching::Accept { fifo: 0 }
+        );
+        let slice = all.filters.clone().into_inner();
+        let borrowed = ww_can_bus::FilterConfig {
+            filters: MaxLen::new_unchecked(RefVec::Slice { slice: &slice }),
+            non_matching_standard: all.non_matching_standard,
+            non_matching_extended: all.non_matching_extended,
+            reject_remote: true,
+        };
+        assert!(bedrock_can::HwFilters::map(&borrowed, &CONTROLLER).is_ok());
+    }
+
+    #[test]
+    fn modes_and_lines() {
+        assert_eq!(
+            parse_mode("internal-loopback").unwrap(),
+            Mode::InternalLoopback
+        );
+        assert_eq!(parse_mode("Listen_Only").unwrap(), Mode::ListenOnly);
+        assert!(parse_mode("fast").is_err());
+        let line = config_line(
+            &Setup::fd(500_000, 2_000_000).to_config(),
+            CONTROLLER.clock_hz,
+        );
+        assert_eq!(
+            line,
+            "Normal, 500 kbit/s at 87.5 %, FD 2 Mbit/s at 75.0 % (TDC Auto, ISO), bus-off recovery after 100 ms"
+        );
+        let hw = bedrock_can::resolve(&Setup::classic(250_000).to_config(), &CONTROLLER).unwrap();
+        assert_eq!(
+            config_line(&hw.to_config(), CONTROLLER.clock_hz),
+            "Normal, 250 kbit/s at 87.5 %, bus-off recovery after 100 ms"
+        );
+        let r = Received {
+            t_us: Some(12_345_678),
+            frame: frame_text::parse("123#DEADBEEF").unwrap(),
+            filter: None,
+        };
+        assert_eq!(rx_line(0, &r), "(12.345678) can0 123#DEADBEEF");
+    }
+
+    #[test]
+    fn setups_match_the_device_checks() {
+        // what the firmware's checks (bedrock_can::resolve) make of a Setup
+        for setup in [
+            Setup::classic(250_000),
+            Setup::classic(1_000_000),
+            Setup::fd(500_000, 2_000_000),
+{% if c.family != "g0" %}
+            Setup::fd(1_000_000, 8_000_000),
+{% endif %}
+            Setup::fd(500_000, 500_000),
+        ] {
+            let hw = bedrock_can::resolve(&setup.to_config(), &CONTROLLER).unwrap();
+            let clock = CONTROLLER.clock_hz;
+            assert_eq!(hw.nominal.bit_rate(clock), Some(setup.rate));
+            assert_eq!(
+                hw.data.map(|d| d.timing.bit_rate(clock).unwrap()),
+                setup.data.map(|(r, _)| r)
+            );
+        }
+        let hw = bedrock_can::resolve(&Setup::classic(250_000).to_config(), &CONTROLLER).unwrap();
+        assert_eq!(hw.recovery, Recovery::AfterMs(100));
+        let manual = Setup {
+            recovery: None,
+            ..Setup::classic(500_000)
+        };
+        assert_eq!(manual.to_config().bus_off_recovery, None);
+    }
+}

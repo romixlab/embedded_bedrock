@@ -24,9 +24,12 @@
 //! ```
 //!
 {% filter rewrap("//! ") %}
-//! Adding to the API: declare the item in `{{ A }}/src/lib.rs`, implement it in `firmware/src/ww.rs`, then add a method to [{{ T }}] that calls the generated client ([{{ T }}::raw]: `raw.led_on().call()`, `raw.device().{{ "label().read_name()" if d.label else "firmware().read_FIRMWARE()" }}`, ...) through [call], [call_fallible], [read] or [write], so the CLI and Python get it with the same errors. The device contract (`device`) is in `device.rs`{{ (', `leds` and `clock` in `sync.rs`' if s.leds else ', `clock` in `sync.rs`') if s.clock else (', `leds` in `leds.rs`' if s.leds else '') }}.
+//! Adding to the API: declare the item in `{{ A }}/src/lib.rs`, implement it in `firmware/src/ww.rs`, then add a method to [{{ T }}] that calls the generated client ([{{ T }}::raw]: `raw.led_on().call()`, `raw.device().{{ "label().read_name()" if d.label else "firmware().read_FIRMWARE()" }}`, ...) through [call], [call_fallible], [read] or [write], so the CLI and Python get it with the same errors. The device contract (`device`) is in `device.rs`{{ ', `can[]` in `can.rs`' if s.can else '' }}{{ (', `leds` and `clock` in `sync.rs`' if s.leds else ', `clock` in `sync.rs`') if s.clock else (', `leds` in `leds.rs`' if s.leds else '') }}.
 {% endfilter %}
 
+{% if s.can %}
+pub mod can;
+{% endif %}
 mod device;
 {% if s.clock %}
 mod sync;
@@ -108,6 +111,11 @@ pub enum Error {
     /// {{ feats("Counters" if d.counters else "", ("the log" if d.counters else "The log") if d.log else "") | join(" or ") }} could not be decoded.
     #[error("{0}")]
     Decode(String),
+{% endif %}
+{% if s.can %}
+    /// A stream or sink of the firmware (`can[].rx`, `can[].tx`) failed.
+    #[error(transparent)]
+    Stream(#[from] wire_weaver_client::StreamError),
 {% endif %}
     /// A value refused before it was sent, with the reason.
     #[error("{0}")]

@@ -1,0 +1,26 @@
+{# `can[]` (TPL-53) from Python: examples/can_loopback.py #}
+{% set arg = "PROBE_SERIAL" if ww.rtt else "SERIAL" %}
+{% set kw = "probe_serial" if ww.rtt else "serial" %}
+"""CAN without a bus: channel INDEX in internal loopback mode (the controller takes its own frames back, the TX pin
+stays recessive), a few frames sent and seen back on the receive stream, then normal mode again. From the repo root:
+`just py-example can_loopback [INDEX] [{{ arg }}]`."""
+
+import sys
+
+import {{ s.py_module }}
+
+index = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+serial = sys.argv[2] if len(sys.argv) > 2 else None
+frames = ["123#DEADBEEF", "1F334455#1122334455667788", "123##1" + "AB" * 64]
+
+with {{ s.py_module }}.Device({{ kw }}=serial) as dev:
+    print(dev.can_configure("500k", index=index, fd_rate="2M", mode="internal-loopback"))
+    got = dev.can_rx(count=len(frames), timeout=2.0, index=index, send=frames)
+    for f in got:
+        print(f.get("text", f"lost {f.get('lost')}"))
+    seen = [f["text"] for f in got if "text" in f]
+    print(dev.can_status(index))
+    dev.can_configure("500k", index=index, fd_rate="2M", mode="normal")
+    if seen != frames:
+        sys.exit(f"loopback: sent {frames}, got {seen}")
+    print(f"loopback ok: {len(seen)} frames back")

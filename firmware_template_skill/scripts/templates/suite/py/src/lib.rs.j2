@@ -4,7 +4,7 @@
 {% set d = s.dev %}
 {% set decode = d.counters or d.log %}
 {% set elf = ww.rtt or decode %}
-{% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
+{% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "can" if s.can else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
                     "Usb" if ww.usb else "", "SiliconRevision" if d.variant else "", "Package" if d.variant and s.variant.package else "", "api_line",
                     "clock_line" if s.clock else "", "firmware_line", "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
@@ -20,7 +20,7 @@ use std::time::Duration;
 {{ C | rust_use(uses) }}
 use pyo3::exceptions::{PyConnectionError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-{% if d.board or d.variant or d.counters or s.clock %}
+{% if d.board or d.variant or d.counters or s.clock or s.can %}
 use pyo3::types::PyDict;
 {% endif %}
 use tokio::runtime::Runtime;
@@ -46,8 +46,16 @@ fn to_py(e: Error) -> PyErr {
         Error::Link { .. }
         | Error::Unimplemented { .. }
         | Error::Device { .. }
+{% if s.can %}
+        | Error::Stream(_)
+{% endif %}
         | Error::Elf(_)
         | Error::Decode(_) => PyRuntimeError::new_err(e.to_string()),
+{% elif s.can %}
+        Error::Link { .. }
+        | Error::Unimplemented { .. }
+        | Error::Device { .. }
+        | Error::Stream(_) => PyRuntimeError::new_err(e.to_string()),
 {% else %}
         Error::Link { .. } | Error::Unimplemented { .. } | Error::Device { .. } => {
             PyRuntimeError::new_err(e.to_string())
@@ -280,6 +288,113 @@ impl Device {
         d.set_item("fit_rms_us", fit.map(|f| f.residual_rms / 1e3))?;
         d.set_item("line", clock_line(&check, steering.as_ref()))?;
         Ok(d)
+    }
+{% endif %}
+{% if s.can %}
+
+{% filter rewrap("    /// ") %}
+    /// Configure CAN channel `index` ({% for ch in s.can.chans %}{{ ch.index }}: {{ ch.instance }}{{ ", " if not loop.last }}{% endfor %}): nominal `rate` (`500000`, `"500k"`) sampled at `sample_point` percent, CAN FD with `fd_rate` (sampled at 75 %), `mode` "normal", "listen-only", "internal-loopback" (frames sent come back, nothing on the bus) and the others of `ww_can_bus::Mode`. Returns what was set, as text.
+{% endfilter %}
+    #[pyo3(signature = (rate="500k", index=0, sample_point=87.5, fd_rate=None, mode="normal"))]
+    fn can_configure(
+        &self,
+        rate: &str,
+        index: u32,
+        sample_point: f64,
+        fd_rate: Option<&str>,
+        mode: &str,
+    ) -> PyResult<String> {
+        let rate = can::parse_rate(rate).map_err(to_py)?;
+        let mut setup = match fd_rate {
+            Some(fd) => can::Setup::fd(rate, can::parse_rate(fd).map_err(to_py)?),
+            None => can::Setup::classic(rate),
+        };
+        setup.sample_point = can::parse_sample_point(&sample_point.to_string()).map_err(to_py)?;
+        setup.mode = can::parse_mode(mode).map_err(to_py)?;
+        let board = self.{{ B }}()?;
+        let set = self.block(board.can_setup(index, &setup))?;
+        let caps = self.block(board.can_capabilities(index))?;
+        Ok(can::config_line(&set, caps.clock.to_f64() as u32))
+    }
+
+    /// CAN channel `index`'s error state and counters, as text.
+    #[pyo3(signature = (index=0))]
+    fn can_status(&self, index: u32) -> PyResult<String> {
+        let status = self.block(self.{{ B }}()?.can_status(index))?;
+        Ok(can::status_line(&status))
+    }
+
+{% filter rewrap("    /// ") %}
+    /// Send frames on CAN channel `index`, each a `cansend` line (`"123#DEADBEEF"`, `"1F334455#11"`, `"123##1AABB"` for CAN FD with bit rate switch); returns when the board has queued them all.
+{% endfilter %}
+    #[pyo3(signature = (frames, index=0))]
+    fn can_send(&self, frames: Vec<String>, index: u32) -> PyResult<()> {
+        let frames = parse_frames(&frames)?;
+        let board = self.{{ B }}()?;
+        self.block(async {
+            let mut tx = board.can_tx(index).await?;
+            for f in frames {
+                tx.send(f).await?;
+            }
+            tx.close().await
+        })
+    }
+
+{% filter rewrap("    /// ") %}
+    /// Receive on CAN channel `index`: up to `count` frames within `timeout` seconds, as `{"t_us", "id", "extended", "data", "fd", "text", "filter"}` dicts (`text` in `candump -L` syntax); frames the board lost in between come as `{"lost": n}`. `send` (`cansend` lines) is sent once the stream is open, so in internal loopback the frames come back here.
+{% endfilter %}
+    #[pyo3(signature = (count=1, timeout=1.0, index=0, send=None))]
+    fn can_rx<'py>(
+        &self,
+        py: Python<'py>,
+        count: usize,
+        timeout: f64,
+        index: u32,
+        send: Option<Vec<String>>,
+    ) -> PyResult<Vec<Bound<'py, PyDict>>> {
+        let timeout = Duration::try_from_secs_f64(timeout)
+            .map_err(|e| PyValueError::new_err(format!("timeout {timeout} s: {e}")))?;
+        let send = parse_frames(&send.unwrap_or_default())?;
+        let board = self.{{ B }}()?;
+        let events = self.block(async {
+            let mut rx = board.can_rx(index).await?;
+            if !send.is_empty() {
+                let mut tx = board.can_tx(index).await?;
+                for f in send {
+                    tx.send(f).await?;
+                }
+                tx.close().await?;
+            }
+            let mut events = Vec::new();
+            let deadline = tokio::time::Instant::now() + timeout;
+            while events.len() < count {
+                match tokio::time::timeout_at(deadline, rx.recv()).await {
+                    Ok(event) => events.push(event?),
+                    Err(_) => break,
+                }
+            }
+            rx.close().await?;
+            Ok(events)
+        })?;
+        events
+            .into_iter()
+            .map(|e| {
+                let d = PyDict::new(py);
+                match e {
+                    can::RxEvent::Frame(r) => {
+                        d.set_item("t_us", r.t_us)?;
+                        d.set_item("id", r.frame.id.raw())?;
+                        d.set_item("extended", r.frame.id.is_extended())?;
+                        d.set_item("data", r.frame.data.as_slice().to_vec())?;
+                        d.set_item("fd", matches!(r.frame.kind, can::FrameKind::Fd { .. }))?;
+                        d.set_item("text", can::frame_text::display(&r.frame).to_string())?;
+                        d.set_item("filter", r.filter)?;
+                    }
+                    can::RxEvent::Lost(n) => d.set_item("lost", n)?,
+                }
+                Ok(d)
+            })
+            .collect()
     }
 {% endif %}
 
@@ -522,6 +637,17 @@ impl Device {
     }
 }
 
+{% if s.can %}
+fn parse_frames(lines: &[String]) -> PyResult<Vec<can::FrameOwned>> {
+    lines
+        .iter()
+        .map(|l| {
+            can::frame_text::parse(l).map_err(|e| PyValueError::new_err(format!("{l:?}: {e}")))
+        })
+        .collect()
+}
+
+{% endif %}
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }

@@ -1670,13 +1670,17 @@ def suite_files(t: Target, o: Opts, ctx: dict) -> dict[str, str | bytes]:
     for f in sorted((tpl / "docs/logo/fonts").iterdir()):
         files[f"docs/logo/fonts/{f.name}"] = f.read_bytes()
     s = ctx["s"]
-    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"] + (["src/sync.rs"] if s["clock"] else ["src/leds.rs"] if s["leds"] else [])),
+    for crate, part, rels in ((s["client"], "client", ["Cargo.toml", "src/lib.rs", "src/device.rs"] + (["src/sync.rs"] if s["clock"] else ["src/leds.rs"] if s["leds"] else [])
+                               + (["src/can.rs"] if s["can"] else [])),
                               (s["cli_crate"], "cli", ["Cargo.toml", "build.rs", "src/main.rs"]),
                               (s["py"], "py", ["Cargo.toml", "pyproject.toml", "src/lib.rs", "examples/blink.py",
                                                "examples/device.py"] + (["examples/clock.py"] if s["clock"] else [])
+                               + (["examples/can_loopback.py"] if s["can"] else [])
                                + ["tests/test_module.py"])):
         for rel in rels:  # the client's leds.rs is sync.rs without the clock
             files[f"{crate}/{rel}"] = render(f"suite/{part}/{'src/sync.rs' if rel == 'src/leds.rs' else rel}.j2", **ctx)
+    if s["can"]:  # cansend / candump -L lines, the same for every board
+        files[f"{s['client']}/src/can/frame_text.rs"] = (tpl / "client/src/can/frame_text.rs").read_text()
     bm = (o.board or {}).get("boardmap")
     if bm:  # boardmap's description and geometry; `just board` renders the pictures
         for key in ("toml", "geometry"):
