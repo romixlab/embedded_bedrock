@@ -1188,7 +1188,7 @@ def variant_context(t: Target) -> Optional[dict]:
         return None
     flash_kib = sum(m.size for m in t.memories if m.kind == "flash") // 1024
     # clock: the code that turns on DBGMCU's clock where it needs one (G0), dev_id_note: where DEV_ID needs a mask
-    return {"clock": "", "clock_note": "", "dev_id_note": "", **v, "kind": "stm32", "dev_id": dev_id,
+    return {"clock": "", "clock_note": "", "dev_id_note": "", **v, "kind": "stm32", "package": False, "dev_id": dev_id,
             "revisions": [tuple(r) for r in v["revisions"]], "flash_kib": flash_kib,
             "part": t.display[5:]}
 

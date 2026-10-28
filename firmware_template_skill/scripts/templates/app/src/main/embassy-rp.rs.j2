@@ -48,8 +48,8 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
     // TODO: call mark_booted() only after self-test
     updater.mark_booted().unwrap();
 {% endif %}
-
 {% if o.settings_flash %}
+
     let {{ "" if o.ww else "mut " }}settings = settings::SettingsStore::load(p.FLASH).await;
   {% if o.log == "defmt" %}
     info!("label: {}", settings.get().label);
