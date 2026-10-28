@@ -1,6 +1,10 @@
 {% set pw = s.led.pwm %}
-{% if not pw %}
-use embassy_stm32::gpio::{Level, Output, Speed};
+{% set hw = o.hw %}
+{% set gpio = ((["Level", "Output", "Speed"] if not pw or hw.init else []) + (["Input", "Pull"] if s.buttons else [])) | sort %}
+{% if gpio | length > 1 %}
+use embassy_stm32::gpio::{{ "{" }}{{ gpio | join(", ") }}{{ "}" }};
+{% elif gpio %}
+use embassy_stm32::gpio::{{ gpio[0] }};
 {% endif %}
 use embassy_time::Timer;
 use cortex_m_rt::exception;
@@ -13,9 +17,12 @@ use embassy_stm32::rcc::SMPSSupplyVoltage;
 {% if o.ww and ww.usb and ww.stm32_usb.hsi48 %}
 use embassy_stm32::rcc::{Hsi48Config, mux};
 {% endif %}
-{% set clock = o.board.clock if o.board and o.board.clock else None %}
+{% set clock = o.board.get("clock") if o.board else None %}
 {% if clock %}
 use {{ clock.use }};
+{% endif %}
+{% if hw.bring_up.get("use") %}
+use {{ hw.bring_up.use }};
 {% endif %}
 {% if o.bootloader %}
 use core::cell::RefCell;
@@ -96,6 +103,20 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
     // PRFTEN here (`embassy_stm32::pac::FLASH.acr().modify(|w| w.set_prften(false))`) when the code outgrows it.
   {% endif %}
 {% endif %}
+{% if hw.init %}
+
+    // Pins driven before anything else (the board preset's [[init]]), held for good: dropping an Output would
+    // disconnect the pin
+  {% for x in hw.init %}
+    // {{ x.what }}
+    let _{{ x.pin | lower }} = Output::new(p.{{ x.pin }}, Level::{{ x.level | capitalize }}, Speed::Low);
+  {% endfor %}
+{% endif %}
+{% if hw.bring_up %}
+
+    // Board bring-up (the board preset's [bring_up])
+{{ hw.bring_up.code | trim("\n") }}
+{% endif %}
 {% if have_init %}
     init::init();
 {% endif %}
@@ -131,18 +152,36 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
 
 {% set spawn = "spawner.spawn(" ~ ("unwrap!(%s)" if o.log == "defmt" else "%s.unwrap()") ~ ");" %}
 {% if pw %}
-  {% set task = "led::led_task(p." ~ pw.timer ~ ", p." ~ o.led ~ ", " ~ ("led_mode" if s.led_at_boot else "led::DEFAULT_MODE") ~ ")" %}
+  {% set mode = "led_mode" if s.led_at_boot else "led::DEFAULT_MODE" %}
+  {% set periphs = (pw.timers | map(attribute="timer") | list + pw.chans | map(attribute="pin") | list) if pw.multi else [pw.timer, o.led] %}
+  {% set task = "led::led_task(p." ~ (periphs | join(", p.")) ~ ", " ~ mode ~ ")" %}
   {% if s.led_at_boot %}
+    {% if pw.multi %}
+    // {{ s.led.Name }} show their looks, {{ s.led.First }} solid with led_at_boot (src/led.rs)
+    {% else %}
     // {{ s.led.Name }} breathes, or shines solid with led_at_boot (src/led.rs)
+    {% endif %}
     let led_mode = if settings.get().led_at_boot {
         led::Mode::On
     } else {
         led::DEFAULT_MODE
     };
+  {% elif pw.multi %}
+    // {{ s.led.Name }} show their looks (src/led.rs)
   {% else %}
     // {{ s.led.Name }} breathes (src/led.rs)
   {% endif %}
-    {{ spawn | format(task) }}
+  {% if pw.multi and ("    let leds = " ~ task ~ ";") | length > 100 %}
+    let leds = led::led_task(
+    {% for x in periphs %}
+        p.{{ x }},
+    {% endfor %}
+        {{ mode }},
+    );
+  {% elif pw.multi %}
+    let leds = {{ task }};
+  {% endif %}
+    {{ spawn | format("leds" if pw.multi else task) }}
 {% elif s.led_at_boot %}
     let led_level = if settings.get().led_at_boot {
         Level::High

@@ -1,0 +1,34 @@
+# Test preset for the matrix (TPL-18): two mono LEDs on a G0B1, PF0 on TIM14_CH1 and PF1 on TIM15_CH1N (a
+# complementary output), a button and an init pin. Not a real board: `--board matrix_presets/g0leds`.
+
+[answers]
+chip = "STM32G0B1RE"
+counters = true
+settings = true
+wire_weaver = true
+ww_transport = "rtt"
+
+[board]
+title = "G0 LEDs test board"
+product = "G0LEDS"
+
+[[leds]]
+name = "D201"
+pin = "PF0"
+role = "status"
+
+[[leds]]
+name = "D202"
+pin = "PF1"
+role = "heartbeat"
+
+[[buttons]]
+name = "USER"
+pin = "PC13"
+pressed = "low"
+pull = "up"
+
+[[init]]
+pin = "PB3"
+level = "high"
+what = "the USB mux's select: high = the MCU (a test of [[init]])"

@@ -1,0 +1,38 @@
+# Test preset for the matrix (TPL-18): an RGB LED lit low on an H725, PC7 / PC6 on TIM3 and PH13 on TIM8_CH1N (a
+# complementary output), the way Donguru wires it. Not a real board: `--board matrix_presets/h7rgb`.
+
+[answers]
+chip = "STM32H725IG"
+supply_config = "DirectSMPS"
+counters = true
+wire_weaver = true
+ww_transport = "rtt"
+clock_sync = "on"
+
+[board]
+title = "H7 RGB test board"
+product = "H7RGB"
+
+[[leds]]
+name = "D1"
+rgb = ["PC7", "PC6", "PH13"]
+active = "low"
+role = "status"
+
+# a test of [bring_up]: the shape of Donguru's USB251xB set-up over I2C2, the address and bytes made up
+[bring_up]
+use = "embassy_stm32::i2c::{self, I2c}"
+takes = ["I2C2", "PB10", "PB11"]
+code = """
+    let mut i2c = I2c::new_blocking(p.I2C2, p.PB10, p.PB11, i2c::Config::default());
+    if embedded_hal::i2c::I2c::write(&mut i2c, 0x2c, &[0xaa, 0x56, 0x00]).is_err() {
+        defmt::warn!("hub set-up: no answer on I2C2");
+    }
+"""
+
+[bring_up.dependencies]
+embedded-hal = "1.0"
+
+[usb]
+product = "H7 RGB test"
+manufacturer = "vhrd.tech"

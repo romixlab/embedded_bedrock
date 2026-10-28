@@ -1,0 +1,229 @@
+{# Several LEDs or an RGB one from the preset's [[leds]] (TPL-18) on timer PWM: bedrock_led's Indication<N> on
+   embassy-stm32 SimplePwm (split into channels) and ComplementaryPwm. `l` = s.led, `pw` = l.pwm (leds_pwm(): leds,
+   timers with their chans, chans, driver), `s.leds`: served as `leds` (src/ww/leds.rs). #}
+{% set l = s.led %}
+{% set pw = l.pwm %}
+{% set n = pw.leds | length %}
+{% filter rewrap("//! ") %}
+//! The board's LEDs on timer PWM, {{ l.name }}, each showing a look of its own (`LOOKS`){{ ", served as one indication (`leds` in the API, src/ww/leds.rs): visible or not, a peak brightness, and [`identify`], which blinks them all for a while and then returns to their modes" if s.leds }}. The animation, its math and the task loop are embedded_bedrock's `bedrock_led` (host-tested there); this module sets up the timers.{{ " While `crate::sync::SYNC` has shared time (a host steers it, src/ww/clock.rs), breath and blink are aligned to it." if s.clock }}{{ "" if s.leds else " `LEDS.set(i, mode)` changes what LED i shows." }}
+{% endfilter %}
+//!
+{% for c in pw.chans %}
+//! - {{ c.doc }}
+{% endfor %}
+//!
+//! The time driver is {{ pw.driver | upper }} (`time-driver-{{ pw.driver }}` in Cargo.toml), named explicitly: `time-driver-any` picks one by
+//! embassy's own order and may take {{ pw.timer }}.
+
+{% if pw.simple %}
+use bedrock_led::Channel as _;
+{% endif %}
+{# rustfmt orders the two by their braces ({DEFAULT_PEAK / {Indication / {Mode) #}
+{% set uses = [("{" ~ (["Indication"] + (["Pwm"] if pw.simple else []) + (["SharedTime"] if s.clock else [])) | join(", ") ~ "};", ""),
+               (("{DEFAULT_PEAK, Mode, look};" if s.leds else "{Mode, look};"), "pub ")] %}
+{% for items, vis in uses | sort(attribute=0) %}
+{{ vis }}use bedrock_led::{{ items }}
+{% endfor %}
+use embassy_stm32::Peri;
+use embassy_stm32::gpio::OutputType;
+use embassy_stm32::peripherals::{{ "{" }}{{ (pw.chans | map(attribute="pin") | list + pw.timers | map(attribute="timer") | list) | join(", ") }}{{ "}" }};
+use embassy_stm32::time::{Hertz, khz};
+{% if pw.comp %}
+use embassy_stm32::timer::AdvancedInstance4Channel;
+use embassy_stm32::timer::complementary_pwm::{ComplementaryPwm, ComplementaryPwmPin};
+{% endif %}
+use embassy_stm32::timer::low_level::CountingMode;
+{% if pw.simple %}
+use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
+{% elif pw.plain_on_comp %}
+use embassy_stm32::timer::simple_pwm::PwmPin;
+{% endif %}
+
+{% if l.timer_mhz %}
+/// 1 kHz: no flicker, {{ l.timer_mhz * 1000 }} steps of duty at {{ l.timer_mhz }} MHz
+{% else %}
+/// 1 kHz: no flicker; the duty has (timer clock / 1 kHz) steps
+{% endif %}
+const PWM_FREQ: Hertz = khz(1);
+
+/// The number of LEDs.
+pub const COUNT: usize = {{ n }};
+{% for led in pw.leds %}
+/// {{ led.name }} ({{ "RGB " if led.rgb }}{{ led.pins | join(", ") }}, {{ led.role }}): its index in `LOOKS` and for `set_led`
+pub const {{ led.var | upper }}: usize = {{ loop.index0 }};
+{% endfor %}
+
+/// What each LED shows after boot, by its role on the board (the bedrock look; an RGB LED's colour is the look's).
+{% set one = "pub const LOOKS: [look::Look; COUNT] = [" ~ (pw.leds | map(attribute="look") | join(", ")) ~ "];" %}
+{% if "\n" not in one and one | length <= 100 %}
+{{ one }}
+{% else %}
+pub const LOOKS: [look::Look; COUNT] = [
+{% for led in pw.leds %}
+    {{ led.look }},
+{% endfor %}
+];
+{% endif %}
+{% if s.leds %}
+
+/// The LEDs `OnlyEssential` keeps showing (power, fault).
+const ESSENTIAL: [bool; COUNT] = [{{ pw.leds | map(attribute="essential") | map("lower") | join(", ") }}];
+{% endif %}
+
+{% if s.led_at_boot %}
+/// What {{ l.first }} shows after boot unless `device.settings.led_at_boot` says solid on.
+{% else %}
+/// What {{ l.first }} shows after boot.
+{% endif %}
+pub const DEFAULT_MODE: Mode = LOOKS[0].mode;
+
+static LEDS: Indication<COUNT> = Indication::new();
+{% if s.leds %}
+
+{% if s.clock %}
+/// Change {{ l.first }}'s mode (`led_on` / `led_off`). Takes effect on the next animation tick; breath and blink
+/// restart from dark (or at their place in shared time).
+{% else %}
+/// Change {{ l.first }}'s mode (`led_on` / `led_off`). Takes effect on the next animation tick; breath and blink
+/// restart from dark.
+{% endif %}
+pub fn set(mode: Mode) {
+    LEDS.set(0, mode);
+}
+
+/// Change the mode of LED `led` (one of the index constants above).
+#[allow(dead_code)] // for the firmware's own code
+pub fn set_led(led: usize, mode: Mode) {
+    LEDS.set(led, mode);
+}
+{% if pw.rgb %}
+
+/// The colour of RGB LED `led`, perceptual per channel (`look::colour`); mono LEDs ignore it.
+#[allow(dead_code)] // for the firmware's own code
+pub fn set_colour(led: usize, rgb: [u8; 3]) {
+    LEDS.set_colour(led, rgb);
+}
+{% endif %}
+
+/// Show or hide the LEDs: `normal` the others, `essential` the power and fault LEDs. Their animations keep running
+/// hidden.
+pub fn show(normal: bool, essential: bool) {
+    for (led, e) in ESSENTIAL.into_iter().enumerate() {
+        LEDS.set_visible(led, if e { essential } else { normal });
+    }
+}
+
+/// Peak brightness (default [`DEFAULT_PEAK`]), without restarting the animations.
+pub fn set_peak(peak: u8) {
+    LEDS.set_peak(peak);
+}
+
+/// Blink every LED at full brightness for `ms` (restarts a running identify, 0 ends it), then show the modes again.
+pub fn identify(ms: u32) {
+    LEDS.identify(ms);
+}
+{% endif %}
+{% if pw.comp %}
+
+/// A timer with complementary outputs: ComplementaryPwm has no embedded-hal `SetDutyCycle` per channel, and a CHyN
+/// output is the inverse of OCyREF, so its compare value is inverted (CCRy = max means off).
+struct Complementary<T: AdvancedInstance4Channel> {
+    pwm: ComplementaryPwm<'static, T>,
+    max: u32,
+}
+
+impl<T: AdvancedInstance4Channel> Complementary<T> {
+    /// `level` (perceptual, `bedrock_led::Channel::set_level`) on `ch`; `invert`: a CHyN output or an LED lit low
+    /// (both: not inverted).
+    fn set_level(&mut self, ch: embassy_stm32::timer::Channel, invert: bool, level: u32) {
+        let duty = bedrock_led::duty(level, self.max);
+        self.pwm
+            .set_duty(ch, if invert { self.max - duty } else { duty });
+    }
+}
+{% endif %}
+
+{% set params = pw.timers | map(attribute="timer") | list + pw.chans | map(attribute="pin") | list %}
+#[embassy_executor::task]
+pub async fn led_task(
+{% for p in params %}
+    {{ p | lower }}: Peri<'static, {{ p }}>,
+{% endfor %}
+    mode: Mode,
+) {
+{% for tm in pw.timers %}
+  {% set tv = tm.timer | lower %}
+  {% if tm.comp %}
+    let mut {{ tv }} = ComplementaryPwm::new(
+        {{ tv }},
+    {% for c in tm.args %}
+      {% if c %}
+        Some({{ "ComplementaryPwmPin" if c.n else "PwmPin" }}::new({{ c.pin | lower }}, OutputType::PushPull)),
+      {% else %}
+        None,
+      {% endif %}
+    {% endfor %}
+        PWM_FREQ,
+        CountingMode::EdgeAlignedUp,
+    );
+    let max = {{ tv }}.get_max_duty();
+    {% for c in tm.chans %}
+    {{ tv }}.set_duty(embassy_stm32::timer::Channel::Ch{{ c.ch }}, {{ "max" if c.invert else "0" }});
+    {{ tv }}.enable(embassy_stm32::timer::Channel::Ch{{ c.ch }});
+    {% endfor %}
+    let mut {{ tv }} = Complementary { pwm: {{ tv }}, max };
+  {% else %}
+    let {{ tv }} = SimplePwm::new(
+        {{ tv }},
+    {% for c in tm.args %}
+      {% if c %}
+        Some({{ "ComplementaryPwmPin" if c.n else "PwmPin" }}::new({{ c.pin | lower }}, OutputType::PushPull)),
+      {% else %}
+        None,
+      {% endif %}
+    {% endfor %}
+        PWM_FREQ,
+        CountingMode::EdgeAlignedUp,
+    )
+    .split();
+    {% for c in tm.chans %}
+    let mut ch = {{ tv }}.ch{{ c.ch }};
+    ch.{{ "set_duty_cycle_fully_on" if c.active_low else "set_duty_cycle_fully_off" }}();
+    ch.enable();
+    let mut {{ c.var }} = Pwm::{{ "active_low" if c.active_low else "new" }}(ch);
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+{% if pw.rgb %}
+    for (led, look) in LOOKS.iter().enumerate() {
+        LEDS.set_colour(led, look.colour);
+    }
+{% endif %}
+
+    let mut modes = LOOKS.map(|look| look.mode);
+    modes[0] = mode;
+{% if s.clock %}
+    LEDS.run_with(
+        modes,
+        || {
+            crate::sync::SYNC.shared_now().map(|s| SharedTime {
+                us: s.us,
+                generation: s.generation,
+            })
+        },
+        |leds| {
+{% for x in pw.show[12] %}
+{{ x }}
+{% endfor %}
+        },
+    )
+    .await
+{% else %}
+    LEDS.run(modes, |leds| {
+{% for x in pw.show[8] %}
+{{ x }}
+{% endfor %}
+    })
+    .await
+{% endif %}
+}

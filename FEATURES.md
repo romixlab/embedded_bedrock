@@ -75,8 +75,12 @@ The generator in `firmware_template_skill/` (template 0.5.0).
 - 📋 **TPL-16 RTIC** as a framework option.
 - 📋 **TPL-17 TODO notes in generated code**: on git dependencies (update periodically) and when the defmt buffer is
   small.
-- 📋 **TPL-18 Board pin maps**: generate peripheral and pin assignments from a board description instead of only the
-  LED pin.
+- 🚧 **TPL-18 Board hardware from the preset**: generate peripheral and pin assignments from a board description
+  instead of only the LED pin. Done: `[[leds]]` with several mono LEDs and RGB, active level and role, each pin on a
+  timer channel through `bedrock_led` (`leds_pwm()`, `templates/app/src/led_multi.rs.j2`; embassy STM32; matrix
+  `g0leds`, `h7rgb`); `[[buttons]]` as `buttons` in the API (`src/ww/buttons.rs`), `[[init]]` pins, `[bring_up]` code
+  with its dependencies, `[usb]` product and manufacturer (`preset_hw()`). Next: `[usb]` vid / pid once wire_weaver
+  TR-17 (`usb_init_with_ids`) lands; typed host methods for `buttons`.
 - 📋 **TPL-19 Ozone and GDB / LLDB start scripts** in generated projects.
 - 🔍 **TPL-20 Old cargo-generate template** (`bedrock_template/`): superseded by the skill; check nothing still uses
   it, then move it to *Dropped*. Its manifests are `Cargo.toml.liquid`: cargo scans every `Cargo.toml` of a git

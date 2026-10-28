@@ -1,0 +1,30 @@
+{# `buttons` (TPL-18): the preset's [[buttons]] as read-only bool properties, `true` while pressed. #}
+//! `buttons`: the board's buttons as read-only properties, `true` while pressed, read when a host asks (no
+//! debouncing, no events).
+
+use super::ServerState;
+use embassy_stm32::gpio::Input;
+use wire_weaver::prelude::*;
+
+/// The board's buttons (the board preset's [[buttons]]).
+pub struct Buttons {
+{% for b in s.buttons %}
+    /// {{ b.name }} on {{ b.pin }}, {{ b.pressed }} while pressed{{ (", pull-" ~ b.pull) if b.pull != "none" else "" }}
+    pub {{ b.var }}: Input<'static>,
+{% endfor %}
+}
+
+// buttons
+impl ServerState {
+{% for b in s.buttons %}
+{% if not loop.first %}
+
+{% endif %}
+    pub(super) fn get_buttons_{{ b.var }}(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+    ) -> GetResult<bool, ()> {
+        Value(self.buttons.{{ b.var }}.is_{{ b.pressed }}())
+    }
+{% endfor %}
+}

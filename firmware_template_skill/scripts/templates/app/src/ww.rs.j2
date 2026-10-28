@@ -11,6 +11,7 @@
 {% set leds = s.leds %}
 {% set clock = s.clock %}
 {% set can = s.can %}
+{% set buttons = s.buttons %}
 //! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
 {% if leds %}
 //! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. `led_on` / `led_off` are here, the device contract
@@ -35,6 +36,9 @@
 //! regenerates the dispatch code and the compiler lists what is missing. Extend [ServerState] with the peripherals
 //! and data the implementations need. See https://github.com/vhrdtech/wire_weaver (`docs/`, `examples_mcu/`).
 
+{% if buttons %}
+mod buttons;
+{% endif %}
 {% if can %}
 mod can;
 {% endif %}
@@ -107,6 +111,10 @@ use ww_device::{EmbassyClock, LinkConfig{{ ", LinkEvent" if streams else "" }}};
 use ww_pin_diag::{Level, PinDiagError, PointState};
 {% endif %}
 use ww_uid::{UidKind, UidSource, UniqueId};
+{% if buttons %}
+
+pub use buttons::Buttons;
+{% endif %}
 
 {% if ww.usb %}
 /// Longest WireWeaver message the device accepts and can reply with (reported to the host)
@@ -158,6 +166,10 @@ pub struct ServerState {
     /// `pins`: the free pins (src/pins.rs)
     pins: crate::pins::Pins,
 {% endif %}
+{% if buttons %}
+    /// `buttons`: the board's buttons (src/ww/buttons.rs)
+    buttons: Buttons,
+{% endif %}
 {% if leds %}
     /// `leds`: mode, brightness and the end of a running identify (src/led.rs shows them)
     leds: leds::LedsState,
@@ -185,7 +197,7 @@ static SERIAL: StaticCell<[u8; {{ 2 * u_id.len }}]> = StaticCell::new();
 
 impl ServerState {
 {% set params = ([] if leds else ["led: Output<'static>"]) + (["last_reset: bedrock_crash::Snapshot"] if o.crash else [])
-     + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) + (["pins: crate::pins::Pins"] if pins else []) %}
+     + (["settings: crate::settings::SettingsStore"] if settings else []) + (["uid: [u8; " ~ u_id.len ~ "]"] if u_id.arg else []) + (["pins: crate::pins::Pins"] if pins else []) + (["buttons: Buttons"] if buttons else []) %}
 {% set sig = "    pub " ~ ("async " if streams else "") ~ "fn new(" %}
 {% if (sig ~ params | join(", ") ~ ") -> Self {") | length <= 100 %}
 {{ sig }}{{ params | join(", ") }}) -> Self {
@@ -249,6 +261,9 @@ impl ServerState {
 {% endif %}
 {% if pins %}
             pins,
+{% endif %}
+{% if buttons %}
+            buttons,
 {% endif %}
 {% if leds %}
             leds: leds::LedsState::new(),
@@ -536,7 +551,10 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
         server_impl::API_ID,
         |config| {
             // VID:PID is c0de:cafe unless set here
-            config.product = Some("{{ o.name }}");
+{% if o.hw.usb.get("manufacturer") %}
+            config.manufacturer = Some({{ o.hw.usb.manufacturer | tojson }});
+{% endif %}
+            config.product = Some({{ (o.hw.usb.get("product") or o.name) | tojson }});
   {% if t.family == "stm32" %}
             config.serial_number = Some(embassy_stm32::uid::uid_hex());
   {% elif t.family == "rp" %}

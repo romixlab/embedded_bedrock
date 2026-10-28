@@ -34,6 +34,7 @@ import argparse
 import concurrent.futures
 import datetime
 import difflib
+import itertools
 import json
 import os
 import re
@@ -90,14 +91,18 @@ def board_presets() -> list[str]:
 
 
 def load_preset(name: str) -> dict:
-    """data/boards/<name>/preset.toml, with its "name" and "dir" added."""
-    d = BOARDS_DIR / name
-    if not (d / "preset.toml").is_file():
-        die(f"--board {name}: no such preset; known: {', '.join(sorted(board_presets())) or 'none'}")
+    """data/boards/<name>/preset.toml, or <name>/preset.toml for a directory (relative to the working directory or
+    to data/: the matrix's test presets are matrix_presets/<x>), with its "name" and "dir" added."""
+    # a bare name is a preset of data/boards; a path is a directory
+    places = [Path(name), HERE / "data" / name] if "/" in name else [BOARDS_DIR / name]
+    d = next((x for x in places if (x / "preset.toml").is_file()), None)
+    if d is None:
+        die(f"--board {name}: no such preset; known: {', '.join(sorted(board_presets())) or 'none'}, or a directory "
+            "with a preset.toml")
     with open(d / "preset.toml", "rb") as f:
         preset = tomllib.load(f)
     preset.setdefault("answers", {})
-    preset["name"], preset["dir"] = name, d
+    preset["name"], preset["dir"] = d.name, d
     return preset
 
 
@@ -705,6 +710,19 @@ def toml_list(items: list[str]) -> str:
     return "[" + ", ".join(f'"{i}"' for i in items) + "]"
 
 
+def toml_value(v) -> str:
+    """A TOML value on one line: a string, number, bool, list or inline table (a preset's dependency spec)."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        return str(v)
+    if isinstance(v, str):
+        return json.dumps(v)
+    if isinstance(v, list):
+        return "[" + ", ".join(toml_value(x) for x in v) + "]"
+    return "{ " + ", ".join(f"{k} = {toml_value(x)}" for k, x in v.items()) + " }"
+
+
 def doc_comment(text: str, indent: str = "", width: int = 116, marker: str = "///", hang: str = "") -> str:
     """`text` as `///` lines (or `marker`'s, `//!`) of at most `width` columns, a little short of 120 as the
     hand-wrapped comments of the reference firmware (rustfmt leaves comments as they are), continuation lines indented
@@ -791,6 +809,7 @@ JINJA = jinja2.Environment(
 )
 JINJA.filters.update(
     toml_list=toml_list,
+    toml_value=toml_value,
     doc=doc_comment,
     hex=lambda n: f"0x{n:X}",
     hex8=lambda n: f"0x{n:08X}",
@@ -867,7 +886,10 @@ class Opts:
     board: Optional[dict] = None  # --board preset (data/boards/<name>/preset.toml) plus its "name" and "dir"
     rom_boot: str = ""      # bedrock_rom_boot family feature ("stm32g0", "stm32h7"): device.boot and dfu (TPL-41)
     rp_boot: bool = False   # device.boot and dfu through the RP boot ROM's BOOTSEL (TPL-56)
-    led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm())
+    led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm()),
+    # or with several LEDs / RGB every LED's (leds_pwm(), "multi")
+    leds: list = field(default_factory=list)  # the --board preset's [[leds]] (preset_leds()), [] without
+    hw: dict = field(default_factory=dict)  # the preset's [[buttons]], [[init]], [bring_up], [usb] (preset_hw())
     pins: dict = field(default_factory=dict)  # --pins: resolve_pins(), {} without
     clock: bool = False     # --clock-sync: `clock` (ww_timebase::Clock) through bedrock_sync (TPL-40)
     can: dict = field(default_factory=dict)  # --can: resolve_can(), {} without (TPL-53)
@@ -1102,6 +1124,26 @@ TIME_DRIVERS = ("TIM4", "TIM3", "TIM22", "TIM21", "TIM12", "TIM9", "TIM15", "TIM
                 "TIM8", "TIM1")
 
 
+def stm32_timers(t: Target) -> dict[str, dict]:
+    """stm32-data's timer peripherals (TIM_* blocks) by name."""
+    return {p["name"]: p for p in t.stm32.get("cores", [{}])[0].get("peripherals", [])
+            if p.get("registers", {}).get("kind") == "timer" and p["registers"].get("block", "").startswith("TIM_")}
+
+
+def timer_channels(timers: dict[str, dict], pin: str) -> list[dict]:
+    """The timer channels `pin` can output, best first: a plain CHy before a complementary CHyN, a general-purpose
+    timer before an advanced one (TIM1 / TIM8 stay for motor control), then by timer number."""
+    chans = []
+    for name, p in timers.items():
+        for x in p.get("pins", []):
+            m = re.fullmatch(r"CH([1-4])(N?)", x["signal"])
+            if x["pin"] == pin and m and "af" in x:  # no "af": F1's AFIO remaps, not generated
+                chans.append(dict(timer=name, ch=int(m.group(1)), n=bool(m.group(2)), af=x["af"],
+                                  block=p["registers"]["block"], signal=f"{name}_{x['signal']}"))
+    chans.sort(key=lambda c: (c["n"], c["block"] == "TIM_ADV", int(c["timer"][3:])))
+    return chans
+
+
 def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
     """--led-mode (TPL-39): the LED pin's timer channel for breath (PWM through bedrock_led) and the embassy time
     driver that leaves its timer free, from stm32-data's peripherals[].pins; None for a plain GPIO output. `auto`
@@ -1113,15 +1155,8 @@ def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
     if t.family != "stm32" or framework != "embassy":
         why = "breath is generated for --framework embassy on STM32 so far (RP and nRF PWM are not wired yet)"
     else:
-        timers = {p["name"]: p for p in t.stm32.get("cores", [{}])[0].get("peripherals", [])
-                  if p.get("registers", {}).get("kind") == "timer" and p["registers"].get("block", "").startswith("TIM_")}
-        for name, p in timers.items():
-            for pin in p.get("pins", []):
-                m = re.fullmatch(r"CH([1-4])(N?)", pin["signal"])
-                if pin["pin"] == led and m and "af" in pin:  # no "af": F1's AFIO remaps, not generated
-                    chans.append(dict(timer=name, ch=int(m.group(1)), n=bool(m.group(2)), af=pin["af"],
-                                      block=p["registers"]["block"], signal=f"{name}_{pin['signal']}"))
-        chans.sort(key=lambda c: (c["n"], c["block"] == "TIM_ADV", int(c["timer"][3:])))
+        timers = stm32_timers(t)
+        chans = timer_channels(timers, led)
         driver = next((d for d in TIME_DRIVERS if d in timers and chans and d != chans[0]["timer"]), None)
         if not chans:
             why = f"{led} has no timer channel on {t.display}"
@@ -1133,7 +1168,197 @@ def led_pwm(t: Target, framework: str, led: str, mode: str) -> Optional[dict]:
         if t.family == "stm32" and framework == "embassy":
             t.notes.append(f"LED {led}: plain GPIO output, {why} (--led-mode gpio)")
         return None
-    return {**chans[0], "driver": driver.lower()}
+    return {**chans[0], "driver": driver.lower(), "multi": False}
+
+
+# A [[leds]] role (TPL-18): the bedrock look the LED shows at boot (src/led.rs `LOOKS`, a Rust expression whose colour
+# is what an RGB LED shows when the firmware turns it on) and whether `OnlyEssential` keeps it
+LED_ROLES = {
+    "status": ("look::OK", False),
+    "heartbeat": ("look::HEARTBEAT", False),
+    "activity": ("look::Look {\n        mode: Mode::Off,\n        ..look::OK\n    }", False),
+    "power": ("look::Look {\n        mode: Mode::On,\n        ..look::OK\n    }", True),
+    "fault": ("look::Look {\n        mode: Mode::Off,\n        ..look::FAULT\n    }", True),
+    "user": ("look::Look {\n        mode: Mode::Off,\n        colour: [255; 3],\n    }", False),
+}
+
+
+def preset_leds(preset: Optional[dict]) -> list[dict]:
+    """The preset's [[leds]] (TPL-18), checked: name, pins (one, or R, G, B), rgb, active_low, role."""
+    if not preset:
+        return []
+    where = f"{preset['dir'] / 'preset.toml'}: [[leds]]"
+    if "leds" in preset and "led" in preset["answers"]:
+        die(f"{where} and [answers] led both name the LED: keep one")
+    leds, seen = [], set()
+    for x in preset.get("leds", []):
+        name = x.get("name") or die(f"{where} without a name")
+        bad = sorted(set(x) - {"name", "pin", "rgb", "active", "role"})
+        if bad:
+            die(f"{where} {name}: unknown keys {', '.join(bad)} (name, pin or rgb, active, role)")
+        if ("pin" in x) == ("rgb" in x):
+            die(f"{where} {name}: give `pin` (a mono LED) or `rgb` (its R, G and B pins), one of them")
+        pins = [x["pin"]] if "pin" in x else list(x["rgb"])
+        if len(pins) != (1 if "pin" in x else 3) or not all(PIN_NAME_RE.fullmatch(p) for p in pins):
+            die(f"{where} {name}: pins like PB14, three for rgb = [R, G, B]")
+        for pin in pins:
+            if pin in seen:
+                die(f"{where} {name}: {pin} is another LED's")
+            seen.add(pin)
+        active, role = x.get("active", "high"), x.get("role", "status")
+        if active not in ("high", "low"):
+            die(f"{where} {name}: active = \"high\" (lit while the pin is high) or \"low\"")
+        if role not in LED_ROLES:
+            die(f"{where} {name}: role is one of {', '.join(LED_ROLES)}")
+        leds.append(dict(name=name, pins=pins, rgb="rgb" in x, active_low=active == "low", role=role,
+                         var=rust_ident(name), look=LED_ROLES[role][0],
+                         essential=LED_ROLES[role][1]))
+    return leds
+
+
+def rust_ident(name: str) -> str:
+    """A board name (B1, "USER", D201) as a snake_case Rust identifier."""
+    var = re.sub(r"[^a-z0-9_]", "_", name.lower())
+    return var if var[0].isalpha() else f"x_{var}"
+
+
+def preset_hw(preset: Optional[dict], leds: list[dict]) -> dict:
+    """The preset's board hardware besides the LEDs (TPL-18), checked: `buttons` ([[buttons]]: name, pin, pressed,
+    pull, var), `init` ([[init]]: pin, level, what), `bring_up` ([bring_up]: use, code, takes, dependencies) and `usb`
+    ([usb]: product, manufacturer, vid, pid). Every pin once, the LEDs' too."""
+    if not preset:
+        return {"buttons": [], "init": [], "bring_up": {}, "usb": {}}
+    where = preset["dir"] / "preset.toml"
+    seen = {pin: f"LED {led['name']}" for led in leds for pin in led["pins"]}
+
+    def take(pin: str, what: str) -> None:
+        if not PIN_NAME_RE.fullmatch(pin):
+            die(f"{where}: {what}: {pin!r} is not a pin like PB14")
+        if pin in seen:
+            die(f"{where}: {what}: {pin} is {seen[pin]}'s")
+        seen[pin] = what
+
+    def keys(x: dict, what: str, known: set[str], needed: set[str]) -> None:
+        bad, missing = sorted(set(x) - known), sorted(needed - set(x))
+        if bad or missing:
+            die(f"{where}: {what}: " + "; ".join(([f"unknown keys {', '.join(bad)}"] if bad else []) +
+                                                 ([f"needs {', '.join(missing)}"] if missing else [])))
+    buttons = []
+    for x in preset.get("buttons", []):
+        what = f"[[buttons]] {x.get('name', '?')}"
+        keys(x, what, {"name", "pin", "pressed", "pull"}, {"name", "pin"})
+        take(x["pin"], what)
+        pressed, pull = x.get("pressed", "low"), x.get("pull", "none")
+        if pressed not in ("high", "low") or pull not in ("none", "up", "down"):
+            die(f"{where}: {what}: pressed = \"high\" | \"low\", pull = \"none\" | \"up\" | \"down\"")
+        buttons.append(dict(name=x["name"], pin=x["pin"], pressed=pressed, pull=pull, var=rust_ident(x["name"])))
+    if len({b["var"] for b in buttons}) < len(buttons):
+        die(f"{where}: [[buttons]]: two names give the same property name")
+    init = []
+    for x in preset.get("init", []):
+        what = f"[[init]] {x.get('pin', '?')}"
+        keys(x, what, {"pin", "level", "what"}, {"pin", "level", "what"})
+        take(x["pin"], what)
+        if x["level"] not in ("high", "low"):
+            die(f"{where}: {what}: level = \"high\" or \"low\"")
+        init.append(dict(x))
+    bring_up = preset.get("bring_up", {})
+    if bring_up:
+        keys(bring_up, "[bring_up]", {"use", "code", "takes", "dependencies"}, {"code"})
+        for pin in [x for x in bring_up.get("takes", []) if PIN_NAME_RE.fullmatch(x)]:
+            take(pin, "[bring_up]")
+    usb = preset.get("usb", {})
+    if usb:
+        keys(usb, "[usb]", {"product", "manufacturer", "vid", "pid", "ulpi"}, set())
+        if "vid" in usb or "pid" in usb:
+            die(f"{where}: [usb] vid / pid: wire_weaver_usb_embassy's usb_init can't set them until wire_weaver TR-17 (embassy-usb 0.6 "
+                "keeps Config's vendor_id / product_id crate-private); product and manufacturer work")
+    return {"buttons": buttons, "init": init, "bring_up": bring_up, "usb": usb}
+
+
+def single_led(leds: list[dict]) -> bool:
+    """[[leds]] that the one-LED path generates exactly (a mono LED lit high, showing the status)."""
+    return len(leds) == 1 and not leds[0]["rgb"] and not leds[0]["active_low"] and leds[0]["role"] == "status"
+
+
+def leds_pwm(t: Target, framework: str, leds: list[dict], mode: str) -> dict:
+    """Several LEDs or an RGB one from the preset's [[leds]] (TPL-18), all on timer PWM through bedrock_led: a timer
+    channel per pin with no channel used twice (CHy and CHyN share a compare), the fewest complementary outputs,
+    advanced timers and timers, and a time driver on none of them. The `led_pwm` of src/led_multi.rs.j2."""
+    if t.family != "stm32" or framework != "embassy":
+        die("[[leds]] with several LEDs or RGB: generated for --framework embassy on STM32 so far")
+    if mode == "gpio":
+        die("--led-mode gpio: [[leds]] with several LEDs or RGB are driven by timer PWM only")
+    timers = stm32_timers(t)
+    slots = []  # (led, colour index, pin, candidates)
+    for i, led in enumerate(leds):
+        for c, pin in enumerate(led["pins"]):
+            cands = timer_channels(timers, pin)
+            if not cands:
+                die(f"[[leds]] {led['name']}: {pin} has no timer channel on {t.display}; an LED without PWM is "
+                    "the one-LED path (a single mono LED, --led-mode gpio)")
+            slots.append((i, c, pin, cands))
+    best, best_key = None, None
+    for pick in itertools.product(*(s[3] for s in slots)):
+        used = [(x["timer"], x["ch"]) for x in pick]
+        if len(set(used)) < len(used):
+            continue
+        tims = {x["timer"] for x in pick}
+        key = (sum(x["n"] for x in pick), sum(x["block"] == "TIM_ADV" for x in pick), len(tims),
+               [int(x["timer"][3:]) for x in pick])
+        if best_key is None or key < best_key:
+            best, best_key = pick, key
+    if best is None:
+        die(f"[[leds]]: the LED pins share timer channels on {t.display}, no assignment drives them all")
+    tims = sorted({x["timer"] for x in best}, key=lambda n: int(n[3:]))
+    driver = next((d for d in TIME_DRIVERS if d in timers and d not in tims), None) or \
+        die(f"[[leds]]: no timer left for embassy's time driver besides {', '.join(tims)}")
+    chans = []
+    for (i, c, pin, _), x in zip(slots, best):
+        led = leds[i]
+        var = led["var"] + (f"_{'rgb'[c]}" if led["rgb"] else "")
+        chans.append({**x, "led": i, "colour": c, "pin": pin, "var": var, "active_low": led["active_low"],
+                      "invert": x["n"] != led["active_low"]})
+    by_timer = []
+    for name in tims:
+        cs = sorted((c for c in chans if c["timer"] == name), key=lambda c: c["ch"])
+        comp = any(c["n"] for c in cs)
+        # the constructor's pin arguments in order: SimplePwm's CH1..CH4, ComplementaryPwm's CH1, CH1N, ... CH4N
+        args = [next((c for c in cs if c["ch"] == ch and c["n"] == n), None)
+                for ch in range(1, 5) for n in ((False, True) if comp else (False,))]
+        by_timer.append({"timer": name, "comp": comp, "chans": cs, "args": args})
+    # src/led.rs: a doc line per channel, and the statements that show a tick's levels
+    show = [f"let {led['var']} = leds.rgb({led['var'].upper()});" for led in leds if led["rgb"]]
+    for c in chans:
+        led = leds[c["led"]]
+        colour = ("red", "green", "blue")[c["colour"]]
+        c["doc"] = f"{led['name']}{' ' + colour if led['rgb'] else ''}: {c['pin']}, {c['signal']}" + \
+            (", lit low" if c["active_low"] else "")
+        level = f"{led['var']}[{c['colour']}]" if led["rgb"] else f"leds.level({led['var'].upper()})"
+        if next(x for x in by_timer if x["timer"] == c["timer"])["comp"]:
+            show.append(f"{c['timer'].lower()}.set_level(embassy_stm32::timer::Channel::Ch{c['ch']}, "
+                        f"{str(c['invert']).lower()}, {level});")
+        else:
+            show.append(f"{c['var']}.set_level({level});")
+    t.notes.append("LEDs: " + ", ".join(f"{leds[c['led']]['name']}{(' ' + 'RGB'[c['colour']]) if leds[c['led']]['rgb'] else ''}"
+                                        f" {c['pin']} {c['signal']}" for c in chans) + f"; time driver {driver}")
+    return {"multi": True, "leds": leds, "timers": by_timer, "chans": chans, "driver": driver.lower(),
+            "timer": and_join(tims), "signal": and_join([c["signal"] for c in chans]),
+            "comp": any(c["n"] for c in chans), "simple": any(not x["comp"] for x in by_timer),
+            "plain_on_comp": any(not c["n"] for x in by_timer if x["comp"] for c in x["chans"]),
+            "rgb": any(led["rgb"] for led in leds), "show": {i: rust_stmt_lines(show, " " * i) for i in (8, 12)}}
+
+
+def rust_stmt_lines(stmts: list[str], indent: str, width: int = 100) -> list[str]:
+    """Statements `f(a, b);` at `indent`, one per line, the arguments one per line where rustfmt would break them."""
+    out = []
+    for x in stmts:
+        if len(indent) + len(x) <= width or not x.endswith(");"):
+            out.append(indent + x)
+            continue
+        head, _, args = x[:-2].partition("(")
+        out += [f"{indent}{head}("] + [f"{indent}    {a}," for a in args.split(", ")] + [f"{indent});"]
+    return out
 
 
 def clock_sync(t: Target, framework: str, ww: bool, mode: str) -> bool:
@@ -1260,7 +1485,10 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         die("--pins needs --log defmt (pins.rs and its refusals log with defmt)")
     b = o.board or {}
     # pins the firmware itself uses: never a point
-    used = {o.led: "the LED"}
+    used = {pin: f"the LED {led['name']}" for led in o.leds for pin in led["pins"]} or {o.led: "the LED"}
+    used.update({b["pin"]: f"the button {b['name']}" for b in o.hw["buttons"]})
+    used.update({x["pin"]: x["what"] for x in o.hw["init"]})
+    used.update({x: "taken by [bring_up]" for x in o.hw["bring_up"].get("takes", []) if PIN_NAME_RE.fullmatch(x)})
     if usb:
         used.update({usb["dp"]: "USB DP", usb["dm"]: "USB DM"})
     used.update({k: v for k, v in o.can.get("used", {}).items() if k not in SWD_PINS})
@@ -1586,8 +1814,11 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
     s["log"] = {"ring": 4096, "store": 8192} if not ram or ram >= 64 * 1024 else {"ring": 1024, "store": 2048}
     # the LED (TPL-39): its name on the board for prose, `pwm` the timer channel it breathes on (led_pwm(), None: a
     # plain GPIO); `leds`: ww_indication::Indication in the API, with breath and --wire-weaver
-    led_name = b.get("readme", {}).get("led", "")
-    s["led"] = {"name": led_name or "the LED", "Name": led_name or "The LED", "var": led_name.lower() or "led",
+    # [[leds]] (TPL-18): `name` all of them ("D201 and D202"), `first` the one led_on / led_off drive
+    led_name = o.leds[0]["name"] if o.leds else b.get("readme", {}).get("led", "")
+    name = and_join([x["name"] for x in o.leds]) if o.led_pwm and o.led_pwm.get("multi") else led_name
+    s["led"] = {"name": name or "the LED", "Name": name or "The LED", "var": name.lower() or "led",
+                "first": led_name or "the LED", "First": led_name or "The LED",
                 "pin": o.led, "pwm": o.led_pwm, "essential": b.get("led", {}).get("essential", ""),
                 "timer_mhz": b.get("clock", {}).get("timer_mhz")}
     s["leds"] = o.ww and bool(o.led_pwm)
@@ -1598,6 +1829,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
                   "oscillator": b.get("clock", {}).get("oscillator", "")} if o.clock else {}
     s["pins"] = o.pins                      # `pins` (ww_pin_diag::PinDiag) beside the device contract (TPL-46)
     s["can"] = o.can                        # `can[]` (ww_can_bus::Can): the FDCAN channels (TPL-53)
+    s["buttons"] = o.hw.get("buttons", []) if o.ww else []  # `buttons`: the preset's [[buttons]] (TPL-18)
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
     s["dev_variant"] = s["dev"]["variant"]
@@ -1634,7 +1866,7 @@ def host_names(t: Target, o: Opts, s: dict) -> dict:
         "py_board": ct.lower() if ct.lower() != "board" else "connected",
         "board_short": ct if b else "board",         # "Blink the Nucleo's LED"
         "board_revision": s["revision"] or "A",      # board_line's example
-        "led_name": readme.get("led", ""),           # the LED's name on the board (LD4)
+        "led_name": o.leds[0]["name"] if o.leds else readme.get("led", ""),  # the user LED's name on the board (LD4)
         "version": "0.1.0",                          # the workspace's (host crates') first version
     }
     doc = s["uid"].get("doc", "")
@@ -1812,8 +2044,10 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
         files["src/ww/device.rs"] = render("app/src/ww/device.rs.j2", **ctx)
         if ctx["s"]["leds"]:
             files["src/ww/leds.rs"] = render("app/src/ww/leds.rs.j2", **ctx)
+        if ctx["s"]["buttons"]:
+            files["src/ww/buttons.rs"] = render("app/src/ww/buttons.rs.j2", **ctx)
     if o.led_pwm:
-        files["src/led.rs"] = render("app/src/led.rs.j2", **ctx)
+        files["src/led.rs"] = render("app/src/led_multi.rs.j2" if o.led_pwm.get("multi") else "app/src/led.rs.j2", **ctx)
     if o.clock:
         files["src/sync.rs"] = render("app/src/sync.rs.j2", **ctx)
         files["src/ww/clock.rs"] = render("app/src/ww/clock.rs.j2", **ctx)
@@ -2609,7 +2843,10 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
 
     rom_boot = rom_boot_family(t, args)
     lay = make_layout(t, args, regs, rom_boot)
-    led = args.led or t.default_led
+    leds = preset_leds(getattr(args, "preset", None))
+    if leds and args.led:
+        die("--led and the preset's [[leds]] both name the LED: drop --led, or edit [[leds]]")
+    led = leds[0]["pins"][0] if leds else (args.led or t.default_led)
     o = Opts(name=name, framework=fw, log=log, bootloader=args.bootloader, settings=args.settings,
              counters=args.counters, ram_counters=args.ram_counters, bkp=regs.bkp if regs else None, bkp_mode=args.bkp_counters,
              flip_link=not args.no_flip_link, nightly=args.nightly, build_core=args.build_core,
@@ -2624,7 +2861,14 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     o.host = args.host
     o.cli_name = args.cli_name or name
     o.probe = args.probe or SETUP_PROBES[t.family][1]
-    o.led_pwm = led_pwm(t, fw, led, args.led_mode)
+    o.leds = leds
+    o.hw = preset_hw(o.board, leds)
+    if (o.hw["buttons"] or o.hw["init"] or o.hw["bring_up"]) and (t.family != "stm32" or fw != "embassy"):
+        die("the preset's [[buttons]], [[init]] and [bring_up]: generated for --framework embassy on STM32 so far")
+    if o.hw["buttons"] and not args.wire_weaver:
+        t.notes.append("[[buttons]]: served as `buttons` with --wire-weaver; without it nothing reads them")
+    o.led_pwm = leds_pwm(t, fw, leds, args.led_mode) if leds and not single_led(leds) else \
+        led_pwm(t, fw, led, args.led_mode)
     o.clock = clock_sync(t, fw, args.wire_weaver, args.clock_sync)
     if o.host and not args.wire_weaver:
         die("--host needs --wire-weaver (the host crates talk to the firmware through its WireWeaver API)")
@@ -2655,8 +2899,9 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
                 die("--ww-transport usb needs --log defmt (wire_weaver_usb_embassy logs with defmt)")
             if t.family == "stm32":
                 usb = stm32_usb(t, Stm32Data(Path(args.cache), args.offline))
-                if led in (usb["dp"], usb["dm"]):
-                    die(f"--led {led} is a USB pin ({usb['periph']} DP/DM), pass another --led")
+                for pin in [x for led in leds for x in led["pins"]] or [led]:
+                    if pin in (usb["dp"], usb["dm"]):
+                        die(f"LED pin {pin} is a USB pin ({usb['periph']} DP/DM), pass another --led or edit [[leds]]")
             elif not t.usb:
                 die(f"{t.display} has no USB device peripheral; use --ww-transport rtt")
 
@@ -2842,8 +3087,8 @@ def main(argv=None) -> None:
                         "hooks, README / AGENTS / FEATURES / CHANGELOG / LICENSE, docs/logo (and docs/board with --board)")
     p.add_argument("--cli-name", help="name of the command line binary and prefix of its environment variables "
                                       "(<CLI>_PROBE, <CLI>_ELF); default the project name")
-    p.add_argument("--board", choices=sorted(board_presets()),
-                   help="board preset from data/boards/<BOARD>/preset.toml: defaults for chip, LED, probe and the "
+    p.add_argument("--board", metavar="{" + ",".join(sorted(board_presets())) + "}|DIR",
+                   help="board preset from data/boards/<BOARD>/preset.toml (or DIR/preset.toml): defaults for chip, LED, probe and the "
                         "other answers, plus what only the board knows (clock tree, README board section, docs/board, "
                         "logo); explicit flags override it")
     p.add_argument("--probe", type=probe_id,

@@ -1,7 +1,16 @@
 {# Common tail of the embassy main() bodies; `led` is an Output created by the caller (none when it breathes,
    s.led.pwm: src/led.rs owns it), `p` the peripherals. #}
 {% if o.ww %}
-  {% set args = feats(not s.led.pwm and "led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid", s.pins and "pins") %}
+  {% set args = feats(not s.led.pwm and "led", o.crash and "last_reset", o.settings_flash and "settings", s.uid.arg and "uid", s.pins and "pins", s.buttons and "buttons") %}
+  {% if s.buttons %}
+
+    // the board's buttons, read through `buttons` (src/ww/buttons.rs)
+    let buttons = ww::Buttons {
+    {% for b in s.buttons %}
+        {{ b.var }}: Input::new(p.{{ b.pin }}, Pull::{{ b.pull | capitalize }}),
+    {% endfor %}
+    };
+  {% endif %}
   {% if s.pins %}
     // every free pin, for `pins` (src/pins.rs): take a pin out of its list there to use it here
     let pins = pins::Pins::new(pins::take!(p));

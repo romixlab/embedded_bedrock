@@ -579,3 +579,17 @@ args = ["--chip", "STM32H725IG", "--supply-config", "DirectSMPS", "--wire-weaver
 builds = ["dev", "release"]
 tags = ["ww", "host"]
 note = "two FDCANs sharing the message RAM (h7_half), PLL2 Q 80 MHz kernel clock"
+
+[[entry]]
+name = "g0leds"
+args = ["--board", "matrix_presets/g0leds", "--host"]
+builds = ["dev", "release"]
+tags = ["ww", "rtt", "host"]
+note = "[[leds]]: two LEDs on TIM14_CH1 and TIM15_CH1N (TPL-18)"
+
+[[entry]]
+name = "h7rgb"
+args = ["--board", "matrix_presets/h7rgb"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+note = "[[leds]]: an RGB LED lit low on TIM3 CH2 / CH1 and TIM8_CH1N, clock sync (TPL-18)"

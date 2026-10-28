@@ -129,6 +129,12 @@ mcan = { {% if o.mcan_src == "git" %}git = "{{ MCAN_GIT }}"{% else %}path = "{{ 
 # `can[]`: bit timing, checks and mappings of a host's input (src/ww/can.rs)
 {{ bedrock_dep("bedrock_can", o.bedrock, root, ', features = ["defmt"]') }}
 {% endif %}
+{% if o.hw.get("bring_up", {}).get("dependencies") %}
+# board bring-up (the board preset's [bring_up], src/main.rs)
+  {% for k, v in o.hw.bring_up.dependencies.items() %}
+{{ k }} = {{ v | toml_value }}
+  {% endfor %}
+{% endif %}
 {% set pins_deps %}
 # raw access to the free pins (src/pins.rs)
 {{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}

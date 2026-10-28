@@ -1,5 +1,6 @@
 {# `leds` (TPL-39): the LED as one ww_indication::Indication, shown through src/led.rs. `l` = s.led #}
 {% set l = s.led %}
+{% set multi = l.pwm.multi %}
 {% filter rewrap("//! ") %}
 //! `leds`: {{ l.name }} as one `ww_indication::Indication`, shown through src/led.rs. RAM only: mode and brightness are back to `Normal` after a reset. The peaks and the identify bookkeeping are `bedrock_led::indication`, shared with the other bedrock boards.
 {% endfilter %}
@@ -18,7 +19,20 @@ use ww_si::ww_numeric::NumericValue;
 use ww_si::{Prefix, Second};
 
 /// `leds.NAMES`
+{% if multi %}
+{% set names = l.pwm.leds | map(attribute="name") | map("tojson") | join(", ") %}
+{% set one = "pub(super) const NAMES: RefVec<'static, &'static str> = RefVec::Slice { slice: &[" ~ names ~ "] };" %}
+{# rustfmt keeps a struct literal on one line while its fields take at most 18 columns (struct_lit_width) #}
+{% if one | length <= 100 and ("slice: &[" ~ names ~ "]") | length <= 18 %}
+{{ one }}
+{% else %}
+pub(super) const NAMES: RefVec<'static, &'static str> = RefVec::Slice {
+    slice: &[{{ names }}],
+};
+{% endif %}
+{% else %}
 pub(super) const NAMES: RefVec<'static, &'static str> = RefVec::Slice { slice: &["{{ l.name if l.name != "the LED" else "LED" }}"] };
+{% endif %}
 
 /// What the API last set, src/led.rs only takes it.
 pub(super) struct LedsState {
@@ -40,12 +54,33 @@ impl LedsState {
 
 // ww_indication::Indication at leds
 impl ServerState {
+{% if multi %}
+    /// `OnlyEssential` keeps the power and fault LEDs (src/led.rs `ESSENTIAL`) and hides the others.
+{% else %}
 {{ ("`OnlyEssential` hides " ~ l.name ~ " too: it is the user LED, nothing essential shows on it" ~ ((" (" ~ l.essential ~ ")") if l.essential else "") ~ ".") | doc("    ") }}
+{% endif %}
     pub(super) fn set_leds_mode(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         value: Mode,
     ) -> SetResult<()> {
+{% if multi %}
+        let (normal, essential) = match value {
+            Mode::AllOff => (false, false),
+            Mode::OnlyEssential => (false, true),
+            Mode::Normal => (true, true),
+            // a mode from a newer host: what it means is unknown, show the LEDs
+{% if o.counters %}
+            _ => {
+                cnt!(leds_mode_unknown: u32);
+                (true, true)
+            }
+{% else %}
+            _ => (true, true),
+{% endif %}
+        };
+        led::show(normal, essential);
+{% else %}
         let visible = match value {
             Mode::AllOff | Mode::OnlyEssential => false,
             Mode::Normal => true,
@@ -60,6 +95,7 @@ impl ServerState {
 {% endif %}
         };
         led::set_visible(visible);
+{% endif %}
         self.leds.mode = value;
         Set
     }
@@ -96,7 +132,7 @@ impl ServerState {
         Value(self.leds.brightness)
     }
 
-    /// {{ l.Name }} blinks at full brightness, whatever the mode; `Busy` while one runs.
+    /// {{ l.Name }} {{ "blink" if multi else "blinks" }} at full brightness, whatever the mode; `Busy` while one runs.
     pub(super) fn leds_identify(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,

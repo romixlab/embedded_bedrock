@@ -76,6 +76,27 @@ or options; purely internal refactors only need a line under the next version.
   templates emitted them in, so a preset's clock `use` beside the HSI48 one (`embassy_stm32::rcc::{Hse, ...}` and
   `embassy_stm32::rcc::{Hsi48Config, mux}`) failed `cargo fmt --check`. Upgrade notes: none (`cargo fmt` fixes it).
 
+- Several LEDs and RGB LEDs from the board preset (TPL-18): a preset's `[[leds]]` list (`name`, `pin` or
+  `rgb = [R, G, B]`, `active = "high" | "low"`, `role = status | heartbeat | activity | power | fault | user`)
+  replaces `[answers] led`. Each pin gets a timer channel from stm32-data (no channel used twice, plain CHy before
+  CHyN, general-purpose timers before advanced ones, the time driver on another timer); `src/led.rs` drives them all
+  through `bedrock_led::Indication<N>` (SimplePwm split into channels, ComplementaryPwm for CHyN outputs, active low
+  inverted), each LED showing its role's bedrock look at boot (`LOOKS`, index constants per LED, `set_led`,
+  `set_colour` for RGB). `led_on` / `led_off` drive the first LED, `leds.NAMES` lists them all and `OnlyEssential`
+  keeps the power and fault LEDs. `--board` also takes a directory with a `preset.toml` (the matrix's test presets in
+  `scripts/data/matrix_presets/`). A single mono, active-high status LED generates exactly what `[answers] led` did.
+  Upgrade notes: none for existing firmware; a board with several LEDs moves them into `[[leds]]` and takes
+  `src/led.rs`, `src/ww/leds.rs` and the LED lines of `src/main.rs` from a scratch directory.
+
+- More board hardware from the preset (TPL-18): `[[buttons]]` (`name`, `pin`, `pressed = "low" | "high"`,
+  `pull = "none" | "up" | "down"`) become `Input`s served as read-only bool properties under `buttons` in the API
+  (`src/ww/buttons.rs`, `true` while pressed); `[[init]]` (`pin`, `level`, `what`) are driven right after
+  `embassy_stm32::init` and held for good; `[bring_up]` (`use`, `code`, `takes`, `[bring_up.dependencies]`) is board
+  set-up code placed after them in `main` with its crates in the firmware's `Cargo.toml`; `[usb]` `product` and
+  `manufacturer` name the USB device. With `--pins` every one of these pins is left out. Every pin of the preset is
+  checked to be used once. `[usb]` `vid` / `pid` are refused until wire_weaver TR-17 lets `usb_init` set them.
+  Upgrade notes: none for existing firmware; a board that sets these up by hand can move them into its preset.
+
 - `scripts/setup.py`: the module docstring is wrapped by the generator at 118 columns whatever the tool list is
   (it had lines of 122 and 134 on G0), and the four section rulers are 120 columns instead of 121. Upgrade notes:
   none needed, take the docstring from a scratch directory if you like.

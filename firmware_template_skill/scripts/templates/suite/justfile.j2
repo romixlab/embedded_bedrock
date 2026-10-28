@@ -151,7 +151,7 @@ test-py:
 # Give the project your own name: `just rename my_board` (crates, directories, the command line name, env vars)
 rename name short="":
     uv run scripts/rename.py {{ L }}name{{ R }} {{ L }}short{{ R }}
-{% if o.board and o.board.boardmap %}
+{% if o.board and o.board.get("boardmap") %}
 
 # Re-draw the board pictures in docs/board/ (top and bottom views, power tree, pin table) from the board description
 # with boardmap: `cargo install --git {{ BEDROCK_GIT }} bedrock_board_cli`

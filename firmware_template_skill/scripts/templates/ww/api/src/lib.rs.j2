@@ -14,9 +14,9 @@ use wire_weaver::prelude::*;
 #[ww_api_root]
 pub trait {{ ww.trait }} {
 {% if s.leds %}
-    /// {{ s.led.Name }} solid on (`leds` shows it until another mode)
+    /// {{ s.led.First }} solid on (`leds` shows it until another mode)
     fn led_on();
-    /// {{ s.led.Name }} off (`leds` shows it until another mode)
+    /// {{ s.led.First }} off (`leds` shows it until another mode)
     fn led_off();
 {% else %}
     /// Turn the LED on
@@ -35,15 +35,27 @@ pub trait {{ ww.trait }} {
 {% if s.leds %}
 
 {% if s.clock %}
+{% if s.led.pwm.multi %}
+    /// {{ s.led.Name }} as one indication: global mode, brightness, identify. Each shows its role's look by default,
+    /// in phase with other boards once `clock` is steered.
+{% else %}
     /// {{ s.led.Name }} as one indication: global mode, brightness, identify. It breathes by default, in phase with other boards
     /// once `clock` is steered.
+{% endif %}
+{% elif s.led.pwm.multi %}
+    /// {{ s.led.Name }} as one indication: global mode, brightness, identify. Each shows its role's look by default.
 {% else %}
     /// {{ s.led.Name }} as one indication: global mode, brightness, identify. It breathes by default.
 {% endif %}
     ww_impl!(leds: ww_indication::Indication);
 {% endif %}
+{% if s.buttons %}
+
+    /// The board's buttons: {{ s.buttons | map(attribute="name") | join(", ") }}
+    ww_impl!(buttons: Buttons);
+{% endif %}
 {% if s.clock %}
-{% if not s.leds %}
+{% if not s.leds and not s.buttons %}
 
 {% endif %}
     /// Device clock: local time (U32 µs, wraps every 71.6 minutes), a host's steer points onto UTC (`host_sync`).
@@ -105,6 +117,17 @@ pub trait Device {
     ww_impl!(dfu: Dfu);
 {% endif %}
 }
+{% if s.buttons %}
+
+/// The board's buttons, read-only: `true` while pressed.
+#[ww_trait]
+pub trait Buttons {
+{% for b in s.buttons %}
+    /// {{ b.name }} ({{ b.pin }})
+    property!(ro {{ b.var }}: bool);
+{% endfor %}
+}
+{% endif %}
 {% if d.dfu %}
 
 {% filter rewrap("/// ") %}
