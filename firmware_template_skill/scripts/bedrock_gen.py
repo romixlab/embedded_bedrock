@@ -870,6 +870,8 @@ class Opts:
     led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm())
     pins: dict = field(default_factory=dict)  # --pins: resolve_pins(), {} without
     clock: bool = False     # --clock-sync: `clock` (ww_timebase::Clock) through bedrock_sync (TPL-40)
+    can: dict = field(default_factory=dict)  # --can: resolve_can(), {} without (TPL-53)
+    mcan_src: str = "git"   # "git" or a path to a local mcan checkout (relative to the output directory)
 
 
 def log_macros(o: Opts) -> tuple[str, str]:
@@ -1261,6 +1263,7 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
     used = {o.led: "the LED"}
     if usb:
         used.update({usb["dp"]: "USB DP", usb["dm"]: "USB DM"})
+    used.update({k: v for k, v in o.can.get("used", {}).items() if k not in SWD_PINS})
     bp = b.get("pins", {})
     ro_info: dict[str, dict] = {}
     if spec == "board":
@@ -1347,6 +1350,137 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         "test": bp.get("test", "") if spec == "board" else "",  # the pin test of a bare board, in the preset dir
         "table": table,
         "board": spec == "board",
+    }
+
+
+# --can (TPL-53): FDCAN channels served as `can[]` (ww_can_bus::Can) through the mcan driver and bedrock_can
+MCAN_GIT = "https://github.com/romixlab/mcan"
+JINJA.globals["MCAN_GIT"] = MCAN_GIT
+# a free interrupt per chip runs the CAN tasks' executor (the first of these the chip has, none the template binds)
+CAN_EXECUTOR_IRQS = ("SWPMI1", "CEC", "SPDIF_RX")
+# software queues per channel in front of the controller (frames), by mcan family: RAM of about 88 B per frame each
+CAN_QUEUES = {"h7": (256, 256), "g0": (64, 64)}
+
+
+def resolve_can(t: Target, o: Opts, spec: Optional[str]) -> dict:
+    """`can` in the suite context ({} without --can): the FDCAN channels in API index order, each with its pins, its
+    interrupts, the transceiver's standby pin and the bedrock_can::Controller layout; the executor's interrupt, the
+    kernel clock and the queue sizes. `spec`: "board" (the --board preset's [[can]] list) or a list like
+    `FDCAN1:PD1,PB8,stby=PC13` (TX then RX pin; `stby=PIN[:high|low]` the transceiver's standby input and the level
+    that puts it in standby, high by default)."""
+    if not spec or spec == "none":
+        return {}
+    if t.family != "stm32" or o.framework != "embassy" or t.series not in ("G0", "H7"):
+        die("--can: embassy on STM32 G0 and H7 so far (the mcan driver's families); others: FEATURES.md TPL-53")
+    if not o.ww:
+        die("--can needs --wire-weaver (`can[]` is part of the WireWeaver API)")
+    if o.log != "defmt" or not o.counters:
+        die("--can needs --log defmt and --counters (src/can.rs logs with defmt and counts what it drops)")
+    b = o.board or {}
+    if spec == "board":
+        entries = b.get("can") or die("--can board needs --board PRESET with a [[can]] list; without a preset pass "
+                                      "the list: --can FDCAN1:PD1,PB8")
+        chans = [dict(instance=e["instance"], tx=e["tx"], rx=e["rx"], transceiver=e.get("transceiver", ""),
+                      standby=e.get("standby", ""), standby_active=e.get("standby_active", "high"),
+                      fdcansel=e.get("fdcansel", "")) for e in entries]
+    else:
+        chans = []
+        for item in (x.strip() for x in spec.split(",") if x.strip()):
+            m = re.fullmatch(r"(FDCAN\d):(P[A-K]\d{1,2})", item)
+            if m:
+                chans.append(dict(instance=m[1], tx=m[2], rx="", transceiver="", standby="", standby_active="high",
+                                  fdcansel=""))
+                continue
+            if not chans:
+                die(f"--can {item}: start with the instance and its TX pin, like FDCAN1:PD1")
+            c = chans[-1]
+            m = re.fullmatch(r"stby=(P[A-K]\d{1,2})(?::(high|low))?", item)
+            if m and not c["standby"]:
+                c["standby"], c["standby_active"] = m[1], m[2] or "high"
+            elif PIN_NAME_RE.fullmatch(item) and not c["rx"]:
+                c["rx"] = item
+            else:
+                die(f"--can {item}: expected FDCANn:TX, then the RX pin, then stby=PIN[:high|low] (e.g. "
+                    "FDCAN1:PD1,PB8,stby=PC13)")
+        if not chans:
+            die("--can: no channel given; e.g. --can FDCAN1:PD1,PB8")
+    family = t.series.lower()
+    used = {o.led: "the LED", "PA13": "SWDIO", "PA14": "SWCLK"}
+    irqs: dict[str, list[str]] = {}  # interrupt -> the instances on it (G0: both FDCANs share two)
+    for i, c in enumerate(chans):
+        name = c["instance"]
+        p = periph(t, name)
+        if not p:
+            have = [x["name"] for x in t.stm32["cores"][0]["peripherals"] if re.fullmatch(r"FDCAN\d", x["name"])]
+            die(f"--can {name}: {t.display} has {human_list(have, 'and') if have else 'no FDCAN'}")
+        if not c["rx"]:
+            die(f"--can {name}: give the RX pin after the TX pin (FDCAN1:PD1,PB8)")
+        if any(x["instance"] == name for x in chans[:i]):
+            die(f"--can: {name} twice")
+        for sig, pin in (("TX", c["tx"]), ("RX", c["rx"])):
+            ok = [x["pin"] for x in p.get("pins", []) if x["signal"] == sig]
+            if pin not in ok:
+                die(f"--can {name}: {pin} is no {sig} pin of {name} on {t.display} ({human_list(sorted(ok, key=pin_key))})")
+        for pin, what in ((c["tx"], f"{name} TX"), (c["rx"], f"{name} RX"), (c["standby"], f"{name}'s standby")):
+            if not pin:
+                continue
+            if pin in used:
+                die(f"--can {name}: {pin} is {used[pin]} already")
+            used[pin] = what
+        if c["standby_active"] not in ("high", "low"):
+            die(f"--can {name}: standby_active is high or low, not {c['standby_active']}")
+        c["n"] = int(name[5:])
+        c["index"] = i
+        c["lower"] = name.lower()
+        c["irq"] = [x["interrupt"] for x in sorted(p.get("interrupts", []), key=lambda x: x["signal"])
+                    if x["signal"] in ("IT0", "IT1")]
+        for line, irq in enumerate(c["irq"]):
+            irqs.setdefault(irq, []).append((name, line))
+    # embassy's time driver binds its timer's interrupt; on the G0 TIM16 and TIM17 share theirs with the FDCANs
+    driver = (o.led_pwm or {}).get("driver", "tim4").upper()
+    clash = [irq for irq in irqs if irq.startswith(driver + "_")]
+    if clash:
+        die(f"--can: embassy's time driver {driver} shares its interrupt with the FDCANs ({clash[0]})")
+    names = {x["name"] for x in t.stm32["cores"][0]["interrupts"]}
+    executor = next((x for x in CAN_EXECUTOR_IRQS if x in names), None) or die(
+        f"--can: no free interrupt for the CAN executor on {t.display} (tried {', '.join(CAN_EXECUTOR_IRQS)})")
+    # the message RAM: H7 one instance gets most of it, two or three share it; G0's is fixed
+    if family == "h7":
+        layout = "h7" if len(chans) == 1 else "h7_half"
+        if len(chans) > 2:
+            die("--can: at most two FDCANs on an H7 (two half layouts fill the message RAM, bedrock_can::Controller)")
+    else:
+        layout = "g0"
+    fdcansel = next((c["fdcansel"] for c in chans if c["fdcansel"]), "")
+    rx_queue, tx_queue = CAN_QUEUES[family]
+    main = o.embassy == "main"
+    # fdcan_ker_ck: the preset's choice, else H7 PLL2_Q at 80 MHz from HSI (the reset choice HSE may not run),
+    # G0 PCLK (the reset choice)
+    if fdcansel:
+        mux = fdcansel
+    elif family == "h7":
+        mux = "Pll2Q" if main else "PLL2_Q"
+    else:
+        mux = ""
+    return {
+        "chans": chans,
+        "family": family,
+        "layout": layout,
+        "irqs": [dict(name=k, chans=v) for k, v in irqs.items()],
+        "executor": executor,
+        "priority": {"g0": ("P2", "P3"), "h7": ("P6", "P7")}[family],  # FDCAN interrupts, the executor's
+        "mux": mux,
+        "pll2": family == "h7" and not fdcansel,
+        "rx_queue": rx_queue,
+        "tx_queue": tx_queue,
+        # credit of `tx` in bytes of serialized TxFrames: the smallest takes 4, so the queue always holds them
+        "tx_credit": 4 * tx_queue,
+        "m0": t.rust_target.startswith("thumbv6m"),
+        "used": used,
+        "count": len(chans),
+        "names": human_list([c["instance"] for c in chans], "and"),
+        "periphs": sorted({c["instance"] for c in chans}),
+        "standby_any": any(c["standby"] for c in chans),
     }
 
 
@@ -1463,6 +1597,7 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
                   "m0": t.rust_target.startswith("thumbv6m"), "rtt": o.ww and o.ww_transport == "rtt",
                   "oscillator": b.get("clock", {}).get("oscillator", "")} if o.clock else {}
     s["pins"] = o.pins                      # `pins` (ww_pin_diag::PinDiag) beside the device contract (TPL-46)
+    s["can"] = o.can                        # `can[]` (ww_can_bus::Can): the FDCAN channels (TPL-53)
     s["product"] = b.get("board", {}).get("product", o.name)  # device.board's name, device.dfu.node's product
     s["revision"] = b.get("board", {}).get("revision", "")    # device.board's revision ("" without a preset)
     s["dev_variant"] = s["dev"]["variant"]
@@ -1680,6 +1815,9 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
         files["src/ww/clock.rs"] = render("app/src/ww/clock.rs.j2", **ctx)
     if o.pins:
         files["src/pins.rs"] = render("app/src/pins.rs.j2", **ctx)
+    if o.can:
+        files["src/can.rs"] = render("app/src/can.rs.j2", **ctx)
+        files["src/ww/can.rs"] = render("app/src/ww/can.rs.j2", **ctx)
     if ctx["s"]["dev"]["log"]:
         files["src/log.rs"] = render("app/src/log.rs.j2", **ctx)
     if ctx["s"]["dev"]["boot"]:
@@ -2518,6 +2656,12 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
             elif not t.usb:
                 die(f"{t.display} has no USB device peripheral; use --ww-transport rtt")
 
+    o.mcan_src = args.mcan_src
+    o.can = resolve_can(t, o, args.can)
+    if usb and o.can:
+        for pin in (usb["dp"], usb["dm"]):
+            if pin in o.can["used"]:
+                die(f"--can: {pin} is a USB pin ({usb['periph']} DP/DM)")
     o.pins = resolve_pins(t, o, args.pins, usb)
     t.notes.append(errata_note(t))
     files = gen_project(t, o, lay, usb)
@@ -2707,6 +2851,15 @@ def main(argv=None) -> None:
                         "`just pins` shows them live (ww pins tui). `board`: every pin the --board preset's board map "
                         "marks free, plus the pins it reads only; else a list like PA0,PA1,PC13:ro (`:ro` read only). "
                         "Never the SWD pins, the LED or USB. Needs --wire-weaver and --log defmt, embassy on STM32")
+    p.add_argument("--can", metavar="board|LIST|none",
+                   help="`can[]` in the API (ww_can_bus::Can): FDCAN channels through the mcan driver, configured, "
+                        "sent and received by a host (`can status|send|dump` with --host). `board`: the --board "
+                        "preset's [[can]] list; else like FDCAN1:PD1,PB8,stby=PC13 (TX, RX, the transceiver's standby "
+                        "pin and the level that puts it in standby, high by default; more channels follow with their "
+                        "own FDCANn:TX). Needs --wire-weaver, --log defmt and --counters, embassy on STM32 G0 or H7")
+    p.add_argument("--mcan-src", default="git",
+                   help="with --can: 'git' (default, " + MCAN_GIT + ") or path to a local mcan checkout, relative to "
+                        "the output directory")
     p.add_argument("--dry-run", action="store_true", help="list files and print memory.x without writing")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")
     p.set_defaults(func=lambda a: cmd_new(a, p_new))

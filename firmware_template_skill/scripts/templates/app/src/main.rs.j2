@@ -8,6 +8,9 @@ mod boot;
 {% if o.build_info %}
 mod build_info;
 {% endif %}
+{% if s.can %}
+mod can;
+{% endif %}
 {% if have_init %}
 mod init;
 {% endif %}
@@ -38,7 +41,7 @@ mod ww;
 {% set ww_rtt = o.ww and ww.rtt and not s.dev.log %}{# with device.log, src/log.rs sets RTT up #}
 {# `use` lines follow the mods (a panic crate, logging, cnt): else the blank line before the include separates them #}
 {% set have_uses = o.log != "none" or t.family == "esp" or not o.crash or ww_rtt or o.counters %}
-{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings_flash or s.led.pwm) and have_uses %}
+{% if (o.build_info or have_init or have_init_ram or o.ww or o.crash or o.settings_flash or s.led.pwm or s.can) and have_uses %}
 
 {% endif %}
 {# --- logging / panic handler --- #}

@@ -1,0 +1,362 @@
+{% set c = s.can %}
+//! `can[]`: ww_can_bus::Can, {% for ch in c.chans %}`can[{{ ch.index }}]` on {{ ch.instance }}{{ ", " if not loop.last }}{% endfor %}. Host input is checked by
+//! `bedrock_can`, each controller is its CAN task's (`src/can.rs`): calls that switch its mode wait for the task's
+//! answer, frames go through its queues.
+//!
+//! Left out (`omit` in `ww.rs`): TX events, bus errors, bus load, timing detection, memory layout, dedicated
+//! buffers, transceiver modes, termination and test pins.
+
+use super::ServerState;
+use crate::can::{CHANS, COUNT, Command, Reply};
+use bedrock_can::{HwConfig, HwFilters, TxReject};
+use cnt::cnt;
+use core::sync::atomic::Ordering;
+use mcan::Id;
+use mcan::pac::message_ram::FrameFormat;
+use wire_weaver::prelude::*;
+use ww_can_bus::{
+    CanConfig, CanError, CanId, Capabilities, Frame, FrameKind, Mode, ProtocolStatus, RxFrame,
+    Second, Status,
+};
+
+/// Received frames passed on per channel and turn of the server task, so requests keep being served.
+const RX_PER_TURN: usize = 64;
+
+/// `can[i].tx` takes [crate::can::TX_CREDIT] bytes of frames; the largest one fits (checked at compile time).
+const TX_CREDIT: ww_stream::sink::SinkCredit = ww_stream::sink::SinkCredit::sized_for(
+    crate::can::TX_CREDIT,
+    super::server_impl::WwCanBusCanStreamSerializer::TX_MAX_ITEM_BYTES,
+);
+
+/// The server's side of the channels: what each controller was last set to, the `rx` streams, the `tx` credit.
+pub struct CanState {
+    hw: [HwConfig; COUNT],
+    filters: [HwFilters; COUNT],
+    rx: [ww_stream::tx::Counted; COUNT],
+    tx_credit: [ww_stream::sink::SinkCredit; COUNT],
+}
+
+impl CanState {
+    pub fn new() -> CanState {
+        let hw = defmt::unwrap!(
+            bedrock_can::default_config(&crate::can::controller()),
+            "the FDCAN kernel clock can't make 250 kbit/s"
+        );
+        CanState {
+            hw: [hw; COUNT],
+            filters: [HwFilters::accept_all(); COUNT],
+            rx: [const { ww_stream::tx::Counted::new() }; COUNT],
+            tx_credit: [TX_CREDIT; COUNT],
+        }
+    }
+}
+
+fn wrong_state(reason: &'static str) -> CanError<'static> {
+    CanError::Common(CommonError::WrongState {
+        reason: MaxLen::new_unchecked(reason),
+    })
+}
+
+/// The channel `index_chain` names (the dispatcher only passes indices of `valid_indices_root_can`).
+fn index(index_chain: [UNib32; 1]) -> usize {
+    index_chain[0].0 as usize
+}
+
+impl ServerState {
+    pub(super) fn valid_indices_root_can(&mut self) -> ValidIndices<'_> {
+        ValidIndices::range_u32(0..COUNT as u32)
+    }
+
+    pub(super) fn can_capabilities(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        _index_chain: [UNib32; 1],
+    ) -> RpcResult<Capabilities<'_>> {
+        Ready(bedrock_can::capabilities(
+            &crate::can::controller(),
+            crate::can::RX_QUEUE as u16,
+            crate::can::TX_QUEUE as u16,
+            &[],
+        ))
+    }
+
+    pub(super) async fn can_configure(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+        config: CanConfig,
+    ) -> RpcResult<Result<CanConfig, CanError<'_>>> {
+        let i = index(index_chain);
+        let hw = match bedrock_can::resolve(&config, &crate::can::controller()) {
+            Ok(hw) => hw,
+            Err(e) => return Ready(Err(e)),
+        };
+        CHANS[i].command(Command::Configure(hw)).await;
+        self.can.hw[i] = hw;
+        Ready(Ok(hw.to_config()))
+    }
+
+    pub(super) fn can_config(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+    ) -> RpcResult<CanConfig> {
+        Ready(self.can.hw[index(index_chain)].to_config())
+    }
+
+    pub(super) fn get_can_status(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+    ) -> GetResult<Status, ()> {
+        let i = index(index_chain);
+        let s = crate::can::status(&CHANS[i]);
+        Value(bedrock_can::status(
+            self.can.hw[i].mode,
+            s.state,
+            s.last_error,
+            s.last_data_error,
+        ))
+    }
+
+    // rx: a counted stream fed from the CAN task's queue by [ServerState::can_pump]
+
+    pub(super) fn can_rx(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        _index_chain: [UNib32; 1],
+    ) -> RpcResult<()> {
+        Ready(())
+    }
+
+    pub(super) fn close_can_rx(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        _index_chain: [UNib32; 1],
+    ) {
+    }
+
+    pub(super) fn stream_can_rx(
+        &mut self,
+        index_chain: [UNib32; 1],
+    ) -> &mut ww_stream::tx::Counted {
+        &mut self.can.rx[index(index_chain)]
+    }
+
+    // tx: a credit sink in front of the CAN task's queue; credit comes back when a frame is in the controller
+
+    pub(super) fn credit_can_tx(
+        &mut self,
+        index_chain: [UNib32; 1],
+    ) -> &mut ww_stream::sink::SinkCredit {
+        &mut self.can.tx_credit[index(index_chain)]
+    }
+
+    pub(super) fn sideband_can_tx(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        _index_chain: [UNib32; 1],
+        _sideband: ww_client_server::StreamSideband,
+    ) -> Option<ww_client_server::StreamSideband> {
+        None
+    }
+
+    /// Queues a frame for the CAN task, or drops it (with its credit back) when it can't be sent as configured.
+    pub(super) fn write_can_tx(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+        value: ww_can_bus::TxFrame<'_>,
+    ) {
+        let i = index(index_chain);
+        let credit = self.can.tx_credit[i].last_item_len();
+        let hw = &self.can.hw[i];
+        let frame = if !bedrock_can::mode_sends(hw.mode) {
+            Err(TxReject::Unsupported)
+        } else {
+            bedrock_can::tx_plan(&value.frame, hw.data.is_some()).and_then(|plan| {
+                crate::can::tx_frame(&plan, value.frame.data.as_slice())
+                    .ok_or(TxReject::Unsupported)
+            })
+        };
+        match frame {
+            Ok(frame) => {
+                if CHANS[i]
+                    .tx
+                    .try_send(crate::can::TxItem { frame, credit })
+                    .is_err()
+                {
+                    // can't happen with the credit in bytes the queue holds (TX_CREDIT)
+                    cnt!(can_tx_queue_full: u32);
+                    self.can.tx_credit[i].free(credit);
+                }
+            }
+            Err(_) => {
+                cnt!(can_tx_rejected: u32);
+                self.can.tx_credit[i].free(credit);
+            }
+        }
+    }
+
+    pub(super) async fn can_set_mode(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+        mode: Mode,
+    ) -> RpcResult<Result<Mode, CanError<'_>>> {
+        let i = index(index_chain);
+        let mode = match bedrock_can::check_mode(mode) {
+            Ok(m) => m,
+            Err(e) => return Ready(Err(e)),
+        };
+        let hw = HwConfig {
+            mode,
+            ..self.can.hw[i]
+        };
+        CHANS[i].command(Command::Configure(hw)).await;
+        self.can.hw[i] = hw;
+        Ready(Ok(mode))
+    }
+
+    pub(super) async fn can_recover(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+    ) -> RpcResult<Result<(), CanError<'_>>> {
+        match CHANS[index(index_chain)].command(Command::Recover).await {
+            Reply::NotBusOff => Ready(Err(wrong_state("not bus-off"))),
+            _ => Ready(Ok(())),
+        }
+    }
+
+    pub(super) async fn can_tx_abort(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+    ) -> RpcResult<u32> {
+        match CHANS[index(index_chain)].command(Command::TxAbort).await {
+            Reply::Aborted(n) => Ready(n),
+            _ => Ready(0),
+        }
+    }
+
+    pub(super) fn can_protocol_status(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+    ) -> RpcResult<ProtocolStatus> {
+        let i = index(index_chain);
+        let s = crate::can::status(&CHANS[i]);
+        let hw = &self.can.hw[i];
+        let status = bedrock_can::status(hw.mode, s.state, s.last_error, s.last_data_error);
+        Ready(ProtocolStatus {
+            status,
+            activity: s.activity,
+            error_log: Some(crate::can::take_error_log(&CHANS[i])),
+            last_fd_frame: s
+                .fd_frame
+                .map(|(esi, brs)| ww_can_bus::FdFrameFlags { esi, brs }),
+            protocol_exception: s.exception,
+            tdc_value: hw.data.and_then(|d| d.tdc).map(|_| s.tdc_value),
+            memory_errors: None,
+        })
+    }
+
+    pub(super) async fn can_set_filters(
+        &mut self,
+        _cx: &mut Context<'_, impl EventOut>,
+        index_chain: [UNib32; 1],
+        filters: ww_can_bus::FilterConfig<'_>,
+    ) -> RpcResult<Result<(), CanError<'_>>> {
+        let i = index(index_chain);
+        let filters = match HwFilters::map(&filters, &crate::can::controller()) {
+            Ok(f) => f,
+            Err(e) => return Ready(Err(e)),
+        };
+        CHANS[i].command(Command::SetFilters(filters)).await;
+        self.can.filters[i] = filters;
+        Ready(Ok(()))
+    }
+
+    /// Server loop: credit of sent frames back to the host, received frames out on `rx`, for every channel.
+    pub(super) async fn can_pump(&mut self, out: &mut impl EventOut) {
+        for i in 0..COUNT {
+            self.can_pump_one(i, out).await;
+        }
+    }
+
+    async fn can_pump_one(&mut self, i: usize, out: &mut impl EventOut) {
+        let ch = &CHANS[i];
+        let freed = ch.tx_freed.swap(0, Ordering::Relaxed);
+        if freed > 0 {
+            self.can.tx_credit[i].free(freed);
+            if let Some(ack) = self.can.tx_credit[i].take_ack()
+                && super::server_impl::stream_data_ser()
+                    .can(i as u32)
+                    .tx_sideband_send(ack, out)
+                    .await
+                    .is_err()
+            {
+                cnt!(can_tx_ack_errors: u32);
+            }
+        }
+        for _ in 0..RX_PER_TURN {
+            let Ok(item) = ch.rx.try_receive() else {
+                break;
+            };
+            let lost = ch.rx_lost.swap(0, Ordering::Relaxed);
+            if lost > 0 {
+                self.can.rx[i].lost(lost as u64);
+            }
+            let h = &item.header;
+            let Some(id) = can_id(&h.id) else {
+                continue;
+            };
+            let kind = if matches!(h.frame_format, FrameFormat::FD) {
+                FrameKind::Fd {
+                    brs: h.bit_rate_switching,
+                    esi: h.error_passive,
+                }
+            } else if h.rtr {
+                FrameKind::Remote {
+                    len: U4::new(h.len.min(8)).unwrap_or(U4::zero()),
+                }
+            } else {
+                FrameKind::Data
+            };
+            let frame = RxFrame {
+                frame: Frame {
+                    id,
+                    kind,
+                    data: MaxLen::new_unchecked(RefVec::new_bytes(item.data())),
+                },
+                // the element that matched (FIDX), back to the host's list
+                filter: h
+                    .filter_index
+                    .and_then(|f| self.can.filters[i].host_index(id.is_extended(), f))
+                    .map(UNib32),
+            };
+            let t = Second::micro(item.t.as_micros() as u32);
+            if super::server_impl::stream_data_ser()
+                .can(i as u32)
+                .rx_send(&mut self.can.rx[i], &frame, 1, Some(t), out)
+                .await
+                .is_err()
+            {
+                cnt!(can_rx_send_errors: u32);
+                self.can.rx[i].lost(1);
+            }
+        }
+        // more than a turn's worth waiting: come back at once
+        if !ch.rx.is_empty() {
+            crate::can::WAKE.signal(());
+        }
+    }
+}
+
+fn can_id(id: &Id) -> Option<CanId> {
+    match id {
+        Id::Standard(s) => CanId::standard(s.as_raw()),
+        Id::Extended(e) => CanId::extended(e.as_raw()),
+    }
+}

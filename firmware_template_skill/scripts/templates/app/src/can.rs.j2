@@ -1,0 +1,960 @@
+{% set c = s.can %}
+{% set h7 = c.family == "h7" %}
+{% set many = c.count > 1 %}
+//! {{ c.names }} behind `can[]` ({{ "indices " ~ (c.chans | map(attribute="index") | join(", ")) if many else "index 0" }}): the task that owns each
+//! controller (the `mcan` driver), the queues between it and the WireWeaver server (`src/ww/can.rs`), the
+//! transceiver's standby pin.
+//!
+//! The tasks run on their own interrupt executor ([start], {{ c.executor }}), above the server and USB, and are woken by
+//! the FDCAN interrupts. Each moves received frames into its [Chan::rx], puts what the server queued in [Chan::tx]
+//! into the transmit FIFO, and is the only one that switches its controller's mode ([command]). What is lost on the
+//! way is counted ([Chan::rx_lost], `cnt` counters). The server reads the status directly ([status], through mcan's
+//! `StatusReader`); [WAKE] tells it there are frames or credit to pass on.
+//!
+//! The checks of host input and the mappings are in `bedrock_can` (host-tested); this module only turns them into
+//! mcan calls. Ported from the B135 firmware (vb135_fdcan_iso_usb_fw `b135_fw/src/can.rs`).
+
+{% if h7 %}
+use bedrock_can::{
+    Controller, HwAction, HwConfig, HwFilter, HwFilters, HwMatch, HwState, Recovery,
+};
+{% else %}
+use bedrock_can::{Controller, HwConfig, HwFilters, HwState, Recovery};
+{% endif %}
+use cnt::cnt;
+use core::sync::atomic::Ordering;
+use defmt::{info, unwrap, warn};
+use embassy_futures::select::{Either, Either4, select, select4};
+{% if c.standby_any %}
+use embassy_stm32::gpio::{Flex, Level, Output, Speed};
+{% else %}
+use embassy_stm32::gpio::Flex;
+{% endif %}
+use embassy_stm32::interrupt::{InterruptExt, Priority};
+use embassy_stm32::peripherals::{{ "{" ~ (c.periphs | join(", ")) ~ "}" if c.periphs | length > 1 else c.periphs[0] }};
+use embassy_stm32::{Peri, interrupt};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
+use embassy_sync::once_lock::OnceLock;
+use embassy_sync::signal::Signal;
+use embassy_time::{Instant, Timer};
+use mcan::config::{FdCanConfig, FrameTransmissionConfig, GlobalFilter, NonMatchingFilter};
+use mcan::pac::message_ram::{Esi, FrameFormat};
+{% if h7 %}
+use mcan::{
+    BusMonitoringMode, ConfigMode, DataBitTiming, DataFieldSize, ExtendedFilter, ExtendedId,
+    ExternalLoopbackMode, FdCan, FdCanInstance, FdCanInstances, FilterAction, FilterMatch, Id,
+    InternalLoopbackMode, InterruptLine, Interrupts, MessageRamLayout, NominalBitTiming,
+    NormalOperationMode, RestrictedOperationMode, RxFifo, RxFrameHeader, StandardFilter,
+    StandardId, StatusReader, TransceiverDelayCompensation, TxFrameHeader,
+};
+{% else %}
+use mcan::{
+    BusMonitoringMode, ConfigMode, DataBitTiming, ExtendedId, ExternalLoopbackMode, FdCan,
+    FdCanInstance, FdCanInstances, Id, InternalLoopbackMode, InterruptLine, Interrupts,
+    NominalBitTiming, NormalOperationMode, RestrictedOperationMode, RxFifo, RxFrameHeader,
+    StandardId, StatusReader, TransceiverDelayCompensation, TxFrameHeader,
+};
+{% endif %}
+{% if c.m0 %}
+use portable_atomic::AtomicU32; // fetch_add on the Cortex-M0+: critical sections
+{% else %}
+use core::sync::atomic::AtomicU32;
+{% endif %}
+use ww_can_bus::Mode;
+
+/// Channels: `can[i]` is [CHANS]`[i]`.
+pub const COUNT: usize = {{ c.count }};
+/// Received frames the queue to the server holds per channel.
+pub const RX_QUEUE: usize = {{ c.rx_queue }};
+/// Frames the transmit queue holds per channel; [TX_CREDIT] bytes of the smallest `TxFrame` fit.
+pub const TX_QUEUE: usize = {{ c.tx_queue }};
+/// Credit of `can[i].tx` in bytes of serialized `TxFrame`s: the smallest one (a standard ID, no data, no marker)
+/// takes 4 bytes, so [TX_QUEUE] frames always hold it.
+pub const TX_CREDIT: u32 = {{ c.tx_credit }};
+/// How long a reconfiguration waits for frames already in the controller to go out before dropping them.
+const TX_DRAIN_MS: u64 = 20;
+/// How often the task looks for bus-off with a delayed recovery.
+const BUS_OFF_POLL_MS: u64 = 10;
+/// What wakes the task on the bus: a frame in a receive FIFO, one lost, room in the transmit FIFO.
+const EVENTS: Interrupts = Interrupts::RX_FIFO0_NEW_MESSAGE
+    .union(Interrupts::RX_FIFO1_NEW_MESSAGE)
+    .union(Interrupts::RX_FIFO0_MESSAGE_LOST)
+    .union(Interrupts::RX_FIFO1_MESSAGE_LOST)
+    .union(Interrupts::TX_COMPLETED)
+    .union(Interrupts::TX_CANCELLATION_FINISHED);
+
+/// What every channel's controller can do: the FDCAN kernel clock (`fdcan_ker_ck`, the same for all instances) and
+/// the message RAM layout [start] gives it.
+pub fn controller() -> Controller {
+    Controller::{{ c.layout }}(embassy_stm32::rcc::frequency::<{{ c.periphs[0] }}>().0)
+}
+
+/// A received frame and when it was read out of the controller.
+pub struct RxItem {
+    pub header: RxFrameHeader,
+    /// `header.len` bytes (none for a remote frame).
+    pub data: [u8; 64],
+    pub t: Instant,
+}
+
+impl RxItem {
+    pub fn data(&self) -> &[u8] {
+        if self.header.rtr {
+            return &[];
+        }
+        &self.data[..(self.header.len as usize).min(64)]
+    }
+}
+
+/// A frame for the controller: header and `len` bytes (the DLC of a remote frame, which sends no data).
+pub struct TxFrame {
+    pub header: TxFrameHeader,
+    pub data: [u8; 64],
+    pub len: u8,
+}
+
+/// A frame to send and the credit it took on `tx`, given back when it is in the controller (or dropped).
+pub struct TxItem {
+    pub frame: TxFrame,
+    pub credit: u32,
+}
+
+/// What the server asks of a channel's task. The filter list makes it large; it lives in [Chan]'s one command slot,
+/// no heap.
+#[allow(clippy::large_enum_variant)]
+pub enum Command {
+    /// Off the bus, apply, back in the configuration's mode; frames queued in `tx` stay queued.
+    Configure(HwConfig),
+    /// The same with a new filter list.
+    SetFilters(HwFilters),
+    /// Bus-off recovery now.
+    Recover,
+    /// Drop every frame queued.
+    TxAbort,
+}
+
+/// The task's answer to a [Command].
+pub enum Reply {
+    Done,
+    /// `Recover` while not bus-off.
+    NotBusOff,
+    /// `TxAbort`: frames dropped.
+    Aborted(u32),
+}
+
+/// One channel's queues and state, shared by its task and the server.
+pub struct Chan {
+    /// Task -> server: received frames.
+    pub rx: Channel<CriticalSectionRawMutex, RxItem, RX_QUEUE>,
+    /// Received frames lost before [Chan::rx] (a full receive FIFO in the controller, a full `rx`), for the stream
+    /// head.
+    pub rx_lost: AtomicU32,
+    /// Server -> task: frames to send.
+    pub tx: Channel<CriticalSectionRawMutex, TxItem, TX_QUEUE>,
+    /// Credit bytes of frames handed to the controller or dropped, for the server to give back.
+    pub tx_freed: AtomicU32,
+    commands: Channel<CriticalSectionRawMutex, Command, 1>,
+    reply: Signal<CriticalSectionRawMutex, Reply>,
+    /// The controller's status, readable while its task owns it.
+    status: OnceLock<StatusReader>,
+    /// `ECR.CEL` is cleared by every read: the errors counted by reads for the status, until `protocol_status` takes
+    /// them.
+    error_log: AtomicU32,
+}
+
+impl Chan {
+    const fn new() -> Chan {
+        Chan {
+            rx: Channel::new(),
+            rx_lost: AtomicU32::new(0),
+            tx: Channel::new(),
+            tx_freed: AtomicU32::new(0),
+            commands: Channel::new(),
+            reply: Signal::new(),
+            status: OnceLock::new(),
+            error_log: AtomicU32::new(0),
+        }
+    }
+
+    /// Runs `cmd` on the channel's task and waits for its answer (a reconfiguration takes up to [TX_DRAIN_MS] and 11
+    /// recessive bits). Only the server calls it, one command at a time.
+    pub async fn command(&self, cmd: Command) -> Reply {
+        self.commands.send(cmd).await;
+        self.reply.wait().await
+    }
+
+    /// Hands credit back to the server.
+    fn free(&self, credit: u32) {
+        self.tx_freed.fetch_add(credit, Ordering::Relaxed);
+        WAKE.signal(());
+    }
+}
+
+/// The channels, in `can[]` order: {{ c.names }}.
+pub static CHANS: [Chan; COUNT] = [const { Chan::new() }; COUNT];
+/// Wakes the server when a channel received frames or freed credit.
+pub static WAKE: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+
+static EXECUTOR: embassy_executor::InterruptExecutor = embassy_executor::InterruptExecutor::new();
+
+#[interrupt]
+unsafe fn {{ c.executor }}() {
+    // {{ c.executor }} is not used by this firmware: its interrupt runs the CAN executor
+    unsafe { EXECUTOR.on_interrupt() }
+}
+{% for irq in c.irqs %}
+
+#[interrupt]
+fn {{ irq.name }}() {
+  {% for name, line in irq.chans %}
+    mcan::on_interrupt(FdCanInstance::FdCan{{ name[5:] }}, InterruptLine::Line{{ line }});
+  {% endfor %}
+}
+{% endfor %}
+
+/// The FDCAN peripherals, their pins{{ " and the transceivers' standby pins" if c.standby_any }}.
+pub struct CanParts {
+{% for ch in c.chans %}
+    pub {{ ch.lower }}: Peri<'static, {{ ch.instance }}>,
+    pub {{ ch.lower }}_tx: Peri<'static, embassy_stm32::peripherals::{{ ch.tx }}>,
+    pub {{ ch.lower }}_rx: Peri<'static, embassy_stm32::peripherals::{{ ch.rx }}>,
+  {% if ch.standby %}
+    /// {{ ch.transceiver ~ "'s" if ch.transceiver else "The transceiver's" }} standby input: {{ ch.standby_active }} puts it in standby
+    pub {{ ch.lower }}_standby: Peri<'static, embassy_stm32::peripherals::{{ ch.standby }}>,
+  {% endif %}
+{% endfor %}
+}
+
+/// An FDCAN's pins in their alternate function, kept for good (embassy's `TxPin` / `RxPin` know the AF number).
+fn can_pins<T: embassy_stm32::can::Instance>(
+    tx: Peri<'static, impl embassy_stm32::can::TxPin<T>>,
+    rx: Peri<'static, impl embassy_stm32::can::RxPin<T>>,
+) {
+    use embassy_stm32::gpio::{AfType, OutputType, Pull{{ "" if c.standby_any else ", Speed" }}};
+    let af = tx.af_num();
+    let mut pin = Flex::new(tx);
+    pin.set_as_af_unchecked(af, AfType::output(OutputType::PushPull, Speed::VeryHigh));
+    core::mem::forget(pin);
+    let af = rx.af_num();
+    let mut pin = Flex::new(rx);
+    pin.set_as_af_unchecked(af, AfType::input(Pull::None));
+    core::mem::forget(pin);
+}
+
+/// Starts the CAN tasks on their interrupt executor (above thread mode, below the FDCAN and USB interrupts), each
+/// channel in the default configuration ([bedrock_can::default_config]).
+pub fn start(parts: CanParts) {
+    // embassy-stm32 owns RCC (mcan without its `rcc` feature): the FDCAN clock (one for all instances) on and reset;
+    // the kernel clock is selected in main.rs
+{% for ch in c.chans %}
+    let _owned = parts.{{ ch.lower }};
+{% endfor %}
+    embassy_stm32::rcc::enable_and_reset::<{{ c.periphs[0] }}>();
+{% for ch in c.chans %}
+    can_pins::<{{ ch.instance }}>(parts.{{ ch.lower }}_tx, parts.{{ ch.lower }}_rx);
+{% endfor %}
+{% if h7 %}
+    let (mut instances, builder) = unwrap!(FdCanInstances::new());
+{% else %}
+    let mut instances = unwrap!(FdCanInstances::new());
+{% endif %}
+    let controller = controller();
+    info!("CAN: kernel clock {} Hz", controller.clock_hz);
+{% for irq in c.irqs %}
+    interrupt::{{ irq.name }}.set_priority(Priority::{{ c.priority[0] }});
+{% endfor %}
+    interrupt::{{ c.executor }}.set_priority(Priority::{{ c.priority[1] }});
+    let spawner = EXECUTOR.start(interrupt::{{ c.executor }});
+{% for ch in c.chans %}
+
+    // {{ ch.instance }}: can[{{ ch.index }}]
+  {% if ch.standby %}
+    // the transceiver out of standby, for good
+    let standby = Output::new(parts.{{ ch.lower }}_standby, Level::{{ "Low" if ch.standby_active == "high" else "High" }}, Speed::Low);
+  {% endif %}
+    let can = unwrap!(instances.take(FdCanInstance::FdCan{{ ch.n }}));
+  {% if h7 %}
+    let (layout, builder) = unwrap!(ram_layout(builder, &controller));
+  {% endif %}
+    let can = match can.into_config_mode() {
+        Ok(can) => can,
+        Err((e, _)) => defmt::panic!("{{ ch.instance }} doesn't answer: {}", e),
+    };
+    unwrap!(CHANS[{{ ch.index }}].status.init(can.status_reader()).ok());
+    spawner.spawn(unwrap!(can_task(&CHANS[{{ ch.index }}], can, {{ "layout, " if h7 }}{{ "Some(standby)" if ch.standby else "None" }})));
+{% endfor %}
+{% if h7 %}
+    let _ = builder;
+{% endif %}
+{% for irq in c.irqs %}
+    // SAFETY: the handler above only calls mcan's interrupt handler
+    unsafe { interrupt::{{ irq.name }}.enable() };
+{% endfor %}
+}
+{% if h7 %}
+
+/// The next part of the message RAM for one instance, sizes in [controller]. A transmit FIFO and no dedicated transmit
+/// buffers, so ES0491 2.22.2 "Tx FIFO messages inverted under specific buffer usage and priority setting" (dedicated
+/// Tx buffers next to the FIFO) doesn't apply.
+fn ram_layout(
+    builder: mcan::MessageRamBuilder<mcan::RamBuilderInitialState>,
+    c: &Controller,
+) -> Result<
+    (
+        MessageRamLayout,
+        mcan::MessageRamBuilder<mcan::RamBuilderInitialState>,
+    ),
+    mcan::MessageRamBuilderError,
+> {
+    builder
+        .allocate_11bit_filters(c.standard_filters)?
+        .allocate_29bit_filters(c.extended_filters)?
+        .allocate_rx_fifo0_buffers(c.rx_fifo0, DataFieldSize::_64Bytes)?
+        .allocate_rx_fifo1_buffers(c.rx_fifo1, DataFieldSize::_64Bytes)?
+        .skip_dedicated_buffers()
+        .allocate_tx_event_fifo_buffers(0)?
+        .tx_buffer_element_size(DataFieldSize::_64Bytes)
+        .allocate_fifo_or_queue(c.tx_fifo)?
+        .allocate_triggers(0)
+}
+{% endif %}
+
+/// The controller on the bus, in the mode the host chose.
+enum Running {
+    Normal(FdCan<NormalOperationMode>),
+    Restricted(FdCan<RestrictedOperationMode>),
+    ListenOnly(FdCan<BusMonitoringMode>),
+    InternalLoopback(FdCan<InternalLoopbackMode>),
+    ExternalLoopback(FdCan<ExternalLoopbackMode>),
+}
+
+/// `$body` with `$c` bound to the controller, whatever its mode.
+macro_rules! each {
+    ($running:expr, $c:ident => $body:expr) => {
+        match $running {
+            Running::Normal($c) => $body,
+            Running::Restricted($c) => $body,
+            Running::ListenOnly($c) => $body,
+            Running::InternalLoopback($c) => $body,
+            Running::ExternalLoopback($c) => $body,
+        }
+    };
+}
+
+/// `$body` with `$c` bound to the controller in a mode that sends, `$otherwise` in the others.
+macro_rules! sending {
+    ($running:expr, $c:ident => $body:expr, $otherwise:expr) => {
+        match $running {
+            Running::Normal($c) => $body,
+            Running::InternalLoopback($c) => $body,
+            Running::ExternalLoopback($c) => $body,
+            Running::Restricted(_) | Running::ListenOnly(_) => $otherwise,
+        }
+    };
+}
+
+impl Running {
+    /// Out of Config mode into `mode` (one of the modes [bedrock_can::mode_on_bus] accepts).
+    fn start(
+        can: FdCan<ConfigMode>,
+        mode: Mode,
+    ) -> Result<Running, (mcan::Error, FdCan<ConfigMode>)> {
+        Ok(match mode {
+            Mode::Restricted => Running::Restricted(can.into_restricted()?),
+            Mode::ListenOnly => Running::ListenOnly(can.into_bus_monitoring()?),
+            Mode::InternalLoopback => Running::InternalLoopback(can.into_internal_loopback()?),
+            Mode::ExternalLoopback => Running::ExternalLoopback(can.into_external_loopback()?),
+            _ => Running::Normal(can.into_normal()?),
+        })
+    }
+
+    /// Back to Config mode; frames still in the transmit FIFO are dropped.
+    fn stop(self) -> Result<FdCan<ConfigMode>, (mcan::Error, Running)> {
+        match self {
+            Running::Normal(c) => c
+                .into_config_mode()
+                .map_err(|(e, c)| (e, Running::Normal(c))),
+            Running::Restricted(c) => c
+                .into_config_mode()
+                .map_err(|(e, c)| (e, Running::Restricted(c))),
+            Running::ListenOnly(c) => c
+                .into_config_mode()
+                .map_err(|(e, c)| (e, Running::ListenOnly(c))),
+            Running::InternalLoopback(c) => c
+                .into_config_mode()
+                .map_err(|(e, c)| (e, Running::InternalLoopback(c))),
+            Running::ExternalLoopback(c) => c
+                .into_config_mode()
+                .map_err(|(e, c)| (e, Running::ExternalLoopback(c))),
+        }
+    }
+}
+
+/// One channel: applies the configuration, runs on the bus or waits off it, until the server's next command.
+/// `_standby` holds the transceiver's standby pin at its level (a dropped `Output` would let it float).
+#[embassy_executor::task(pool_size = COUNT)]
+async fn can_task(
+    ch: &'static Chan,
+    mut can: FdCan<ConfigMode>,
+{% if h7 %}
+    layout: MessageRamLayout,
+{% endif %}
+    _standby: Option<{{ "Output<'static>" if c.standby_any else "Flex<'static>" }}>,
+) {
+    let controller = controller();
+    let mut hw = unwrap!(
+        bedrock_can::default_config(&controller),
+        "the FDCAN kernel clock can't make 250 kbit/s"
+    );
+    let mut filters = HwFilters::accept_all();
+    // a frame taken out of `tx` and not in the controller yet: kept across reconfigurations
+    let mut pending: Option<TxItem> = None;
+    loop {
+        apply(&mut can, &hw, &filters{{ ", layout" if h7 }});
+        info!(
+            "CAN: nominal {} bit/s, FD {}, on bus {}",
+            hw.nominal.bit_rate(controller.clock_hz),
+            hw.data.map(|d| d.timing.bit_rate(controller.clock_hz)),
+            bedrock_can::mode_on_bus(hw.mode)
+        );
+        let cmd = if bedrock_can::mode_on_bus(hw.mode) {
+            match Running::start(can, hw.mode) {
+                Ok(mut running) => {
+                    let cmd = run(ch, &mut running, &hw, &mut pending).await;
+                    drain_tx_hw(&mut running).await;
+                    can = stop(running).await;
+                    cmd
+                }
+                Err((e, c)) => {
+                    warn!("CAN: can't go on the bus: {}", e);
+                    cnt!(can_start_errors: u32);
+                    can = c;
+                    configured(ch, &mut pending).await
+                }
+            }
+        } else {
+            configured(ch, &mut pending).await
+        };
+        match cmd {
+            Command::Configure(new) => hw = new,
+            Command::SetFilters(new) => filters = new,
+            // handled where they come in
+            Command::Recover | Command::TxAbort => {}
+        }
+        ch.reply.signal(Reply::Done);
+    }
+}
+
+/// Back to Config mode; setting INIT can't fail on a clocked controller, but if it does, it is tried again.
+async fn stop(mut running: Running) -> FdCan<ConfigMode> {
+    loop {
+        match running.stop() {
+            Ok(can) => return can,
+            Err((e, r)) => {
+                warn!("CAN: can't leave the bus: {}", e);
+                cnt!(can_stop_errors: u32);
+                running = r;
+                Timer::after_millis(1).await;
+            }
+        }
+    }
+}
+
+/// On the bus: receives, sends, recovers from bus-off, answers `Recover` and `TxAbort`; returns the first command
+/// that needs the controller off the bus.
+async fn run(
+    ch: &'static Chan,
+    can: &mut Running,
+    hw: &HwConfig,
+    pending: &mut Option<TxItem>,
+) -> Command {
+    let sends = bedrock_can::mode_sends(hw.mode);
+    let mut bus_off_since: Option<Instant> = None;
+    loop {
+        receive(ch, can);
+        if sends {
+            send(ch, can, pending);
+        } else {
+            drop_queued(ch, pending);
+        }
+        // a frame in hand waits for room in the transmit FIFO (TX_COMPLETED), otherwise for the next one queued
+        let next_tx = async {
+            if pending.is_some() || !sends {
+                core::future::pending().await
+            } else {
+                ch.tx.receive().await
+            }
+        };
+        let tick = async {
+            match hw.recovery {
+                Recovery::AfterMs(_) => Timer::after_millis(BUS_OFF_POLL_MS).await,
+                _ => core::future::pending().await,
+            }
+        };
+        let r = select4(
+            ch.commands.receive(),
+            async { each!(&mut *can, c => c.wait_interrupts(EVENTS).await) },
+            next_tx,
+            tick,
+        )
+        .await;
+        match r {
+            Either4::First(Command::Recover) => ch.reply.signal(recover(can)),
+            Either4::First(Command::TxAbort) => {
+                ch.reply.signal(Reply::Aborted(abort(ch, can, pending)))
+            }
+            Either4::First(cmd) => return cmd,
+            Either4::Second(flags) => count_fifo_overruns(ch, flags),
+            Either4::Third(item) => *pending = Some(item),
+            Either4::Fourth(()) => {
+                if let Recovery::AfterMs(ms) = hw.recovery {
+                    recover_after(can, ms, &mut bus_off_since);
+                }
+            }
+        }
+    }
+}
+
+/// Off the bus (`Off`, `Config`): answers commands, drops what is queued for sending.
+async fn configured(ch: &'static Chan, pending: &mut Option<TxItem>) -> Command {
+    drop_queued(ch, pending);
+    loop {
+        match select(ch.commands.receive(), ch.tx.receive()).await {
+            Either::First(Command::Recover) => ch.reply.signal(Reply::NotBusOff),
+            Either::First(Command::TxAbort) => {
+                ch.reply.signal(Reply::Aborted(abort_queued(ch, pending)))
+            }
+            Either::First(cmd) => return cmd,
+            Either::Second(item) => {
+                cnt!(can_tx_dropped_off_bus: u32);
+                ch.free(item.credit);
+            }
+        }
+    }
+}
+
+/// Drops the frame in hand and the queue in a mode that doesn't send.
+fn drop_queued(ch: &Chan, pending: &mut Option<TxItem>) {
+    let n = abort_queued(ch, pending);
+    if n > 0 {
+        cnt!(can_tx_dropped_not_sending: u32 += n);
+    }
+}
+
+/// Moves received frames from both FIFOs into [Chan::rx].
+fn receive(ch: &Chan, can: &mut Running) {
+    let mut any = false;
+    for fifo in [RxFifo::Fifo0, RxFifo::Fifo1] {
+        loop {
+            let mut data = [0u8; 64];
+            let header = match each!(&mut *can, c => c.receive_fifo(fifo, &mut data)) {
+                Ok(Some((header, _))) => header,
+                Ok(None) => break,
+                Err(e) => {
+                    // every element is 64 bytes, the buffer too: can't happen
+                    warn!("CAN: receive: {}", e);
+                    cnt!(can_rx_errors: u32);
+                    break;
+                }
+            };
+            let item = RxItem {
+                header,
+                data,
+                t: Instant::now(),
+            };
+            if ch.rx.try_send(item).is_err() {
+                cnt!(can_rx_queue_full: u32);
+                ch.rx_lost.fetch_add(1, Ordering::Relaxed);
+            }
+            any = true;
+        }
+    }
+    if any {
+        WAKE.signal(());
+    }
+}
+
+/// A receive FIFO that was full when a frame came in: at least one frame lost (`IR.RFnL`, M_CAN has no count).
+fn count_fifo_overruns(ch: &Chan, flags: Interrupts) {
+    for fifo in [RxFifo::Fifo0, RxFifo::Fifo1] {
+        if flags.intersects(Interrupts::rx_fifo_message_lost(fifo)) {
+            cnt!(can_rx_fifo_overruns: u32);
+            ch.rx_lost.fetch_add(1, Ordering::Relaxed);
+            WAKE.signal(());
+        }
+    }
+}
+
+/// Puts the frame in hand and what the server queued into the transmit FIFO while it has room; credit goes back for
+/// every frame in the controller.
+fn send(ch: &Chan, can: &mut Running, pending: &mut Option<TxItem>) {
+    while let Some(item) = pending.take().or_else(|| ch.tx.try_receive().ok()) {
+        let f = &item.frame;
+        let data = &f.data[..(f.len as usize).min(64)];
+        match sending!(&mut *can, c => c.transmit(f.header, data), Err(mcan::Error::TxQueueFull)) {
+            Ok(_) => ch.free(item.credit),
+            Err(mcan::Error::TxQueueFull) => {
+                *pending = Some(item);
+                return;
+            }
+            Err(e) => {
+                // bedrock_can::tx_plan checked the frame: can't happen
+                warn!("CAN: transmit: {}", e);
+                cnt!(can_tx_errors: u32);
+                ch.free(item.credit);
+            }
+        }
+    }
+}
+
+/// Leaves bus-off `ms` after entering it (`Recovery::Immediate` is done by mcan's interrupt handler).
+fn recover_after(can: &mut Running, ms: u32, since: &mut Option<Instant>) {
+    if !each!(&*can, c => c.is_bus_off()) {
+        *since = None;
+        return;
+    }
+    let at = *since.get_or_insert_with(Instant::now);
+    if at.elapsed().as_millis() >= ms as u64 {
+        info!("CAN: bus-off for {} ms, recovering", ms);
+        if sending!(&mut *can, c => c.recover_from_bus_off(), Ok(false)).is_err() {
+            cnt!(can_recovery_errors: u32);
+        }
+        *since = None;
+    }
+}
+
+fn recover(can: &mut Running) -> Reply {
+    // bus-off set INIT: clearing it starts the recovery sequence (129 x 11 recessive bits)
+    match sending!(&mut *can, c => c.recover_from_bus_off(), Ok(false)) {
+        Ok(true) => Reply::Done,
+        Ok(false) => Reply::NotBusOff,
+        Err(e) => {
+            warn!("CAN: recovery: {}", e);
+            cnt!(can_recovery_errors: u32);
+            Reply::Done
+        }
+    }
+}
+
+/// Drops the frame in hand and the queue; the number dropped.
+fn abort_queued(ch: &Chan, pending: &mut Option<TxItem>) -> u32 {
+    let mut n = 0;
+    if let Some(item) = pending.take() {
+        ch.free(item.credit);
+        n += 1;
+    }
+    while let Ok(item) = ch.tx.try_receive() {
+        ch.free(item.credit);
+        n += 1;
+    }
+    n
+}
+
+/// Drops the queue, the frame in hand and what the controller hasn't sent yet.
+fn abort(ch: &Chan, can: &mut Running, pending: &mut Option<TxItem>) -> u32 {
+    abort_queued(ch, pending) + sending!(&mut *can, c => c.cancel_pending(), 0)
+}
+
+/// Before leaving the bus: waits a little for the frames in the controller to go out; what is left is cancelled
+/// (leaving for Config mode would clear the requests too) and counted.
+async fn drain_tx_hw(can: &mut Running) {
+    let start = Instant::now();
+    // restricted and listen-only never send (TXBRP is held in reset)
+    while !sending!(&*can, c => c.is_idle(), true) {
+        if start.elapsed().as_millis() >= TX_DRAIN_MS {
+            let left = sending!(&mut *can, c => c.cancel_pending(), 0);
+            warn!("CAN: {} frames dropped on reconfiguration", left);
+            cnt!(can_tx_dropped_reconfigure: u32 += left);
+            return;
+        }
+        Timer::after_micros(200).await;
+    }
+}
+
+/// `hw` and `filters` into the controller, which is in Config mode.
+{% if h7 %}
+fn apply(
+    can: &mut FdCan<ConfigMode>,
+    hw: &HwConfig,
+    filters: &HwFilters,
+    layout: MessageRamLayout,
+) {
+{% else %}
+fn apply(can: &mut FdCan<ConfigMode>, hw: &HwConfig, filters: &HwFilters) {
+{% endif %}
+    let config = match mcan_config(hw, filters{{ ", layout" if h7 }}) {
+        Ok(c) => c,
+        Err(e) => {
+            // bedrock_can checked the timing against the same ranges: can't happen
+            warn!("CAN: bit timing refused by mcan: {}", e);
+            cnt!(can_config_errors: u32);
+            return;
+        }
+    };
+    if let Err(e) = can.apply_config(config) {
+        warn!("CAN: apply_config: {}", e);
+        cnt!(can_config_errors: u32);
+    }
+{% if h7 %}
+    let c = controller();
+    for (i, f) in filters
+        .standard
+        .iter()
+        .take(c.standard_filters as usize)
+        .enumerate()
+    {
+        if can
+            .set_standard_filter(i as u8, f.as_ref().and_then(standard_filter))
+            .is_err()
+        {
+            cnt!(can_config_errors: u32);
+        }
+    }
+    for (i, f) in filters
+        .extended
+        .iter()
+        .take(c.extended_filters as usize)
+        .enumerate()
+    {
+        if can
+            .set_extended_filter(i as u8, f.as_ref().and_then(extended_filter))
+            .is_err()
+        {
+            cnt!(can_config_errors: u32);
+        }
+    }
+{% else %}
+    // the G0's filter elements aren't in mcan yet (Controller::g0 has none): the global filter only
+{% endif %}
+}
+
+/// The mcan configuration for `hw`: the ranges were checked against `bedrock_can::NOMINAL` / `DATA`, mcan checks
+/// them again.
+{% if h7 %}
+fn mcan_config(
+    hw: &HwConfig,
+    filters: &HwFilters,
+    layout: MessageRamLayout,
+) -> Result<FdCanConfig, mcan::BitTimingError> {
+{% else %}
+fn mcan_config(hw: &HwConfig, filters: &HwFilters) -> Result<FdCanConfig, mcan::BitTimingError> {
+{% endif %}
+    let n = &hw.nominal;
+    let mut config = FdCanConfig::default()
+        .set_nominal_bit_timing(NominalBitTiming::new(n.prescaler, n.seg1, n.seg2, n.sjw)?)
+        .set_frame_transmit(FrameTransmissionConfig::ClassicCanOnly)
+        .set_non_iso_mode(false);
+    if let Some(d) = &hw.data {
+        let t = &d.timing;
+        // DATA limits: prescaler and seg1 at most 32
+        let mut dbtr = DataBitTiming::new(t.prescaler as u8, t.seg1 as u8, t.seg2, t.sjw)?;
+        if let Some((offset, window)) = d.tdc {
+            dbtr = dbtr.with_tdc(TransceiverDelayCompensation::new(offset, window)?)?;
+        }
+        config = config
+            .set_data_bit_timing(dbtr)
+            .set_frame_transmit(FrameTransmissionConfig::AllowFdCanAndBRS)
+            .set_non_iso_mode(!d.iso);
+    }
+    {{ "config = config" if h7 else "Ok(config" }}
+{% if h7 %}
+        // one_shot is DAR mode. ES0491 2.22.3 "DAR mode transmission failure due to lost arbitration" (A on revisions
+        // A, Z): "the transmission may fail due to lost arbitration at the first two identifier bits"; the workaround
+        // (clear TRPx, set CFx, send again) is not done here, such a frame is lost like any one-shot frame that loses
+        // arbitration
+{% endif %}
+        .set_automatic_retransmit(!hw.one_shot)
+        .set_transmit_pause(hw.tx_pause)
+        // off unless the host asks: {{ "ES0491 2.22.1" if h7 else "ES0548 2.15.1" }} "Desynchronization under specific condition with edge
+        // filtering enabled" (A on every revision), workaround "Disable edge filtering or wait for frame
+        // retransmission"
+        .set_edge_filtering(hw.edge_filtering)
+        .set_protocol_exception_handling(hw.protocol_exception)
+        // received frames are timestamped when the task reads them out (embassy-time, 1 µs): the controller's
+        // timestamp counter runs in bit times
+        .set_automatic_bus_off_recovery(hw.recovery == Recovery::Immediate)
+        .set_interrupts(EVENTS)
+        .set_global_filter(GlobalFilter {
+            handle_standard_frames: non_matching(filters.non_matching_standard),
+            handle_extended_frames: non_matching(filters.non_matching_extended),
+            reject_remote_standard_frames: filters.reject_remote,
+            reject_remote_extended_frames: filters.reject_remote,
+        }){{ ";" if h7 else ")" }}
+{% if h7 %}
+    config.layout = layout;
+    Ok(config)
+{% endif %}
+}
+
+fn non_matching(n: Option<u8>) -> NonMatchingFilter {
+    match n {
+        Some(0) => NonMatchingFilter::IntoRxFifo0,
+        Some(_) => NonMatchingFilter::IntoRxFifo1,
+        None => NonMatchingFilter::Reject,
+    }
+}
+{% if h7 %}
+
+fn action(a: HwAction) -> FilterAction {
+    match a {
+        HwAction::Fifo {
+            fifo: 0,
+            priority: false,
+        } => FilterAction::StoreInFifo0,
+        HwAction::Fifo {
+            fifo: _,
+            priority: false,
+        } => FilterAction::StoreInFifo1,
+        HwAction::Fifo {
+            fifo: 0,
+            priority: true,
+        } => FilterAction::SetPriorityAndStoreInFifo0,
+        HwAction::Fifo {
+            fifo: _,
+            priority: true,
+        } => FilterAction::SetPriorityAndStoreInFifo1,
+        HwAction::Reject => FilterAction::Reject,
+    }
+}
+
+/// The element for a mapped filter; IDs and masks were checked to be 11 / 29 bits (`None` can't happen).
+fn standard_filter(f: &HwFilter) -> Option<StandardFilter> {
+    let id = |raw: u32| StandardId::new(u16::try_from(raw).ok()?);
+    let matching = match f.matching {
+        HwMatch::Range { from, to } => FilterMatch::Range {
+            from: id(from)?,
+            to: id(to)?,
+        },
+        HwMatch::Dual(a, b) => FilterMatch::Dual(id(a)?, id(b)?),
+        HwMatch::Mask { id: v, mask } => FilterMatch::Mask {
+            id: id(v)?,
+            mask: id(mask)?,
+        },
+    };
+    Some(StandardFilter {
+        matching,
+        action: action(f.action),
+    })
+}
+
+fn extended_filter(f: &HwFilter) -> Option<ExtendedFilter> {
+    let matching = match f.matching {
+        HwMatch::Range { from, to } => FilterMatch::Range {
+            from: ExtendedId::new(from)?,
+            to: ExtendedId::new(to)?,
+        },
+        HwMatch::Dual(a, b) => FilterMatch::Dual(ExtendedId::new(a)?, ExtendedId::new(b)?),
+        HwMatch::Mask { id, mask } => FilterMatch::Mask {
+            id: ExtendedId::new(id)?,
+            mask: ExtendedId::new(mask)?,
+        },
+    };
+    Some(ExtendedFilter {
+        matching,
+        action: action(f.action),
+    })
+}
+{% endif %}
+
+/// The frame for a checked [bedrock_can::TxPlan] and the host's data (at most the plan's length, zero-padded).
+pub fn tx_frame(plan: &bedrock_can::TxPlan, data: &[u8]) -> Option<TxFrame> {
+    let id = if plan.extended {
+        Id::Extended(ExtendedId::new(plan.id)?)
+    } else {
+        Id::Standard(StandardId::new(u16::try_from(plan.id).ok()?)?)
+    };
+    let mut bytes = [0u8; 64];
+    let n = data.len().min(bytes.len());
+    bytes[..n].copy_from_slice(&data[..n]);
+    Some(TxFrame {
+        header: TxFrameHeader {
+            frame_format: if plan.fd {
+                FrameFormat::FD
+            } else {
+                FrameFormat::Classic
+            },
+            id,
+            bit_rate_switching: plan.brs,
+            error_state: Esi::EsiDependsOnErrorPassive,
+            remote: plan.rtr,
+            marker: None,
+        },
+        data: bytes,
+        len: plan.len,
+    })
+}
+
+// ---- status, read by the server ----
+
+/// What a read of the status found.
+pub struct Snapshot {
+    pub state: HwState,
+    /// Last errors since the last read (`PSR.LEC` / `DLEC`, kept by mcan across its own reads).
+    pub last_error: Option<ww_can_bus::ProtocolError>,
+    pub last_data_error: Option<ww_can_bus::ProtocolError>,
+    pub activity: ww_can_bus::Activity,
+    /// ESI and BRS of the last FD frame received, if one was.
+    pub fd_frame: Option<(bool, bool)>,
+    pub exception: bool,
+    pub tdc_value: u8,
+}
+
+/// Reads a channel's status; before its task started, all quiet.
+pub fn status(ch: &Chan) -> Snapshot {
+    let Some(reader) = ch.status.try_get() else {
+        return Snapshot {
+            state: HwState::default(),
+            last_error: None,
+            last_data_error: None,
+            activity: ww_can_bus::Activity::Synchronizing,
+            fd_frame: None,
+            exception: false,
+            tdc_value: 0,
+        };
+    };
+    let p = reader.protocol_status();
+    let e = reader.error_counters();
+    ch.error_log
+        .fetch_add(e.error_logging as u32, Ordering::Relaxed);
+    Snapshot {
+        state: HwState {
+            bus_off: p.bus_off,
+            passive: p.error_passive,
+            warning: p.error_warning,
+            tec: e.transmit,
+            rec: e.receive,
+        },
+        last_error: bedrock_can::protocol_error(lec(p.last_error)),
+        last_data_error: bedrock_can::protocol_error(lec(p.data_last_error)),
+        activity: bedrock_can::activity(match p.activity {
+            mcan::Activity::Synchronizing => 0,
+            mcan::Activity::Idle => 1,
+            mcan::Activity::Receiver => 2,
+            mcan::Activity::Transmitter => 3,
+        }),
+        fd_frame: p.received_fd.then_some((p.received_esi, p.received_brs)),
+        exception: p.protocol_exception,
+        tdc_value: p.tdc_value,
+    }
+}
+
+/// Errors counted since the last call (`ECR.CEL`, saturating like the register).
+pub fn take_error_log(ch: &Chan) -> u8 {
+    ch.error_log.swap(0, Ordering::Relaxed).min(255) as u8
+}
+
+/// The raw `PSR.LEC` code bedrock_can maps.
+fn lec(code: mcan::LastErrorCode) -> u8 {
+    use mcan::LastErrorCode as L;
+    match code {
+        L::NoError => 0,
+        L::Stuff => 1,
+        L::Form => 2,
+        L::Ack => 3,
+        L::Bit1 => 4,
+        L::Bit0 => 5,
+        L::Crc => 6,
+        L::NoChange => 7,
+    }
+}

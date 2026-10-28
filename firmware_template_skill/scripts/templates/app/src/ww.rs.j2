@@ -6,10 +6,11 @@
 {% set u_id = s.uid %}
 {% set streams = d.log %}
 {% set settings = o.settings_flash %}
-{% set arms = 1 + (1 if streams else 0) + (1 if settings else 0) %}
+{% set arms = 1 + (1 if streams else 0) + (1 if settings else 0) + (1 if s.can else 0) %}
 {% set pins = s.pins %}
 {% set leds = s.leds %}
 {% set clock = s.clock %}
+{% set can = s.can %}
 //! WireWeaver server: implements `{{ ww.krate }}::{{ ww.trait }}` (defined in `../{{ ww.api }}/src/lib.rs`) for
 {% if leds %}
 //! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. `led_on` / `led_off` are here, the device contract
@@ -26,11 +27,17 @@
 //! [ServerState] and serves it over {{ "USB" if ww.usb else "RTT (the debug probe)" }}. The LED is here, the device contract (`device`) in
 //! `ww/device.rs`.
 {% endif %}
+{% if can %}
+//! The FDCAN channels (`can[]`) are in `ww/can.rs`.
+{% endif %}
 //!
 //! To add a method, property or stream: declare it in the API trait, then implement it here, `ww_codegen!` below
 //! regenerates the dispatch code and the compiler lists what is missing. Extend [ServerState] with the peripherals
 //! and data the implementations need. See https://github.com/vhrdtech/wire_weaver (`docs/`, `examples_mcu/`).
 
+{% if can %}
+mod can;
+{% endif %}
 {% if clock %}
 mod clock;
 {% endif %}
@@ -48,7 +55,9 @@ use defmt::{info, unwrap{{ ", warn" if pins else "" }}};
 use rtt_target::rprintln;
 {% endif %}
 use embassy_executor::Spawner;
-{% if arms == 3 %}
+{% if arms == 4 %}
+use embassy_futures::select::{Either4, select4};
+{% elif arms == 3 %}
 use embassy_futures::select::{Either3, select3};
 {% elif arms == 2 %}
 use embassy_futures::select::{Either, select};
@@ -158,6 +167,11 @@ pub struct ServerState {
     /// itself is `crate::sync::SYNC`{{ ", read by the LED task too" if s.led.pwm }}
     clock: clock::ClockState,
 {% endif %}
+{% if can %}
+    /// `can[]`: what each controller was last set to, the `rx` streams and the `tx` credit (the controllers are the
+    /// CAN tasks', src/can.rs)
+    can: can::CanState,
+{% endif %}
 }
 {% if not u_id.ref %}
 
@@ -241,6 +255,9 @@ impl ServerState {
 {% endif %}
 {% if clock %}
             clock: clock::ClockState::new(),
+{% endif %}
+{% if can %}
+            can: can::CanState::new(),
 {% endif %}
         }
     }
@@ -363,7 +380,13 @@ mod server_impl {
     wire_weaver::ww_codegen!(
         {{ ww.krate }} :: {{ ww.trait }} for super::ServerState,
         server = true, no_alloc = true, use_async = true,
-{% if settings and clock %}
+{% if can %}
+  {% set awaits = feats(settings and "flash writes", clock and "clock.steer's time_map point", "the CAN tasks switching a controller") %}
+        // handlers that await ({{ awaits | and_join }}) are async, all others plain `fn`s: an
+        // `async fn` that never awaits still costs flash as a state of the dispatcher
+        handler_model = "{{ feats(settings and "device.label.*|device.settings.*", clock and "clock.steer", "can.configure|can.set_mode|can.set_filters|can.recover|can.tx_abort") | join("|") }}=async, _=sync",
+{% else %}
+  {% if settings and clock %}
         // handlers that await (flash writes, clock.steer's time_map point) are async, all others plain `fn`s: an
         // `async fn` that never awaits still costs flash as a state of the dispatcher
         handler_model = "device.label.*|device.settings.*|clock.steer=async, _=sync",
@@ -380,6 +403,7 @@ mod server_impl {
         // dispatcher)
         handler_model = "_=sync",
 {% endif %}
+{% endif %}
         method_model = "_=immediate",
         property_model = "_=get_set",
         introspect = "with_docs",
@@ -394,6 +418,11 @@ mod server_impl {
 {% endif %}
 {% if d.counters %}
             "device.counters.watch",
+{% endif %}
+{% if can %}
+            // can[]: not served (src/ww/can.rs)
+            "can.tx_events", "can.bus_errors", "can.bus_load", "can.detect_timing", "can.set_layout",
+            "can.rx_buffers", "can.tx_buffers", "can.transceiver", "can.terminator", "can.test_pins",
 {% endif %}
         ],
     );
@@ -577,14 +606,17 @@ async fn server_task(mut server: {{ server_ty }}, mut state: ServerState) {
     let mut next_pump = Instant::now() + crate::log::PUMP_PERIOD;
     loop {
   {% if settings %}
-        match select3(
+        match select{{ 4 if can else 3 }}(
             server.wait(),
             Timer::at(next_pump),
             Timer::at(state.settings.due_at()),
+{% if can %}
+            crate::can::WAKE.wait(),
+{% endif %}
         )
         .await
         {
-            Either3::First(ready) => {
+            Either{{ 4 if can else 3 }}::First(ready) => {
                 if let Some(event) = server.handle(ready, &mut state).await {
                     info!("{:?}", event);
                     if matches!(event, LinkEvent::Down(_)) {
@@ -598,12 +630,21 @@ async fn server_task(mut server: {{ server_ty }}, mut state: ServerState) {
                     }
                 }
             }
-            Either3::Second(()) => next_pump += crate::log::PUMP_PERIOD,
-            Either3::Third(()) => state.settings.persist_if_due().await,
+            Either{{ 4 if can else 3 }}::Second(()) => next_pump += crate::log::PUMP_PERIOD,
+            Either{{ 4 if can else 3 }}::Third(()) => state.settings.persist_if_due().await,
+{% if can %}
+            // frames received or credit freed: passed on below
+            Either4::Fourth(()) => {}
+{% endif %}
         }
   {% else %}
+{% if can %}
+        match select3(server.wait(), Timer::at(next_pump), crate::can::WAKE.wait()).await {
+            Either3::First(ready) => {
+{% else %}
         match select(server.wait(), Timer::at(next_pump)).await {
             Either::First(ready) => {
+{% endif %}
                 if let Some(event) = server.handle(ready, &mut state).await {
                     info!("{:?}", event);
                     if matches!(event, LinkEvent::Down(_)) {
@@ -617,10 +658,20 @@ async fn server_task(mut server: {{ server_ty }}, mut state: ServerState) {
                     }
                 }
             }
+{% if can %}
+            Either3::Second(()) => next_pump += crate::log::PUMP_PERIOD,
+            // frames received or credit freed: passed on below
+            Either3::Third(()) => {}
+{% else %}
             Either::Second(()) => next_pump += crate::log::PUMP_PERIOD,
+{% endif %}
         }
   {% endif %}
         crate::log::pump(&mut state.log_frames).await;
+{% if can %}
+        // also with the link down: the CAN queues keep moving, frames for a closed stream are dropped
+        state.can_pump(&mut server.sink()).await;
+{% endif %}
         if server.is_up()
             && state
                 .poll_streams(

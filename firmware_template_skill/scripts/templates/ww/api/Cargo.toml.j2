@@ -9,11 +9,11 @@ description = "WireWeaver API of the {{ o.name }} firmware"
 [features]
 # owned (alloc) variants of the API types, for host-side users
 std = [
-{% for c in feats("wire_weaver", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", s.leds and "ww_indication", d.log and "ww_log", s.pins and "ww_pin_diag", s.clock and "ww_timebase", "ww_uid", d.label and "ww_user_info") %}
+{% for c in feats("wire_weaver", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", s.leds and "ww_indication", d.log and "ww_log", s.pins and "ww_pin_diag", s.clock and "ww_timebase", s.can and "ww_can_bus", "ww_uid", d.label and "ww_user_info") %}
     "{{ c }}/std",
 {% endfor %}
 ]
-{% set dm = feats("wire_weaver/defmt", "ww_firmware_info/defmt", s.leds and "ww_indication/defmt", s.pins and "ww_pin_diag/defmt", s.clock and "ww_timebase/defmt", d.label and "ww_user_info/defmt", "dep:defmt") %}
+{% set dm = feats("wire_weaver/defmt", "ww_firmware_info/defmt", s.leds and "ww_indication/defmt", s.pins and "ww_pin_diag/defmt", s.clock and "ww_timebase/defmt", s.can and "ww_can_bus/defmt", d.label and "ww_user_info/defmt", "dep:defmt") %}
 {% if dm | length > 4 %}
 defmt = [
   {% for c in dm %}
@@ -61,6 +61,10 @@ defmt = { version = "{{ V["defmt"] }}", optional = true }
 {% endif %}
 {% if s.clock %}
 {{ ww_dep("ww_timebase", "ww_stdlib/ww_timebase", o.ww_src, "../", ", default-features = false") }}
+{% endif %}
+{% if s.can %}
+# `can[]`: the CAN FD channels
+{{ ww_dep("ww_can_bus", "ww_stdlib/ww_can_bus", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 
 [dev-dependencies]

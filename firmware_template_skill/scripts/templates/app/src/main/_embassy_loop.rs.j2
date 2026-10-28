@@ -7,6 +7,20 @@
     let pins = pins::Pins::new(pins::take!(p));
   {% endif %}
 
+  {% if s.can %}
+    // {{ s.can.names }}: `can[]` (src/can.rs, src/ww/can.rs)
+    can::start(can::CanParts {
+    {% for ch in s.can.chans %}
+        {{ ch.lower }}: p.{{ ch.instance }},
+        {{ ch.lower }}_tx: p.{{ ch.tx }},
+        {{ ch.lower }}_rx: p.{{ ch.rx }},
+      {% if ch.standby %}
+        {{ ch.lower }}_standby: p.{{ ch.standby }},
+      {% endif %}
+    {% endfor %}
+    });
+
+  {% endif %}
     let state = ww::ServerState::new({{ args | join(", ") }}){{ ".await" if s.dev.log else "" }};
   {% if ww.usb %}
     let driver = ww::usb_driver({{ ww.usb_args }});

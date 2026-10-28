@@ -563,3 +563,19 @@ args = ["--chip", "STM32L476RG", "--wire-weaver", "--ww-transport", "rtt", "--le
 builds = ["dev"]
 tags = ["ww", "rtt", "host"]
 note = "clock on a Cortex-M4 (no M0+ width note), breath on TIM2_CH1"
+
+# --can (TPL-53): FDCAN channels as `can[]` through mcan and bedrock_can, the client's can methods and `can` command
+
+[[entry]]
+name = "g0can"
+args = ["--chip", "STM32G0B1CE", "--wire-weaver", "--counters", "--can", "FDCAN1:PD1,PB8,stby=PC13", "--host"]
+builds = ["dev", "release"]
+tags = ["ww", "host"]
+note = "B129A-like: FDCAN1 on PD1 / PB8, the transceiver's standby on PC13, mcan's G0 layout (no filter elements)"
+
+[[entry]]
+name = "h7can"
+args = ["--chip", "STM32H725IG", "--supply-config", "DirectSMPS", "--wire-weaver", "--counters", "--can", "FDCAN1:PB9,PB8,FDCAN3:PG9,PD12", "--host"]
+builds = ["dev", "release"]
+tags = ["ww", "host"]
+note = "two FDCANs sharing the message RAM (h7_half), PLL2 Q 80 MHz kernel clock"

@@ -123,6 +123,12 @@ cnt = "{{ V["cnt"] }}"{{ " # 0.5: used words and format version, served as devic
 # the shared clock a host steers onto UTC (src/sync.rs), served as `clock` (src/ww/clock.rs)
 {{ bedrock_dep("bedrock_sync", o.bedrock, root, ", features = " ~ (feats("embassy", "ww-timebase", defmt and "defmt") | toml_list)) }}
 {% endif %}
+{% if s.can %}
+# {{ s.can.names }} (src/can.rs): the M_CAN driver, without its `rcc` feature (embassy-stm32 owns RCC)
+mcan = { {% if o.mcan_src == "git" %}git = "{{ MCAN_GIT }}"{% else %}path = "{{ "" if o.mcan_src.startswith("/") else root }}{{ o.mcan_src }}"{% endif %}, default-features = false, features = {{ feats(s.can.family, "defmt", "embassy") | toml_list }} }
+# `can[]`: bit timing, checks and mappings of a host's input (src/ww/can.rs)
+{{ bedrock_dep("bedrock_can", o.bedrock, root, ', features = ["defmt"]') }}
+{% endif %}
 {% set pins_deps %}
 # raw access to the free pins (src/pins.rs)
 {{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
@@ -157,7 +163,7 @@ embassy-sync = "{{ V["embassy-sync"] }}"
 {{ ww.api }} = { path = "../{{ ww.api }}"{{ ', features = ["defmt"]' if defmt else "" }} }
 {{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
 {{ ww_dep("ww_client_server", "ww_stdlib/ww_client_server", o.ww_src, root, ", default-features = false") }}
-  {% if o.settings_flash or d.log %}
+  {% if o.settings_flash or d.log or s.can %}
 embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/ww.rs)
   {% endif %}
 {{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
@@ -166,6 +172,9 @@ embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/
 {{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ", default-features = false, features = " ~ (feats("time", (s.leds or s.clock) and "u32") | toml_list)) }}
   {% if s.leds %}
 {{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, root, ", default-features = false") }}
+  {% endif %}
+  {% if s.can %}
+{{ ww_dep("ww_can_bus", "ww_stdlib/ww_can_bus", o.ww_src, root, ", default-features = false") }}
   {% endif %}
   {% if s.clock %}
 {{ ww_dep("ww_timebase", "ww_stdlib/ww_timebase", o.ww_src, root, ", default-features = false") }}
@@ -209,9 +218,10 @@ build-info-build = "{{ V["build-info-build"] }}"
 {% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
-{% if (o.build_info or s.dev.boot or s.leds or s.clock) and o.ww_src != "git" %}
+{% if (o.build_info or s.dev.boot or s.leds or s.clock or s.can) and o.ww_src != "git" %}
 {{ bedrock_ww_patch(o.ww_src, root, s.dev.boot, ([("bedrock_led", "ww_indication", "ww_stdlib/ww_indication")] if s.leds else [])
-                   + ([("bedrock_sync", "ww_timebase", "ww_stdlib/ww_timebase"), ("bedrock_sync", "ww_si", "ww_stdlib/ww_si")] if s.clock else [])) }}
+                   + ([("bedrock_sync", "ww_timebase", "ww_stdlib/ww_timebase"), ("bedrock_sync", "ww_si", "ww_stdlib/ww_si")] if s.clock else [])
+                   + ([("bedrock_can", "ww_can_bus", "ww_stdlib/ww_can_bus")] + ([] if s.clock else [("bedrock_can", "ww_si", "ww_stdlib/ww_si")]) if s.can else [])) }}
 {% endif %}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html

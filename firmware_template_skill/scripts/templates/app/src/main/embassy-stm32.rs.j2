@@ -39,7 +39,7 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
     boot::log(&early);
 {% endif %}
 {% include "app/src/main/_last_reset_boot.rs.j2" %}
-    let {{ "mut " if o.supply_config or clock or (o.ww and ww.usb and ww.stm32_usb.hsi48) else "" }}config = embassy_stm32::Config::default();
+    let {{ "mut " if o.supply_config or clock or (o.ww and ww.usb and ww.stm32_usb.hsi48) or (s.can and s.can.mux) else "" }}config = embassy_stm32::Config::default();
 {% if o.supply_config %}
     config.rcc.supply_config = SupplyConfig::{{ o.supply_config }}{{ "(SMPSSupplyVoltage::%s)" % o.smps_voltage if o.smps_voltage else "" }}; // from schematic: how VCORE is supplied
 {% endif %}
@@ -59,6 +59,24 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
   {% else %}
     // TODO: {{ u.periph }} needs an accurate 48 MHz clock (no HSI48 + CRS on this chip): HSE + PLL{{ ", config.rcc.mux." ~ u.mux if u.mux else "" }}
   {% endif %}
+{% endif %}
+{% set cn = s.can %}
+{% if cn and cn.pll2 %}
+  {% set m = o.embassy == "main" %}
+    // FDCAN kernel clock: PLL2 Q at 80 MHz from the 64 MHz HSI (/ 4 * 40 = 640 MHz VCO, / 8), every common nominal and
+    // data bit rate exact (2, 4, 5 and 8 Mbit/s too); with an HSE, take PLL2 from it (all PLLs share one source)
+    config.rcc.pll2 = Some(embassy_stm32::rcc::Pll {
+        source: embassy_stm32::rcc::PllSource::{{ "Hsi" if m else "HSI" }},
+        prediv: embassy_stm32::rcc::PllPreDiv::{{ "Div4" if m else "DIV4" }},
+        mul: embassy_stm32::rcc::PllMul::{{ "Mul40" if m else "MUL40" }},
+        divp: None,
+        divq: Some(embassy_stm32::rcc::PllDiv::{{ "Div8" if m else "DIV8" }}),
+        divr: None,
+    });
+    config.rcc.mux.fdcansel = embassy_stm32::rcc::mux::Fdcansel::{{ cn.mux }};
+{% elif cn and cn.mux %}
+    // FDCAN kernel clock (the board's choice)
+    config.rcc.mux.fdcansel = embassy_stm32::rcc::mux::Fdcansel::{{ cn.mux }};
 {% endif %}
     let p = embassy_stm32::init(config);
 {% if t.series == "G0" %}

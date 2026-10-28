@@ -50,6 +50,12 @@ pub trait {{ ww.trait }} {
     /// No sync line.
     ww_impl!(clock: ww_timebase::Clock);
 {% endif %}
+{% if s.can %}
+
+    /// CAN FD channels ({% for ch in s.can.chans %}`can[{{ ch.index }}]` {{ ch.instance }}{{ (" through a " ~ ch.transceiver) if ch.transceiver }}{{ ", " if not loop.last }}{% endfor %}): configure, send,
+    /// receive, filters, status
+    ww_impl!(can[]: ww_can_bus::Can);
+{% endif %}
 }
 
 /// The device contract: what every WireWeaver device answers, so generic host tools (`ww info`, `ww log`) work.
