@@ -76,6 +76,10 @@ or options; purely internal refactors only need a line under the next version.
   templates emitted them in, so a preset's clock `use` beside the HSI48 one (`embassy_stm32::rcc::{Hse, ...}` and
   `embassy_stm32::rcc::{Hsi48Config, mux}`) failed `cargo fmt --check`. Upgrade notes: none (`cargo fmt` fixes it).
 
+- `scripts/setup.py`: the module docstring is wrapped by the generator at 118 columns whatever the tool list is
+  (it had lines of 122 and 134 on G0), and the four section rulers are 120 columns instead of 121. Upgrade notes:
+  none needed, take the docstring from a scratch directory if you like.
+
 - Silicon revisions that can grow (TPL-52): the API's `SiliconRevision` has `Unknown` first, then the errata sheet's
   revisions in its order, `ww_repr = unib32` (was `nib`) and the catch-all `Newer(u32)` (was `Other`), so a revision
   added to `stm32.toml` later is appended and an additive API change instead of renumbering `Unknown`.
