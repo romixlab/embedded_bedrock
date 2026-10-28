@@ -50,7 +50,7 @@ answers; see AGENTS.md).
 {% if o.settings_flash %}{% set _ = dev.append("a label and settings stored in flash") %}{% endif %}
 {% if o.counters %}{% set _ = dev.append("the `cnt` event counters in RAM" ~ (" and in backup registers" if o.bkp else "")) %}{% endif %}
 {% if s.dev_log %}{% set _ = dev.append("the defmt log, kept in RAM across a reset") %}{% endif %}
-{% if s.rom_boot %}{% set _ = dev.append("reboots into the STM32 ROM bootloader and a boot-loop rescue") %}{% endif %}
+{% if s.rom_boot %}{% set _ = dev.append("reboots into the STM32 ROM bootloader and a boot-loop rescue" if s.boot.kind == "stm32" else "reboots into BOOTSEL through the boot ROM") %}{% endif %}
 {% set _ = has.append("a WireWeaver API over " ~ ("USB" if ww.usb else "RTT") ~ " with the device contract under `device` (" ~ dev | join("; ") ~ ")") %}
 {% else %}
 {% set _ = has.append("a WireWeaver API over " ~ ("USB" if ww.usb else "RTT")) %}
@@ -138,7 +138,11 @@ Each part of the device contract (`device` in the API, the same traits as other 
 {{ (s.cli ~ ' board').ljust(24) }} # {{ B.get("product", o.name) }}{{ " rev " ~ B.get("revision") if B.get("revision") else "" }} (Assumed), serial = the chip's unique id
 {{ (s.cli ~ ' uid').ljust(24) }} # the {{ s.uid_bits }}-bit unique id
 {% if s.dev_variant %}
+{% if s.variant.kind == "rp" %}
+{{ (s.cli ~ ' variant').ljust(24) }} # {{ R.get("variant", "the chip's silicon revision" ~ (" and package" if s.variant.package else "")) }}: SYSINFO and the bootrom version
+{% else %}
 {{ (s.cli ~ ' variant').ljust(24) }} # {{ R.get("variant", "the chip's id, revision and flash size") }}: DBGMCU_IDCODE and the flash size register
+{% endif %}
 {% endif %}
 {% if o.settings_flash %}
 {{ (s.cli ~ ' label "bench 1"').ljust(24) }} # the label, in flash; `{{ s.cli }} label` shows it
@@ -318,7 +322,7 @@ with {{ s.py_module }}.Device() as dev:{{ " " * [1, 22 - s.py_module | length] |
     print(dev.clock_check())                # {"state": "Locked", "residual_us": -230.0, "rtt_us": 8204.0, ...}
 {% endif %}
 {% if s.rom_boot %}
-    dev.reboot()                            # reboot(updater=True): into the ROM bootloader; disconnects
+    dev.reboot()                            # reboot(updater=True): into {{ "BOOTSEL" if s.boot.kind == "rp" else "the ROM bootloader" }}; disconnects
 {% endif %}
 {% endif %}
 ```

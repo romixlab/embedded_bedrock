@@ -482,10 +482,17 @@ note = "USB client: Usb target, devices subcommand"
 
 [[entry]]
 name = "rp2040h"
-args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--host"]
+args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--host", "--settings"]
 builds = ["dev"]
 tags = ["ww", "host"]
-note = "USB client, root cargo test, just lint"
+note = "USB client, settings on embassy-rp's flash, BOOTSEL reboot, root cargo test, just lint"
+
+[[entry]]
+name = "rp2350h"
+args = ["--chip", "rp2350", "--wire-weaver", "--counters", "--host", "--settings"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "RP2350 USB client: settings, variant from SYSINFO, BOOTSEL reboot through the ROM"
 
 [[entry]]
 name = "rp2040hm"

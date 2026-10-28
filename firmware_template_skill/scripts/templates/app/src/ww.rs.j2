@@ -489,6 +489,9 @@ pub fn usb_driver(usbd: Peri<'static, peripherals::USBD>) -> UsbDriver {
   {% endif %}
 
 pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
+  {% if t.family == "rp" %}
+    let serial = state.serial;
+  {% endif %}
     // server_impl::API_ID is reported in a USB string descriptor, `ww list` shows it without opening the device.
     // A user label (e.g. loaded from flash) can be added with wire_weaver::api_id::with_label().
 {% set db = t.family == "stm32" and o.embassy == "main" and u.double_buffer %}
@@ -507,6 +510,14 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
             config.product = Some("{{ o.name }}");
   {% if t.family == "stm32" %}
             config.serial_number = Some(embassy_stm32::uid::uid_hex());
+  {% elif t.family == "rp" %}
+    {% if t.rp_variant == "rp2040" %}
+            // device.board's serial: the flash chip's unique id in hex
+    {% else %}
+            // device.board's serial, which the boot ROM reports in BOOTSEL too: a host follows the board there and
+            // back (RP2350 datasheet: SERIAL_NUMBER, "default uppercase hex string of the device_id")
+    {% endif %}
+            config.serial_number = Some(serial);
   {% endif %}
         },
   {% if db %}

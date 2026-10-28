@@ -126,7 +126,11 @@ enum Cmd {
     Uid,
 {% endif %}
 {% if d.variant %}
+{% if s.variant.kind == "rp" %}
+    /// The chip on the board: part, silicon revision{{ ", package" if s.variant.package else "" }}
+{% else %}
     /// The chip on the board: device id, silicon revision, flash size
+{% endif %}
     Variant,
 {% endif %}
 {% if d.counters %}
@@ -157,7 +161,7 @@ enum Cmd {
     Settings(SettingsCmd),
 {% endif %}
 {% if d.boot %}
-    /// Boot state, and reboots into the firmware or the STM32 ROM bootloader
+    /// Boot state, and reboots into the firmware or {{ s.boot.rom }}
     #[command(subcommand)]
     Boot(BootCmd),
 {% endif %}
@@ -233,8 +237,13 @@ enum SettingsCmd {
 enum BootCmd {
     /// The boot state (always confirmed: the firmware is the only image)
     State,
-    /// Reset the board into the firmware, or into the STM32 ROM bootloader with --updater (USB DFU on PA11/PA12;
+{% if s.boot.kind == "rp" %}
+    /// Reset the board into the firmware, or into BOOTSEL with --updater (the boot ROM's PICOBOOT and USB mass
+    /// storage; `ww dfu rp flash` or `just flash` brings the firmware back)
+{% else %}
+    /// Reset the board into the firmware, or into the STM32 ROM bootloader with --updater ({{ s.boot.via }};
     /// `just flash` brings the firmware back through the probe)
+{% endif %}
     Reboot {
         #[arg(long)]
         updater: bool,
@@ -701,7 +710,7 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
                     board.reboot(into).await?;
                     if *updater {
                         println!(
-                            "{GREEN}rebooting into the STM32 ROM bootloader{GREEN:#} {DIM}(USB DFU on PA11/PA12; `just flash` brings the firmware back){DIM:#}"
+                            "{GREEN}rebooting into {{ s.boot.rom }}{GREEN:#} {DIM}({{ s.boot.via }}; {{ s.boot.back }}){DIM:#}"
                         );
                     } else {
                         println!("{GREEN}rebooting{GREEN:#}");
@@ -754,6 +763,26 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
 {% if d.variant %}
 
 /// `{{ s.variant_example }}`.
+{% if s.variant.kind == "rp" %}
+fn variant_line(v: &{{ C }}::Variant) -> String {
+    let revision = match v.revision {
+{% for r in s.variant.revisions %}
+        {{ C }}::SiliconRevision::{{ r[0] }} => "rev {{ r[0] }}",
+{% endfor %}
+        _ => "unknown revision",
+    };
+{% if s.variant.package %}
+    let package = match v.package {
+        {{ C }}::Package::A => "QFN-60 ({{ s.variant.device }}A)",
+        {{ C }}::Package::B => "QFN-80 ({{ s.variant.device }}B)",
+        _ => "unknown package",
+    };
+    format!("{{ s.variant.device }} {revision} (bootrom {}), {package}", v.rom_version)
+{% else %}
+    format!("{{ s.variant.device }} {revision} (bootrom {})", v.rom_version)
+{% endif %}
+}
+{% else %}
 fn variant_line(v: &{{ C }}::Variant) -> String {
     let device = match v.dev_id {
         {{ "0x%x" | format(s.variant.dev_id) }} => "{{ s.variant.device }}",
@@ -770,6 +799,7 @@ fn variant_line(v: &{{ C }}::Variant) -> String {
         v.dev_id, v.rev_id, v.flash_kib
     )
 }
+{% endif %}
 {% endif %}
 
 fn hex(bytes: &[u8]) -> String {

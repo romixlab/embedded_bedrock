@@ -29,7 +29,11 @@ use wire_weaver_client::{StreamCursor, StreamEvent};
 use crate::{ {{- uses | sort(case_sensitive=true) | join(", ") }}};
 
 {% if d.variant %}
+{% if s.variant.kind == "rp" and s.variant.package %}
+pub use {{ A }}::{Package, SiliconRevision, Variant};
+{% else %}
 pub use {{ A }}::{SiliconRevision, Variant};
+{% endif %}
 {% endif %}
 {% if d.board %}
 pub use ww_board_info::BoardSummaryOwned;
@@ -233,16 +237,21 @@ impl {{ T }} {
         .await
     }
 
-    /// Resets the board into the firmware (`App`) or into the STM32 ROM bootloader (`Updater`). The board answers
-    /// first, the reset follows: the connection is gone afterwards.
+{% filter rewrap("    /// ") %}
+    /// Resets the board into the firmware (`App`) or into {{ s.boot.rom }} (`Updater`). The board answers first, the reset follows: the connection is gone afterwards.
+{% endfilter %}
     pub async fn reboot(&self, into: BootTarget) -> Result<()> {
         call_fallible("BootControl::reboot", self.raw.device().boot().reboot(into)).await
     }
 {% endif %}
 {% if d.dfu %}
 
+{% if s.boot.kind == "rp" %}
+    /// Who the update node is: product, profile (`InPlace`), boot state, last result.
+{% else %}
     /// Who the update node is: product, profile (`InPlace`), boot state, last result (`Recovery` after the ROM
     /// bootloader took over from a boot loop).
+{% endif %}
     pub async fn dfu_node(&self) -> Result<NodeInfoOwned> {
         call("UpdateNode::node", self.raw.device().dfu().node().node()).await
     }

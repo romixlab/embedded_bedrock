@@ -866,6 +866,7 @@ class Opts:
     probe: str = ""         # debug probe VID:PID
     board: Optional[dict] = None  # --board preset (data/boards/<name>/preset.toml) plus its "name" and "dir"
     rom_boot: str = ""      # bedrock_rom_boot family feature ("stm32g0", "stm32h7"): device.boot and dfu (TPL-41)
+    rp_boot: bool = False   # device.boot and dfu through the RP boot ROM's BOOTSEL (TPL-56)
     led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm())
     pins: dict = field(default_factory=dict)  # --pins: resolve_pins(), {} without
     clock: bool = False     # --clock-sync: `clock` (ww_timebase::Clock) through bedrock_sync (TPL-40)
@@ -1060,6 +1061,14 @@ def rom_boot_family(t: Target, args) -> str:
     return ""
 
 
+def rp_boot(t: Target, args) -> bool:
+    """device.boot and device.dfu.node of an RP --wire-weaver firmware updated in place through the boot ROM's BOOTSEL
+    mode (PICOBOOT, `ww dfu rp flash`): `reboot(Updater)` resets into it (TPL-56). Left out with --bootloader
+    (embassy-boot owns the boot then) and without --log defmt, as on STM32."""
+    return (t.family == "rp" and args.wire_weaver and not args.bootloader and args.framework == "embassy"
+            and (args.log or "defmt") == "defmt")
+
+
 def rom_boot_word(regs: Optional[Stm32Regs], rom_boot: str) -> Optional[tuple[str, int]]:
     """(register, address) of the boot word when it is the last word of the backup registers the BKP counters take:
     memory.x and CNT_BKP_BUFFER_SIZE_WORDS leave it out then."""
@@ -1150,8 +1159,27 @@ def uid_context(t: Target, o: Opts) -> dict:
     return {}
 
 
+# device.variant on RP (TPL-55): SYSINFO CHIP_ID and the bootrom's version byte (0x00000013), which tells the silicon
+# revisions apart. revisions: (name, bootrom version, CHIP_ID.REVISION or None where the datasheet gives none).
+RP_VARIANT = {
+    # RP2040 datasheet 2.8: "versions 1, 2 and 3 of the bootrom, which correspond to the B0, B1 and B2 silicon
+    # revisions"; 2.20 SYSINFO CHIP_ID gives no REVISION values
+    "rp2040": {"device": "RP2040", "ref": "RP2040 datasheet 2.8, 2.20", "package": False,
+               "revisions": [("B0", 1, None), ("B1", 2, None), ("B2", 3, None)]},
+    # RP2350 datasheet appendix C: A2 is REVISION 2, A3 and A4 are REVISION 3 told apart by the bootrom version
+    # (Table 464: "value 2 for A2, 3 for A3, 4 for A4"); 12.15.1 PACKAGE_SEL: 0 = QFN-80, 1 = QFN-60
+    "rp235x": {"device": "RP2350", "ref": "RP2350 datasheet 12.15.1, appendix C", "package": True,
+               "revisions": [("A2", 2, 2), ("A3", 3, 3), ("A4", 4, 3)]},
+}
+
+
 def variant_context(t: Target) -> Optional[dict]:
-    """device.variant: the chip's line, its revision table and registers (stm32.toml [variant]), None where unknown."""
+    """device.variant: the chip's line, its revision table and registers (stm32.toml [variant], RP_VARIANT), None
+    where unknown. `kind` picks the API's shape: "stm32" (DBGMCU_IDCODE, flash size) or "rp" (SYSINFO, bootrom)."""
+    if t.family == "rp":
+        v = RP_VARIANT["rp2040" if t.rp_variant == "rp2040" else "rp235x"]
+        # RP2354: an RP2350 with a stacked flash die, which SYSINFO doesn't show
+        return {**v, "kind": "rp", "part": t.display, "stacked": t.display.startswith("RP2354")}
     if t.family != "stm32":
         return None
     dev_id = t.stm32.get("device_id")
@@ -1160,7 +1188,7 @@ def variant_context(t: Target) -> Optional[dict]:
         return None
     flash_kib = sum(m.size for m in t.memories if m.kind == "flash") // 1024
     # clock: the code that turns on DBGMCU's clock where it needs one (G0), dev_id_note: where DEV_ID needs a mask
-    return {"clock": "", "clock_note": "", "dev_id_note": "", **v, "dev_id": dev_id,
+    return {"clock": "", "clock_note": "", "dev_id_note": "", **v, "kind": "stm32", "dev_id": dev_id,
             "revisions": [tuple(r) for r in v["revisions"]], "flash_kib": flash_kib,
             "part": t.display[5:]}
 
@@ -1383,19 +1411,31 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         "log": o.ww and o.log == "defmt",
         "variant": variant is not None,
         "settings": o.ww and bool(o.settings_flash),
-        "boot": o.ww and bool(o.rom_boot),
-        "dfu": o.ww and bool(o.rom_boot),
+        "boot": o.ww and (bool(o.rom_boot) or o.rp_boot),
+        "dfu": o.ww and (bool(o.rom_boot) or o.rp_boot),
     }
     s["has_device"] = o.ww                  # `device` in the API
     s["led_at_boot"] = s["dev"]["settings"]  # device.settings.led_at_boot (every --wire-weaver firmware has the LED)
     s["variant"] = variant                  # device.variant: dev_id, device, revisions [(name, rev_id, marking)]
     if variant:  # the Variant type's doc: what the preset knows of the board's chip, else the part this firmware is for
         variant["doc"] = b.get("variant", {}).get("doc") or (
-            f"this firmware is built for an {t.display}, what can differ is its silicon revision.")
+            f"this firmware is built for an {t.display}, what can differ is its silicon revision"
+            + (" and package." if variant.get("package") else "."))
     # src/boot.rs: the boot word, where the ROM's USB is on this board, what the rescue needs (the preset's [rom_boot])
     rb = b.get("rom_boot", {})
-    s["boot"] = {"word": ROM_BOOT[o.rom_boot][2], "usb": rb.get("usb", "PA11 / PA12"), "healthy": rb.get("healthy", ""),
-                 "rescue": rb.get("rescue", "")} if s["dev"]["boot"] else {}
+    # `kind`: "stm32" (bedrock_rom_boot's boot word, early boot, rescue) or "rp" (BOOTSEL through the boot ROM);
+    # prose: `rom` the updater, `via` how it takes firmware, `flash` the host command that writes it there, `back`
+    # how the firmware comes back
+    if o.rp_boot:
+        s["boot"] = {"kind": "rp", "rom": "the RP boot ROM (BOOTSEL)", "via": "PICOBOOT and USB mass storage",
+                     "flash": "ww dfu rp flash", "back": "`ww dfu rp flash` or `just flash` brings the firmware back"}
+    elif s["dev"]["boot"]:
+        usb = rb.get("usb", "PA11 / PA12")
+        s["boot"] = {"kind": "stm32", "rom": "the STM32 ROM bootloader", "via": f"USB DFU on {usb.replace(' / ', '/')}",
+                     "flash": "ww dfu stm32 flash", "back": "`just flash` brings the firmware back", "usb": usb,
+                     "word": ROM_BOOT[o.rom_boot][2], "healthy": rb.get("healthy", ""), "rescue": rb.get("rescue", "")}
+    else:
+        s["boot"] = {}
     s["uid"] = {"arg": False, "reg": "", "ref": False, **uid_context(t, o)} if o.ww else {}
     # src/log.rs: the logger's ring and the stream's store, a quarter of them on parts with less than 64 KiB of RAM
     # (12 KiB of 20 on an L073 left no stack)
@@ -1456,7 +1496,11 @@ def host_names(t: Target, o: Opts, s: dict) -> dict:
     doc = s["uid"].get("doc", "")
     names["uid_desc"] = doc if doc.startswith("the ") else f"the {doc}"  # "the STM32 96-bit unique id"
     v = s["variant"]
-    if v:  # variant_line's example: `STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash`
+    if v and v["kind"] == "rp":  # variant_line's example: `RP2350 rev A4 (bootrom 4), QFN-60 (RP2350A)`
+        name, rom = v["revisions"][-1][:2]
+        names["variant_example"] = f"{v['device']} rev {name} (bootrom {rom})" + \
+            (", QFN-60 (RP2350A)" if v["package"] else "")
+    elif v:  # variant_line's example: `STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash`
         name, rev_id = v["revisions"][0][:2]
         names["variant_example"] = f"{v['device']} ({v['dev_id']:#05x}) rev {name} ({rev_id:#06x}), {v['flash_kib']} KiB flash"
     return names
@@ -2417,6 +2461,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
     o.embassy = args.embassy
     o.rom_boot = rom_boot
+    o.rp_boot = rp_boot(t, args)
     o.board = getattr(args, "preset", None)
     o.host = args.host
     o.cli_name = args.cli_name or name

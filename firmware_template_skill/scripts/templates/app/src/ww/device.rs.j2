@@ -11,7 +11,11 @@ use core::sync::atomic::AtomicU32;
 {% endif %}
 {% if d.variant %}
 use {{ hal }}::pac;
+{% if v.kind == "rp" and v.package %}
+use {{ ww.krate }}::{Package, SiliconRevision, Variant};
+{% else %}
 use {{ ww.krate }}::{SiliconRevision, Variant};
+{% endif %}
 {% endif %}
 use wire_weaver::prelude::*;
 use ww_board_info::{BoardSummary, RevisionSource};
@@ -165,6 +169,27 @@ impl ServerState {
     }
 }
 
+{% if v.kind == "rp" %}
+/// SYSINFO CHIP_ID{{ " and PACKAGE_SEL" if v.package else "" }}, the bootrom's version byte ({{ v.ref }}).
+fn variant() -> Variant {
+    let id = pac::SYSINFO.chip_id().read();
+    let rom_version = {{ hal }}::rom_data::rom_version_number();
+    Variant {
+        part: id.part(),
+        rev_id: id.revision(),
+        rom_version,
+        revision: SiliconRevision::from_rom_version(rom_version),
+  {% if v.package %}
+        // PACKAGE_SEL: 0 = QFN-80, 1 = QFN-60; right when read here (RP2350-E23, A2: 0 through PICOBOOT only)
+        package: if pac::SYSINFO.package_sel().read().package_sel() {
+            Package::A
+        } else {
+            Package::B
+        },
+  {% endif %}
+    }
+}
+{% else %}
 /// DBGMCU_IDCODE and the FLASH_SIZE word ({{ v.idcode_ref }}, {{ v.flash_ref }}).
 fn variant() -> Variant {
   {% if v.clock %}
@@ -187,6 +212,7 @@ fn variant() -> Variant {
         flash_kib,
     }
 }
+{% endif %}
 {% endif %}
 {% if d.settings %}
 
@@ -234,8 +260,8 @@ impl ServerState {
 {% endif %}
 {% if d.boot %}
 
-// ww_dfu::BootControl at device.boot and ww_dfu::UpdateNode at device.dfu.node: the firmware in place, updated by the
-// STM32 ROM bootloader (src/boot.rs).
+// ww_dfu::BootControl at device.boot and ww_dfu::UpdateNode at device.dfu.node: the firmware in place, updated by
+// {{ s.boot.rom }} (src/boot.rs).
 impl ServerState {
     pub(super) fn device_boot_boot_state(
         &mut self,
@@ -258,14 +284,22 @@ impl ServerState {
         Ready(bedrock_rom_boot::dfu::revert())
     }
 
+{% if s.boot.kind == "rp" %}
+    /// The reply goes out first: the reset follows `boot::REPLY_MS` later (src/boot.rs).
+{% else %}
     /// The reply goes out first: the reset follows `bedrock_rom_boot::REPLY_MS` later (src/boot.rs).
+{% endif %}
     pub(super) fn device_boot_reboot(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         into: BootTarget,
     ) -> RpcResult<Result<(), DfuError>> {
         defmt::info!("reboot into {}", into);
+{% if s.boot.kind == "rp" %}
+        crate::boot::request_reboot(bedrock_rom_boot::dfu::reboot_target(into));
+{% else %}
         bedrock_rom_boot::request_reboot(bedrock_rom_boot::dfu::reboot_target(into));
+{% endif %}
         Ready(Ok(()))
     }
 
@@ -273,10 +307,15 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
     ) -> RpcResult<NodeInfo<'_>> {
+{% if s.boot.kind == "rp" %}
+        // no boot-loop rescue here: the last result is always `Nothing`
+        Ready(bedrock_rom_boot::dfu::node(PRODUCT, false))
+{% else %}
         Ready(bedrock_rom_boot::dfu::node(
             PRODUCT,
             bedrock_rom_boot::fell_back(),
         ))
+{% endif %}
     }
 }
 {% endif %}

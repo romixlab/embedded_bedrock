@@ -1,5 +1,54 @@
 {# ROM bootloader updates of a --wire-weaver firmware (bedrock_rom_boot, device.boot / device.dfu.node); s.boot #}
 {% set b = s.boot %}
+{% if b.kind == "rp" %}
+//! Firmware updates through the RP boot ROM: `device.boot.reboot(Updater)` (src/ww/device.rs) resets into BOOTSEL,
+//! where the ROM's PICOBOOT interface takes the new firmware (`ww dfu rp flash`, `just flash-bootsel`) and its USB
+//! mass storage a UF2 file. The ROM reports the same USB serial number as this firmware, so a host follows the board
+//! into BOOTSEL and back. The firmware sits alone in flash: the boot state is always `Confirmed`, there is nothing to
+//! revert to (`bedrock_rom_boot::dfu`).
+
+use bedrock_rom_boot::Reboot;
+use defmt::{info, unwrap};
+use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
+use embassy_time::Timer;
+
+/// A `device.boot.reboot` request, for [reboot_task]
+static REBOOT: Signal<CriticalSectionRawMutex, Reboot> = Signal::new();
+/// Time for the reply to reach the host before the reset (the USB stack sends it from its own task)
+const REPLY_MS: u64 = 50;
+
+/// Asks [reboot_task] to reset into `into`, [REPLY_MS] from now, so the reply goes out first.
+pub fn request_reboot(into: Reboot) {
+    REBOOT.signal(into);
+}
+
+/// After embassy's init: the reboot task.
+pub fn after_init(spawner: Spawner) {
+    spawner.spawn(unwrap!(reboot_task()));
+}
+
+/// Resets when `device.boot.reboot` asked for it, once its reply has left.
+#[embassy_executor::task]
+async fn reboot_task() {
+    let into = REBOOT.wait().await;
+    Timer::after_millis(REPLY_MS).await;
+    if into == Reboot::Rom {
+        info!("boot: reset into BOOTSEL");
+  {% if t.rp_variant == "rp2040" %}
+        // both interfaces (mass storage and PICOBOOT), no activity LED
+  {% else %}
+        // both interfaces (mass storage and PICOBOOT), no activity LED. The ROM's reboot() with a 10 ms delay: with
+        // 0 it doesn't reboot (RP2350-E30, A2 to A4); nothing here sets FRCE_OFF bits (RP2350-E19, A2: the reboot
+        // hangs with bits other than PROC1 set)
+  {% endif %}
+        embassy_rp::rom_data::reset_to_usb_boot(0, 0);
+    }
+    info!("boot: reset");
+    cortex_m::peripheral::SCB::sys_reset();
+}
+{% else %}
 //! Firmware updates through the STM32 ROM bootloader (`bedrock_rom_boot`): the early boot that runs first thing in
 //! main, before clocks and embassy, the reboots `device.boot.reboot` asks for (src/ww/device.rs), and the boot-loop
 //! rescue.
@@ -74,3 +123,4 @@ async fn healthy_task() {
     let why = bedrock_rom_boot::healthy_watch(HEALTHY_AFTER).await;
     info!("boot: healthy ({})", why);
 }
+{% endif %}

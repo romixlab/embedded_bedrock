@@ -35,6 +35,9 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
 {% else %}
     let p = embassy_rp::init(Default::default());
 {% endif %}
+{% if s.dev.boot %}
+    boot::after_init(spawner); // the reset into BOOTSEL device.boot.reboot asks for (src/boot.rs)
+{% endif %}
 {% if o.bootloader %}
 
     let flash = Flash::<_, embassy_rp::flash::Blocking, FLASH_SIZE>::new_blocking(p.FLASH);
@@ -47,7 +50,6 @@ async fn main({{ "spawner" if o.ww else "_spawner" }}: embassy_executor::Spawner
 {% endif %}
 
 {% if o.settings_flash %}
-
     let {{ "" if o.ww else "mut " }}settings = settings::SettingsStore::load(p.FLASH).await;
   {% if o.log == "defmt" %}
     info!("label: {}", settings.get().label);

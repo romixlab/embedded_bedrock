@@ -102,7 +102,11 @@ cnt = "{{ V["cnt"] }}"{{ " # 0.5: used words and format version, served as devic
 # crash capture: HardFault / panic record kept across reset, reset cause (src/last_reset.rs); the panic handler
 {{ bedrock_dep("bedrock_crash", o.bedrock, root, ", features = " ~ (feats("cortex-m", defmt and "defmt") | toml_list)) }}
 {% endif %}
-{% if d.boot %}
+{% if d.boot and s.boot.kind == "rp" %}
+# device.boot and device.dfu.node of a firmware updated in place through the RP boot ROM (src/boot.rs resets into
+# BOOTSEL): bedrock_rom_boot's ww_dfu answers, no family feature
+{{ bedrock_dep("bedrock_rom_boot", o.bedrock, root, ", features = " ~ (feats("ww-dfu", defmt and "defmt") | toml_list)) }}
+{% elif d.boot %}
 # firmware updates through the STM32 ROM bootloader (src/boot.rs): the early boot, reboot(Updater), boot-loop rescue,
 # device.boot and device.dfu.node
 {{ bedrock_dep("bedrock_rom_boot", o.bedrock, root, ", features = " ~ (feats(o.rom_boot, "embassy", "ww-dfu", defmt and "defmt") | toml_list)) }}

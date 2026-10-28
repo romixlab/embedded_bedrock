@@ -6,7 +6,7 @@
 {% set elf = ww.rtt or decode %}
 {% set uses = feats("BootTarget" if d.boot else "", "Brightness" if s.leds else "", "CounterBuffer" if d.counters else "", "Error", "Mode" if s.leds else "", T,
                     "PROBE_RS_CHIP" if ww.rtt else "", "Probe" if ww.rtt else "", "USB_ID" if ww.usb else "",
-                    "Usb" if ww.usb else "", "SiliconRevision" if d.variant else "", "api_line",
+                    "Usb" if ww.usb else "", "SiliconRevision" if d.variant else "", "Package" if d.variant and s.variant.package else "", "api_line",
                     "clock_line" if s.clock else "", "firmware_line", "node_lines" if d.dfu else "", "reset_lines" if d.last_reset else "") %}
 {% filter rewrap("//! ") %}
 //! `{{ M }}` Python module: [Device] wraps `{{ C }}::{{ T }}` with blocking calls on a tokio runtime of its own, so scripts and notebooks need no asyncio. Everything the module does, the library does.
@@ -350,13 +350,23 @@ impl Device {
 
 {% set revs = s.variant.revisions | map(attribute=0) | list %}
 {% filter rewrap("    /// ") %}
+{% if s.variant.kind == "rp" %}
+    /// The chip on the board: `{"part", "rev_id", "rom_version", "revision"{{ ', "package"' if s.variant.package else "" }}}`, `revision` is {{ revs | map("tojson") | join(", ") }} or "unknown"{{ ', `package` "A" (QFN-60) or "B" (QFN-80)' if s.variant.package else "" }}.
+{% else %}
     /// The chip on the board: `{"dev_id", "rev_id", "revision", "flash_kib"}`, `revision` is {{ revs | map("tojson") | join(", ") }} or "unknown".
+{% endif %}
 {% endfilter %}
     fn variant<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let v = self.block(self.{{ B }}()?.variant())?;
         let d = PyDict::new(py);
+{% if s.variant.kind == "rp" %}
+        d.set_item("part", v.part)?;
+        d.set_item("rev_id", v.rev_id)?;
+        d.set_item("rom_version", v.rom_version)?;
+{% else %}
         d.set_item("dev_id", v.dev_id)?;
         d.set_item("rev_id", v.rev_id)?;
+{% endif %}
         d.set_item(
             "revision",
             match v.revision {
@@ -366,7 +376,18 @@ impl Device {
                 _ => "unknown",
             },
         )?;
+{% if s.variant.kind == "rp" and s.variant.package %}
+        d.set_item(
+            "package",
+            match v.package {
+                Package::A => "A",
+                Package::B => "B",
+                _ => "unknown",
+            },
+        )?;
+{% elif s.variant.kind != "rp" %}
         d.set_item("flash_kib", v.flash_kib)?;
+{% endif %}
         Ok(d)
     }
 {% endif %}
@@ -438,8 +459,9 @@ impl Device {
         Ok(format!("{:?}", self.block(self.{{ B }}()?.boot_state())?))
     }
 
-    /// Reset the board into the firmware, or with `updater=True` into the STM32 ROM bootloader (USB DFU on
-    /// PA11/PA12). The connection is gone afterwards: the object is disconnected.
+{% filter rewrap("    /// ") %}
+    /// Reset the board into the firmware, or with `updater=True` into {{ s.boot.rom }} ({{ s.boot.via }}). The connection is gone afterwards: the object is disconnected.
+{% endfilter %}
     #[pyo3(signature = (updater=false))]
     fn reboot(&mut self, updater: bool) -> PyResult<()> {
         let into = if updater {

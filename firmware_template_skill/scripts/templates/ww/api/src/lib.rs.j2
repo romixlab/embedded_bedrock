@@ -78,7 +78,11 @@ pub trait Device {
     ww_impl!(log: ww_log::LogDefmt);
 {% endif %}
 {% if d.variant %}
+{% if v.kind == "rp" %}
+    /// The chip on this board, read from the chip itself: part, silicon revision{{ ", package" if v.package else "" }}
+{% else %}
     /// The chip on this board, read from the chip itself: device id, silicon revision, flash size
+{% endif %}
     property!(ro variant: Variant);
 {% endif %}
 {% if d.settings %}
@@ -86,7 +90,7 @@ pub trait Device {
     ww_impl!(settings: Settings);
 {% endif %}
 {% if d.boot %}
-    /// Boot state, confirm, revert, reboot: `reboot(Updater)` goes to the STM32 ROM bootloader. The state is always
+    /// Boot state, confirm, revert, reboot: `reboot(Updater)` goes to {{ s.boot.rom }}. The state is always
     /// `Confirmed`, there is no image to revert to.
     ww_impl!(boot: ww_dfu::BootControl);
 {% endif %}
@@ -97,8 +101,9 @@ pub trait Device {
 }
 {% if d.dfu %}
 
-/// Firmware update over the API (`ww_dfu`): here only who the node is. Updates go through the STM32 ROM bootloader
-/// (`device.boot.reboot(Updater)`, then `ww dfu stm32 flash` over USB on PA11/PA12), or through the debug probe.
+{% filter rewrap("/// ") %}
+/// Firmware update over the API (`ww_dfu`): here only who the node is. Updates go through {{ s.boot.rom }} (`device.boot.reboot(Updater)`, then `{{ s.boot.flash }}`, {{ s.boot.via }}), or through the debug probe.
+{% endfilter %}
 #[ww_trait]
 pub trait Dfu {
     /// Who this node is: product, profile, boot state, last result
@@ -121,6 +126,62 @@ pub trait Settings {
 {% endif %}
 {% if d.variant %}
 
+{% if v.kind == "rp" %}
+{{ ("The chip a board carries, see [`Device::variant`]: " ~ v.doc) | doc }}
+#[derive_shrink_wrap(
+    borrowed,
+    owned(feature = "std"),
+    derive(Copy, Clone, Debug, PartialEq, Eq)
+)]
+pub struct Variant {
+    /// SYSINFO CHIP_ID.PART
+    pub part: u16,
+    /// SYSINFO CHIP_ID.REVISION, the raw revision field
+    pub rev_id: u8,
+    /// The bootrom's version byte (0x00000013), which tells the silicon revisions apart
+    pub rom_version: u8,
+    /// The silicon revision `rom_version` stands for ({{ v.ref }})
+    pub revision: SiliconRevision,
+{% if v.package %}
+    /// The package, from SYSINFO PACKAGE_SEL{{ "; an RP2354 (stacked flash) reads as its RP2350 package" if v.stacked else "" }}
+    pub package: Package,
+{% endif %}
+}
+
+{{ ("Silicon revision of an " ~ v.device ~ ", told by the bootrom version (" ~ v.ref ~ "), see [`Variant::rom_version`] for the raw value. The revisions keep the datasheet's order and a new one is only ever added at the end, so a firmware that knows it is a compatible API change: an older host reads it as [`Newer`](SiliconRevision::Newer), with the version in `rom_version`.") | doc }}
+#[derive_shrink_wrap(borrowed, owned(feature = "std"), derive(Copy, Clone, Debug, PartialEq, Eq), ww_repr = unib32, future_version = Newer)]
+pub enum SiliconRevision {
+    /// A bootrom version this firmware doesn't know (a revision newer than it), the value is in `rom_version`
+    Unknown,
+{% for name, rom, rev in v.revisions %}
+    /// Revision {{ name }}: bootrom version {{ rom }}{{ ", CHIP_ID.REVISION %d" % rev if rev is not none else "" }}
+    {{ name }},
+{% endfor %}
+}
+
+impl SiliconRevision {
+    /// The revision of a bootrom version byte.
+    pub const fn from_rom_version(rom_version: u8) -> Self {
+        match rom_version {
+{% for name, rom, rev in v.revisions %}
+            {{ rom }} => SiliconRevision::{{ name }},
+{% endfor %}
+            _ => SiliconRevision::Unknown,
+        }
+    }
+}
+{% if v.package %}
+
+/// The package of an {{ v.device }}: SYSINFO PACKAGE_SEL ({{ v.ref }}).
+#[derive_shrink_wrap(borrowed, owned(feature = "std"), derive(Copy, Clone, Debug, PartialEq, Eq), ww_repr = unib32, future_version = Newer)]
+pub enum Package {
+    /// RP2350A{{ " / RP2354A" if v.stacked else "" }}: QFN-60, 30 GPIOs (PACKAGE_SEL 1)
+    A,
+    /// RP2350B{{ " / RP2354B" if v.stacked else "" }}: QFN-80, 48 GPIOs (PACKAGE_SEL 0)
+    B,
+}
+{% endif %}
+{% else %}
 {{ ("The chip a board carries, see [`Device::variant`]: " ~ v.doc) | doc }}
 #[derive_shrink_wrap(
     borrowed,
@@ -160,4 +221,5 @@ impl SiliconRevision {
         }
     }
 }
+{% endif %}
 {% endif %}
