@@ -271,6 +271,58 @@ Over RTT the host polls the probe, so a round trip takes milliseconds and the bo
 {% endif %}
 {% endif %}
 {% endif %}
+{% if s.can and s.has_cli %}
+{% set c = s.can %}
+{% set X = s.cli ~ " can" %}
+
+## CAN
+
+{% filter rewrap("") %}
+{{ "The board has " ~ c.count ~ " CAN FD channels" if c.count > 1 else "The board has one CAN FD channel" }}, `can[]` in the API (`ww_can_bus::Can`, served by `firmware/src/can.rs` and `firmware/src/ww/can.rs` over embedded_bedrock's `bedrock_can` and the `mcan` driver). Each starts at 250 kbit/s, classic CAN, normal mode{{ ", with its transceiver out of standby" if c.standby_any }}; the configuration is RAM only.
+{% endfilter %}
+
+| Index | FDCAN | TX | RX | Transceiver | Standby |
+|---|---|---|---|---|---|
+{% for ch in c.chans %}
+| {{ ch.index }} | {{ ch.instance }} | {{ ch.tx }} | {{ ch.rx }} | {{ ch.transceiver or "-" }} | {{ (ch.standby ~ " (" ~ ch.standby_active ~ " = standby)") if ch.standby else "-" }} |
+{% endfor %}
+
+```sh
+{{ (X ~ ' status').ljust(40) }} # configuration, error state (TEC / REC), protocol state of can[0]
+{{ (X ~ ' configure --rate 500k').ljust(40) }} # classic CAN at 500 kbit/s, sampled at 87.5 %
+{{ (X ~ ' configure --rate 500k --fd-rate 2M').ljust(40) }} # CAN FD, 2 Mbit/s data phase
+{{ (X ~ ' send 123#DEADBEEF 1F334455#11').ljust(40) }} # cansend syntax: standard, extended; 123#R remote; 123##1AABB FD with BRS
+{{ (X ~ ' dump').ljust(40) }} # candump -L lines (device time, channel, frame) until Ctrl-C
+{% if c.count > 1 %}
+{{ (X ~ ' status --index 1').ljust(40) }} # the other channels: --index N
+{% endif %}
+```
+
+### Loopback test, no bus needed
+
+{% filter rewrap("") %}
+In internal loopback mode the controller takes its own frames back and leaves its TX pin recessive, so this needs no transceiver, no bus and no second node; it checks the firmware, the API and the host side end to end:
+{% endfilter %}
+
+```sh
+{{ X }} configure --rate 500k --fd-rate 2M --mode internal-loopback
+{{ X }} dump -n 3 &                      # in a second terminal, or in the background
+sleep 1                                  # dump's stream is open
+{{ X }} send 123#DEADBEEF 1F334455#1122334455667788 123##1AABBCCDD
+wait                                     # dump printed the three frames and stopped
+{{ X }} configure --rate 500k --fd-rate 2M   # back to normal mode
+```
+{% if s.has_py %}
+
+{% filter rewrap("") %}
+`just py-example can_loopback` does the same from Python (`can_configure`, `can_rx` with `send=`, `can_status`) and fails when a frame doesn't come back.
+{% endfilter %}
+{% endif %}
+
+{% filter rewrap("") %}
+On a real bus: a transceiver, 120 Ω at both ends, at least one other node that acknowledges (a lone node sees ACK errors and goes error passive, `{{ X }} status` shows it).{{ " The G0's FDCAN has no filter elements in `mcan` yet: only the global filter (accept or reject non-matching frames, reject remote frames)." if c.family == "g0" else "" }}
+{% endfilter %}
+{% endif %}
 {% if s.has_py %}
 
 ## Python

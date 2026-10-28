@@ -11,7 +11,7 @@
 {% set about = feats("the LED", "the firmware", "the board" if d.board else "", "its label" if d.label else "",
                      ("counters and log" if d.log else "counters") if d.counters else ("its log" if d.log else ""),
                      "settings" if d.settings else "", "the last reset" if d.last_reset else "",
-                     "reboots into the ROM bootloader" if d.boot else "") %}
+                     "reboots into the ROM bootloader" if d.boot else "", "the CAN channels" if s.can else "") %}
 {% filter rewrap("//! ") %}
 //! `{{ s.cli }}`: the command line over `{{ C }}`. Argument parsing and printing live here, everything that talks to the board is the library's.
 //!
