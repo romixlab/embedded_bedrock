@@ -86,8 +86,13 @@ The generator in `firmware_template_skill/` (template 0.5.0).
 - 📋 **TPL-24 Settings store with `--bootloader`**: the embassy-boot updater in `main` and `src/settings.rs` both
   take the `FLASH` peripheral; share one `Flash` (blocking mutex, as the updater already uses) and generate the
   settings code for bootloader layouts too. Until then `--settings --bootloader` reserves the region only.
-- 📋 **TPL-25 Settings store on RP and nRF** (and the HAL frameworks): `ww_settings` on embassy-rp's flash (XIP
-  stalls during an erase, run from RAM or accept it) and embassy-nrf's NVMC; region only so far.
+- 🚧 **TPL-25 Settings store on RP and nRF** (and the HAL frameworks): RP 🧪: `src/settings.rs` for embassy on
+  RP2040 / RP2350 without `--bootloader` (`settings_flash()` "rp", `app/src/settings.rs.j2`): `ww_settings` on
+  embassy-rp's blocking `Flash` through `BlockingAsync`, the region of `--settings-pages` sectors at the end of flash
+  as usb_io_fw's b200_board does. An erase or write stalls XIP: embassy-rp runs it from RAM with interrupts off, on
+  core 0 only, pauses core 1 when it was started with `spawn_core1`, and waits for DMA reading flash. Built in the
+  matrix (`rp2040h`, `rp2350h`), not run on a board yet. nRF (embassy-nrf's NVMC) and the HAL frameworks: region only
+  so far.
 - 📋 **TPL-26 Settings store on other ECC flash** (G4, L4, L5, U5, WB, WL, H5, C0, U0): needs an `EccSafeFlash`
   family in WireWeaver's `ww_ecc_flash` first (`FLASH_ECCR` address and NMI flow per family); region only so far.
 - 🐛 **TPL-23 `init_ram.rs` not rustfmt clean for long bank names**: `xf3` (F303VC), `xg4` (G474RE) and `xl4`
@@ -176,8 +181,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   nucleo_g0b1re_template (cc1c30b) does, with the items the answers allow (`suite_context()` `s.dev`): the API crate
   (`ww/api/src/lib.rs.j2`) has `device: Device` with `firmware`, `last_reset` (crash capture), `board`, `uid`,
   `label` and `settings` (`--settings`, `led_at_boot`), `counters`, `log` (`--log defmt`: ww_defmt_logger, RTT tee),
-  `variant` (STM32 DBGMCU_IDCODE + FLASH_SIZE, revisions from `stm32.toml` `[variant.<dev_id>]`), `boot` and
-  `dfu.node` (bedrock_rom_boot on G0 / single-core H7 without `--bootloader`, needs `--log defmt`); the firmware
+  `variant` (STM32 DBGMCU_IDCODE + FLASH_SIZE, revisions from `stm32.toml` `[variant.<dev_id>]`; RP: TPL-55), `boot`
+  and `dfu.node` (bedrock_rom_boot on G0 / single-core H7 without `--bootloader`, needs `--log defmt`; RP: TPL-56); the
+  firmware
   `src/ww.rs`, `src/ww/device.rs`, `src/log.rs`, `src/boot.rs`; the boot word is taken out of cnt's BKPSRAM
   (`memory.x`, `CNT_BKP_BUFFER_SIZE_WORDS`). The G0 answers with `--board nucleo_g0b1re` regenerate G0's
   `firmware/src` byte for byte (that firmware runs on the board). Builds for the tested matrix's `--wire-weaver`
@@ -189,6 +195,24 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   a revision added later is appended, an additive API change. The matrix's `api-evolve` build (`matrix_api_evolve()`)
   regenerates the API with one more revision and runs `ww api check`: at the end compatible, in front breaking. Needs a
   `ww` from wire_weaver 668483bd or newer (EVO-10, the checker knows the catch-all).
+- 🧪 **TPL-55 Chip variant on RP**: `device.variant` of an RP2040 / RP2350 `--wire-weaver` firmware
+  (`variant_context()` kind "rp", `RP_VARIANT` in `bedrock_gen.py`): `Variant { part, rev_id, rom_version, revision,
+  package }` from SYSINFO CHIP_ID (PART, REVISION), the bootrom's version byte at 0x00000013 and, on RP2350, PACKAGE_SEL
+  (`Package::A` QFN-60, `B` QFN-80; an RP2354 reads as its RP2350 package). The revision comes from the bootrom version,
+  since CHIP_ID.REVISION can't tell all of them apart: RP2040 B0 / B1 / B2 = bootrom 1 / 2 / 3 (RP2040 datasheet 2.8),
+  RP2350 A2 / A3 / A4 = bootrom 2 / 3 / 4 (RP2350 datasheet appendix C; A3 and A4 both REVISION 3).
+  `SiliconRevision` grows by appending as TPL-52 (`from_rom_version`). With `--host` the client, CLI `variant` (`RP2350
+  rev A4 (bootrom 4), QFN-60 (RP2350A)`), Python `variant()` and the README follow. Built in the matrix (`rp2040h`,
+  `rp2350h`), not run on a board yet.
+- 🧪 **TPL-56 Boot and update node on RP**: `device.boot` and `device.dfu.node` of an RP `--wire-weaver` firmware
+  without `--bootloader` (needs `--log defmt`, `rp_boot()`): `reboot(Updater)` resets into BOOTSEL through
+  `embassy_rp::rom_data::reset_to_usb_boot` (the RP2350 ROM's `reboot()` with a 10 ms delay, RP2350-E30), 50 ms after
+  the reply (`src/boot.rs`, as usb_io_fw's b200_usb_io `reboot_task`); the state is always `Confirmed`, `confirm` is
+  `Ok`, `revert` `Unsupported`, the node `Profile::InPlace` (bedrock_rom_boot's `dfu` answers, no family feature). The
+  USB serial is `device.board`'s, which the RP2350 ROM reports in BOOTSEL too, so `ww dfu rp flash` (wire_weaver
+  CLT-21) follows the board there. With `--host` the client, CLI `boot` / `dfu`, Python and README say BOOTSEL. Built
+  in the matrix (`rp2040h`, `rp2350h`), not run on a board yet; whether the RP2040 ROM's serial matches (the flash
+  chip's id) is not in its datasheet.
 - 🧪 **TPL-39 The LED breathes on its timer channel** (`--led-mode auto|breath|gpio`, default auto): `led_pwm()`
   finds the LED pin's `TIMx_CHy` / `CHyN` and AF in stm32-data (`peripherals[].pins`; a plain channel before a
   complementary one, a general-purpose timer before TIM1 / TIM8) and names embassy's time driver off that timer

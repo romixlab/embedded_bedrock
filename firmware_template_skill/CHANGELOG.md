@@ -10,6 +10,27 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- The RP device suite, part 1 (TPL-25, TPL-55, TPL-56), for `--chip rp2040` / `rp2350` with `--wire-weaver` and
+  without `--bootloader`:
+  - Settings on RP flash: `--settings` writes `src/settings.rs` for embassy on RP (was region only): `ww_settings` on
+    embassy-rp's blocking `Flash` through `BlockingAsync`, the region at the end of flash; main loads it and starts
+    the LED at `led_at_boot`. An erase stalls XIP: embassy-rp runs it from RAM, core 0 only, core 1 paused.
+  - `device.variant` on RP: `Variant { part, rev_id, rom_version, revision, package }` from SYSINFO CHIP_ID, the
+    bootrom version byte and (RP2350) PACKAGE_SEL; `SiliconRevision` RP2040 B0..B2 / RP2350 A2..A4 by bootrom
+    version, appendable as TPL-52; `Package` A (QFN-60) / B (QFN-80).
+  - `device.boot` and `device.dfu.node` on RP (needs `--log defmt`): `reboot(Updater)` resets into BOOTSEL through
+    the boot ROM (`src/boot.rs`), state always `Confirmed`, node `Profile::InPlace` from `bedrock_rom_boot::dfu`
+    (the crate with no family feature). The USB serial number is `device.board`'s (the RP2350 ROM's in BOOTSEL).
+  - With `--host`: client, CLI (`variant`, `boot`, `dfu`), Python and README for these items; texts name BOOTSEL
+    instead of the STM32 ROM bootloader. Matrix: `rp2040h` gains `--settings`, new `rp2350h`.
+
+  Upgrade notes: an RP `--wire-weaver` firmware gains API items (`variant`, `boot`, `dfu`; `settings` and `label`
+  with `--settings`): additive, a minor API version bump and `just api-save`. Regenerate into a scratch directory and
+  take `src/boot.rs`, `src/settings.rs`, the new parts of `src/ww/device.rs`, `src/ww.rs` (`serial_number`),
+  `src/main.rs` (`boot::after_init`, the settings load), `Cargo.toml` (`bedrock_rom_boot`) and the API's `lib.rs`;
+  with `--host` the client, CLI, Python module and README. Needs a board run: settings across a reset and power
+  cut, `variant` on the board's silicon, `boot reboot --updater` then `ww dfu rp flash`.
+
 - Silicon revisions that can grow (TPL-52): the API's `SiliconRevision` has `Unknown` first, then the errata sheet's
   revisions in its order, `ww_repr = unib32` (was `nib`) and the catch-all `Newer(u32)` (was `Other`), so a revision
   added to `stm32.toml` later is appended and an additive API change instead of renumbering `Unknown`.
