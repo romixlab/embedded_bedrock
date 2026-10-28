@@ -198,13 +198,13 @@ The firmware serves `pins` ([`ww_pin_diag::PinDiag`](https://github.com/vhrdtech
 {% set which = "the pins it was generated with (`--pins`)" %}
 {% endif %}
 {% set check = " (`just test` checks the list against the pin table)" if P.table and s.has_client else "" %}
-{{ ("raw access to " ~ which ~ (", plus " ~ P.ro_readme ~ " to read" if P.read_only else "") ~ ". " ~ P.readme_left_out ~ " are not in it. A pin stays in analog mode, as after reset, until a host sets or reads it, and goes back there when the host releases the pins, disconnects or goes silent; one program at a time has them (`#[claim(exclusive)]`). `firmware/src/pins.rs` has the list: take a pin out of it before using it for something else" ~ check ~ ".") | wordwrap(115, break_long_words=False, break_on_hyphens=False) }}
+{{ ("raw access to " ~ which ~ (", plus " ~ P.ro_readme ~ " to read" if P.read_only else "") ~ ". " ~ P.readme_left_out ~ " " ~ P.left_out_are ~ " not in it. A pin stays in analog mode, as after reset, until a host sets or reads it, and goes back there when the host releases the pins, disconnects or goes silent; one program at a time has them (`#[claim(exclusive)]`). `firmware/src/pins.rs` has the list: take a pin out of it before using it for something else" ~ check ~ ".") | wordwrap(115, break_long_words=False, break_on_hyphens=False) }}
 
 ```sh
 {% if s.boardmap %}
 just pins                # every pin live on the board's headers: 1/0 drive, u/d/n pull, x release all, q quit
 {% else %}
-just pins                # every pin live, a panel per port: 1/0 drive, u/d/n pull, x release all, q quit
+just pins                # every pin live{{ "" if P.rp else ", a panel per port" }}: 1/0 drive, u/d/n pull, x release all, q quit
 {% endif %}
 ww {{ wsel }} pins list
 {% if P.test %}

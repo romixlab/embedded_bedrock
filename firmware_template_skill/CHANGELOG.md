@@ -47,6 +47,32 @@ or options; purely internal refactors only need a line under the next version.
   `src/can.rs` and `src/can/`, the CLI's `can` command, the Python `can_*` functions and the README section. Check
   the transceiver's standby level against the schematic; nothing has run on hardware yet.
 
+- The RP device suite, part 2 (TPL-57, TPL-50, TPL-48), for embassy on `--chip rp2040` / `rp2350` / `rp2350b`:
+  - The LED breathes on RP PWM: `--led-mode auto` (the default) picks the LED pin's PWM slice and channel (slice
+    `(n >> 1) & 7`, channel A on even GPIOs; slices 8-11 above GPIO 31 on RP2350B) and writes `src/led.rs` on
+    embassy-rp's `Pwm` at about 2 kHz through `bedrock_led` mono, as on STM32: `led_task`, `led_on` / `led_off`,
+    `led_at_boot`, and with `--wire-weaver` `leds: ww_indication::Indication`. `--led-mode gpio` keeps the plain
+    output.
+  - New option `--led-active high|low` [high]: `low` for an LED from 3V3 to the pin, the PWM output or the GPIO level
+    inverted. RP only so far; it refuses elsewhere (TPL-67).
+  - Clock sync on RP: `--clock-sync auto` turns `clock` on with `--wire-weaver` on embassy RP, as on STM32;
+    `clock.info` names embassy-rp's `TIMER` (RP2040) / `TIMER0` (RP235x).
+  - `--pins LIST` on RP: pins named `GP0`, `GP1`, ... (`GP2,GP3:ro`), `src/pins.rs` on embassy-rp's `Flex`, a pin
+    disconnected (input buffer off, no pulls) until a host uses it; on RP2350 a pulled-down input keeps its input
+    buffer off between reads (RP2350-E9). Board presets on RP default their pin nets to `GPn`.
+  - Host docs: README "Pins" says "is" for a single left-out pin and drops "a panel per port" on RP; the `--pins`
+    help names RP. Matrix: `rp2040pins`, `rp2350bled`, `rp2040gpio`, `rp2350clkoff`.
+
+  Upgrade notes: an embassy RP firmware regenerated with its answers now breathes and, with `--wire-weaver`, serves
+  `leds` and `clock` (additive API items: a minor API version bump and `just api-save`); answer `--led-mode gpio`
+  and / or `--clock-sync off` to keep it as it was. Otherwise regenerate into a scratch directory and take
+  `src/led.rs`, `src/sync.rs`, `src/ww/leds.rs`, `src/ww/clock.rs`, the new parts of `src/ww.rs` and `src/main.rs`
+  (the `led_task` spawn with its PWM slice), `Cargo.toml` (`bedrock_led`, `bedrock_sync`) and the API's `lib.rs`;
+  with `--host` the client's `sync.rs` / `leds.rs`, the CLI, Python and README. A board whose LED goes from 3V3 to
+  the pin adds `--led-active low`. `--pins` is new on RP: take `src/pins.rs` and its `ww.rs` / `main.rs` parts.
+  Needs a board run: the breath, `leds identify`, `clock --watch` over USB, `just pins` and on RP2350 A2 a
+  pulled-down pin reading low.
+
 - The RP device suite, part 1 (TPL-25, TPL-55, TPL-56), for `--chip rp2040` / `rp2350` with `--wire-weaver` and
   without `--bootloader`:
   - Settings on RP flash: `--settings` writes `src/settings.rs` for embassy on RP (was region only): `ww_settings` on

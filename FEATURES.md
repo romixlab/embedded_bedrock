@@ -239,6 +239,17 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   CLT-21) follows the board there. With `--host` the client, CLI `boot` / `dfu`, Python and README say BOOTSEL. Built
   in the matrix (`rp2040h`, `rp2350h`), not run on a board yet; whether the RP2040 ROM's serial matches (the flash
   chip's id) is not in its datasheet.
+- 🧪 **TPL-57 The LED breathes on RP PWM**: `--led-mode auto` breathes on embassy RP too (`rp_led_pwm()`: every GPIO
+  has a PWM slice channel, GPIO n is channel A when even, slice `(n >> 1) & 7` below GPIO 32 and `8 + ((n >> 1) & 3)`
+  above on RP2350B, as embassy-rp's `impl_pin!` table). `src/led.rs` (`app/src/led-rp.rs.j2`, after usb_io_fw's
+  `b200_usb_io/src/led.rs` and `b200_board/src/led.rs`): embassy-rp `Pwm` at about 2 kHz (TOP 0xffff) through
+  `bedrock_led` mono, the same `led_task`, `led_at_boot`, `leds: ww_indication::Indication` and host side as TPL-39;
+  the breath follows shared time with TPL-50. New option `--led-active high|low` (default high; `low` inverts the PWM
+  output or the GPIO level, for an LED from 3V3 to the pin; RP only, TPL-67). Matrix: every embassy RP entry on GP25,
+  `rp2350bled` (GP38, slice 11, active low), `rp2040gpio` (`--led-mode gpio --led-active low`). Not run on a board.
+- 📋 **TPL-67 `--led-active low` outside RP**: the option refuses on STM32 (embassy `SimplePwm` /
+  `ComplementaryPwm` output polarity, the HAL crates' GPIO), nRF and ESP; boards with an LED from 3V3 to the pin
+  invert by hand there.
 - 🧪 **TPL-39 The LED breathes on its timer channel** (`--led-mode auto|breath|gpio`, default auto): `led_pwm()`
   finds the LED pin's `TIMx_CHy` / `CHyN` and AF in stm32-data (`peripherals[].pins`; a plain channel before a
   complementary one, a general-purpose timer before TIM1 / TIM8) and names embassy's time driver off that timer
@@ -248,8 +259,8 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `led_at_boot` setting starts it solid on. With `--wire-weaver`: `leds: ww_indication::Indication` in the API (mode,
   brightness, identify; `src/ww/leds.rs`), with `--host` the client's `leds_mode` / `brightness` / `identify`, the
   CLI's `leds show|mode|brightness|identify`, Python's `leds_mode`, `brightness`, `identify()` and a README "LED"
-  section. A pin without a channel, `--framework` other than embassy and RP / nRF / ESP (PWM not wired yet) keep the
-  plain GPIO output (`new` says so); `--led-mode breath` refuses there. The G0 answers with `--board nucleo_g0b1re`
+  section. A pin without a channel, `--framework` other than embassy and nRF / ESP (PWM not wired yet) keep the
+  plain GPIO output (`new` says so); `--led-mode breath` refuses there. RP: TPL-57. The G0 answers with `--board nucleo_g0b1re`
   regenerate nucleo_g0b1re_template's FW-10 / API-4 leds part (v0.1.7, a182dbc); the clock is TPL-40. Builds
   for the tested matrix (`g0brd` PA5 TIM2_CH1, `g0ledn` PF1 TIM15_CH1N, `h7ledpb0` PB0 TIM3_CH3, `h7ledpe1` and
   `g0ledgpio` without a channel, `g0ledoff`, and every embassy STM32 entry on PB14; full run 24 Oct 2026: only the known TPL-22, TPL-23, TPL-34 fail); ran on a board only as G0's own
@@ -294,9 +305,13 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - ✅ **TPL-68 `can_task` signature unlike rustfmt without a standby pin on G0**: `src/can.rs` always wrapped the
   task's parameters, but with no `stby=` pin and no H7 layout they fit in 100 columns and rustfmt keeps them on one
   line (`--can FDCAN1:PD1,PB8` failed `rustfmt --check`). Fixed in `templates/app/src/can.rs.j2`; matrix `g0canhw`.
-- 📋 **TPL-50 Clock sync on RP and nRF**: `--clock-sync on` refuses outside embassy STM32. `bedrock_sync`'s
-  `embassy` feature is chip-independent; what is missing is `clock.info`'s source name and a check on a board
-  (embassy-rp's and embassy-nrf's time drivers, USB round trips).
+- 🧪 **TPL-50 Clock sync on RP and nRF**: RP done, nRF open. `clock_sync()` turns `clock` on with `--wire-weaver`
+  on embassy RP too: the same `src/sync.rs` / `src/ww/clock.rs` as TPL-40 (`bedrock_sync`'s `embassy` feature is
+  chip-independent), `clock.info` names embassy-rp's time driver timer (`TIMER` on RP2040, `TIMER0` on RP235x,
+  embassy-rp `time_driver.rs`), bedrock_sync's 2 ms lock tolerance over USB; the LED breathes on shared time (TPL-57).
+  Matrix: every RP `--wire-weaver` entry (`rp2040h`, `rp2350h`, `rp2040pins`, `rp2350bled`, `rp2040gpio` without
+  the breath), `rp2350clkoff` (`--clock-sync off`). Not run on a board: USB round trips on embassy-rp unmeasured.
+  nRF: `--clock-sync on` still refuses (embassy-nrf's RTC time driver, its source name and a board check).
 - 📋 **TPL-47 `device.boot` / `dfu` without defmt**: `rom_boot_family()` leaves boot out unless `--log defmt`
   (`src/boot.rs` logs defmt values); `--log rtt` / `none` firmware on G0 / H7 could have it too.
 - 🧪 **TPL-46 `--pins`: `ww_pin_diag::PinDiag` beside the device suite**: `--pins board|LIST|none` (`resolve_pins()`;
@@ -313,8 +328,15 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   the client test, the pin test plan and the README section byte for byte (that firmware passed `ww pins test` on
   the board); matrix entries `g0board`, `g0pinsh` (list, USB, `--host`), `g0pinsrtt` (list, no `--host`) and
   `h7pins` build. Embassy on STM32 with `--log defmt` only; the H7 code has not run on a board.
-- 📋 **TPL-48 `--pins` on RP and nRF**: `resolve_pins()` dies outside STM32; embassy-rp and embassy-nrf have a
-  `Flex` too, `pins.rs` needs their pull / drive / analog (disconnected input) calls and the pin names of the chip.
+- 🧪 **TPL-48 `--pins` on RP and nRF**: RP done, nRF open. `resolve_pins()` takes RP pin names `GP0`..`GP29`
+  (`GP47` on RP2350B), never the LED; SWD and USB have pins of their own. `src/pins.rs` (`app/src/pins-rp.rs.j2`) on
+  embassy-rp's `Flex`: "analog" is the disconnected state (input buffer off, no pulls, output off; `Pins::new`
+  disconnects every pin, since `Flex::new` turns the input buffer on), weak drive 2 mA, normal 4 mA. RP2350-E9
+  (RP2350 datasheet appendix D.5.1, "Increased leakage current on Bank 0 GPIO when pad input is enabled", affects A2,
+  fixed in A3: an input-enabled pad holds itself at about 2.2 V against the pull-down) is handled on every RP235x as usb_io_fw's `b200_board/src/pin_diag.rs` does: a
+  pulled-down input keeps the input buffer off and a read turns it on, waits, reads and turns it off again. A board
+  preset's map defaults its pin nets to `^GP\d+$` on RP (none exists yet). Matrix: `rp2040pins`, `rp2350bled`
+  (pins above GP29). Not run on a board. nRF: `resolve_pins()` still dies (embassy-nrf's `Flex`, its pin names).
 - 📋 **TPL-49 `--pins` without embassy**: the STM32 HAL crates (`stm32-hal2`, `stm32xx-hal`) and bare firmware have no
   `pins.rs` yet (it is written against embassy-stm32's `Flex`); `--wire-weaver` there serves the device suite only.
 - ✅ **TPL-38 API evolution check**: every `--wire-weaver` API crate gets `tests/evolution.rs`

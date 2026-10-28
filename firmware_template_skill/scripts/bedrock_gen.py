@@ -1432,7 +1432,7 @@ def rp_led_pwm(t: Target, led: str) -> dict:
     n = rp_gpio(t, led)
     sl = (n >> 1) & 7 if n < 32 else 8 + ((n >> 1) & 3)
     ch = "B" if n & 1 else "A"
-    return dict(slice=f"PWM_SLICE{sl}", ch=ch, gpio=n, signal=f"PWM {sl}{ch}", timer=f"PWM_SLICE{sl}",
+    return dict(slice=f"PWM_SLICE{sl}", ch=ch, gpio=n, signal=f"slice {sl} channel {ch}", timer=f"PWM_SLICE{sl}",
                 freq="about 2 kHz", driver="", multi=False)
 
 
@@ -1662,9 +1662,11 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         # the README's: the read-only pins, what is left out (the preset's short form)
         "ro_readme": human_list([ro_info[n].get("readme", n) if n in ro_info else n for n in ro], "and") if ro else "",
         "readme_left_out": bp.get("readme_left_out", "") if spec == "board" else "T" + human_list(taken, "and")[1:],
+        "left_out_are": "are" if spec == "board" or len(taken) > 1 else "is",  # RP leaves out only the LED
         "test": bp.get("test", "") if spec == "board" else "",  # the pin test of a bare board, in the preset dir
         "table": table,
         "board": spec == "board",
+        "rp": rp,  # one bank: `ww pins tui` shows no panel per port
     }
 
 
@@ -3236,7 +3238,8 @@ def main(argv=None) -> None:
                    help="`pins` in the API (ww_pin_diag::PinDiag): raw access to free pins for bring-up and pin tests, "
                         "`just pins` shows them live (ww pins tui). `board`: every pin the --board preset's board map "
                         "marks free, plus the pins it reads only; else a list like PA0,PA1,PC13:ro (`:ro` read only). "
-                        "Never the SWD pins, the LED or USB. Needs --wire-weaver and --log defmt, embassy on STM32")
+                        "RP pins are named GP0, GP1, ... Never the SWD pins, the LED or USB. Needs --wire-weaver and --log "
+                        "defmt, embassy on STM32 and RP")
     p.add_argument("--can", metavar="board|LIST|none",
                    help="`can[]` in the API (ww_can_bus::Can): FDCAN channels through the mcan driver, configured, "
                         "sent and received by a host (`can status|send|dump` with --host). `board`: the --board "

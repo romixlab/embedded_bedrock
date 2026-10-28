@@ -614,3 +614,34 @@ args = ["--board", "matrix_presets/h7ulpi"]
 builds = ["dev", "release"]
 tags = ["ww"]
 note = "--usb-phy ulpi: USB_OTG_HS high speed, NXT on PH4, USB clock from the preset's PLL3Q, VID:PID 1209:0001 through usb_init_with_ids (TPL-54, TPL-18; needs wire_weaver TR-17)"
+
+# RP (TPL-57, TPL-50, TPL-48): every embassy RP entry above breathes on its default LED pin (GP25 on PWM slice 4,
+# channel B) and, with --wire-weaver, serves `clock` on embassy-rp's TIMER (TIMER0 on RP235x).
+
+[[entry]]
+name = "rp2040pins"
+args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--pins", "GP2,GP3:ro", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "--pins on RP2040: embassy-rp's Flex, no E9 workaround; breath and clock over USB"
+
+[[entry]]
+name = "rp2350bled"
+args = ["--chip", "rp2350b", "--wire-weaver", "--counters", "--led", "PIN_38", "--led-active", "low", "--pins", "GP0,GP1,GP22:ro,GP40", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "RP2350B: active-low LED on PWM slice 11 (GPIO >= 32), pins above GP29 with the RP2350-E9 workaround"
+
+[[entry]]
+name = "rp2040gpio"
+args = ["--chip", "rp2040", "--wire-weaver", "--led-mode", "gpio", "--led-active", "low", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "--led-mode gpio, active low: clock without leds"
+
+[[entry]]
+name = "rp2350clkoff"
+args = ["--chip", "rp2350", "--wire-weaver", "--clock-sync", "off", "--host"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "--clock-sync off on RP: leds without clock"

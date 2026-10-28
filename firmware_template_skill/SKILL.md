@@ -80,9 +80,10 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      2e8a:000c on RP, J-Link 1366:1015 on nRF]: the cargo runner and every recipe select the probe by it, the serial
      comes from `<CLI>_PROBE` in the environment or `.env`; a PC with several probes never gets an implicit one.
    - pin diagnostics `--pins board|LIST|none` [none; both presets: board] (`--wire-weaver`, embassy
-     on STM32, `--log defmt`): `pins` in the API (`ww_pin_diag::PinDiag`, `src/pins.rs`) for bring-up and pin tests,
+     on STM32 and RP, `--log defmt`): `pins` in the API (`ww_pin_diag::PinDiag`, `src/pins.rs`) for bring-up and pin tests,
      `just pins` shows them live (`ww pins tui`). `board`: every pin the preset's board map marks free, plus its
-     read-only pins; a list `PA0,PB3,PC13:ro` without a preset (`:ro` only read). Never SWD, the LED or USB.
+     read-only pins; a list `PA0,PB3,PC13:ro` without a preset (`:ro` only read; RP pins `GP2,GP3:ro`). Never
+     SWD, the LED or USB. RP2350 (A2 silicon) pulled-down inputs keep the input buffer off between reads (RP2350-E9).
    - CAN `--can board|LIST|none` [none] (`--wire-weaver`, `--log defmt`, `--counters`, embassy on STM32G0 / H7):
      FDCAN channels as `can[]` in the API (`ww_can_bus::Can` over `mcan` and `bedrock_can`, `src/can.rs`,
      `src/ww/can.rs`), with `--host` the client's `can` module, `<cli> can status|configure|send|dump` and Python
@@ -104,11 +105,12 @@ Paths are relative to this skill directory; use the absolute path when invoking.
    - board LED pin `--led` (PB14 / PIN_25 / P0_13 / GPIO8 by default), RTC usage `--rtc`
    - LED mode `--led-mode auto|breath|gpio` [auto]: `breath` drives the LED pin's timer channel as PWM through
      `bedrock_led` (breathes, `leds` in the API with `--wire-weaver`) and names embassy's time driver off that timer;
-     `auto` breathes where the pin has a channel (embassy on STM32 so far), `gpio` keeps a plain output. Ask when the
-     firmware needs the LED's timer for something else.
+     `auto` breathes where the pin has a channel (embassy on STM32 and RP: every RP GPIO has a PWM slice channel),
+     `gpio` keeps a plain output. Ask when the firmware needs the LED's timer or slice for something else.
+   - LED active level `--led-active high|low` [high]: `low` for an LED from 3V3 to the pin (RP so far).
    - clock sync `--clock-sync auto|on|off` [auto]: `clock` in the API (`ww_timebase::Clock` through
      `bedrock_sync`): a host steers the board's shared clock onto UTC and the LED breathes on it, in phase with other
-     boards; `auto` turns it on with `--wire-weaver` on embassy STM32. `off` for firmware that wants no clock.
+     boards; `auto` turns it on with `--wire-weaver` on embassy STM32 and RP. `off` for firmware that wants no clock.
    - STM32H7 with SMPS: `--supply-config <variant>` [+ `--smps-voltage V1_8|V2_5`] — the script **refuses** to
      generate without it; the value must come from the board schematic. Explain the options
      (see `references/stm32-notes.md`) and ask, never guess.
