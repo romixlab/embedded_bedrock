@@ -655,7 +655,8 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   root-sheet `/` of KiCad's net names; the pad's pin name joins its net, so the views colour it by the pin's role
   and the pin table lists `PB14` with its label `LED` (the generator's `--pins board` reads the same); the alias
   column only where a description names any; a `+` in front of a rail (`+VIN_CAN`) keeps its class; the bottom
-  view's title drops "(mirrored ...)" when a narrow board has no room for it · `geometry.rs`, `nets.rs`, `pins.rs`.
+  view's title drops "(mirrored ...)" when a narrow board has no room for it; `extract --pin-names` renames what a
+  symbol calls the pins (`GPIO38_47` → `GP38`, rePort B200A) · `geometry.rs`, `nets.rs`, `pins.rs`.
 - ✅ **MAP-11 BGA boards: unconnected balls, shorted pins, horizontal headers**: on the B135B (TFBGA176, TPL-59) a
   pad on KiCad's `unconnected-...` net gets no row in the pin table, only a "Not connected on the board" line, and
   is no free pin for the generator's `--pins board`; two MCU pins on one net (PB3 and PG9) get a row each with the

@@ -101,6 +101,26 @@ impl Footprint {
 }
 
 impl Geometry {
+    /// Renames the pads' pin names that `re` matches whole (`$1` in `with` is its first group): a symbol whose pins
+    /// are named `GPIO38_47` (name and pad) gives `GP38` with `^GPIO(\d+)(_\d+)?$` and `GP$1`. Returns how many
+    /// it renamed.
+    pub fn rename_pins(&mut self, pattern: &str, with: &str) -> Result<usize> {
+        let re = regex_lite::Regex::new(pattern)
+            .with_context(|| format!("pin name pattern {pattern}"))?;
+        let mut n = 0;
+        for pad in self.footprints.values_mut().flat_map(|f| f.pads.iter_mut()) {
+            if let Some(pin) = &pad.pin
+                && let Some(m) = re.find(pin)
+                && m.start() == 0
+                && m.end() == pin.len()
+            {
+                pad.pin = Some(re.replace(pin, with).into_owned());
+                n += 1;
+            }
+        }
+        Ok(n)
+    }
+
     pub fn load(path: &Path) -> Result<Self> {
         let text =
             std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
@@ -468,6 +488,30 @@ mod tests {
             "{:?}",
             j.pads
         );
+    }
+
+    #[test]
+    fn pins_renamed_whole_matches_only() {
+        let text = r#"(kicad_pcb
+  (footprint "lib:rp" (layer "F.Cu") (at 0 0)
+    (property "Reference" "U1")
+    (pad "47" smd rect (at 0 0) (size 1 1) (net "LED") (pinfunction "GPIO38_47"))
+    (pad "49" smd rect (at 1 0) (size 1 1) (net "B0") (pinfunction "GPIO40"))
+    (pad "33" smd rect (at 2 0) (size 1 1) (net "SWCLK") (pinfunction "SWCLK_33")))
+  (gr_line (start 0 0) (end 10 0) (layer "Edge.Cuts"))
+)"#;
+        let dir = std::env::temp_dir().join(format!("bedrock_board_pins_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("t.kicad_pcb");
+        std::fs::write(&path, text).unwrap();
+        let mut geo = Geometry::extract(&path, "test", |_| true).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(geo.rename_pins(r"^GPIO(\d+)(_\d+)?$", "GP$1").unwrap(), 2);
+        let u1 = &geo.footprints["U1"];
+        let pin = |n: &str| u1.pad(n).unwrap().pin.clone();
+        assert_eq!(pin("47").as_deref(), Some("GP38"));
+        assert_eq!(pin("49").as_deref(), Some("GP40"));
+        assert_eq!(pin("33").as_deref(), Some("SWCLK_33"));
     }
 
     #[test]

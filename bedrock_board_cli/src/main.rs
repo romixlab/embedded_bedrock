@@ -43,6 +43,10 @@ enum Cmd {
         /// Where the file came from, printed in the pictures' footer
         #[arg(long, default_value = "the board's PCB file")]
         source: String,
+        /// Rename pin names a symbol gives the MCU's pads, REGEX=REPLACEMENT (whole names, `$1` the first group;
+        /// repeatable): `--pin-names '^GPIO(\d+)(_\d+)?$=GP$1'` turns `GPIO38_47` into `GP38`
+        #[arg(long, value_name = "REGEX=REPLACEMENT")]
+        pin_names: Vec<String>,
     },
     /// Render the pictures and the pin table from a description
     Render {
@@ -66,6 +70,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             out,
             prefixes,
             source,
+            pin_names,
         } => {
             let prefixes = prefixes.unwrap_or_else(|| {
                 ["CN", "J", "JP", "SB", "LD", "D", "B", "SW", "U", "X", "Y"]
@@ -73,7 +78,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                     .map(String::from)
                     .collect()
             });
-            let geo = Geometry::extract(&pcb, &source, |reference| {
+            let mut geo = Geometry::extract(&pcb, &source, |reference| {
                 prefixes.iter().any(|p| {
                     reference.starts_with(p.as_str())
                         && reference[p.len()..]
@@ -82,6 +87,13 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                             .is_some_and(|c| c.is_ascii_digit())
                 })
             })?;
+            for rule in &pin_names {
+                let (re, with) = rule
+                    .rsplit_once('=')
+                    .ok_or_else(|| anyhow::anyhow!("--pin-names {rule}: REGEX=REPLACEMENT"))?;
+                let n = geo.rename_pins(re, with)?;
+                println!("{DIM}--pin-names {rule}: {n} pins{DIM:#}");
+            }
             geo.save(&out)?;
             println!(
                 "{BOLD}{}{BOLD:#} footprints, {} outline segments, board {:.1} x {:.1} mm -> {}",

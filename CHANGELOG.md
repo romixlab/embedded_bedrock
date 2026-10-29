@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `boardmap extract --pin-names REGEX=REPLACEMENT` renames the pin names a symbol gives the MCU's pads
+  (`GPIO38_47` → `GP38` for rePort B200A's RP2350B) (MAP-10).
+
 ### Fixed
 
 - boardmap extract reads the outline an enclosure footprint carries (`fp_line` / `fp_arc` on `Edge.Cuts`, KiCad 10

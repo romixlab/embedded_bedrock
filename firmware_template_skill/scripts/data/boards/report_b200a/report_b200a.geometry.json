@@ -2044,7 +2044,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_CK",
-          "pin": "GPIO4_1"
+          "pin": "GP4"
         },
         {
           "number": "2",
@@ -2059,7 +2059,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_CMD",
-          "pin": "GPIO5_2"
+          "pin": "GP5"
         },
         {
           "number": "3",
@@ -2074,7 +2074,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_D3",
-          "pin": "GPIO6_3"
+          "pin": "GP6"
         },
         {
           "number": "4",
@@ -2089,7 +2089,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_D2",
-          "pin": "GPIO7_4"
+          "pin": "GP7"
         },
         {
           "number": "5",
@@ -2119,7 +2119,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/SDA",
-          "pin": "GPIO8_6"
+          "pin": "GP8"
         },
         {
           "number": "7",
@@ -2134,7 +2134,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/SCL",
-          "pin": "GPIO9_7"
+          "pin": "GP9"
         },
         {
           "number": "8",
@@ -2149,7 +2149,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/DIR7",
-          "pin": "GPIO10_8"
+          "pin": "GP10"
         },
         {
           "number": "9",
@@ -2164,7 +2164,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/DIR6",
-          "pin": "GPIO11_9"
+          "pin": "GP11"
         },
         {
           "number": "10",
@@ -2194,7 +2194,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO0",
-          "pin": "GPIO12_11"
+          "pin": "GP12"
         },
         {
           "number": "12",
@@ -2209,7 +2209,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO1",
-          "pin": "GPIO13_12"
+          "pin": "GP13"
         },
         {
           "number": "13",
@@ -2224,7 +2224,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO2",
-          "pin": "GPIO14_13"
+          "pin": "GP14"
         },
         {
           "number": "14",
@@ -2239,7 +2239,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO3",
-          "pin": "GPIO15_14"
+          "pin": "GP15"
         },
         {
           "number": "15",
@@ -2269,7 +2269,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO5",
-          "pin": "GPIO16_16"
+          "pin": "GP16"
         },
         {
           "number": "17",
@@ -2284,7 +2284,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO4",
-          "pin": "GPIO17_17"
+          "pin": "GP17"
         },
         {
           "number": "18",
@@ -2299,7 +2299,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO6",
-          "pin": "GPIO18_18"
+          "pin": "GP18"
         },
         {
           "number": "19",
@@ -2314,7 +2314,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/IO7",
-          "pin": "GPIO19_19"
+          "pin": "GP19"
         },
         {
           "number": "20",
@@ -2329,7 +2329,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/DIR4",
-          "pin": "GPIO20_20"
+          "pin": "GP20"
         },
         {
           "number": "21",
@@ -2344,7 +2344,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/DIR5",
-          "pin": "GPIO21_21"
+          "pin": "GP21"
         },
         {
           "number": "22",
@@ -2359,7 +2359,7 @@
           "shape": "rect",
           "through": false,
           "net": "USER_BTN",
-          "pin": "GPIO22_22"
+          "pin": "GP22"
         },
         {
           "number": "23",
@@ -2374,7 +2374,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/Shift Reg/EXP.LATCH",
-          "pin": "GPIO23_23"
+          "pin": "GP23"
         },
         {
           "number": "24",
@@ -2404,7 +2404,7 @@
           "shape": "rect",
           "through": false,
           "net": "unconnected-(U1801-GPIO24-Pad25)",
-          "pin": "GPIO24_25"
+          "pin": "GP24"
         },
         {
           "number": "26",
@@ -2419,7 +2419,7 @@
           "shape": "rect",
           "through": false,
           "net": "/MCU/ADPT_HPULL",
-          "pin": "GPIO25_26"
+          "pin": "GP25"
         },
         {
           "number": "27",
@@ -2434,7 +2434,7 @@
           "shape": "rect",
           "through": false,
           "net": "/MCU/SCK",
-          "pin": "GPIO26_27"
+          "pin": "GP26"
         },
         {
           "number": "28",
@@ -2449,7 +2449,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/Shift Reg/EXP.~{OE}",
-          "pin": "GPIO27_28"
+          "pin": "GP27"
         },
         {
           "number": "29",
@@ -2569,7 +2569,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/EXP_DI",
-          "pin": "GPIO28_36"
+          "pin": "GP28"
         },
         {
           "number": "37",
@@ -2584,7 +2584,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/Shift Reg/EXP.CLK",
-          "pin": "GPIO29_37"
+          "pin": "GP29"
         },
         {
           "number": "38",
@@ -2599,7 +2599,7 @@
           "shape": "rect",
           "through": false,
           "net": "/MCU/CTS",
-          "pin": "GPIO30_38"
+          "pin": "GP30"
         },
         {
           "number": "39",
@@ -2614,7 +2614,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/RTS",
-          "pin": "GPIO31_39"
+          "pin": "GP31"
         },
         {
           "number": "40",
@@ -2629,7 +2629,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/TX",
-          "pin": "GPIO32_40"
+          "pin": "GP32"
         },
         {
           "number": "41",
@@ -2659,7 +2659,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/RX",
-          "pin": "GPIO33_42"
+          "pin": "GP33"
         },
         {
           "number": "43",
@@ -2674,7 +2674,7 @@
           "shape": "rect",
           "through": false,
           "net": "/MCU/SCK",
-          "pin": "GPIO34_43"
+          "pin": "GP34"
         },
         {
           "number": "44",
@@ -2689,7 +2689,7 @@
           "shape": "rect",
           "through": false,
           "net": "/MCU/MOSI",
-          "pin": "GPIO35_44"
+          "pin": "GP35"
         },
         {
           "number": "45",
@@ -2704,7 +2704,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/MISO",
-          "pin": "GPIO36_45"
+          "pin": "GP36"
         },
         {
           "number": "46",
@@ -2719,7 +2719,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/CS",
-          "pin": "GPIO37_46"
+          "pin": "GP37"
         },
         {
           "number": "47",
@@ -2734,7 +2734,7 @@
           "shape": "rect",
           "through": false,
           "net": "LED",
-          "pin": "GPIO38_47"
+          "pin": "GP38"
         },
         {
           "number": "48",
@@ -2749,7 +2749,7 @@
           "shape": "rect",
           "through": false,
           "net": "/MCU/CTS",
-          "pin": "GPIO39_48"
+          "pin": "GP39"
         },
         {
           "number": "49",
@@ -2764,7 +2764,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B0_A",
-          "pin": "GPIO40"
+          "pin": "GP40"
         },
         {
           "number": "50",
@@ -2809,7 +2809,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B2_A",
-          "pin": "GPIO41"
+          "pin": "GP41"
         },
         {
           "number": "53",
@@ -2824,7 +2824,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B5_A",
-          "pin": "GPIO42"
+          "pin": "GP42"
         },
         {
           "number": "54",
@@ -2839,7 +2839,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B4_A",
-          "pin": "GPIO43"
+          "pin": "GP43"
         },
         {
           "number": "55",
@@ -2854,7 +2854,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B6_A",
-          "pin": "GPIO44"
+          "pin": "GP44"
         },
         {
           "number": "56",
@@ -2869,7 +2869,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B3_A",
-          "pin": "GPIO45"
+          "pin": "GP45"
         },
         {
           "number": "57",
@@ -2884,7 +2884,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/B1_A",
-          "pin": "GPIO46"
+          "pin": "GP46"
         },
         {
           "number": "58",
@@ -2899,7 +2899,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/ADPT_KIND",
-          "pin": "GPIO47"
+          "pin": "GP47"
         },
         {
           "number": "59",
@@ -3184,7 +3184,7 @@
           "shape": "rect",
           "through": false,
           "net": "/Frontend/SYNC_IO",
-          "pin": "GPIO0_77"
+          "pin": "GP0"
         },
         {
           "number": "78",
@@ -3199,7 +3199,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_DET",
-          "pin": "GPIO1_78"
+          "pin": "GP1"
         },
         {
           "number": "79",
@@ -3214,7 +3214,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_D0",
-          "pin": "GPIO2_79"
+          "pin": "GP2"
         },
         {
           "number": "80",
@@ -3229,7 +3229,7 @@
           "shape": "rect",
           "through": false,
           "net": "SDMMC_D1",
-          "pin": "GPIO3_80"
+          "pin": "GP3"
         },
         {
           "number": "81",
