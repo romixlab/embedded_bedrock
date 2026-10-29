@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.29] - 2026-10-29
+
 ### Added
 
 - `boardmap extract --pin-names REGEX=REPLACEMENT` renames the pin names a symbol gives the MCU's pads
