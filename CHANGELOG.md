@@ -9,6 +9,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- boardmap: `labels = "outside"` for a header lying across the board, its labels turned on their side above the top
+  row and below the bottom row (MAP-11).
+
+### Fixed
+
+- boardmap on BGA boards: pads on KiCad's `unconnected-...` nets get no pin table row (a "Not connected on the board"
+  line lists them), two MCU pins on one net get a row each, `PH0-OSC_IN`-style pin names count as the pin, and net
+  labels drop the hierarchical sheet path (MAP-11).
+
 ## [0.2.27] - 2026-10-29
 
 ### Fixed

@@ -1531,9 +1531,14 @@ def board_pins(preset: dict, rp: bool = False) -> tuple[list[str], dict]:
     mcu = geo["footprints"].get(desc["board"]["mcu_ref"]) or die(f"{bm['geometry']}: no footprint "
                                                                  f"{desc['board']['mcu_ref']} (the MCU)")
     roles = desc.get("pins", {})
-    # a pad's pin name (KiCad's pinfunction, MAP-10) wins over a net labelled by function (`LED` on PB14)
-    nets = {n for p in mcu["pads"] if p.get("net")
-            for n in [p["pin"] if p.get("pin") and pin_re.search(p["pin"]) else p["net"]] if pin_re.search(n)}
+
+    def pin_name(pin: str) -> Optional[str]:
+        """The MCU pin a pad's pin name is: itself, or its part before `-` (`PH0-OSC_IN`), as boardmap's (MAP-11)."""
+        return next((x for x in (pin, pin.split("-")[0]) if pin_re.search(x)), None)
+    # a pad's pin name (KiCad's pinfunction, MAP-10) wins over a net labelled by function (`LED` on PB14); a pad
+    # nothing else is wired to (KiCad's `unconnected-...` net, a BGA's spare balls) is no free pin (MAP-11)
+    nets = {n for p in mcu["pads"] if p.get("net") and not p["net"].lower().startswith("unconnected")
+            for n in [p.get("pin") and pin_name(p["pin"]) or p["net"]] if pin_re.search(n)}
     return sorted((n for n in nets if roles.get(n, {}).get("role", "free") == "free"), key=pin_key), roles
 
 

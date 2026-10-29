@@ -1,0 +1,268 @@
+# Board description for boardmap (bedrock_board): what to draw of the B135B FDCAN ISO USB and what every pin does.
+# Facts: the B135B KiCad board (hw/b135_fdcan_iso_usb/source/b135b, rev B: its nets, the schematic's labels),
+# vb135_fdcan_iso_usb_fw (b135_fw, b135_board), the STM32H725xE/G (DS13311), USB3315, TS3USB221A and ADM3050E
+# datasheets.
+
+[board]
+name = "B135B FDCAN ISO USB"
+pcb = "B135B (rev B)"
+mcu = "STM32H725IGK6 (U201, TFBGA176+25)"
+mcu_ref = "U201"
+geometry = "b135b.geometry.json"
+sources = ["B135B KiCad board rev B", "STM32H725xE/G datasheet DS13311", "USB3315, TS3USB221A and ADM3050E datasheets"]
+scale = 9.0
+
+[[view.connector]]
+ref = "J203"
+label = "J203 2x4"
+labels = "outside"
+numbers = true
+
+[[view.part]]
+ref = "U201"
+label = "U201\nSTM32H725IGK6"
+kind = "mcu"
+
+[[view.part]]
+ref = "J301"
+label = "J301 USB-C\nUSB HS / FS, power in"
+kind = "usb"
+
+[[view.part]]
+ref = "J501"
+label = "J501 DE-9\n2 CAN_L\n7 CAN_H\n3 GND\n9 V+"
+kind = "other"
+
+[[view.part]]
+ref = "J202"
+label = "J202 Tag-Connect TC2050\nSWD, BOOT0, reset"
+kind = "other"
+dy = 6
+
+[[view.part]]
+ref = "J201"
+label = "J201 microSD\nSDMMC1"
+kind = "other"
+
+# SW201 pulls BOOT0 to +3V3 (R220 10k to GND); PE1 reads the same net
+[[view.part]]
+ref = "SW201"
+label = "SW201 BOOT0\nPE1"
+kind = "button"
+
+# D201, common anode on +3V3: R PC7 (R202 130R), G PC6 (R203 33R), B PH13 (R204 33R), low lights a colour
+[[view.part]]
+ref = "D201"
+label = "D201 RGB\nPC7 PC6 PH13"
+kind = "led"
+
+[[view.part]]
+ref = "X301"
+label = "X301 24 MHz\nHSE, ULPI REFCLK"
+kind = "other"
+dx = -14
+dy = 22
+
+[[view.part]]
+ref = "X201"
+label = "X201 32 kHz"
+kind = "other"
+dx = -30
+
+[[view.part]]
+ref = "U303"
+label = "U303 USB3315\nULPI PHY"
+kind = "chip"
+
+[[view.part]]
+ref = "U301"
+label = "U301 TS3USB221A\nHS / FS mux"
+kind = "chip"
+dy = -16
+
+[[view.part]]
+ref = "U501"
+label = "U501 ADM3050E\nisolated CAN FD"
+kind = "chip"
+
+[[view.part]]
+ref = "K501"
+label = "K501 relay\n120 R termination"
+kind = "other"
+
+[[view.part]]
+ref = "U601"
+label = "U601 LT8304\nbus V+ → 5 V"
+kind = "chip"
+
+[[view.part]]
+ref = "U401"
+label = "U401 AOZ1376\nUSB OVP"
+kind = "chip"
+dx = 14
+
+[[view.part]]
+ref = "U402"
+label = "U402 RT5760\n5V→3V3"
+kind = "chip"
+dx = -26
+dy = -34
+
+[pins]
+PA13 = { role = "taken", short = "SWDIO", note = "SWD data: J202-2 (Tag-Connect)." }
+PA14 = { role = "taken", short = "SWCLK", note = "SWD clock: J202-4 (Tag-Connect)." }
+PH0 = { role = "function", short = "HSE", note = "H7_CLK: the 24 MHz oscillator X301 (always on), HSE in bypass; R216 (49R9) in series. X301 clocks the USB3315's REFCLK too. PH1 is not connected." }
+PC14 = { role = "function", short = "LSE", note = "32.768 kHz crystal X201 (OSC32_IN). VBAT from the CR1632 holder B201 through D202." }
+PC15 = { role = "function", short = "LSE", note = "32.768 kHz crystal X201 (OSC32_OUT)." }
+PA11 = { role = "taken", short = "USB FS D-", note = "D_FS-: the TS3USB221A U301's FS side, J301 when PH5 is high (R305 pulls it so at reset): the ROM bootloader's USB DFU." }
+PA12 = { role = "taken", short = "USB FS D+", note = "D_FS+: the TS3USB221A U301's FS side, J301 when PH5 is high." }
+PH5 = { role = "taken", short = "~USB_MUX_HS", note = "The TS3USB221A U301's select: low connects J301 to the USB3315 (high speed), high (R305 10k pull-up, at reset) to PA11 / PA12." }
+PH3 = { role = "taken", short = "~ULPI_RST", note = "The USB3315 U303's RESETB: R312 pulls it low (PHY in reset), the firmware drives it high." }
+PA9 = { role = "taken", short = "VBUS", note = "USB_VBUS_DET: J301's VBUS through R303 (10k), D303 (5V6) clamps it; also the USB3315's VBUS." }
+PA5 = { role = "taken", short = "ULPI CK", note = "ULPI_CK: the 60 MHz clock from the USB3315." }
+PA3 = { role = "taken", short = "ULPI D0", note = "ULPI_D0 to the USB3315." }
+PB0 = { role = "taken", short = "ULPI D1", note = "ULPI_D1 to the USB3315." }
+PB1 = { role = "taken", short = "ULPI D2", note = "ULPI_D2 to the USB3315." }
+PB10 = { role = "taken", short = "ULPI D3", note = "ULPI_D3 to the USB3315." }
+PB11 = { role = "taken", short = "ULPI D4", note = "ULPI_D4 to the USB3315." }
+PB12 = { role = "taken", short = "ULPI D5", note = "ULPI_D5 to the USB3315." }
+PB13 = { role = "taken", short = "ULPI D6", note = "ULPI_D6 to the USB3315." }
+PB5 = { role = "taken", short = "ULPI D7", note = "ULPI_D7 to the USB3315." }
+PC0 = { role = "taken", short = "ULPI STP", note = "ULPI_STP to the USB3315." }
+PC2 = { role = "taken", short = "ULPI DIR", note = "ULPI_DIR from the USB3315." }
+PC3 = { role = "taken", short = "ULPI NXT", note = "ULPI_NXT from the USB3315 (stm32-data's other choice, PH4, is not connected)." }
+PC7 = { role = "taken", short = "LED R", note = "D201 red cathode through R202 (130R): low lights it. TIM3_CH2 for PWM." }
+PC6 = { role = "taken", short = "LED G", note = "D201 green cathode through R203 (33R): low lights it. TIM3_CH1 for PWM." }
+PH13 = { role = "taken", short = "LED B", note = "D201 blue cathode through R204 (33R): low lights it. TIM8_CH1N for PWM." }
+PE1 = { role = "taken", short = "BOOT0", note = "Reads BOOT0: SW201 pulls it to +3V3, R220 (10k) to GND; also J202-8. High while the button is held." }
+PB9 = { role = "taken", short = "CAN1 TX", note = "FDCAN1_TX to the isolated transceiver ADM3050E U501 (no standby pin), DE-9 J501." }
+PB8 = { role = "taken", short = "CAN1 RX", note = "FDCAN1_RX from the ADM3050E U501." }
+PC13 = { role = "taken", short = "TERM_EN", note = "Sets the latching relay K501 (120 R termination on): R502, the TLP2270 U502, Q501. A pulse high of 20 ms; low otherwise. ES0491 2.2.6 (LSE disturbed by PC13 toggling) is for LQFP packages, not this BGA." }
+PE4 = { role = "taken", short = "TERM_DIS", note = "Resets the latching relay K501 (termination off): R503, Q502. A pulse high of 20 ms; low otherwise." }
+PG9 = { role = "taken", short = "CAN3 TX", note = "FDCAN3_TX on J203-3, no transceiver. Shorted to PB3 on the board." }
+PD12 = { role = "taken", short = "CAN3 RX", note = "FDCAN3_RX on J203-4, no transceiver. Shorted to PA7 on the board." }
+PB3 = { role = "taken", short = "CAN3 TX", note = "J203-3, shorted to PG9 (FDCAN3 TX) on the board: keep it an input (at reset it is JTDO, driven only by JTAG)." }
+PA7 = { role = "taken", short = "CAN3 RX", note = "J203-4, shorted to PD12 (FDCAN3 RX) on the board: keep it an input (analog at reset)." }
+PB4 = { role = "free", short = "", note = "J203-7, shorted to PB7 on the board (one pin of the pair is free). NJTRST at reset, with the internal pull-up." }
+PB7 = { role = "taken", short = "= PB4", note = "J203-7, shorted to PB4 on the board: PB4 is the free one, keep PB7 an input." }
+PE0 = { role = "free", short = "", note = "J203-5." }
+PA8 = { role = "free", short = "MCO1", note = "MCO1 on the test point TP202: a clock out for a scope." }
+PC8 = { role = "taken", short = "SD D0", note = "SDMMC1_D0, the microSD slot J201." }
+PC9 = { role = "taken", short = "SD D1", note = "SDMMC1_D1, J201." }
+PC10 = { role = "taken", short = "SD D2", note = "SDMMC1_D2, J201." }
+PC11 = { role = "taken", short = "SD D3", note = "SDMMC1_D3, J201." }
+PC12 = { role = "taken", short = "SD CK", note = "SDMMC1_CK, J201." }
+PD2 = { role = "taken", short = "SD CMD", note = "SDMMC1_CMD, J201." }
+PG4 = { role = "taken", short = "SD detect", note = "SDMMC_PRESENT: J201's card detect switch." }
+PB14 = { role = "taken", short = "RID_EN", note = "Powers the board id dividers on PF13 and PF14 while they are read." }
+PF13 = { role = "taken", short = "RID_VARIANT", note = "ADC: the board variant's divider, fed from PB14." }
+PF14 = { role = "taken", short = "RID_BOM", note = "ADC: the bill of materials' divider, fed from PB14." }
+PC5 = { role = "taken", short = "5V0/2", note = "5V0_DIV: +5V0_SYS through R408 / R409 (÷ 2) to the ADC." }
+
+[[power.node]]
+id = "usb"
+label = "J301 USB-C VBUS\n5k1 on CC: a sink\nPA9 senses it"
+kind = "source"
+col = 0
+row = 0
+
+[[power.node]]
+id = "bus"
+label = "J501-9 bus V+\nD504 TVS 58 V · F601 1 A"
+kind = "source"
+col = 0
+row = 2
+
+[[power.node]]
+id = "u401"
+label = "U401 AOZ1376\nOVP · reverse current blocking"
+kind = "switch"
+col = 1
+row = 0
+
+[[power.node]]
+id = "u601"
+label = "U601 LT8304 flyback\nT601, isolated"
+kind = "regulator"
+col = 1
+row = 2
+
+[[power.node]]
+id = "5v"
+label = "+5V0_SYS\nJ203-8 · PC5 ÷ 2"
+kind = "rail"
+col = 2
+row = 1
+
+[[power.node]]
+id = "u402"
+label = "U402 RT5760 buck"
+kind = "regulator"
+col = 3
+row = 1
+
+[[power.node]]
+id = "3v3"
+label = "+3V3\nU201, D201, ADM3050E VDD1"
+kind = "rail"
+col = 4
+row = 1
+
+[[power.node]]
+id = "u302"
+label = "U302 NCP563\n1.8 V for the USB3315"
+kind = "regulator"
+col = 2.5
+row = 0
+
+[[power.node]]
+id = "ps501"
+label = "PS501 MIE1W0505\n+5V0_ISO: ADM3050E VDD2,\nTLP2270, relay K501"
+kind = "regulator"
+col = 2.5
+row = 2
+
+[[power.node]]
+id = "smps"
+label = "U201 SMPS\nVCORE (DirectSMPS)"
+kind = "load"
+col = 5
+row = 1
+
+[[power.edge]]
+from = "usb"
+to = "u401"
+label = "VBUS"
+
+[[power.edge]]
+from = "u401"
+to = "5v"
+
+[[power.edge]]
+from = "bus"
+to = "u601"
+
+[[power.edge]]
+from = "u601"
+to = "5v"
+label = "D604"
+
+[[power.edge]]
+from = "5v"
+to = "u402"
+
+[[power.edge]]
+from = "5v"
+to = "u302"
+
+[[power.edge]]
+from = "5v"
+to = "ps501"
+
+[[power.edge]]
+from = "u402"
+to = "3v3"
+
+[[power.edge]]
+from = "3v3"
+to = "smps"

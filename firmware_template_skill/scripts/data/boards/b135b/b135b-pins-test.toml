@@ -1,0 +1,9 @@
+# Pin test of a bare B135B FDCAN ISO USB (rev B, nothing on J203), for
+# `ww --api API pins test --plan docs/board/b135b-pins-test.toml` (README "Pins"). PE0 and PA8 float; PB4 is wired
+# to PB7 on the board, which the firmware leaves an input, so it floats too (the KiCad board's nets). To be
+# confirmed with `--save` on a board.
+target = "pins"
+
+[[point]]
+names = ["PA8", "PB4", "PE0"]
+expect = "floating"

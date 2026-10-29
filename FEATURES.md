@@ -398,9 +398,29 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   right form. Open hardware notes (parked for Roman, `tpm work park`, never the Donguru J-Link): flashing over
   BOOTSEL and the Debug Probe, the README's device steps, the pin test of a bare board (`--save`), the SWD / debug
   connector's physical style (Pico 2's datasheet says it may differ from the R3 board the geometry is taken from).
+- 🧪 **TPL-59 Board preset `b135b`**: B135B FDCAN ISO USB (STM32H725IGK6 TFBGA176+25, 1 MiB single bank, rev B) in
+  `scripts/data/boards/b135b/`: answers (WireWeaver over USB high speed through the USB3315 ULPI PHY, `--usb-phy
+  ulpi` with NXT on PC3, DirectSMPS, settings, counters, backup counters, host crates, CLI `b135`, `--pins board`,
+  `--can board`, probe `1366:0101` for a J-Link on the Tag-Connect J202), the 24 MHz HSE bypass clock tree of
+  vb135_fdcan_iso_usb_fw (PLL1 520 MHz at VOS0, PLL2 Q 80 MHz FDCAN, PLL3 Q 48 MHz USB), the RGB LED D201 lit low
+  (PC7 / PC6 TIM3, PH13 TIM8_CH1N), the button SW201 read on PE1 (BOOT0), init pins (PH3 the PHY's reset high, PH5
+  the HS / FS mux low, the termination relay's PC13 / PE4 low), `[[can]]` FDCAN1 PB9 / PB8 (ADM3050E) and FDCAN3
+  PG9 / PD12 on J203, ROM boot through bedrock_rom_boot (H7) with DFU over J301 at full speed, the board map from the
+  KiCad board (MAP-11) and README sections with the ES0491 errata that touch the board (2.2.5, 2.2.6, 2.22.1-3).
+  The termination relay K501 is documented, not driven: `can[]` has no terminator yet. Matrix entry `h7b135b`;
+  generated as b135_template (not published yet). Open hardware steps: flash through the J-Link, the README's device
+  steps (USB HS enumeration, `info`, LEDs, SW201), ROM boot and DFU over J301, both CAN channels on a bus, the pin
+  test of a bare board (`--save`), the silicon revision fitted (DBGMCU REV_ID) against ES0491.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
+- 🐛 **TPL-69 H7 firmware does not report a supply locked by the ROM bootloader**: ROM bootloader versions before
+  V9.3 (AN2606) leave PWR_CR3 locked in its reset state (SMPS and LDO) when they jump to the application, and
+  PWR_CR3 takes one write per power-on, so a `--supply-config DirectSMPS` firmware started from the ROM (ROM boot,
+  `boot reboot --updater`, TPL-41) runs on SMPS + LDO until a power cycle without saying so (embassy-stm32 does not
+  check the write). Harmless where VDDLDO, VCAP and VFBSMPS share a net (B135B), wrong elsewhere. Read PWR_CR3 back
+  before `embassy_stm32::init`, pass embassy what it holds, log and count the mismatch, as vb135_fdcan_iso_usb_fw's
+  `b135_fw/src/clocks.rs` `supply_config()` does. Found on the B135B preset (TPL-59).
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -635,6 +655,13 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   and the pin table lists `PB14` with its label `LED` (the generator's `--pins board` reads the same); the alias
   column only where a description names any; a `+` in front of a rail (`+VIN_CAN`) keeps its class; the bottom
   view's title drops "(mirrored ...)" when a narrow board has no room for it · `geometry.rs`, `nets.rs`, `pins.rs`.
+- ✅ **MAP-11 BGA boards: unconnected balls, shorted pins, horizontal headers**: on the B135B (TFBGA176, TPL-59) a
+  pad on KiCad's `unconnected-...` net gets no row in the pin table, only a "Not connected on the board" line, and
+  is no free pin for the generator's `--pins board`; two MCU pins on one net (PB3 and PG9) get a row each with the
+  other in "also on the net"; pin names with a second function (`PH0-OSC_IN`) count as the pin (`PH0`); net labels
+  drop the hierarchical sheet path (`/MCU_H7/PE0` → `PE0`); `labels = "outside"` labels a header lying across the
+  board above its top row and below its bottom row, turned on their side · `nets.rs`, `pins.rs`, `views.rs`,
+  `bedrock_gen.py` `board_pins()`.
 
 - ✅ **MAP-12 Pin names from symbols that number every pin**: some KiCad symbols name pins `PC13_1` and the G0's
   remap pads `PA9/PA11_33` (B153A Donguru): `extract` drops the `_<pad>` suffix when every pad of a footprint has

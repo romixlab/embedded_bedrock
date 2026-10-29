@@ -1,0 +1,183 @@
+# Board preset for `bedrock_gen.py new --board b135b`: B135B FDCAN ISO USB (rev B), an isolated USB high speed to CAN
+# FD adapter, the board of b135_template. [answers] are defaults for `new`'s options (explicit flags and --answers
+# win), the rest is what only the board knows. Facts: the B135B KiCad board (hw/b135_fdcan_iso_usb/source/b135b,
+# rev B), vb135_fdcan_iso_usb_fw (b135_fw/src/clocks.rs, main.rs), DS13311 (STM32H725xE/G), ES0491 Rev 9.
+
+[answers]
+chip = "STM32H725IG"            # U201 STM32H725IGK6, TFBGA176+25, 1 MiB flash in one bank
+supply_config = "DirectSMPS"    # VLXSMPS feeds VDDLDO, VCAP and VFBSMPS (one net): the SMPS supplies VCORE alone
+probe = "1366:0101"             # a SEGGER J-Link on the Tag-Connect J202 (TC2050, 10 pins)
+settings = true
+counters = true
+bkp_counters = "auto"
+wire_weaver = true
+ww_transport = "usb"            # J301 USB-C: high speed through the USB3315 ULPI PHY
+usb_phy = "ulpi"
+host = true
+cli_name = "b135"
+pins = "board"                  # PinDiag on every free pin of the board map, [pins] below
+can = "board"                   # the [[can]] list below
+
+[board]
+title = "B135B FDCAN ISO USB"      # prose and the README title
+maker = "B135B"                    # the README's link text: "B135B FDCAN ISO USB board"
+product = "B135B FDCAN ISO USB"    # ww_board_info product
+revision = "B"                     # B135B
+url = "https://github.com/vhrdtech/hw/tree/main/b135_fdcan_iso_usb"
+core = "Cortex-M7"
+client = "B135"                    # the client library's typed board type
+probe_name = "the J-Link on the Tag-Connect J202"
+probe_kind = "J-Link"              # the host crates' "the only J-Link attached"
+probe_kind_a = "a J-Link"
+template = true                    # a GitHub template repository: the README says how to make it yours
+repository = "https://github.com/vhrdtech/b135_template"  # the template's own repository (Cargo.toml)
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "B135 boards"             # "with two B135 boards attached"
+variant = "STM32H72x/H73x (0x483) rev Z (0x1001), 1 MiB flash"
+led = "D201"
+reset_how = "plug the USB-C cable in again"  # no reset button: reset is J202-10 or a power cycle
+first_item = """The board's 5 V supply on PC5 (+5V0_SYS ÷ 2) as a
+   readable property is a good first one."""
+
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every B135B has an STM32H725IGK6 (TFBGA176+25), what can differ is
+its silicon revision."""
+
+# src/boot.rs: the ROM bootloader on this board
+[rom_boot]
+usb = "PA11 / PA12, the USB-C J301 through the TS3USB221A mux U301 (R305 pulls its select to full speed at reset)"
+healthy = "the USB host configuring the board would call it healthy earlier, `bedrock_rom_boot::usb_configured`; not wired in yet"
+rescue = "nothing to bring up for the ROM's USB: at reset R305 holds the mux U301 on PA11 / PA12"
+
+[logo]
+board = "B135B"
+chip = "H725"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from the KiCad board
+[boardmap]
+toml = "b135b.toml"
+geometry = "b135b.geometry.json"
+
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "the board has no power LED, D201 is its only one"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
+# it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "the SWD pins (PA13, PA14), USB (PA11, PA12, PA9, the mux PH5), the ULPI PHY (PA5, PA3, PB0, PB1, PB10, PB11, PB12, PB13, PB5, PC0, PC2, PC3, its reset PH3), the LED (PC7, PC6, PH13), the button (PE1), CAN (PB9, PB8, the termination relay PC13, PE4, FDCAN3 PG9, PD12 and PB3, PA7 shorted to them), the microSD slot (PC8, PC9, PC10, PC11, PC12, PD2, PG4), the board id dividers (PB14, PF13, PF14), the supply divider (PC5), PB7 (shorted to PB4), the clock pins (PH0, PC14, PC15) or reset"
+readme_left_out = "The SWD pins, USB and its ULPI PHY, the LED, the button, CAN, the microSD slot, the board id and supply dividers, the crystals and reset"
+test = "b135b-pins-test.toml"
+
+# the RGB LED D201, common anode on +3V3: each cathode through its resistor to a pin, low lights it. PC7 / PC6 are
+# TIM3 CH2 / CH1, PH13 TIM8_CH1N (DS13311 alternate functions)
+[[leds]]
+name = "D201"
+rgb = ["PC7", "PC6", "PH13"]
+active = "low"
+role = "status"
+
+# SW201 pulls BOOT0 to +3V3 (R220 10k pulls it down); PE1 is on the same net, so it reads the button
+[[buttons]]
+name = "SW201"
+pin = "PE1"
+pressed = "high"
+pull = "none"
+
+[[init]]
+pin = "PH3"
+level = "high"
+what = "the USB3315's RESETB (~ULPI_RST): R312 holds the PHY in reset until the firmware drives it high"
+
+[[init]]
+pin = "PH5"
+level = "low"
+what = "the TS3USB221A's select (~USB_MUX_HS): low connects J301 to the ULPI PHY, R305 pulls it to PA11 / PA12 (full speed, the ROM bootloader's) at reset"
+
+[[init]]
+pin = "PC13"
+level = "low"
+what = "TERM_EN, the 120 R termination relay K501's set coil: a pulse high (20 ms) switches the termination on, it latches"
+
+[[init]]
+pin = "PE4"
+level = "low"
+what = "TERM_DIS, the termination relay K501's reset coil: a pulse high (20 ms) switches the termination off, it latches"
+
+# FDCAN1 to the isolated transceiver ADM3050E (U501, no standby pin) and the DE-9 J501; FDCAN3 bare on J203-3 / J203-4
+# (a 3.3 V logic TX and RX, no transceiver). The FDCAN kernel clock is PLL2 Q, 80 MHz, from [clock] below
+[[can]]
+instance = "FDCAN1"
+tx = "PB9"
+rx = "PB8"
+transceiver = "ADM3050E (U501), isolated"
+fdcansel = "PLL2_Q"
+
+[[can]]
+instance = "FDCAN3"
+tx = "PG9"
+rx = "PD12"
+fdcansel = "PLL2_Q"
+
+[usb]
+product = "B135 USB-FDCAN"
+manufacturer = "vhrd.tech"
+ulpi = { NXT = "PC3" }  # stm32-data has PC3 and PH4 for ULPI_NXT; the board has PC3
+
+# main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO; timer_mhz: the timers' clock (the
+# LED's PWM resolution in src/led.rs)
+[clock]
+timer_mhz = 260
+usb = true  # the snippet sets the USB kernel clock: the generator adds no HSI48 / CRS lines
+# where the core clock comes from (src/sync.rs, with --clock-sync)
+oscillator = "the 520 MHz comes from the 24 MHz oscillator X301 through PLL1"
+use = "embassy_stm32::rcc::{self, Hse, HseMode, Pll, PllDiv, PllMul, PllPreDiv, PllSource, mux}"
+code = """
+    // Clock tree: the 24 MHz oscillator X301 into HSE (bypass, PH0), the same clock the USB3315 takes. PLL1 24 / 3 *
+    // 65 = 520 MHz VCO, P / 1 = 520 MHz core (VOS0; ECC on the TCMs holds up to 520 MHz), AHB 260 MHz, APB 130 MHz,
+    // timers 260 MHz. PLL2 24 / 3 * 50 = 400 MHz, Q / 5 = 80 MHz for FDCAN: every common nominal and data bit rate
+    // is exact. PLL3 24 / 2 * 16 = 192 MHz, Q / 4 = 48 MHz for USB (embassy-stm32 checks the USB kernel clock is
+    // 48 MHz also with a ULPI PHY, which brings its own 60 MHz). As vb135_fdcan_iso_usb_fw's b135_fw/src/clocks.rs.
+    config.rcc.hse = Some(Hse {
+        freq: embassy_stm32::time::Hertz::mhz(24),
+        mode: HseMode::Bypass,
+    });
+    config.rcc.pll1 = Some(Pll {
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV3,
+        mul: PllMul::MUL65,
+        divp: Some(PllDiv::DIV1),
+        divq: None,
+        divr: None,
+    });
+    config.rcc.pll2 = Some(Pll {
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV3,
+        mul: PllMul::MUL50,
+        divp: None,
+        divq: Some(PllDiv::DIV5),
+        divr: None,
+    });
+    config.rcc.pll3 = Some(Pll {
+        source: PllSource::HSE,
+        prediv: PllPreDiv::DIV2,
+        mul: PllMul::MUL16,
+        divp: None,
+        divq: Some(PllDiv::DIV4),
+        divr: None,
+    });
+    config.rcc.sys = rcc::Sysclk::PLL1_P;
+    config.rcc.d1c_pre = rcc::AHBPrescaler::DIV1;
+    config.rcc.ahb_pre = rcc::AHBPrescaler::DIV2;
+    config.rcc.apb1_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.apb2_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.apb3_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.apb4_pre = rcc::APBPrescaler::DIV2;
+    config.rcc.voltage_scale = rcc::VoltageScale::Scale0;
+    config.rcc.hsi48 = None;
+    config.rcc.mux.usbsel = mux::Usbsel::PLL3_Q;
+"""

@@ -46,6 +46,19 @@ or options; purely internal refactors only need a line under the next version.
   as `led_on` / `led_off` already did. Upgrade notes: `cargo fmt` fixes an existing firmware's `<py>/src/lib.rs` in
   place; a regenerate also picks it up.
 
+- Board preset `b135b` (TPL-59): `--board b135b` generates firmware for the B135B FDCAN ISO USB (STM32H725IGK6
+  TFBGA176+25, rev B): USB high speed through the USB3315 ULPI PHY (NXT on PC3), the 24 MHz HSE bypass clock tree
+  (520 MHz at VOS0, PLL2 Q 80 MHz FDCAN, PLL3 Q 48 MHz USB), DirectSMPS, the RGB LED D201 lit low, SW201 on PE1,
+  init pins for the PHY's reset, the HS / FS mux and the termination relay, `can[]` on FDCAN1 (PB9 / PB8, ADM3050E)
+  and FDCAN3 (PG9 / PD12 on J203), ROM boot, `--pins board` (PA8, PB4, PE0), probe `1366:0101` (J-Link), the board
+  map and README sections with ES0491's errata for the board. Matrix entry `h7b135b`. Upgrade notes: new preset,
+  nothing changes for existing firmware.
+
+- `--pins board` (MAP-11): a pad on KiCad's `unconnected-...` net (a BGA's spare balls) is no free pin, and a pin
+  name with a second function (`PH0-OSC_IN`) counts as the pin. No change for the existing presets (nucleo_g0b1re,
+  b129a_cannify). Upgrade notes: none; a firmware made from a BGA board's map regenerates `src/pins.rs` without the
+  unconnected pins.
+
 - `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
   when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
   change to generated output.

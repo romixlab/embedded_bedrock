@@ -1,0 +1,7135 @@
+{
+  "source": "B135B KiCad board (hw/b135_fdcan_iso_usb/source/b135b)",
+  "bbox": [
+    120.0,
+    45.0,
+    202.3,
+    95.5
+  ],
+  "outline": [
+    {
+      "kind": "line",
+      "from": [
+        202.3,
+        46.4
+      ],
+      "to": [
+        200.7,
+        46.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        120.3,
+        55.0
+      ],
+      "to": [
+        120.0,
+        55.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        199.7,
+        95.1
+      ],
+      "to": [
+        199.7,
+        95.5
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        122.6,
+        45.4
+      ],
+      "mid": [
+        122.307107,
+        46.107107
+      ],
+      "to": [
+        121.6,
+        46.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        120.3,
+        49.6
+      ],
+      "mid": [
+        121.007107,
+        49.892893
+      ],
+      "to": [
+        121.3,
+        50.6
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        199.7,
+        45.4
+      ],
+      "to": [
+        199.7,
+        45.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        120.0,
+        94.1
+      ],
+      "to": [
+        120.0,
+        55.0
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        121.3,
+        54.0
+      ],
+      "mid": [
+        121.007107,
+        54.707107
+      ],
+      "to": [
+        120.3,
+        55.0
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        200.7,
+        46.4
+      ],
+      "mid": [
+        199.992893,
+        46.107107
+      ],
+      "to": [
+        199.7,
+        45.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        120.0,
+        46.4
+      ],
+      "to": [
+        121.6,
+        46.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        122.6,
+        45.4
+      ],
+      "to": [
+        122.6,
+        45.0
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        199.7,
+        95.1
+      ],
+      "mid": [
+        199.992893,
+        94.392893
+      ],
+      "to": [
+        200.7,
+        94.1
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        199.7,
+        95.5
+      ],
+      "to": [
+        122.6,
+        95.5
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        121.6,
+        94.1
+      ],
+      "mid": [
+        122.307107,
+        94.392893
+      ],
+      "to": [
+        122.6,
+        95.1
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        202.3,
+        46.4
+      ],
+      "to": [
+        202.3,
+        94.1
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        120.0,
+        49.6
+      ],
+      "to": [
+        120.0,
+        46.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        120.0,
+        49.6
+      ],
+      "to": [
+        120.3,
+        49.6
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        202.3,
+        94.1
+      ],
+      "to": [
+        200.7,
+        94.1
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        121.3,
+        50.6
+      ],
+      "to": [
+        121.3,
+        54.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        120.0,
+        94.1
+      ],
+      "to": [
+        121.6,
+        94.1
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        122.6,
+        95.1
+      ],
+      "to": [
+        122.6,
+        95.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        122.6,
+        45.0
+      ],
+      "to": [
+        199.7,
+        45.0
+      ]
+    }
+  ],
+  "footprints": {
+    "D201": {
+      "value": "LED_GBAR",
+      "side": "F",
+      "at": [
+        123.71,
+        59.7
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            124.16,
+            60.5
+          ],
+          "size": [
+            0.5,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(D201-GK)",
+          "pin": "GK"
+        },
+        {
+          "number": "2",
+          "at": [
+            123.25999999999999,
+            60.5
+          ],
+          "size": [
+            0.5,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(D201-BK)",
+          "pin": "BK"
+        },
+        {
+          "number": "3",
+          "at": [
+            123.25999999999999,
+            58.900000000000006
+          ],
+          "size": [
+            0.5,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "A"
+        },
+        {
+          "number": "4",
+          "at": [
+            124.16,
+            58.900000000000006
+          ],
+          "size": [
+            0.5,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(D201-RK)",
+          "pin": "RK"
+        }
+      ]
+    },
+    "D202": {
+      "value": "Vf<0.1V @ 10uA",
+      "side": "F",
+      "at": [
+        158.4,
+        90.8
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            158.4,
+            89.75
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/+VBAT_D",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            158.4,
+            91.85
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/+VBAT_RAW",
+          "pin": "A"
+        }
+      ]
+    },
+    "D301": {
+      "value": "SMF22A",
+      "side": "F",
+      "at": [
+        131.3,
+        71.1
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            129.85000000000002,
+            71.1
+          ],
+          "size": [
+            1.3,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            132.75,
+            71.1
+          ],
+          "size": [
+            1.3,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D302": {
+      "value": "RCLAMP0502BA",
+      "side": "F",
+      "at": [
+        130.605,
+        67.4
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            129.95499999999998,
+            66.9
+          ],
+          "size": [
+            0.6,
+            0.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J-",
+          "pin": "K1"
+        },
+        {
+          "number": "2",
+          "at": [
+            129.95499999999998,
+            67.9
+          ],
+          "size": [
+            0.6,
+            0.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J+",
+          "pin": "K2"
+        },
+        {
+          "number": "3",
+          "at": [
+            131.255,
+            67.4
+          ],
+          "size": [
+            0.6,
+            0.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "D303": {
+      "value": "5V6",
+      "side": "F",
+      "at": [
+        130.3,
+        63.1
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            131.0,
+            63.1
+          ],
+          "size": [
+            0.6,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB_VBUS_DET",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            129.60000000000002,
+            63.1
+          ],
+          "size": [
+            0.6,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "D501": {
+      "value": "BAS516",
+      "side": "F",
+      "at": [
+        175.2,
+        69.9
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            175.2,
+            70.60000000000001
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+5V0_ISO",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            175.2,
+            69.2
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/RL_S",
+          "pin": "A"
+        }
+      ]
+    },
+    "D502": {
+      "value": "BAS516",
+      "side": "F",
+      "at": [
+        175.5,
+        82.0
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            175.5,
+            82.7
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+5V0_ISO",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            175.5,
+            81.3
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/RL_R",
+          "pin": "A"
+        }
+      ]
+    },
+    "D503": {
+      "value": "PESD2CANFD24V-QBZ",
+      "side": "F",
+      "at": [
+        187.2,
+        72.7
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            187.7,
+            73.025
+          ],
+          "size": [
+            0.5,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_L",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            187.7,
+            72.375
+          ],
+          "size": [
+            0.5,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_H",
+          "pin": "A2"
+        },
+        {
+          "number": "3",
+          "at": [
+            187.01,
+            72.7
+          ],
+          "size": [
+            0.44,
+            0.9
+          ],
+          "shape": "other",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "common"
+        }
+      ]
+    },
+    "D504": {
+      "value": "SMAJ58CA",
+      "side": "F",
+      "at": [
+        198.2,
+        52.1
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            196.2,
+            52.1
+          ],
+          "size": [
+            2.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            200.2,
+            52.1
+          ],
+          "size": [
+            2.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D601": {
+      "value": "RB168MM150TFTR",
+      "side": "F",
+      "at": [
+        193.7,
+        49.0
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            192.29999999999998,
+            49.0
+          ],
+          "size": [
+            1.1,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9_PR",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            195.1,
+            49.0
+          ],
+          "size": [
+            1.1,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9_F",
+          "pin": "A"
+        }
+      ]
+    },
+    "D602": {
+      "value": "CMZ5944B",
+      "side": "F",
+      "at": [
+        184.4,
+        50.4
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            182.4,
+            50.4
+          ],
+          "size": [
+            2.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/SNB1",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            186.4,
+            50.4
+          ],
+          "size": [
+            2.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9_PR",
+          "pin": "A"
+        }
+      ]
+    },
+    "D603": {
+      "value": "RB168MM150TFTR",
+      "side": "F",
+      "at": [
+        178.1,
+        51.3
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            179.5,
+            51.3
+          ],
+          "size": [
+            1.1,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/SNB1",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            176.7,
+            51.3
+          ],
+          "size": [
+            1.1,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_SW",
+          "pin": "A"
+        }
+      ]
+    },
+    "D604": {
+      "value": "PDS360-13",
+      "side": "F",
+      "at": [
+        152.82,
+        60.938
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            152.82,
+            59.818000000000005
+          ],
+          "size": [
+            3.36,
+            4.86
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            153.73999999999998,
+            63.800000000000004
+          ],
+          "size": [
+            1.39,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/TR",
+          "pin": "A"
+        },
+        {
+          "number": "2",
+          "at": [
+            151.9,
+            63.800000000000004
+          ],
+          "size": [
+            1.39,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/TR",
+          "pin": "A"
+        }
+      ]
+    },
+    "D605": {
+      "value": "5V6?",
+      "side": "F",
+      "at": [
+        149.5,
+        63.1
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            149.5,
+            62.050000000000004
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            149.5,
+            64.15
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "F601": {
+      "value": "1A Slow blow",
+      "side": "F",
+      "at": [
+        198.175,
+        49.0
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            199.57500000000002,
+            49.0
+          ],
+          "size": [
+            1.25,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9"
+        },
+        {
+          "number": "2",
+          "at": [
+            196.775,
+            49.0
+          ],
+          "size": [
+            1.25,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9_F"
+        }
+      ]
+    },
+    "J201": {
+      "value": "MEM2061-01-188-00-A",
+      "side": "F",
+      "at": [
+        128.1,
+        84.5
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            124.875,
+            86.44
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D2",
+          "pin": "DAT2"
+        },
+        {
+          "number": "2",
+          "at": [
+            125.27499999999999,
+            85.34
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D3",
+          "pin": "DAT3"
+        },
+        {
+          "number": "3",
+          "at": [
+            124.875,
+            84.24
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_CMD",
+          "pin": "CMD"
+        },
+        {
+          "number": "4",
+          "at": [
+            124.675,
+            83.14
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/+3V3_SD",
+          "pin": "VDD"
+        },
+        {
+          "number": "5",
+          "at": [
+            124.875,
+            82.04
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_CKJ",
+          "pin": "CLK"
+        },
+        {
+          "number": "6",
+          "at": [
+            124.675,
+            80.94
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "7",
+          "at": [
+            124.875,
+            79.84
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D0",
+          "pin": "DAT0"
+        },
+        {
+          "number": "8",
+          "at": [
+            124.875,
+            78.74
+          ],
+          "size": [
+            2.0,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D1",
+          "pin": "DAT1"
+        },
+        {
+          "number": "9",
+          "at": [
+            135.42499999999998,
+            79.55
+          ],
+          "size": [
+            1.4,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_PRESENT",
+          "pin": "DET_B"
+        },
+        {
+          "number": "10",
+          "at": [
+            135.42499999999998,
+            85.25
+          ],
+          "size": [
+            1.4,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_PRESENT",
+          "pin": "DET_A"
+        },
+        {
+          "number": "11",
+          "at": [
+            122.27499999999999,
+            77.95
+          ],
+          "size": [
+            1.9,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "11",
+          "at": [
+            121.27499999999999,
+            91.1
+          ],
+          "size": [
+            1.9,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD"
+        }
+      ]
+    },
+    "J202": {
+      "value": "TAGconnect 10P",
+      "side": "F",
+      "at": [
+        146.8,
+        91.3
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            150.61,
+            91.3
+          ],
+          "size": [
+            0.9906,
+            0.9906
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            142.99,
+            92.316
+          ],
+          "size": [
+            0.9906,
+            0.9906
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            142.99,
+            90.28399999999999
+          ],
+          "size": [
+            0.9906,
+            0.9906
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            149.34,
+            90.66499999999999
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/+V_TGT",
+          "pin": "1"
+        },
+        {
+          "number": "2",
+          "at": [
+            148.07000000000002,
+            90.66499999999999
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "H7_SWDIO",
+          "pin": "2"
+        },
+        {
+          "number": "3",
+          "at": [
+            146.8,
+            90.66499999999999
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "3"
+        },
+        {
+          "number": "4",
+          "at": [
+            145.53,
+            90.66499999999999
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "H7_SWCLK",
+          "pin": "4"
+        },
+        {
+          "number": "5",
+          "at": [
+            144.26000000000002,
+            90.66499999999999
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "5"
+        },
+        {
+          "number": "6",
+          "at": [
+            144.26000000000002,
+            91.935
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(J202-Pad6)",
+          "pin": "6"
+        },
+        {
+          "number": "7",
+          "at": [
+            145.53,
+            91.935
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(J202-Pad7)",
+          "pin": "7"
+        },
+        {
+          "number": "8",
+          "at": [
+            146.8,
+            91.935
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/BOOT0",
+          "pin": "8"
+        },
+        {
+          "number": "9",
+          "at": [
+            148.07000000000002,
+            91.935
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "9"
+        },
+        {
+          "number": "10",
+          "at": [
+            149.34,
+            91.935
+          ],
+          "size": [
+            0.7874,
+            0.7874
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/~{H7_RST}",
+          "pin": "10"
+        }
+      ]
+    },
+    "J203": {
+      "value": "Conn_02x04_Odd_Even",
+      "side": "F",
+      "at": [
+        159.6,
+        75.1
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            157.695,
+            77.05
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/PA1_C",
+          "pin": "Pin_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            157.695,
+            73.14999999999999
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/PA0_C",
+          "pin": "Pin_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            158.965,
+            77.05
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/PB3_PG9",
+          "pin": "Pin_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            158.965,
+            73.14999999999999
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/PA7_PD12",
+          "pin": "Pin_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            160.23499999999999,
+            77.05
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/PE0",
+          "pin": "Pin_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            160.23499999999999,
+            73.14999999999999
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "Pin_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            161.505,
+            77.05
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/PB4_PB7",
+          "pin": "Pin_7"
+        },
+        {
+          "number": "8",
+          "at": [
+            161.505,
+            73.14999999999999
+          ],
+          "size": [
+            0.74,
+            2.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "Pin_8"
+        }
+      ]
+    },
+    "J301": {
+      "value": "USB_C_Receptacle_USB2.0_16P",
+      "side": "F",
+      "at": [
+        124.175,
+        68.4
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            126.78,
+            65.51
+          ],
+          "size": [
+            0.65,
+            0.65
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            126.78,
+            71.29
+          ],
+          "size": [
+            0.65,
+            0.65
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "A1",
+          "at": [
+            127.855,
+            65.2
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "A4",
+          "at": [
+            127.855,
+            66.0
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "VBUS"
+        },
+        {
+          "number": "A5",
+          "at": [
+            127.855,
+            67.15
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/CC1",
+          "pin": "CC1"
+        },
+        {
+          "number": "A6",
+          "at": [
+            127.855,
+            68.15
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J+",
+          "pin": "D+"
+        },
+        {
+          "number": "A7",
+          "at": [
+            127.855,
+            68.65
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J-",
+          "pin": "D-"
+        },
+        {
+          "number": "A8",
+          "at": [
+            127.855,
+            69.65
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J301-SBU1-PadA8)",
+          "pin": "SBU1"
+        },
+        {
+          "number": "A9",
+          "at": [
+            127.855,
+            70.80000000000001
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "VBUS"
+        },
+        {
+          "number": "A12",
+          "at": [
+            127.855,
+            71.60000000000001
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "B1",
+          "at": [
+            127.855,
+            71.60000000000001
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "B4",
+          "at": [
+            127.855,
+            70.80000000000001
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "VBUS"
+        },
+        {
+          "number": "B5",
+          "at": [
+            127.855,
+            70.15
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/CC2",
+          "pin": "CC2"
+        },
+        {
+          "number": "B6",
+          "at": [
+            127.855,
+            69.15
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J+",
+          "pin": "D+"
+        },
+        {
+          "number": "B7",
+          "at": [
+            127.855,
+            67.65
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J-",
+          "pin": "D-"
+        },
+        {
+          "number": "B8",
+          "at": [
+            127.855,
+            66.65
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J301-SBU2-PadB8)",
+          "pin": "SBU2"
+        },
+        {
+          "number": "B9",
+          "at": [
+            127.855,
+            66.0
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "VBUS"
+        },
+        {
+          "number": "B12",
+          "at": [
+            127.855,
+            65.2
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "S1",
+          "at": [
+            127.28,
+            64.08000000000001
+          ],
+          "size": [
+            2.1,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            123.1,
+            64.08000000000001
+          ],
+          "size": [
+            1.8,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            127.28,
+            72.72
+          ],
+          "size": [
+            2.1,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            123.1,
+            72.72
+          ],
+          "size": [
+            1.8,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        }
+      ]
+    },
+    "J501": {
+      "value": "ID09P33E4GV00LF",
+      "side": "F",
+      "at": [
+        191.36,
+        70.25
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "0",
+          "at": [
+            192.78,
+            82.75
+          ],
+          "size": [
+            4.0,
+            4.0
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/CAN Ch1/D9SH",
+          "pin": "PAD"
+        },
+        {
+          "number": "0",
+          "at": [
+            192.78,
+            57.75
+          ],
+          "size": [
+            4.0,
+            4.0
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/CAN Ch1/D9SH",
+          "pin": "PAD"
+        },
+        {
+          "number": "1",
+          "at": [
+            191.36,
+            75.73
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "unconnected-(J501-Pad1)",
+          "pin": "1"
+        },
+        {
+          "number": "2",
+          "at": [
+            191.36,
+            72.99
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/CAN Ch1/CAN_L",
+          "pin": "2"
+        },
+        {
+          "number": "3",
+          "at": [
+            191.36,
+            70.25
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "3"
+        },
+        {
+          "number": "4",
+          "at": [
+            191.36,
+            67.51
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "unconnected-(J501-Pad4)",
+          "pin": "4"
+        },
+        {
+          "number": "5",
+          "at": [
+            191.36,
+            64.77
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/CAN Ch1/CAN1_SHLD",
+          "pin": "5"
+        },
+        {
+          "number": "6",
+          "at": [
+            194.20000000000002,
+            74.36
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "6"
+        },
+        {
+          "number": "7",
+          "at": [
+            194.20000000000002,
+            71.62
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/CAN Ch1/CAN_H",
+          "pin": "7"
+        },
+        {
+          "number": "8",
+          "at": [
+            194.20000000000002,
+            68.88
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "unconnected-(J501-Pad8)",
+          "pin": "8"
+        },
+        {
+          "number": "9",
+          "at": [
+            194.20000000000002,
+            66.14
+          ],
+          "size": [
+            1.6,
+            1.6
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/Bus Power/+VIN_DB9",
+          "pin": "9"
+        }
+      ]
+    },
+    "J701": {
+      "value": "709155001615004",
+      "side": "B",
+      "at": [
+        129.4,
+        91.1
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            124.4,
+            91.1
+          ],
+          "size": [
+            2.4,
+            3.0
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "1"
+        },
+        {
+          "number": "1",
+          "at": [
+            134.4,
+            91.1
+          ],
+          "size": [
+            2.4,
+            3.0
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "1"
+        }
+      ]
+    },
+    "J702": {
+      "value": "0986-1-15-20-75-14-11-0",
+      "side": "B",
+      "at": [
+        122.8,
+        87.5
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            122.8,
+            87.5
+          ],
+          "size": [
+            1.2625,
+            1.165
+          ],
+          "shape": "other",
+          "through": false,
+          "net": "GND",
+          "pin": "1"
+        }
+      ]
+    },
+    "J703": {
+      "value": "0986-1-15-20-75-14-11-0",
+      "side": "B",
+      "at": [
+        200.0,
+        87.5
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            200.0,
+            87.5
+          ],
+          "size": [
+            1.2625,
+            1.165
+          ],
+          "shape": "other",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "1"
+        }
+      ]
+    },
+    "JP501": {
+      "value": "SolderJumper_2_Bridged",
+      "side": "B",
+      "at": [
+        191.35,
+        62.1
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            191.35,
+            61.45
+          ],
+          "size": [
+            0.5,
+            1.0
+          ],
+          "shape": "other",
+          "through": false,
+          "net": "/CAN Ch1/D9SH",
+          "pin": "A"
+        },
+        {
+          "number": "2",
+          "at": [
+            191.35,
+            62.75
+          ],
+          "size": [
+            0.5,
+            1.0
+          ],
+          "shape": "other",
+          "through": false,
+          "net": "/CAN Ch1/CAN1_SHLD",
+          "pin": "B"
+        }
+      ]
+    },
+    "K501": {
+      "value": "EE2-5TNUH-L",
+      "side": "F",
+      "at": [
+        181.0,
+        77.1
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            177.855,
+            70.75
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+5V0_ISO"
+        },
+        {
+          "number": "3",
+          "at": [
+            177.855,
+            75.83
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/RL3"
+        },
+        {
+          "number": "4",
+          "at": [
+            177.855,
+            78.36999999999999
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_H_TERM"
+        },
+        {
+          "number": "5",
+          "at": [
+            177.855,
+            80.91
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_H"
+        },
+        {
+          "number": "6",
+          "at": [
+            177.855,
+            83.44999999999999
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+5V0_ISO"
+        },
+        {
+          "number": "7",
+          "at": [
+            184.145,
+            83.44999999999999
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/RL_R"
+        },
+        {
+          "number": "8",
+          "at": [
+            184.145,
+            80.91
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_L"
+        },
+        {
+          "number": "9",
+          "at": [
+            184.145,
+            78.36999999999999
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_L_TERM"
+        },
+        {
+          "number": "10",
+          "at": [
+            184.145,
+            75.83
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/RL10"
+        },
+        {
+          "number": "12",
+          "at": [
+            184.145,
+            70.75
+          ],
+          "size": [
+            2.0,
+            1.11
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/RL_S"
+        }
+      ]
+    },
+    "SW201": {
+      "value": "SW_Push_Shielded",
+      "side": "F",
+      "at": [
+        120.692,
+        52.3
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            125.69999999999999,
+            50.05
+          ],
+          "size": [
+            5.0,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/BOOT0",
+          "pin": "1"
+        },
+        {
+          "number": "2",
+          "at": [
+            125.69999999999999,
+            54.55
+          ],
+          "size": [
+            5.0,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "2"
+        },
+        {
+          "number": "SH",
+          "at": [
+            121.94999999999999,
+            48.4
+          ],
+          "size": [
+            1.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "B"
+        },
+        {
+          "number": "SH",
+          "at": [
+            121.32,
+            52.3
+          ],
+          "size": [
+            1.2,
+            3.1
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "B"
+        },
+        {
+          "number": "SH",
+          "at": [
+            121.94999999999999,
+            56.199999999999996
+          ],
+          "size": [
+            1.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "B"
+        }
+      ]
+    },
+    "U201": {
+      "value": "STM32H725IGKx",
+      "side": "F",
+      "at": [
+        147.2,
+        80.8
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "A1",
+          "at": [
+            151.75,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "A2",
+          "at": [
+            151.1,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/CAN Ch1/FDCAN1_RX",
+          "pin": "PB8"
+        },
+        {
+          "number": "A3",
+          "at": [
+            150.45,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VDDLDO"
+        },
+        {
+          "number": "A4",
+          "at": [
+            149.79999999999998,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VCAP"
+        },
+        {
+          "number": "A5",
+          "at": [
+            149.14999999999998,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201B-PB6-PadA5)",
+          "pin": "PB6"
+        },
+        {
+          "number": "A6",
+          "at": [
+            148.5,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PB3_PG9",
+          "pin": "PB3"
+        },
+        {
+          "number": "A7",
+          "at": [
+            147.85,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG11-PadA7)",
+          "pin": "PG11"
+        },
+        {
+          "number": "A8",
+          "at": [
+            147.2,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PB3_PG9",
+          "pin": "PG9"
+        },
+        {
+          "number": "A9",
+          "at": [
+            146.54999999999998,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD3-PadA9)",
+          "pin": "PD3"
+        },
+        {
+          "number": "A10",
+          "at": [
+            145.89999999999998,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD1-PadA10)",
+          "pin": "PD1"
+        },
+        {
+          "number": "A11",
+          "at": [
+            145.25,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA15-PadA11)",
+          "pin": "PA15"
+        },
+        {
+          "number": "A12",
+          "at": [
+            144.6,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "H7_SWCLK",
+          "pin": "PA14"
+        },
+        {
+          "number": "A13",
+          "at": [
+            143.95,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VDDLDO"
+        },
+        {
+          "number": "A14",
+          "at": [
+            143.29999999999998,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VCAP"
+        },
+        {
+          "number": "A15",
+          "at": [
+            142.64999999999998,
+            85.35
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "B1",
+          "at": [
+            151.75,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/CAN Ch1/TERM_DIS",
+          "pin": "PE4"
+        },
+        {
+          "number": "B2",
+          "at": [
+            151.1,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE3-PadB2)",
+          "pin": "PE3"
+        },
+        {
+          "number": "B3",
+          "at": [
+            150.45,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/CAN Ch1/FDCAN1_TX",
+          "pin": "PB9"
+        },
+        {
+          "number": "B4",
+          "at": [
+            149.79999999999998,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PE0",
+          "pin": "PE0"
+        },
+        {
+          "number": "B5",
+          "at": [
+            149.14999999999998,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PB4_PB7",
+          "pin": "PB7"
+        },
+        {
+          "number": "B6",
+          "at": [
+            148.5,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PB4_PB7",
+          "pin": "PB4"
+        },
+        {
+          "number": "B7",
+          "at": [
+            147.85,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG13-PadB7)",
+          "pin": "PG13"
+        },
+        {
+          "number": "B8",
+          "at": [
+            147.2,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD7-PadB8)",
+          "pin": "PD7"
+        },
+        {
+          "number": "B9",
+          "at": [
+            146.54999999999998,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD5-PadB9)",
+          "pin": "PD5"
+        },
+        {
+          "number": "B10",
+          "at": [
+            145.89999999999998,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_CMD",
+          "pin": "PD2"
+        },
+        {
+          "number": "B11",
+          "at": [
+            145.25,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_CK",
+          "pin": "PC12"
+        },
+        {
+          "number": "B12",
+          "at": [
+            144.6,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH14-PadB12)",
+          "pin": "PH14"
+        },
+        {
+          "number": "B13",
+          "at": [
+            143.95,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "H7_SWDIO",
+          "pin": "PA13"
+        },
+        {
+          "number": "B14",
+          "at": [
+            143.29999999999998,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/MCO1",
+          "pin": "PA8"
+        },
+        {
+          "number": "B15",
+          "at": [
+            142.64999999999998,
+            84.7
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "D_FS+",
+          "pin": "PA12"
+        },
+        {
+          "number": "C1",
+          "at": [
+            151.75,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/CAN Ch1/TERM_EN",
+          "pin": "PC13"
+        },
+        {
+          "number": "C2",
+          "at": [
+            151.1,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "C3",
+          "at": [
+            150.45,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE2-PadC3)",
+          "pin": "PE2"
+        },
+        {
+          "number": "C4",
+          "at": [
+            149.79999999999998,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/BOOT0",
+          "pin": "PE1"
+        },
+        {
+          "number": "C5",
+          "at": [
+            149.14999999999998,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/BOOT0",
+          "pin": "BOOT0"
+        },
+        {
+          "number": "C6",
+          "at": [
+            148.5,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D7",
+          "pin": "PB5"
+        },
+        {
+          "number": "C7",
+          "at": [
+            147.85,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG14-PadC7)",
+          "pin": "PG14"
+        },
+        {
+          "number": "C8",
+          "at": [
+            147.2,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG10-PadC8)",
+          "pin": "PG10"
+        },
+        {
+          "number": "C9",
+          "at": [
+            146.54999999999998,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD4-PadC9)",
+          "pin": "PD4"
+        },
+        {
+          "number": "C10",
+          "at": [
+            145.89999999999998,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD0-PadC10)",
+          "pin": "PD0"
+        },
+        {
+          "number": "C11",
+          "at": [
+            145.25,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D3",
+          "pin": "PC11"
+        },
+        {
+          "number": "C12",
+          "at": [
+            144.6,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D2",
+          "pin": "PC10"
+        },
+        {
+          "number": "C13",
+          "at": [
+            143.95,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/LED_B",
+          "pin": "PH13"
+        },
+        {
+          "number": "C14",
+          "at": [
+            143.29999999999998,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA10-PadC14)",
+          "pin": "PA10"
+        },
+        {
+          "number": "C15",
+          "at": [
+            142.64999999999998,
+            84.05
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "D_FS-",
+          "pin": "PA11"
+        },
+        {
+          "number": "D1",
+          "at": [
+            151.75,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/OSC32_OUT",
+          "pin": "PC15-OSC32_OUT"
+        },
+        {
+          "number": "D2",
+          "at": [
+            151.1,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/OSC32_IN",
+          "pin": "PC14-OSC32_IN"
+        },
+        {
+          "number": "D3",
+          "at": [
+            150.45,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE5-PadD3)",
+          "pin": "PE5"
+        },
+        {
+          "number": "D4",
+          "at": [
+            149.79999999999998,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PDR_ON",
+          "pin": "PDR_ON"
+        },
+        {
+          "number": "D5",
+          "at": [
+            149.14999999999998,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "D6",
+          "at": [
+            148.5,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "D7",
+          "at": [
+            147.85,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG15-PadD7)",
+          "pin": "PG15"
+        },
+        {
+          "number": "D8",
+          "at": [
+            147.2,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG12-PadD8)",
+          "pin": "PG12"
+        },
+        {
+          "number": "D9",
+          "at": [
+            146.54999999999998,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD6-PadD9)",
+          "pin": "PD6"
+        },
+        {
+          "number": "D10",
+          "at": [
+            145.89999999999998,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "D11",
+          "at": [
+            145.25,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "D12",
+          "at": [
+            144.6,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH15-PadD12)",
+          "pin": "PH15"
+        },
+        {
+          "number": "D13",
+          "at": [
+            143.95,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "USB_VBUS_DET",
+          "pin": "PA9"
+        },
+        {
+          "number": "D14",
+          "at": [
+            143.29999999999998,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D0",
+          "pin": "PC8"
+        },
+        {
+          "number": "D15",
+          "at": [
+            142.64999999999998,
+            83.39999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/LED_R",
+          "pin": "PC7"
+        },
+        {
+          "number": "E1",
+          "at": [
+            151.75,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "E2",
+          "at": [
+            151.1,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/+VBAT_D",
+          "pin": "VBAT"
+        },
+        {
+          "number": "E3",
+          "at": [
+            150.45,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE6-PadE3)",
+          "pin": "PE6"
+        },
+        {
+          "number": "E4",
+          "at": [
+            149.79999999999998,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "E12",
+          "at": [
+            144.6,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "E13",
+          "at": [
+            143.95,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_D1",
+          "pin": "PC9"
+        },
+        {
+          "number": "E14",
+          "at": [
+            143.29999999999998,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/LED_G",
+          "pin": "PC6"
+        },
+        {
+          "number": "E15",
+          "at": [
+            142.64999999999998,
+            82.75
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD50USB"
+        },
+        {
+          "number": "F1",
+          "at": [
+            151.75,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VLX",
+          "pin": "VLXSMPS"
+        },
+        {
+          "number": "F2",
+          "at": [
+            151.1,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSSSMPS"
+        },
+        {
+          "number": "F3",
+          "at": [
+            150.45,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF1-PadF3)",
+          "pin": "PF1"
+        },
+        {
+          "number": "F4",
+          "at": [
+            149.79999999999998,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF0-PadF4)",
+          "pin": "PF0"
+        },
+        {
+          "number": "F6",
+          "at": [
+            148.5,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "F7",
+          "at": [
+            147.85,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "F8",
+          "at": [
+            147.2,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "F9",
+          "at": [
+            146.54999999999998,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "F10",
+          "at": [
+            145.89999999999998,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "F12",
+          "at": [
+            144.6,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "F13",
+          "at": [
+            143.95,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD33USB"
+        },
+        {
+          "number": "F14",
+          "at": [
+            143.29999999999998,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG6-PadF14)",
+          "pin": "PG6"
+        },
+        {
+          "number": "F15",
+          "at": [
+            142.64999999999998,
+            82.1
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG5-PadF15)",
+          "pin": "PG5"
+        },
+        {
+          "number": "G1",
+          "at": [
+            151.75,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDSMPS",
+          "pin": "VDDSMPS"
+        },
+        {
+          "number": "G2",
+          "at": [
+            151.1,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VFBSMPS"
+        },
+        {
+          "number": "G3",
+          "at": [
+            150.45,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF2-PadG3)",
+          "pin": "PF2"
+        },
+        {
+          "number": "G4",
+          "at": [
+            149.79999999999998,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "G6",
+          "at": [
+            148.5,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "G7",
+          "at": [
+            147.85,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "G8",
+          "at": [
+            147.2,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "G9",
+          "at": [
+            146.54999999999998,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "G10",
+          "at": [
+            145.89999999999998,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "G12",
+          "at": [
+            144.6,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG8-PadG12)",
+          "pin": "PG8"
+        },
+        {
+          "number": "G13",
+          "at": [
+            143.95,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG7-PadG13)",
+          "pin": "PG7"
+        },
+        {
+          "number": "G14",
+          "at": [
+            143.29999999999998,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/SDMMC_PRESENT",
+          "pin": "PG4"
+        },
+        {
+          "number": "G15",
+          "at": [
+            142.64999999999998,
+            81.45
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG2-PadG15)",
+          "pin": "PG2"
+        },
+        {
+          "number": "H1",
+          "at": [
+            151.75,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF6-PadH1)",
+          "pin": "PF6"
+        },
+        {
+          "number": "H2",
+          "at": [
+            151.1,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF4-PadH2)",
+          "pin": "PF4"
+        },
+        {
+          "number": "H3",
+          "at": [
+            150.45,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF5-PadH3)",
+          "pin": "PF5"
+        },
+        {
+          "number": "H4",
+          "at": [
+            149.79999999999998,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF3-PadH4)",
+          "pin": "PF3"
+        },
+        {
+          "number": "H6",
+          "at": [
+            148.5,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "H7",
+          "at": [
+            147.85,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "H8",
+          "at": [
+            147.2,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "H9",
+          "at": [
+            146.54999999999998,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "H10",
+          "at": [
+            145.89999999999998,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "H12",
+          "at": [
+            144.6,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "H13",
+          "at": [
+            143.95,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG3-PadH13)",
+          "pin": "PG3"
+        },
+        {
+          "number": "H14",
+          "at": [
+            143.29999999999998,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD14-PadH14)",
+          "pin": "PD14"
+        },
+        {
+          "number": "H15",
+          "at": [
+            142.64999999999998,
+            80.8
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD13-PadH15)",
+          "pin": "PD13"
+        },
+        {
+          "number": "J1",
+          "at": [
+            151.75,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "H7_CLK",
+          "pin": "PH0-OSC_IN"
+        },
+        {
+          "number": "J2",
+          "at": [
+            151.1,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF8-PadJ2)",
+          "pin": "PF8"
+        },
+        {
+          "number": "J3",
+          "at": [
+            150.45,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF7-PadJ3)",
+          "pin": "PF7"
+        },
+        {
+          "number": "J4",
+          "at": [
+            149.79999999999998,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF9-PadJ4)",
+          "pin": "PF9"
+        },
+        {
+          "number": "J6",
+          "at": [
+            148.5,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "J7",
+          "at": [
+            147.85,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "J8",
+          "at": [
+            147.2,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "J9",
+          "at": [
+            146.54999999999998,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "J10",
+          "at": [
+            145.89999999999998,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "J12",
+          "at": [
+            144.6,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD15-PadJ12)",
+          "pin": "PD15"
+        },
+        {
+          "number": "J13",
+          "at": [
+            143.95,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD11-PadJ13)",
+          "pin": "PD11"
+        },
+        {
+          "number": "J14",
+          "at": [
+            143.29999999999998,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "J15",
+          "at": [
+            142.64999999999998,
+            80.14999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PA7_PD12",
+          "pin": "PD12"
+        },
+        {
+          "number": "K1",
+          "at": [
+            151.75,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH1-OSC_OUT-PadK1)",
+          "pin": "PH1-OSC_OUT"
+        },
+        {
+          "number": "K2",
+          "at": [
+            151.1,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K3",
+          "at": [
+            150.45,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF10-PadK3)",
+          "pin": "PF10"
+        },
+        {
+          "number": "K4",
+          "at": [
+            149.79999999999998,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "K6",
+          "at": [
+            148.5,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K7",
+          "at": [
+            147.85,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K8",
+          "at": [
+            147.2,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K9",
+          "at": [
+            146.54999999999998,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K10",
+          "at": [
+            145.89999999999998,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K12",
+          "at": [
+            144.6,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "K13",
+          "at": [
+            143.95,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD9-PadK13)",
+          "pin": "PD9"
+        },
+        {
+          "number": "K14",
+          "at": [
+            143.29999999999998,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201B-PB15-PadK14)",
+          "pin": "PB15"
+        },
+        {
+          "number": "K15",
+          "at": [
+            142.64999999999998,
+            79.5
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/RID_EN",
+          "pin": "PB14"
+        },
+        {
+          "number": "L1",
+          "at": [
+            151.75,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/~{H7_RST}",
+          "pin": "NRST"
+        },
+        {
+          "number": "L2",
+          "at": [
+            151.1,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_STP",
+          "pin": "PC0"
+        },
+        {
+          "number": "L3",
+          "at": [
+            150.45,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201C-PC1-PadL3)",
+          "pin": "PC1"
+        },
+        {
+          "number": "L4",
+          "at": [
+            149.79999999999998,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VREF-"
+        },
+        {
+          "number": "L12",
+          "at": [
+            144.6,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "L13",
+          "at": [
+            143.95,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD10-PadL13)",
+          "pin": "PD10"
+        },
+        {
+          "number": "L14",
+          "at": [
+            143.29999999999998,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201D-PD8-PadL14)",
+          "pin": "PD8"
+        },
+        {
+          "number": "L15",
+          "at": [
+            142.64999999999998,
+            78.85
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D6",
+          "pin": "PB13"
+        },
+        {
+          "number": "M1",
+          "at": [
+            151.75,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_DIR",
+          "pin": "PC2"
+        },
+        {
+          "number": "M2",
+          "at": [
+            151.1,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_NXT",
+          "pin": "PC3"
+        },
+        {
+          "number": "M3",
+          "at": [
+            150.45,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VREF+",
+          "pin": "VREF+"
+        },
+        {
+          "number": "M4",
+          "at": [
+            149.79999999999998,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDA",
+          "pin": "VDDA"
+        },
+        {
+          "number": "M5",
+          "at": [
+            149.14999999999998,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "M6",
+          "at": [
+            148.5,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "M7",
+          "at": [
+            147.85,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "5V0_DIV",
+          "pin": "PC5"
+        },
+        {
+          "number": "M8",
+          "at": [
+            147.2,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D2",
+          "pin": "PB1"
+        },
+        {
+          "number": "M9",
+          "at": [
+            146.54999999999998,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "M10",
+          "at": [
+            145.89999999999998,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "M11",
+          "at": [
+            145.25,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH7-PadM11)",
+          "pin": "PH7"
+        },
+        {
+          "number": "M12",
+          "at": [
+            144.6,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE14-PadM12)",
+          "pin": "PE14"
+        },
+        {
+          "number": "M13",
+          "at": [
+            143.95,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH11-PadM13)",
+          "pin": "PH11"
+        },
+        {
+          "number": "M14",
+          "at": [
+            143.29999999999998,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH9-PadM14)",
+          "pin": "PH9"
+        },
+        {
+          "number": "M15",
+          "at": [
+            142.64999999999998,
+            78.2
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D5",
+          "pin": "PB12"
+        },
+        {
+          "number": "N1",
+          "at": [
+            151.75,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201C-PC2_C-PadN1)",
+          "pin": "PC2_C"
+        },
+        {
+          "number": "N2",
+          "at": [
+            151.1,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201C-PC3_C-PadN2)",
+          "pin": "PC3_C"
+        },
+        {
+          "number": "N3",
+          "at": [
+            150.45,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSSA"
+        },
+        {
+          "number": "N4",
+          "at": [
+            149.79999999999998,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH2-PadN4)",
+          "pin": "PH2"
+        },
+        {
+          "number": "N5",
+          "at": [
+            149.14999999999998,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D0",
+          "pin": "PA3"
+        },
+        {
+          "number": "N6",
+          "at": [
+            148.5,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PA7_PD12",
+          "pin": "PA7"
+        },
+        {
+          "number": "N7",
+          "at": [
+            147.85,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF11-PadN7)",
+          "pin": "PF11"
+        },
+        {
+          "number": "N8",
+          "at": [
+            147.2,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE8-PadN8)",
+          "pin": "PE8"
+        },
+        {
+          "number": "N9",
+          "at": [
+            146.54999999999998,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG1-PadN9)",
+          "pin": "PG1"
+        },
+        {
+          "number": "N10",
+          "at": [
+            145.89999999999998,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF15-PadN10)",
+          "pin": "PF15"
+        },
+        {
+          "number": "N11",
+          "at": [
+            145.25,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/RID_VARIANT",
+          "pin": "PF13"
+        },
+        {
+          "number": "N12",
+          "at": [
+            144.6,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D3",
+          "pin": "PB10"
+        },
+        {
+          "number": "N13",
+          "at": [
+            143.95,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH8-PadN13)",
+          "pin": "PH8"
+        },
+        {
+          "number": "N14",
+          "at": [
+            143.29999999999998,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH10-PadN14)",
+          "pin": "PH10"
+        },
+        {
+          "number": "N15",
+          "at": [
+            142.64999999999998,
+            77.55
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH12-PadN15)",
+          "pin": "PH12"
+        },
+        {
+          "number": "P1",
+          "at": [
+            151.75,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA0-PadP1)",
+          "pin": "PA0"
+        },
+        {
+          "number": "P2",
+          "at": [
+            151.1,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA1-PadP2)",
+          "pin": "PA1"
+        },
+        {
+          "number": "P3",
+          "at": [
+            150.45,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PA1_C",
+          "pin": "PA1_C"
+        },
+        {
+          "number": "P4",
+          "at": [
+            149.79999999999998,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH4-PadP4)",
+          "pin": "PH4"
+        },
+        {
+          "number": "P5",
+          "at": [
+            149.14999999999998,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA4-PadP5)",
+          "pin": "PA4"
+        },
+        {
+          "number": "P6",
+          "at": [
+            148.5,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_CK",
+          "pin": "PA5"
+        },
+        {
+          "number": "P7",
+          "at": [
+            147.85,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201B-PB2-PadP7)",
+          "pin": "PB2"
+        },
+        {
+          "number": "P8",
+          "at": [
+            147.2,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201G-PG0-PadP8)",
+          "pin": "PG0"
+        },
+        {
+          "number": "P9",
+          "at": [
+            146.54999999999998,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE7-PadP9)",
+          "pin": "PE7"
+        },
+        {
+          "number": "P10",
+          "at": [
+            145.89999999999998,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D4",
+          "pin": "PB11"
+        },
+        {
+          "number": "P11",
+          "at": [
+            145.25,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201F-PF12-PadP11)",
+          "pin": "PF12"
+        },
+        {
+          "number": "P12",
+          "at": [
+            144.6,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE12-PadP12)",
+          "pin": "PE12"
+        },
+        {
+          "number": "P13",
+          "at": [
+            143.95,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE13-PadP13)",
+          "pin": "PE13"
+        },
+        {
+          "number": "P14",
+          "at": [
+            143.29999999999998,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE15-PadP14)",
+          "pin": "PE15"
+        },
+        {
+          "number": "P15",
+          "at": [
+            142.64999999999998,
+            76.89999999999999
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201H-PH6-PadP15)",
+          "pin": "PH6"
+        },
+        {
+          "number": "R1",
+          "at": [
+            151.75,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "R2",
+          "at": [
+            151.1,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA2-PadR2)",
+          "pin": "PA2"
+        },
+        {
+          "number": "R3",
+          "at": [
+            150.45,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/PA0_C",
+          "pin": "PA0_C"
+        },
+        {
+          "number": "R4",
+          "at": [
+            149.79999999999998,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "~{ULPI_RST}",
+          "pin": "PH3"
+        },
+        {
+          "number": "R5",
+          "at": [
+            149.14999999999998,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "~{USB_MUX_HS}",
+          "pin": "PH5"
+        },
+        {
+          "number": "R6",
+          "at": [
+            148.5,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201C-PC4-PadR6)",
+          "pin": "PC4"
+        },
+        {
+          "number": "R7",
+          "at": [
+            147.85,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201A-PA6-PadR7)",
+          "pin": "PA6"
+        },
+        {
+          "number": "R8",
+          "at": [
+            147.2,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "ULPI_D1",
+          "pin": "PB0"
+        },
+        {
+          "number": "R9",
+          "at": [
+            146.54999999999998,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE10-PadR9)",
+          "pin": "PE10"
+        },
+        {
+          "number": "R10",
+          "at": [
+            145.89999999999998,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/RID_BOM",
+          "pin": "PF14"
+        },
+        {
+          "number": "R11",
+          "at": [
+            145.25,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE9-PadR11)",
+          "pin": "PE9"
+        },
+        {
+          "number": "R12",
+          "at": [
+            144.6,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "unconnected-(U201E-PE11-PadR12)",
+          "pin": "PE11"
+        },
+        {
+          "number": "R13",
+          "at": [
+            143.95,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VCAP"
+        },
+        {
+          "number": "R14",
+          "at": [
+            143.29999999999998,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "/MCU_H7/VDDLDO",
+          "pin": "VDDLDO"
+        },
+        {
+          "number": "R15",
+          "at": [
+            142.64999999999998,
+            76.25
+          ],
+          "size": [
+            0.3,
+            0.3
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        }
+      ]
+    },
+    "U301": {
+      "value": "TS3USB221A",
+      "side": "F",
+      "at": [
+        134.0,
+        67.4
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            134.675,
+            68.15
+          ],
+          "size": [
+            0.55,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_HS+",
+          "pin": "D1+"
+        },
+        {
+          "number": "2",
+          "at": [
+            134.675,
+            67.65
+          ],
+          "size": [
+            0.55,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_HS-",
+          "pin": "D1-"
+        },
+        {
+          "number": "3",
+          "at": [
+            134.675,
+            67.15
+          ],
+          "size": [
+            0.55,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "D_FS+",
+          "pin": "D2+"
+        },
+        {
+          "number": "4",
+          "at": [
+            134.675,
+            66.65
+          ],
+          "size": [
+            0.55,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "D_FS-",
+          "pin": "D2-"
+        },
+        {
+          "number": "5",
+          "at": [
+            134.0,
+            66.5
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "6",
+          "at": [
+            133.325,
+            66.65
+          ],
+          "size": [
+            0.55,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(U301-~{OE})",
+          "pin": "~{OE}"
+        },
+        {
+          "number": "7",
+          "at": [
+            133.325,
+            67.15
+          ],
+          "size": [
+            0.55,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J-",
+          "pin": "D-"
+        },
+        {
+          "number": "8",
+          "at": [
+            133.325,
+            67.65
+          ],
+          "size": [
+            0.55,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J+",
+          "pin": "D+"
+        },
+        {
+          "number": "9",
+          "at": [
+            133.325,
+            68.15
+          ],
+          "size": [
+            0.55,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "~{USB_MUX_HS}",
+          "pin": "S"
+        },
+        {
+          "number": "10",
+          "at": [
+            134.0,
+            68.30000000000001
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VCC"
+        }
+      ]
+    },
+    "U302": {
+      "value": "NCP563SQ18T1G",
+      "side": "F",
+      "at": [
+        144.9,
+        66.7
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            145.85,
+            67.35000000000001
+          ],
+          "size": [
+            0.9,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "2",
+          "at": [
+            145.85,
+            66.05
+          ],
+          "size": [
+            0.9,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VIN"
+        },
+        {
+          "number": "3",
+          "at": [
+            143.95000000000002,
+            66.05
+          ],
+          "size": [
+            0.9,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/+1V8_ULPI",
+          "pin": "VOUT"
+        },
+        {
+          "number": "4",
+          "at": [
+            143.95000000000002,
+            67.35000000000001
+          ],
+          "size": [
+            0.9,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "EN"
+        }
+      ]
+    },
+    "U303": {
+      "value": "USB3315",
+      "side": "F",
+      "at": [
+        141.25,
+        70.85
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            140.6,
+            70.19999999999999
+          ],
+          "size": [
+            1.05,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            140.6,
+            71.5
+          ],
+          "size": [
+            1.05,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            141.9,
+            70.19999999999999
+          ],
+          "size": [
+            1.05,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            141.9,
+            71.5
+          ],
+          "size": [
+            1.05,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            139.405,
+            69.6
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/ULPI_ID",
+          "pin": "ID"
+        },
+        {
+          "number": "2",
+          "at": [
+            139.405,
+            70.1
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB_VBUS_DET",
+          "pin": "VBUS"
+        },
+        {
+          "number": "3",
+          "at": [
+            139.405,
+            70.6
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VBAT"
+        },
+        {
+          "number": "4",
+          "at": [
+            139.405,
+            71.1
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/ULPI_REGOUT_3V3",
+          "pin": "VDD3.3"
+        },
+        {
+          "number": "5",
+          "at": [
+            139.405,
+            71.6
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_HS-",
+          "pin": "DM"
+        },
+        {
+          "number": "6",
+          "at": [
+            139.405,
+            72.1
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_HS+",
+          "pin": "DP"
+        },
+        {
+          "number": "7",
+          "at": [
+            140.0,
+            72.695
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/ULPI_CPEN",
+          "pin": "CPEN"
+        },
+        {
+          "number": "8",
+          "at": [
+            140.5,
+            72.695
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D7",
+          "pin": "DATA7"
+        },
+        {
+          "number": "9",
+          "at": [
+            141.0,
+            72.695
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D6",
+          "pin": "DATA6"
+        },
+        {
+          "number": "10",
+          "at": [
+            141.5,
+            72.695
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D5",
+          "pin": "DATA5"
+        },
+        {
+          "number": "11",
+          "at": [
+            142.0,
+            72.695
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D4",
+          "pin": "DATA4"
+        },
+        {
+          "number": "12",
+          "at": [
+            142.5,
+            72.695
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_CK",
+          "pin": "CLKOUT"
+        },
+        {
+          "number": "13",
+          "at": [
+            143.095,
+            72.1
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D3",
+          "pin": "DATA3"
+        },
+        {
+          "number": "14",
+          "at": [
+            143.095,
+            71.6
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D2",
+          "pin": "DATA2"
+        },
+        {
+          "number": "15",
+          "at": [
+            143.095,
+            71.1
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D1",
+          "pin": "DATA1"
+        },
+        {
+          "number": "16",
+          "at": [
+            143.095,
+            70.6
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_D0",
+          "pin": "DATA0"
+        },
+        {
+          "number": "17",
+          "at": [
+            143.095,
+            70.1
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDDIO"
+        },
+        {
+          "number": "18",
+          "at": [
+            143.095,
+            69.6
+          ],
+          "size": [
+            0.69,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_NXT",
+          "pin": "NXT"
+        },
+        {
+          "number": "19",
+          "at": [
+            142.5,
+            69.005
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_DIR",
+          "pin": "DIR"
+        },
+        {
+          "number": "20",
+          "at": [
+            142.0,
+            69.005
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ULPI_STP",
+          "pin": "STP"
+        },
+        {
+          "number": "21",
+          "at": [
+            141.5,
+            69.005
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/+1V8_ULPI",
+          "pin": "VDD1.8"
+        },
+        {
+          "number": "22",
+          "at": [
+            141.0,
+            69.005
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "~{ULPI_RST}",
+          "pin": "RESETB"
+        },
+        {
+          "number": "23",
+          "at": [
+            140.5,
+            69.005
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/USB_REFCLK",
+          "pin": "REFCLK"
+        },
+        {
+          "number": "24",
+          "at": [
+            140.0,
+            69.005
+          ],
+          "size": [
+            0.28,
+            0.69
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/ULPI_RBIAS",
+          "pin": "RBIAS"
+        },
+        {
+          "number": "25",
+          "at": [
+            140.25,
+            70.85
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "25",
+          "at": [
+            141.25,
+            69.85
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "25",
+          "at": [
+            141.25,
+            70.85
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "25",
+          "at": [
+            141.25,
+            70.85
+          ],
+          "size": [
+            2.5,
+            2.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "25",
+          "at": [
+            141.25,
+            71.85
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "25",
+          "at": [
+            142.25,
+            70.85
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "GND"
+        }
+      ]
+    },
+    "U401": {
+      "value": "AOZ1376DI-01",
+      "side": "F",
+      "at": [
+        131.32,
+        74.45
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            132.64,
+            75.6375
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "VOUT"
+        },
+        {
+          "number": "2",
+          "at": [
+            132.64,
+            75.2625
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "VOUT"
+        },
+        {
+          "number": "3",
+          "at": [
+            132.64,
+            74.7
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/AOZ_POVP",
+          "pin": "POVP"
+        },
+        {
+          "number": "4",
+          "at": [
+            132.64,
+            74.2
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/VUSB_FLTB",
+          "pin": "FLTB"
+        },
+        {
+          "number": "5",
+          "at": [
+            132.64,
+            73.7
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/AOZ_ENB",
+          "pin": "ENB"
+        },
+        {
+          "number": "6",
+          "at": [
+            132.64,
+            73.2
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "7",
+          "at": [
+            130.0,
+            73.2
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/AOZ_SS",
+          "pin": "SS"
+        },
+        {
+          "number": "8",
+          "at": [
+            130.0,
+            73.7
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U401-NC-Pad8)",
+          "pin": "NC"
+        },
+        {
+          "number": "9",
+          "at": [
+            130.0,
+            74.2
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U401-NC-Pad9)",
+          "pin": "NC"
+        },
+        {
+          "number": "10",
+          "at": [
+            130.0,
+            74.7
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U401-NC-Pad10)",
+          "pin": "NC"
+        },
+        {
+          "number": "11",
+          "at": [
+            130.0,
+            75.2625
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "VIN"
+        },
+        {
+          "number": "12",
+          "at": [
+            130.0,
+            75.6375
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+VIN_USB",
+          "pin": "VIN"
+        },
+        {
+          "number": "13",
+          "at": [
+            131.32,
+            74.45
+          ],
+          "size": [
+            1.5,
+            2.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "EP_GND"
+        }
+      ]
+    },
+    "U402": {
+      "value": "RT5760",
+      "side": "F",
+      "at": [
+        156.9,
+        67.4
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            156.215,
+            66.9
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/3V3_FB",
+          "pin": "FB"
+        },
+        {
+          "number": "2",
+          "at": [
+            156.215,
+            67.4
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            156.215,
+            67.9
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "VIN"
+        },
+        {
+          "number": "4",
+          "at": [
+            157.585,
+            67.9
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/3V3_SW",
+          "pin": "SW"
+        },
+        {
+          "number": "5",
+          "at": [
+            157.585,
+            67.4
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_SYS",
+          "pin": "EN"
+        },
+        {
+          "number": "6",
+          "at": [
+            157.585,
+            66.9
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/3V3_PG",
+          "pin": "PG"
+        }
+      ]
+    },
+    "U501": {
+      "value": "ADM3050EBRIZ",
+      "side": "F",
+      "at": [
+        169.2,
+        88.7
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            164.32319999999999,
+            86.795
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+3V3_ADM",
+          "pin": "VDD1"
+        },
+        {
+          "number": "2",
+          "at": [
+            164.32319999999999,
+            88.065
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/FDCAN1_TX",
+          "pin": "TXD"
+        },
+        {
+          "number": "3",
+          "at": [
+            164.32319999999999,
+            89.33500000000001
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/FDCAN1_RX",
+          "pin": "RXD"
+        },
+        {
+          "number": "4",
+          "at": [
+            164.32319999999999,
+            90.605
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND1"
+        },
+        {
+          "number": "5",
+          "at": [
+            174.0768,
+            90.605
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "GND2"
+        },
+        {
+          "number": "6",
+          "at": [
+            174.0768,
+            89.33500000000001
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_L_FLT",
+          "pin": "CANL"
+        },
+        {
+          "number": "7",
+          "at": [
+            174.0768,
+            88.065
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CAN_H_FLT",
+          "pin": "CANH"
+        },
+        {
+          "number": "8",
+          "at": [
+            174.0768,
+            86.795
+          ],
+          "size": [
+            1.4732,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+5V0_ISO",
+          "pin": "VDD2"
+        }
+      ]
+    },
+    "U502": {
+      "value": "TLP2270",
+      "side": "F",
+      "at": [
+        169.2,
+        76.9
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            163.89999999999998,
+            74.995
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CT_AS"
+        },
+        {
+          "number": "2",
+          "at": [
+            163.89999999999998,
+            76.265
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            163.89999999999998,
+            77.53500000000001
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "4",
+          "at": [
+            163.89999999999998,
+            78.805
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CT_AR"
+        },
+        {
+          "number": "5",
+          "at": [
+            174.5,
+            78.805
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "6",
+          "at": [
+            174.5,
+            77.53500000000001
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CT_GR"
+        },
+        {
+          "number": "7",
+          "at": [
+            174.5,
+            76.265
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/CT_GS"
+        },
+        {
+          "number": "8",
+          "at": [
+            174.5,
+            74.995
+          ],
+          "size": [
+            1.8034,
+            0.8128
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/CAN Ch1/+5V0_ISO",
+          "pin": "VDD"
+        }
+      ]
+    },
+    "U601": {
+      "value": "LT8304IS8E#PBF",
+      "side": "F",
+      "at": [
+        179.25,
+        57.6
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            179.82,
+            58.35
+          ],
+          "size": [
+            0.96,
+            1.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            179.82,
+            56.85
+          ],
+          "size": [
+            0.96,
+            1.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            178.68,
+            58.35
+          ],
+          "size": [
+            0.96,
+            1.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            178.68,
+            56.85
+          ],
+          "size": [
+            0.96,
+            1.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            181.85,
+            59.505
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_EN_UVLO",
+          "pin": "EN"
+        },
+        {
+          "number": "2",
+          "at": [
+            181.85,
+            58.235
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_INT_VCC",
+          "pin": "INT_VCC"
+        },
+        {
+          "number": "3",
+          "at": [
+            181.85,
+            56.965
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/+VIN_DB9_PR",
+          "pin": "VIN"
+        },
+        {
+          "number": "4",
+          "at": [
+            181.85,
+            55.695
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "5",
+          "at": [
+            176.65,
+            55.695
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_SW",
+          "pin": "SW"
+        },
+        {
+          "number": "6",
+          "at": [
+            176.65,
+            56.965
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_RFB",
+          "pin": "RFB"
+        },
+        {
+          "number": "7",
+          "at": [
+            176.65,
+            58.235
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_RREF",
+          "pin": "RREF"
+        },
+        {
+          "number": "8",
+          "at": [
+            176.65,
+            59.505
+          ],
+          "size": [
+            1.143,
+            0.76
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Bus Power/BP_TC",
+          "pin": "TC"
+        },
+        {
+          "number": "9",
+          "at": [
+            179.9,
+            58.6
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            179.9,
+            57.6
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            179.9,
+            56.6
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            179.25,
+            57.6
+          ],
+          "size": [
+            1.8,
+            2.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            179.25,
+            57.6
+          ],
+          "size": [
+            2.29,
+            3.0
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            178.6,
+            58.6
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            178.6,
+            57.6
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            178.6,
+            56.6
+          ],
+          "size": [
+            0.5,
+            0.5
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ISO_1",
+          "pin": "GND"
+        }
+      ]
+    },
+    "X201": {
+      "value": "ECX-.327-CDX-1293",
+      "side": "F",
+      "at": [
+        157.0,
+        85.9
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            157.0,
+            87.15
+          ],
+          "size": [
+            1.9,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/OSC32_IN",
+          "pin": "1"
+        },
+        {
+          "number": "2",
+          "at": [
+            157.0,
+            84.65
+          ],
+          "size": [
+            1.9,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU_H7/OSC32_OUT",
+          "pin": "2"
+        }
+      ]
+    },
+    "X301": {
+      "value": "Osc 24MHz 50ppm 3.2x2.5mm",
+      "side": "F",
+      "at": [
+        150.6,
+        68.0
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            149.775,
+            66.95
+          ],
+          "size": [
+            1.1,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(X301-EN)",
+          "pin": "EN"
+        },
+        {
+          "number": "2",
+          "at": [
+            149.775,
+            69.05
+          ],
+          "size": [
+            1.1,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            151.42499999999998,
+            69.05
+          ],
+          "size": [
+            1.1,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/XOUT",
+          "pin": "OUT"
+        },
+        {
+          "number": "4",
+          "at": [
+            151.42499999999998,
+            66.95
+          ],
+          "size": [
+            1.1,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "Vdd"
+        }
+      ]
+    }
+  }
+}

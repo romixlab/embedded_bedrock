@@ -391,6 +391,10 @@ fn draw_connector(
     xs.dedup_by(|a, b| (*a - *b).abs() < 0.5);
     let column = |x: f64| xs.iter().position(|c| (c - x).abs() < 0.5).unwrap_or(0);
     let ncol = xs.len();
+    // rows by y, for labels outside a header that lies across the board
+    let mut ys: Vec<f64> = pads.iter().map(|p| m.y(p.at[1])).collect();
+    ys.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    ys.dedup_by(|a, b| (*a - *b).abs() < 0.5);
     // the mirrored view swaps left and right
     // the mirrored view swaps left and right; its inside labels would land on the solder bridges, the top view
     // and the morpho headers carry them anyway
@@ -402,6 +406,8 @@ fn draw_connector(
     };
     let mut leaders: Vec<(f64, f64, f64)> = Vec::new();
     let mut texts: Vec<(f64, f64, Anchor, Runs)> = Vec::new();
+    // labels turned on their side: (x, y, upwards, runs)
+    let mut turned: Vec<(f64, f64, bool, Runs)> = Vec::new();
 
     for pad in &pads {
         let (px, py) = (m.x(pad.at[0]), m.y(pad.at[1]));
@@ -432,7 +438,7 @@ fn draw_connector(
             .or_else(|| desc.aliases.get(net))
             .cloned()
             .unwrap_or_default();
-        let shown = nets.display(own);
+        let shown = crate::nets::short_name(nets.display(own));
         let label = if is_anonymous(shown) {
             if alias.is_empty() {
                 "—".to_string()
@@ -443,27 +449,6 @@ fn draw_connector(
             shown.to_string()
         };
         let short = desc.pins.get(net).map(|p| p.short.as_str()).unwrap_or("");
-        let col = column(px);
-        let (lx, anchor, leader_to) = match labels {
-            // the label columns keep the pin columns' left-to-right order: the inner column's label sits next to
-            // the board, the outer column's further out (its leader passes the inner pads, under the halo)
-            Labels::Left => {
-                let base = m.board_left().min(m.board_right()) - 10.0;
-                let x = base - (ncol - 1 - col) as f64 * LABEL_COLUMN;
-                (x, Anchor::End, x + 2.0)
-            }
-            Labels::Right => {
-                let base = m.board_left().max(m.board_right()) + 10.0;
-                let x = base + col as f64 * LABEL_COLUMN;
-                (x, Anchor::Start, x - 2.0)
-            }
-            Labels::InsideLeft => (px - r - 6.0, Anchor::End, px - r - 4.0),
-            Labels::InsideRight => (px + r + 6.0, Anchor::Start, px + r + 4.0),
-            Labels::None => unreachable!(),
-        };
-        if matches!(labels, Labels::Left | Labels::Right) {
-            leaders.push((px, py, leader_to));
-        }
         let mut runs: Runs = vec![(
             label.clone(),
             halo(&format!("fill:{color};font-weight:600")),
@@ -481,11 +466,42 @@ fn draw_connector(
                 halo(&format!("fill:{};font-style:italic", style::MUTED)),
             ));
         }
-        if conn.numbers && matches!(labels, Labels::Left | Labels::Right) {
+        if conn.numbers && matches!(labels, Labels::Left | Labels::Right | Labels::Outside) {
             runs.push((
                 format!("  {}", pad.number),
                 halo(&format!("fill:{};font-size:8px", style::MUTED)),
             ));
+        }
+        if labels == Labels::Outside {
+            // the top row's labels read upwards from above its pads, the bottom row's downwards from below
+            let r = m.len(pad.size[0].max(pad.size[1])) / 2.0;
+            if (py - ys[0]).abs() < 0.5 {
+                turned.push((px + 3.8, py - r - 4.0, true, runs));
+            } else if (py - ys[ys.len() - 1]).abs() < 0.5 {
+                turned.push((px - 3.8, py + r + 4.0, false, runs));
+            }
+            continue;
+        }
+        let col = column(px);
+        let (lx, anchor, leader_to) = match labels {
+            // the label columns keep the pin columns' left-to-right order: the inner column's label sits next to
+            // the board, the outer column's further out (its leader passes the inner pads, under the halo)
+            Labels::Left => {
+                let base = m.board_left().min(m.board_right()) - 10.0;
+                let x = base - (ncol - 1 - col) as f64 * LABEL_COLUMN;
+                (x, Anchor::End, x + 2.0)
+            }
+            Labels::Right => {
+                let base = m.board_left().max(m.board_right()) + 10.0;
+                let x = base + col as f64 * LABEL_COLUMN;
+                (x, Anchor::Start, x - 2.0)
+            }
+            Labels::InsideLeft => (px - r - 6.0, Anchor::End, px - r - 4.0),
+            Labels::InsideRight => (px + r + 6.0, Anchor::Start, px + r + 4.0),
+            Labels::Outside | Labels::None => unreachable!(),
+        };
+        if matches!(labels, Labels::Left | Labels::Right) {
+            leaders.push((px, py, leader_to));
         }
         texts.push((lx, py + 3.8, anchor, runs));
     }
@@ -503,10 +519,20 @@ fn draw_connector(
         let refs: Vec<(&str, &str)> = runs.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
         svg.runs(lx, ly, LABEL_SIZE, anchor, &refs);
     }
+    for (x, y, up, runs) in turned {
+        let refs: Vec<(&str, &str)> = runs.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+        svg.group_start(&format!(
+            "transform=\"rotate({} {x:.2} {y:.2})\"",
+            if up { -90 } else { 90 }
+        ));
+        svg.runs(x, y, LABEL_SIZE, Anchor::Start, &refs);
+        svg.group_end();
+    }
     // connector name
     let (nx, ny, anchor) = match labels {
         Labels::Left => (x0 - 10.0, y0 - 8.0, Anchor::End),
         Labels::Right => (x1 + 10.0, y0 - 8.0, Anchor::Start),
+        Labels::Outside => (x0 - 8.0, (y0 + y1) / 2.0 + 4.0, Anchor::End),
         _ => ((x0 + x1) / 2.0, y0 - 6.0, Anchor::Middle),
     };
     svg.text(

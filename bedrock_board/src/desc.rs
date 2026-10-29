@@ -74,7 +74,8 @@ pub struct View {
 pub struct Connector {
     pub r#ref: String,
     pub label: String,
-    /// Where the pad labels go: left, right (outside the board), or inside (next to the pads).
+    /// Where the pad labels go: left, right (outside the board), inside (next to the pads), or outside: turned on their
+    /// side above the top row and below the bottom row, for a header lying across the board (MAP-11).
     pub labels: Labels,
     /// Show pin numbers next to the pads.
     #[serde(default)]
@@ -88,6 +89,7 @@ pub enum Labels {
     Right,
     InsideLeft,
     InsideRight,
+    Outside,
     None,
 }
 
