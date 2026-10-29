@@ -362,7 +362,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   ST-LINK sits on J2 (VID:PID), flash, the README's device steps, ROM boot over J3, the pin test of a bare board
   (`--save`), the ES0548 read for HSE / PLL / USB on the silicon revision fitted. CAN (FDCAN1 TX PD1, RX PB8, STB
   PC13 low) comes in with TPL-53 through a template upgrade of cannify_micro_template.
-- 🚧 **TPL-60 Board preset `donguru_b153a`**: Donguru B153A (STM32G0B1CET6 LQFP48, rev A, Main variant: USB2512B
+- 🧪 **TPL-60 Board preset `donguru_b153a`**: Donguru B153A (STM32G0B1CET6 LQFP48, rev A, Main variant: USB2512B
   hub) in `scripts/data/boards/donguru_b153a/`: answers (WireWeaver over the MCU's own USB behind the hub, settings,
   counters, backup counters, host crates, CLI `donguru`, `--pins board`, probe `1366:0101` for a J-Link on the
   receptacle's SBU), HSI16 through the PLL to 64 MHz (USB on HSI48 + CRS), the LEDs LD101 red PF0 (TIM14_CH1) and
@@ -370,9 +370,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   bring-up in `[bring_up]` (RESET_N on PC13 driven from RTC_OUT1 so it holds through a reset, as typec_dongle FW-46;
   usb251xb config over I2C2 PB10 / PB14 with port 2's D+ / D- swap; kept when RTC_CR shows it running), VID:PID
   c0de:cafe (wire_weaver's default), the analog PA7 button / slide switch documented (no digital button), ROM boot,
-  the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0donguru`. To do: the matrix
-  run, donguru_template generated. Hardware (🧪, never through the Donguru J-Link): flash, the README's device
-  steps, the hub kept through `boot reboot --updater` into the ROM's DFU, the pin test of a bare board (`--save`).
+  the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0donguru` (passes, with
+  `g0cannify` and `g0board` unchanged); `donguru_template` generated from it (session folder for now, no remote yet):
+  `just test`, `just lint`, the firmware build and `just board` pass. Probe: nothing attached on build-1 (29 Oct
+  2026: no USB devices, no probe-rs), so the J-Link or second Donguru on the SBU is still to be found. Hardware (🧪,
+  never through the Donguru J-Link): flash, the README's device steps, the hub kept through `boot reboot --updater`
+  into the ROM's DFU, the pin test of a bare board (`--save`); tracked as P2528#29oct-1424.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
