@@ -688,5 +688,7 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
 
 ## Dropped and superseded
 
+- **MAP-14 Two MCU pins on one net in the pin table** (B200A's GP26 / GP34, GP30 / GP39): superseded by MAP-11,
+  which fixed the same for the B135B; `pins.rs` test `two_rp_pins_on_one_net_get_a_row_each` covers the RP case.
 - **BLD-7 Git hook** that replaces path dependencies with git links before pushing: superseded by BLD-8 (git
   dependencies, patched to the sibling checkout for local work).

@@ -1,6 +1,6 @@
 {# `buttons` (TPL-18): the preset's [[buttons]] as read-only bool properties, `true` while pressed. On RP2350 a
    button with the pad pull-down gets the RP2350-E9 workaround of pins-rp.rs.j2 (RP2350 datasheet, appendix D.5.1). #}
-{% set e9 = t.family == "rp" and t.rp_variant != "rp2040" and s.buttons | selectattr("pull", "eq", "down") | list %}
+{% set e9 = (s.buttons | selectattr("pull", "eq", "down") | list) if t.family == "rp" and t.rp_variant != "rp2040" else [] %}
 //! `buttons`: the board's buttons as read-only properties, `true` while pressed, read when a host asks (no
 //! debouncing, no events).
 {% if e9 %}

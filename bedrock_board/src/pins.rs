@@ -289,4 +289,46 @@ mod tests {
             "{table}"
         );
     }
+
+    /// MAP-14: B200A's GP26 and GP34 are both on /MCU/SCK; each gets its row and names the other
+    #[test]
+    fn two_rp_pins_on_one_net_get_a_row_each() {
+        let mut footprints = BTreeMap::new();
+        footprints.insert(
+            "U1".to_string(),
+            fp(vec![
+                pad("1", "/MCU/SCK", Some("GP26")),
+                pad("2", "/MCU/SCK", Some("GP34")),
+                pad("3", "LED", Some("GP38")),
+            ]),
+        );
+        let geo = Geometry {
+            source: String::new(),
+            bbox: [0.0; 4],
+            outline: vec![],
+            footprints,
+        };
+        let desc: Desc = toml::from_str(concat!(
+            "[board]\nname = \"b\"\npcb = \"p\"\nmcu = \"m\"\nmcu_ref = \"U1\"\ngeometry = \"g.json\"\n",
+            "pin_nets = '^GP\\d+$'\n",
+            "[pins]\nGP26 = { role = \"shared\" }\nGP34 = { role = \"free\" }\n",
+        ))
+        .unwrap();
+        let md = render(&desc, &geo).unwrap();
+        let rows: Vec<&str> = md.lines().filter(|l| l.starts_with("| `GP")).collect();
+        assert_eq!(rows.len(), 3, "{md}");
+        assert!(
+            rows[0].starts_with("| `GP26` SCK |")
+                && rows[0].contains("GP34 (U1)")
+                && rows[0].contains("shared"),
+            "{md}"
+        );
+        assert!(
+            rows[1].starts_with("| `GP34` SCK |")
+                && rows[1].contains("GP26 (U1)")
+                && rows[1].contains("free"),
+            "{md}"
+        );
+        assert!(rows[2].starts_with("| `GP38` LED |"), "{md}");
+    }
 }
