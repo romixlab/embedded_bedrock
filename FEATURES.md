@@ -154,6 +154,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
   that matrix entry uses the 128 KiB F103CB; since the device suite (TPL-41) the F103C8 release is 26.7 KiB over and the F103CB dev build 27 KiB over (its release fits); a 64 KiB part needs the suite trimmed (log, introspection docs) by an option. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
   on 64 KiB parts, or the tested part moves to F103CB.
+- 🐛 **TPL-71 `l073` (STM32L073RZ, `--wire-weaver`) dev build overflows RAM**: `cortex-m-rt`'s `.uninit` section
+  overflows RAM by 212 bytes under flip-link; seen in the 29 Oct 2026 matrix run, unrelated to this branch's
+  pico/TPL-70 work (matrix.toml and the generated firmware for this chip are untouched here). Not chased further:
+  needs the same kind of trim TPL-34 lists (log, introspection) or a smaller default to fit again.
 - ✅ **TPL-43 `--wire-weaver` with `--ww-src git`: the API crate has no `Cargo.lock`**: fixed with a host workspace
   root over the API crate (`suite/Cargo.toml.j2`, the firmware excluded), as `nucleo_g0b1re_template` has; `new`
   runs `cargo generate-lockfile` there (`post_steps()`), so `#[ww_api_root]` (wire_weaver_core
@@ -713,3 +717,6 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   which fixed the same for the B135B; `pins.rs` test `two_rp_pins_on_one_net_get_a_row_each` covers the RP case.
 - **BLD-7 Git hook** that replaces path dependencies with git links before pushing: superseded by BLD-8 (git
   dependencies, patched to the sibling checkout for local work).
+- **TPL-70 `board_pins.rs` RP pin names / `blink()` wrap**: found independently building `pico` (TPL-62), same
+  session as `pico2` found and fixed the identical two bugs as TPL-63; TPL-63's fix (the generic `` | ` `` row
+  filter plus the `= EXPR` split, and `blink()`'s length-checked one-liner) is the one kept, landed on main first.
