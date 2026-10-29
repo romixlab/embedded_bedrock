@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.28] - 2026-10-29
+
 ### Added
 
 - boardmap: `labels = "outside"` for a header lying across the board, its labels turned on their side above the top
