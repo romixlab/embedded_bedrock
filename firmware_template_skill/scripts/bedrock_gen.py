@@ -1273,7 +1273,8 @@ def rust_ident(name: str) -> str:
 
 def preset_hw(preset: Optional[dict], leds: list[dict], rp: bool = False) -> dict:
     """The preset's board hardware besides the LEDs (TPL-18), checked: `buttons` ([[buttons]]: name, pin, pressed,
-    pull, var), `init` ([[init]]: pin, level, what), `bring_up` ([bring_up]: use, code, takes, dependencies) and `usb`
+    pull, var), `init` ([[init]]: pin, level, what), `bring_up` ([bring_up]: use, code, takes, dependencies, what: a
+    line for the generated FEATURES.md) and `usb`
     ([usb]: product, manufacturer, vid, pid). Every pin once, the LEDs' too. Pins are named as the board map names
     them (PB14; GP22 on RP), `periph` is the HAL's peripheral (PB14; PIN_22 on RP)."""
     if not preset:
@@ -1319,7 +1320,7 @@ def preset_hw(preset: Optional[dict], leds: list[dict], rp: bool = False) -> dic
         init.append(dict(x, periph=periph(x["pin"])))
     bring_up = preset.get("bring_up", {})
     if bring_up:
-        keys(bring_up, "[bring_up]", {"use", "code", "takes", "dependencies"}, {"code"})
+        keys(bring_up, "[bring_up]", {"use", "code", "takes", "dependencies", "what"}, {"code"})
         for pin in [x for x in bring_up.get("takes", []) if name_re.fullmatch(x)]:
             take(pin, "[bring_up]")
     usb = preset.get("usb", {})

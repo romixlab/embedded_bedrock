@@ -71,9 +71,9 @@ Paths are relative to this skill directory; use the absolute path when invoking.
      4. *Also the host side (a client, CLI and Python package next to the firmware, justfile, CI, git hooks, README /
         AGENTS / FEATURES / CHANGELOG / LICENSE, logo)?* → `--host` (needs `--wire-weaver`); `--cli-name SHORT` names
         the command line and its env prefix [project name].
-   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`: `nucleo_g0b1re`, `b129a_cannify`;
-     or a directory with a `preset.toml`): answers for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...)
-     plus what only the board knows (clock tree, `[[leds]]`, `[[buttons]]`, `[[init]]` pins, `[bring_up]` code, `[usb]`
+   - board preset `--board <preset>` (`scripts/data/boards/<preset>/preset.toml`: `nucleo_g0b1re`, `b129a_cannify`,
+     `report_b200a`; or a directory with a `preset.toml`): answers for the board (chip, LED, probe, `--wire-weaver`, `--host`, ...)
+     plus what only the board knows (clock tree, `[[leds]]`, `[[buttons]]`, `[[init]]` pins, `[bring_up]` code (STM32 and RP), `[usb]`
      names, README board section, `docs/board/`, logo; test presets in `scripts/data/matrix_presets/`). Explicit flags override it. Ask which board first: a preset
      answers most of the questions above.
    - debug probe `--probe VID:PID` [the board preset's, else the family's on-board probe: ST-LINK 0483:374b, CMSIS-DAP

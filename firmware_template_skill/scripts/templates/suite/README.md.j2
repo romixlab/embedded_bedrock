@@ -55,7 +55,7 @@ answers; see AGENTS.md).
 {% else %}
 {% set _ = has.append("a WireWeaver API over " ~ ("USB" if ww.usb else "RTT")) %}
 {% endif %}
-{% if o.settings_flash %}{% set _ = has.append("a settings store in the last " ~ s.settings_size ~ " of flash" ~ (" with ECC-safe reads" if o.settings_flash != "plain" else "")) %}{% endif %}
+{% if o.settings_flash %}{% set _ = has.append("a settings store in the last " ~ s.settings_size ~ " of flash" ~ (" with ECC-safe reads" if o.settings_flash in ("g0", "h7") else "")) %}{% endif %}
 {% if o.flip_link and t.cortex_m %}{% set _ = has.append("flip-link stack overflow protection") %}{% endif %}
 {% if es0548_bank2 %}{% set _ = has.append("the ES0548 dual-bank prefetch guard") %}{% endif %}
 {{ ("What the firmware has from the start: " ~ has | join(", ") ~ ". [FEATURES.md](FEATURES.md) lists all of it with its status; [CHANGELOG.md](CHANGELOG.md) the changes.") | wordwrap(117, break_long_words=False, break_on_hyphens=False) }}

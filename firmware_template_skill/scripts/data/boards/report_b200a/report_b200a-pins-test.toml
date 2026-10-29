@@ -1,0 +1,23 @@
+# Pin test of a bare B200A rePort (rev A, nothing on J102 / J103, no SD card), for
+# `ww --api API pins test --plan docs/board/report_b200a-pins-test.toml` (README "Pins"), with the 595 chain in its
+# safe word (every translator off, VREF off). From the schematic (hw/b200_re_port/doc/hw_b200a.md), not yet
+# recorded on a board: confirm with `--save`. GP25 (1K to ADPT_KIND, 100K pull-up) sits near the threshold against
+# the internal pull-down and has no expectation; GP0's 1M pull-down loses to the internal pull-up, so it follows.
+target = "pins"
+
+[[point]]
+names = ["GP0", "GP4", "GP12..=GP19", "GP24", "GP31", "GP32", "GP34", "GP35", "GP37"]
+expect = "floating"
+
+# microSD CMD and D0-D3, 10K pull-ups to +3V3_SD; I2C0 SDA / SCL, 3K3 pull-ups R301 / R302
+[[point]]
+names = ["GP2", "GP3", "GP5", "GP6", "GP7", "GP8", "GP9"]
+expect = "pull_up"
+
+# DIR of IO4-IO7 (SN74LVC1T45), 10K pull-downs
+[[point]]
+names = ["GP10", "GP11", "GP20", "GP21"]
+expect = "pull_down"
+
+[shorts]
+same_net = [["GP26", "GP34"]]  # MCU/SCK: SPI1 SCK and SPI0 SCK on one net (hw §9)

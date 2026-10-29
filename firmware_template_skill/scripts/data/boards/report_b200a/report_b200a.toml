@@ -1,0 +1,251 @@
+# Board description for boardmap (bedrock_board): what to draw of the B200A rePort and what every pin does. Facts:
+# hw/b200_re_port/doc/hw_b200a.md (from the KiCad schematic, rev A, 1 May 2026; § numbers are its sections), the
+# board file, usb_io_fw. The geometry came from
+#   boardmap extract hw/b200_re_port/source/b200a/b200_re_port.kicad_pcb -o report_b200a.geometry.json \
+#     --source "b200_re_port.kicad_pcb (rePort B200A, KiCad 10)" --prefixes J,SW,D10,U160,U18,Y18 \
+#     --pin-names '^GPIO(\d+)(_\d+)?$=GP$1'
+# (the RP2350B symbol names its pins GPIO38_47: name and pad). The user connector J102 sits behind level translators
+# and protection, so no MCU pin reaches a header directly: "free" here means the firmware may drive or pull the pin
+# while the 595 chain holds its safe word (every translator off, VREF off, hw §15), and the note says what sits on
+# its net.
+
+[board]
+name = "B200A rePort"
+pcb = "B200A (rev A)"
+mcu = "RP2350B (U1801, QFN-80)"
+mcu_ref = "U1801"
+geometry = "report_b200a.geometry.json"
+pin_nets = '^GP\d+$'
+sources = ["B200A schematic rev A (1 May 2026)", "hw/b200_re_port/doc/hw_b200a.md", "RP2350 datasheet"]
+scale = 12.0
+
+[[view.connector]]
+ref = "J102"
+label = "J102 main header"
+labels = "right"
+numbers = true
+
+[[view.connector]]
+ref = "J101"
+label = "J101 SWD"
+labels = "right"
+numbers = true
+
+[[view.connector]]
+ref = "J103"
+label = "J103 sync / BOOT / VREF"
+labels = "left"
+numbers = true
+
+[[view.part]]
+ref = "U1801"
+label = "U1801\nRP2350B"
+kind = "mcu"
+
+[[view.part]]
+ref = "J1601"
+label = "J1601 USB-C\nUSB FS, power in"
+kind = "usb"
+
+[[view.part]]
+ref = "SW101"
+label = "SW101\nGP22, high pressed"
+kind = "button"
+
+[[view.part]]
+ref = "D102"
+label = "D102\nGP38, low lights"
+kind = "led"
+
+[[view.part]]
+ref = "J104"
+label = "J104 microSD"
+kind = "other"
+
+[[view.part]]
+ref = "U1802"
+label = "U1802 BY25Q40\n512 KiB QSPI"
+kind = "chip"
+
+[[view.part]]
+ref = "Y1801"
+label = "Y1801 12 MHz"
+kind = "other"
+
+[[view.part]]
+ref = "U1601"
+label = "U1601 RT5760\n5V→3V3"
+kind = "chip"
+
+[[view.part]]
+ref = "U1803"
+label = "U1803 TLV74311\n1V1 core"
+kind = "chip"
+
+[[view.part]]
+ref = "U1602"
+label = "U1602 TLV70233\n\"1V8\" (3.3 V part)"
+kind = "chip"
+
+[pins]
+GP0 = { role = "free", short = "SYNC", note = "SYNC_IO: 255 Ω to J103 pins 1 and 3 (5V6 Zener, 1M pull-down), no translator: 3.3 V straight to the pin (hw §11)." }
+GP1 = { role = "shared", short = "SD DET", note = "microSD card detect (J104), 10K pull-up; the card switch pulls it to GND: never drive it (hw §11)." }
+GP2 = { role = "free", short = "SD D0", note = "microSD D0 (J104), 10K pull-up to +3V3_SD." }
+GP3 = { role = "free", short = "SD D1", note = "microSD D1 (J104), 10K pull-up to +3V3_SD." }
+GP4 = { role = "free", short = "SD CLK", note = "microSD CLK (J104) through 33 Ω." }
+GP5 = { role = "free", short = "SD CMD", note = "microSD CMD (J104), 10K pull-up to +3V3_SD." }
+GP6 = { role = "free", short = "SD D3", note = "microSD D3 (J104), 10K pull-up to +3V3_SD. D0-D3 are not consecutive on rev A (2, 3, 7, 6): 1-bit SDIO or SPI mode only." }
+GP7 = { role = "free", short = "SD D2", note = "microSD D2 (J104), 10K pull-up to +3V3_SD." }
+GP8 = { role = "free", short = "SDA", note = "I2C0 SDA, the MCU side of both I2C translators (U302, U303; off in the safe word), 3K3 pull-up R301 to 3.3 V (hw §8)." }
+GP9 = { role = "free", short = "SCL", note = "I2C0 SCL, the MCU side of both I2C translators, 3K3 pull-up R302 to 3.3 V (hw §8)." }
+GP10 = { role = "free", short = "DIR7", note = "IO7 direction (SN74LVC1T45 DIR, 10K pull-down: low = input). High makes IO7 an output on J102-28 once a VREF is on (hw §6)." }
+GP11 = { role = "free", short = "DIR6", note = "IO6 direction, 10K pull-down (hw §6)." }
+GP12 = { role = "free", short = "IO0", note = "IO0, the MCU side of its SN74LVC1T45 (J102-3); with VREF off both sides are high-Z. Also SPI1 RX for the SPI monitor (hw §6, §9)." }
+GP13 = { role = "free", short = "IO1", note = "IO1 through its SN74LVC1T45 (J102-5)." }
+GP14 = { role = "free", short = "IO2", note = "IO2 through its SN74LVC1T45 (J102-7)." }
+GP15 = { role = "free", short = "IO3", note = "IO3 through its SN74LVC1T45 (J102-9)." }
+GP16 = { role = "free", short = "IO5", note = "IO5 through its SN74LVC1T45 (J102-25). IO4 and IO5 are swapped against GPIO order (hw §6)." }
+GP17 = { role = "free", short = "IO4", note = "IO4 through its SN74LVC1T45 (J102-24)." }
+GP18 = { role = "free", short = "IO6", note = "IO6 through its SN74LVC1T45 (J102-27)." }
+GP19 = { role = "free", short = "IO7", note = "IO7 through its SN74LVC1T45 (J102-28)." }
+GP20 = { role = "free", short = "DIR4", note = "IO4 direction, 10K pull-down (hw §6)." }
+GP21 = { role = "free", short = "DIR5", note = "IO5 direction, 10K pull-down (hw §6)." }
+GP22 = { role = "taken", short = "SW101", note = "User button SW101 to 3.3 V when pressed, no external pull-down: the internal one, and the RP2350-E9 workaround (hw §11)." }
+GP23 = { role = "taken", short = "EX LATCH", note = "595 chain RCLK (EXP.LATCH, U1401-U1404, hw §4)." }
+GP24 = { role = "free", short = "", note = "Not connected (hw §11): reaches nothing." }
+GP25 = { role = "free", short = "HPULL", note = "ADPT_HPULL: 1K to ADPT_KIND (GP47, 100K pull-up to 3.3 V), the strong pull-up for a 1-wire adapter EEPROM on J102-2 (hw §11)." }
+GP26 = { role = "shared", short = "SCK", note = "SPI1 SCK, the same net as GP34 (MCU/SCK): only one of them may be an output (hw §9, §15)." }
+GP27 = { role = "taken", short = "EX ~OE", note = "595 chain output enable, ⚠️ no pull-up on rev A: the firmware drives it high first thing at boot (hw §4)." }
+GP28 = { role = "taken", short = "EX DI", note = "595 chain serial data (EXP_DI, hw §4)." }
+GP29 = { role = "taken", short = "EX CLK", note = "595 chain shift clock (EXP.CLK, hw §4)." }
+GP30 = { role = "shared", short = "CTS", note = "UART0 CTS from the TXU0204 U1501, the same net as GP39: an input, never an output (hw §10, §15)." }
+GP31 = { role = "free", short = "RTS", note = "UART0 RTS into the TXU0204 U1501 (J102-20, translator off in the safe word)." }
+GP32 = { role = "free", short = "TX", note = "UART0 TX into the TXU0204 U1501 (J102-15)." }
+GP33 = { role = "shared", short = "RX", note = "UART0 RX from the TXU0204 U1501 (J102-11): an input." }
+GP34 = { role = "free", short = "SCK", note = "SPI0 SCK to the master translator U1301 (J102-16), the same net as GP26 (hw §9)." }
+GP35 = { role = "free", short = "MOSI", note = "SPI0 TX to the master translator U1301 (J102-17), and into the slave one U1302 as ext MISO." }
+GP36 = { role = "shared", short = "MISO", note = "SPI0 RX from U1301 (master) and U1302 (slave): translator outputs, an input." }
+GP37 = { role = "free", short = "CS", note = "SPI0 CS to U1301 (J102-19); in slave mode U1302 drives it (hw §9)." }
+GP38 = { role = "taken", short = "LED", note = "D102: 3.3 V, LED, 33 Ω, GP38: low lights it. PWM slice 11A breathes it (hw §11)." }
+GP39 = { role = "shared", short = "CTS", note = "UART1 RX on the CTS net, the same net as GP30: an input (hw §10)." }
+GP40 = { role = "taken", short = "ADC0", note = "Analog buffer U0 output (IO0 ÷ 1.5), driven by the TLV9004 U201 (hw §7)." }
+GP41 = { role = "taken", short = "ADC1", note = "Analog buffer U2 output (IO2)." }
+GP42 = { role = "taken", short = "ADC2", note = "Analog buffer U5 output (I2C SCL)." }
+GP43 = { role = "taken", short = "ADC3", note = "Analog buffer U4 output (UART RX)." }
+GP44 = { role = "taken", short = "ADC4", note = "Analog buffer U6 output (I2C SDA)." }
+GP45 = { role = "taken", short = "ADC5", note = "Analog buffer U3 output (IO3)." }
+GP46 = { role = "taken", short = "ADC6", note = "Analog buffer U1 output (IO1)." }
+GP47 = { role = "taken", short = "ADPT", note = "ADPT_KIND (ADC7): 255 Ω to J102-2, 100K pull-up to 3.3 V; not 5 V tolerant (hw §11)." }
+
+[[power.node]]
+id = "usb"
+label = "J1601 USB-C VBUS\n+5V0_USBIN · 5k1 on CC: a sink"
+kind = "source"
+col = 0
+row = 0
+
+[[power.node]]
+id = "u1601"
+label = "U1601 RT5760 buck\n1 A · 2.2 MHz"
+kind = "regulator"
+col = 1
+row = 0
+
+[[power.node]]
+id = "3v3"
+label = "+3V3_DCDC\nMCU · flash · 595s · SD"
+kind = "rail"
+col = 2
+row = 0
+
+[[power.node]]
+id = "u1803"
+label = "U1803 TLV74311\n1.1 V LDO"
+kind = "regulator"
+col = 3
+row = 0
+
+[[power.node]]
+id = "core"
+label = "+1V1_CORE\nDVDD (internal VREG unused)"
+kind = "load"
+col = 4
+row = 0
+
+[[power.node]]
+id = "u1602"
+label = "U1602 TLV70233\n⚠️ a 3.3 V part on rev A"
+kind = "regulator"
+col = 3
+row = 1
+
+[[power.node]]
+id = "1v8"
+label = "+1V8_LDO\n~3.2 V on rev A"
+kind = "rail"
+col = 4
+row = 1
+
+[[power.node]]
+id = "vref"
+label = "+VREF · J103-7\n5 V, 3.3 V or \"1.8 V\" via EX16/13/17"
+kind = "switch"
+col = 5
+row = 1
+
+[[power.node]]
+id = "out"
+label = "J102-1 +3V3_OUT · J102-29 +5V0_OUT\nF101, F102 100 mA polyfuses"
+kind = "load"
+col = 1
+row = 2
+
+[[power.edge]]
+from = "usb"
+to = "u1601"
+label = "VBUS"
+
+[[power.edge]]
+from = "u1601"
+to = "3v3"
+
+[[power.edge]]
+from = "3v3"
+to = "u1803"
+
+[[power.edge]]
+from = "u1803"
+to = "core"
+
+[[power.edge]]
+from = "3v3"
+to = "u1602"
+
+[[power.edge]]
+from = "u1602"
+to = "1v8"
+
+[[power.edge]]
+from = "1v8"
+to = "vref"
+off = true
+
+[[power.edge]]
+from = "3v3"
+to = "vref"
+off = true
+
+[[power.edge]]
+from = "usb"
+to = "vref"
+off = true
+
+[[power.edge]]
+from = "usb"
+to = "out"
+label = "F101"
+
+[[power.edge]]
+from = "3v3"
+to = "out"
+label = "F102"

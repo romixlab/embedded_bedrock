@@ -342,6 +342,13 @@ tags = ["ww", "host"]
 note = "the B135B FDCAN ISO USB preset (TPL-59): USB HS over ULPI (NXT PC3), HSE bypass 24 MHz to 520 MHz at VOS0, PLL2Q FDCAN, PLL3Q USB, RGB LED lit low, init pins, button, FDCAN1 + FDCAN3 from [[can]], TFBGA176 with unconnected balls (MAP-11), --pins board; firmware/src equals b135_template's"
 
 [[entry]]
+name = "rp2350report"
+args = ["--board", "report_b200a"]
+builds = ["dev", "release"]
+tags = ["ww", "host"]
+note = "the B200A rePort preset (TPL-61): RP2350B with 512 KiB flash, [bring_up] (595 chain), [[buttons]] with the RP2350-E9 read, --pins board with read-only pins, settings in the last 4 sectors; firmware/src equals report_template's"
+
+[[entry]]
 name = "rp2040w"
 args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--bootloader"]
 builds = ["dev", "bootloader"]

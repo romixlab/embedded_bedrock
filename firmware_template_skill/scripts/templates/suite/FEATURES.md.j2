@@ -20,7 +20,7 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {{ row("FW-" ~ n.i, "WireWeaver device API served over " ~ ("USB" if ww.usb else "RTT (channels `ww_up` / `ww_down` next to the " ~ ("defmt" if o.log == "defmt" else "log") ~ " channel)" if o.log != "none" else "RTT (channels `ww_up` / `ww_down`)"), "🧪", "`firmware/src/ww.rs`") -}}
 {% if o.settings_flash %}
 {% set n.i = n.i + 1 %}
-{{ row("FW-" ~ n.i, "Settings store in flash (`ww_settings`, " ~ s.settings_size ~ " at the end of the flash" ~ (", ECC-safe reads" if o.settings_flash != "plain" else "") ~ ") with the board's label", "🧪", "`firmware/src/settings.rs`") -}}
+{{ row("FW-" ~ n.i, "Settings store in flash (`ww_settings`, " ~ s.settings_size ~ " at the end of the flash" ~ (", ECC-safe reads" if o.settings_flash in ("g0", "h7") else "") ~ ") with the board's label", "🧪", "`firmware/src/settings.rs`") -}}
 {% endif %}
 {% if o.counters %}
 {% set n.i = n.i + 1 %}
@@ -34,9 +34,18 @@ progress, 📋 planned, 🐛 bug. Update this file in the same commit as the cod
 {% set n.i = n.i + 1 %}
 {{ row("FW-" ~ n.i, "ES0548 (dual-bank prefetch) guard: flash prefetch on, code kept in bank 1 by a link-time assert", "🧪", "`firmware/memory.x`") -}}
 {% endif %}
-{% if s.board.get("clock") %}
+{% if s.board.get("clock", {}).get("code") %}
 {% set n.i = n.i + 1 %}
 {{ row("FW-" ~ n.i, "Clock tree for the " ~ s.title, "🧪", "`firmware/src/main.rs`") -}}
+{% endif %}
+{% if o.hw.bring_up %}
+{% set n.i = n.i + 1 %}
+{{ row("FW-" ~ n.i, "Board bring-up right after the HAL's init" ~ ((": " ~ o.hw.bring_up.what) if o.hw.bring_up.get("what") else ""), "🧪", "`firmware/src/main.rs`") -}}
+{% endif %}
+{% if s.buttons %}
+{% set e9 = t.family == "rp" and t.rp_variant != "rp2040" and s.buttons | selectattr("pull", "eq", "down") | list %}
+{% set n.i = n.i + 1 %}
+{{ row("FW-" ~ n.i, "`buttons`: " ~ (s.buttons | map(attribute="name") | join(", ")) ~ (" as a read-only property" if s.buttons | length == 1 else " as read-only properties") ~ ", `true` while pressed" ~ ("; a pulled-down one has the pad's input buffer on only while it is read (RP2350-E9)" if e9 else ""), "🧪", "`firmware/src/ww/buttons.rs`") -}}
 {% endif %}
 {% if s.has_device %}
 {% set n.i = n.i + 1 %}

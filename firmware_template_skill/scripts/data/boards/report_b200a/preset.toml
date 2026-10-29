@@ -1,0 +1,125 @@
+# Board preset for `bedrock_gen.py new --board report_b200a`: B200A rePort (rev A), the board of report_template.
+# [answers] are defaults for `new`'s options (explicit flags and --answers win), the rest is what only the board
+# knows. Facts: hw/b200_re_port/doc/hw_b200a.md (from the KiCad schematic, rev A, 1 May 2026; § numbers below are
+# its sections), the board file hw/b200_re_port/source/b200a/b200_re_port.kicad_pcb, the BOM, usb_io_fw (the
+# board's application firmware: b200_board/src/chain.rs, flash.rs, state.rs), the RP2350 datasheet (build
+# 01/10/2026). B200B (mid-Nov 2026) gets a later revision of this preset: the ~OE pull-up and the button's external
+# pull-down make parts of [bring_up] and the E9 read unnecessary there.
+
+[answers]
+chip = "rp2350b"         # U1801 RP2350B, QFN-80
+flash_size = "512K"      # U1802 BY25Q40, 4 Mbit QSPI (hw §3)
+led = "PIN_38"           # D102: 3.3 V -> LED -> 33R -> GPIO38, active low; PWM slice 11A breathes it (hw §11)
+led_active = "low"
+probe = "2e8a:000c"      # a CMSIS-DAP probe (Raspberry Pi Debug Probe) on J101; which probe is to be confirmed
+settings = true
+settings_pages = 4       # the last four 4 KiB sectors, 0x7c000..0x80000, as usb_io_fw's b200_board/src/flash.rs
+counters = true
+wire_weaver = true
+ww_transport = "usb"     # the board's own USB-C (J1601): the probe only flashes
+host = true
+cli_name = "report"
+pins = "board"           # PinDiag on every free pin of the board map, [pins] below
+
+[board]
+title = "rePort"                   # prose and the README title
+maker = "B200A"                    # the README's link text: "B200A rePort board"
+product = "B200A rePort"           # ww_board_info product
+revision = "A"                     # B200A
+url = "https://github.com/vhrdtech/hw/tree/main/b200_re_port"
+core = "Cortex-M33"
+client = "Report"                  # the client library's typed board type
+probe_name = "the probe on J101"
+probe_kind = "CMSIS-DAP probe"     # the host crates' "the only CMSIS-DAP probe attached"
+probe_kind_a = "a CMSIS-DAP probe"
+template = true                    # a template repository: the README says how to make it yours
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "rePort boards"           # "with two rePort boards attached"
+variant = "RP2350 rev A4 (bootrom 4)"
+led = "D102"
+reset_how = "plug the USB-C cable in again"  # no reset button: reset is J101 pin 5 or a power cycle
+first_item = """The SD card detect switch on GP1 as a readable property is a good
+   first one."""
+
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every B200A has an RP2350B (QFN-80); the BOM orders the A4 stepping
+(SC1510-A4), what can differ is the stepping fitted."""
+
+[logo]
+board = "rePort"
+chip = "RP2350B"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from the KiCad board
+[boardmap]
+toml = "report_b200a.toml"
+geometry = "report_b200a.geometry.json"
+
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "the board has no power LED, D102 is its only one"
+
+# SW101 (hw §11): GPIO22 to 3.3 V when pressed, no external pull-down, so the internal one; RP2350-E9 can hold a
+# pulled-down input high after release, the generated buttons.rs reads it with the input buffer on just for the read
+[[buttons]]
+name = "SW101"
+pin = "GP22"
+pressed = "high"
+pull = "down"
+
+# hw §4 and §15: the 595 chain (U1401-U1404) has no pull-up on EXP.~OE (GPIO27), so from power-on its outputs drive
+# whatever the storage registers hold, which can turn on two VREF sources at once (VBUS into the 3.3 V rail). First
+# thing at boot: ~OE high, shift the safe word in, latch, ~OE low. The pins stay held for good: dropping one would
+# let it float. usb_io_fw's b200_usb_io/src/chain.rs is the full driver (rules for every later change).
+[bring_up]
+what = "the 595 chain's safe word latched before its outputs are enabled (EXP.~OE has no pull-up on rev A)"
+takes = ["GP23", "GP27", "GP28", "GP29"]
+code = """
+    // The 595 chain (rePort hw §4, §15): EXP.~OE (GPIO27) has no pull-up, so the outputs are on with undefined
+    // content since power-on. Outputs off, shift in the safe word, latch, outputs on. The safe word is all off:
+    // every EX 0 but EX13, the 3.3 V VREF, which is active low. The first bit shifted ends up in EX31.
+    let mut chain_oe_n = embassy_rp::gpio::Output::new(p.PIN_27, embassy_rp::gpio::Level::High);
+    let mut chain_di = embassy_rp::gpio::Output::new(p.PIN_28, embassy_rp::gpio::Level::Low);
+    let mut chain_clk = embassy_rp::gpio::Output::new(p.PIN_29, embassy_rp::gpio::Level::Low);
+    let mut chain_latch = embassy_rp::gpio::Output::new(p.PIN_23, embassy_rp::gpio::Level::Low);
+    const CHAIN_SAFE: u32 = 1 << 13;
+    // 4 cycles between edges: ~27 ns at 150 MHz, above the SN74LVC595's 5 ns setup and pulse width at 3.3 V
+    for n in (0..32).rev() {
+        chain_di.set_level(embassy_rp::gpio::Level::from(CHAIN_SAFE & (1 << n) != 0));
+        cortex_m::asm::delay(4);
+        chain_clk.set_high();
+        cortex_m::asm::delay(4);
+        chain_clk.set_low();
+    }
+    chain_latch.set_high();
+    cortex_m::asm::delay(4);
+    chain_latch.set_low();
+    chain_oe_n.set_low();
+    defmt::debug!("595 chain: safe word {=u32:#010x} latched", CHAIN_SAFE);
+"""
+
+[usb]
+product = "rePort"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
+# it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "the button (GP22), the LED (GP38), the 595 chain (GP23, GP27, GP28, GP29), the analog buffer outputs (GP40, GP41, GP42, GP43, GP44, GP45, GP46) and the adapter detect (GP47)"
+readme_left_out = "The button, the LED, the 595 chain, the analog buffer outputs and the adapter detect"
+test = "report_b200a-pins-test.toml"
+
+# pins a part of the board drives or that must never be outputs (hw §9, §10, §15, usb_io_fw state.rs INPUT_ONLY)
+[pins.read_only]
+GP1 = { what = "the SD card detect", parts = "the card detect switch to GND and its 10K pull-up on GP1", readme = "GP1 (SD detect)" }
+GP26 = { what = "SPI SCK, the same net as GP34", parts = "the SCK net GP26 shares with GP34 (only one of them may be an output)", readme = "GP26 (SCK, joined to GP34)" }
+GP30 = { what = "UART CTS, the same net as GP39", parts = "the CTS translator output U1501 on GP30 and GP39", readme = "GP30 (CTS)" }
+GP33 = { what = "UART RX", parts = "the RX translator output U1501 on GP33", readme = "GP33 (RX)" }
+GP36 = { what = "SPI MISO", parts = "the MISO translator outputs U1301 / U1302 on GP36", readme = "GP36 (MISO)" }
+GP39 = { what = "UART CTS, the same net as GP30", parts = "the CTS net GP39 shares with GP30", readme = "GP39 (CTS)" }
+
+# src/sync.rs (with --clock-sync): where the core clock comes from
+[clock]
+oscillator = "the 150 MHz comes from the 12 MHz crystal Y1801 through PLL_SYS"
