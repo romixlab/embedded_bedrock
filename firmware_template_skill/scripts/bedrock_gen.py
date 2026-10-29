@@ -1514,6 +1514,14 @@ def variant_context(t: Target) -> Optional[dict]:
 
 # --pins (TPL-46): the points of ww_pin_diag::PinDiag in src/pins.rs. STM32 pins are PA0..PK15, RP GPIOs GP0..GP47
 # (the Pico's silkscreen names; SWD and USB have pins of their own there)
+# methods of the Python wrapper's Device (suite/py/src/lib.rs.j2): the accessor of the connected board must not be one
+PY_DEVICE_METHODS = {
+    "api", "blink", "block", "board", "boot_count", "boot_state", "brightness", "build_id", "can_configure", "can_rx",
+    "can_send", "can_status", "clear_last_reset", "clock_check", "counters", "dfu_node", "disconnect", "firmware",
+    "identify", "label", "last_reset", "led_at_boot", "led_off", "led_on", "leds_mode", "log", "new", "reboot",
+    "report", "reset_counters", "reset_settings", "set_brightness", "set_label", "set_led_at_boot", "set_leds_mode",
+    "uid", "variant", "wait_clock_locked",
+}
 PIN_NAME_RE = re.compile(r"P([A-K])(\d{1,2})")
 RP_PIN_NAME_RE = re.compile(r"GP()(\d{1,2})")
 SWD_PINS = ("PA13", "PA14")  # SWDIO, SWCLK on every STM32: the probe's, never a point
@@ -1972,8 +1980,9 @@ def host_names(t: Target, o: Opts, s: dict) -> dict:
         "probe_const": f"{ct.upper()}_PROBE",        # VID:PID of the probe, the default of Probe
         "probe_kind": kind,                          # "the only Nucleo ST-LINK attached"
         "probe_kind_a": kind_a,
-        # the Python Device's accessor of the connected board; `board` is taken by the board() method of the contract
-        "py_board": ct.lower() if ct.lower() != "board" else "connected",
+        # the Python Device's accessor of the connected board, `connected` where the name is one of Device's methods
+        # (`board` of the contract, `report` of a firmware named report)
+        "py_board": ct.lower() if ct.lower() not in PY_DEVICE_METHODS else "connected",
         "board_short": ct if b else "board",         # "Blink the Nucleo's LED"
         "board_revision": s["revision"] or "A",      # board_line's example
         "led_name": o.leds[0]["name"] if o.leds else readme.get("led", ""),  # the user LED's name on the board (LD4)

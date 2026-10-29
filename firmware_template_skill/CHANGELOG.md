@@ -59,8 +59,13 @@ or options; purely internal refactors only need a line under the next version.
   b129a_cannify). Upgrade notes: none; a firmware made from a BGA board's map regenerates `src/pins.rs` without the
   unconnected pins.
 
+- Python wrapper (TPL-61): the `Device`'s private accessor of the connected board is `connected()` whenever the
+  firmware's name is one of `Device`'s methods (`report`, `log`, `counters`, `label`, ...), not only for `board`;
+  a firmware named `report` failed to build its `_py` crate. Upgrade notes: nothing unless the firmware's name is
+  one of those; then rename the accessor in `<name>_py/src/lib.rs` the same way.
+
 - Board preset `report_b200a` (TPL-61): B200A rePort, RP2350B with 512 KiB flash, `--board report_b200a`; matrix
-  entry `rp2350report`. `[[buttons]]`, `[[init]]` and `[bring_up]` now work on embassy-rp (TPL-18): pins named as
+  entry `report`. `[[buttons]]`, `[[init]]` and `[bring_up]` now work on embassy-rp (TPL-18): pins named as
   the board map does (`GP22`), a pulled-down button on RP2350 read with the pad's input buffer on only for the read
   (RP2350-E9), `[bring_up]` right after `embassy_rp::init`. `[bring_up] what` (new, optional) is the line the
   generated FEATURES.md shows. Upgrade notes: nothing for existing firmware unless its preset gains these tables.
