@@ -500,7 +500,7 @@ mod tests {
     (pad "33" smd rect (at 2 0) (size 1 1) (net "SWCLK") (pinfunction "SWCLK_33")))
   (gr_line (start 0 0) (end 10 0) (layer "Edge.Cuts"))
 )"#;
-        let dir = std::env::temp_dir().join(format!("bedrock_board_pins_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bedrock_board_rename_{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("t.kicad_pcb");
         std::fs::write(&path, text).unwrap();
