@@ -1105,6 +1105,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "exact_units"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "serde",
+ "shrink_wrap",
+]
+
+[[package]]
 name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3503,6 +3512,7 @@ dependencies = [
  "anyhow",
  "cargo_toml",
  "convert_case",
+ "exact_units",
  "hex",
  "pest",
  "pest_derive",
@@ -3541,6 +3551,7 @@ dependencies = [
 name = "wire_weaver_evolution"
 version = "0.5.0"
 dependencies = [
+ "exact_units",
  "ron",
  "serde",
  "shrink_wrap",
@@ -3683,6 +3694,7 @@ name = "ww_self"
 version = "0.3.0"
 dependencies = [
  "anyhow",
+ "exact_units",
  "quote",
  "serde",
  "sha2 0.11.0",
@@ -3697,6 +3709,7 @@ name = "ww_si"
 version = "0.2.0"
 dependencies = [
  "defmt",
+ "exact_units",
  "shrink_wrap",
  "ww_numeric",
 ]
