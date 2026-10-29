@@ -59,6 +59,16 @@ or options; purely internal refactors only need a line under the next version.
   b129a_cannify). Upgrade notes: none; a firmware made from a BGA board's map regenerates `src/pins.rs` without the
   unconnected pins.
 
+- Board preset `report_b200a` (TPL-61): B200A rePort, RP2350B with 512 KiB flash, `--board report_b200a`; matrix
+  entry `rp2350report`. `[[buttons]]`, `[[init]]` and `[bring_up]` now work on embassy-rp (TPL-18): pins named as
+  the board map does (`GP22`), a pulled-down button on RP2350 read with the pad's input buffer on only for the read
+  (RP2350-E9), `[bring_up]` right after `embassy_rp::init`. `[bring_up] what` (new, optional) is the line the
+  generated FEATURES.md shows. Upgrade notes: nothing for existing firmware unless its preset gains these tables.
+
+- Generated FEATURES.md and README (TPL-25, TPL-18): RP settings no longer claim "ECC-safe reads" (only G0 / H7
+  have them); "Clock tree" is listed only when the preset's `[clock]` has code; new rows for `[bring_up]` and
+  `buttons`. Upgrade notes: fix the two sentences by hand in a firmware's own FEATURES.md / README if it has them.
+
 - `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
   when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
   change to generated output.

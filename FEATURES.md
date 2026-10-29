@@ -411,6 +411,21 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   generated as b135_template (not published yet). Open hardware steps: flash through the J-Link, the README's device
   steps (USB HS enumeration, `info`, LEDs, SW201), ROM boot and DFU over J301, both CAN channels on a bus, the pin
   test of a bare board (`--save`), the silicon revision fitted (DBGMCU REV_ID) against ES0491.
+- 🧪 **TPL-61 Board preset `report_b200a`**: B200A rePort (RP2350B QFN-80, 512 KiB BY25Q40, 12 MHz crystal, rev A)
+  in `scripts/data/boards/report_b200a/`, facts from `hw/b200_re_port/doc/hw_b200a.md`: WireWeaver over its own
+  USB-C (product `rePort`), D102 on GP38 active low breathing on PWM slice 11A (TPL-57), SW101 on GP22 as
+  `buttons.sw101` (pressed high, internal pull-down, RP2350-E9 read), `[bring_up]` latching the 595 chain's safe
+  word before its outputs are enabled (EXP.~OE has no pull-up on rev A; usb_io_fw's chain.rs is the model), settings
+  in the last four 4 KiB sectors (0x7c000, as usb_io_fw's `b200_board/src/flash.rs`, TPL-25), boot and dfu through
+  BOOTSEL (TPL-55, TPL-56; by hand: J103 pin 5 to pin 6 while plugging in), the shared clock (TPL-50), `--pins
+  board` on the MCU sides of the translators, the SD lines and SYNC with GP1, GP26, GP30, GP33, GP36, GP39 read
+  only (TPL-48), the board map from the KiCad 10 board (`boardmap extract --pin-names`, MAP-1 enclosure outline).
+  `[bring_up] what` is a new preset key (the generated FEATURES row). Matrix entry `rp2350report`; generated as
+  report_template. Open hardware steps: which probe sits on J101 (VID:PID; 2e8a:000c assumed), flash, the README's
+  device steps, BOOTSEL by `boot reboot --updater` and by J103, the pin test of a bare board (`--save`), the
+  stepping fitted (`variant`, BOM orders A4), the button with the E9 read. Not done: the RP2350's own regulator
+  left on (VREG_LX unconnected; the datasheet's "approximately 400 µA until it's shut down" by VREG HIZ). B200B
+  (mid-Nov 2026) gets a revision of the preset.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
