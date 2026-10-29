@@ -595,6 +595,13 @@ tags = ["ww", "rtt"]
 note = "[[leds]]: an RGB LED lit low on TIM3 CH2 / CH1 and TIM8_CH1N, clock sync (TPL-18)"
 
 [[entry]]
+name = "g0canhw"
+args = ["--board", "matrix_presets/g0leds", "--can", "FDCAN1:PD1,PD0"]
+builds = ["dev"]
+tags = ["ww", "rtt"]
+note = "[[leds]], a button and an init pin beside --can without a standby pin (TPL-18, TPL-53, TPL-68)"
+
+[[entry]]
 name = "h7ulpi"
 args = ["--board", "matrix_presets/h7ulpi"]
 builds = ["dev", "release"]

@@ -291,6 +291,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   their items. Seen on a board preset's clock (`use embassy_stm32::rcc::{Hse, ...}` next to
   `use embassy_stm32::rcc::{Hsi48Config, mux}`) failing the matrix's `cargo fmt --check` (found while building the
   B129A CANnify preset, TPL-58).
+- ✅ **TPL-68 `can_task` signature unlike rustfmt without a standby pin on G0**: `src/can.rs` always wrapped the
+  task's parameters, but with no `stby=` pin and no H7 layout they fit in 100 columns and rustfmt keeps them on one
+  line (`--can FDCAN1:PD1,PB8` failed `rustfmt --check`). Fixed in `templates/app/src/can.rs.j2`; matrix `g0canhw`.
 - 📋 **TPL-50 Clock sync on RP and nRF**: `--clock-sync on` refuses outside embassy STM32. `bedrock_sync`'s
   `embassy` feature is chip-independent; what is missing is `clock.info`'s source name and a check on a board
   (embassy-rp's and embassy-nrf's time drivers, USB round trips).

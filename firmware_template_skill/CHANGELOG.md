@@ -10,6 +10,9 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `--can` without a standby pin on G0 (TPL-68): `src/can.rs`'s `can_task` signature is on one line, as rustfmt
+  keeps it (it was wrapped, failing `cargo fmt --check`). Upgrade notes: `cargo fmt` fixes it in place.
+
 - CAN (TPL-53): `--can board|LIST|none` (default `none`) serves FDCAN channels as `can[]: ww_can_bus::Can` on
   embassy STM32G0 and H7 (needs `--wire-weaver`, `--log defmt`, `--counters`), ported from B135's firmware
   (`b135_fw/src/{can.rs,ww/can.rs}`, `b135_client/src/can.rs`).

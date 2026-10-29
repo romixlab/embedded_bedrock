@@ -394,14 +394,19 @@ impl Running {
 /// One channel: applies the configuration, runs on the bus or waits off it, until the server's next command.
 /// `_standby` holds the transceiver's standby pin at its level (a dropped `Output` would let it float).
 #[embassy_executor::task(pool_size = COUNT)]
+{% if h7 or c.standby_any %}
 async fn can_task(
     ch: &'static Chan,
     mut can: FdCan<ConfigMode>,
-{% if h7 %}
+  {% if h7 %}
     layout: MessageRamLayout,
-{% endif %}
+  {% endif %}
     _standby: Option<{{ "Output<'static>" if c.standby_any else "Flex<'static>" }}>,
 ) {
+{% else %}
+{# exactly 100 columns on one line, as rustfmt keeps it #}
+async fn can_task(ch: &'static Chan, mut can: FdCan<ConfigMode>, _standby: Option<Flex<'static>>) {
+{% endif %}
     let controller = controller();
     let mut hw = unwrap!(
         bedrock_can::default_config(&controller),
