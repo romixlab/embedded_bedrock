@@ -59,6 +59,10 @@ or options; purely internal refactors only need a line under the next version.
   b129a_cannify). Upgrade notes: none; a firmware made from a BGA board's map regenerates `src/pins.rs` without the
   unconnected pins.
 
+- `suite/py/src/lib.rs.j2`'s `blink()` wrapper (TPL-61, TPL-63): the one-line form is picked by rustfmt's
+  `chain_width` (60) on `self.<accessor>()?.blink(...)`, not by the line's width; a firmware named `report`
+  (accessor `connected`) got the one-line form and failed `cargo fmt --check`. Upgrade notes: `cargo fmt` fixes it.
+
 - `[[buttons]]` on STM32 generates again (TPL-61): the RP2350-E9 list was a bool there; g0leds and g0canhw failed
   to generate. Upgrade notes: none.
 
