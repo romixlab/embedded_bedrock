@@ -77,6 +77,9 @@ or options; purely internal refactors only need a line under the next version.
   have them); "Clock tree" is listed only when the preset's `[clock]` has code; new rows for `[bring_up]` and
   `buttons`. Upgrade notes: fix the two sentences by hand in a firmware's own FEATURES.md / README if it has them.
 
+- `matrix` (TPL-46): entries that render `docs/board/` with this checkout's `boardmap` take turns; two at once
+  relinked the binary under each other ("Text file busy", g0board's pins test failed). No change to generated output.
+
 - `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
   when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
   change to generated output.

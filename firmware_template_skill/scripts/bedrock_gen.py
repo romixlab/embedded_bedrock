@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
 import datetime
 import difflib
 import itertools
@@ -43,6 +44,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import threading
 import time
 import tomllib
 import urllib.error
@@ -2607,6 +2609,11 @@ def matrix_build_root(scratch: Path) -> Path:
     return cache / "bedrock_matrix" / scratch.name
 
 
+# entries run in parallel: two `cargo run` of this checkout's boardmap relink and exec the same binary, and one of
+# them fails with "Text file busy" (g0board, TPL-61); a render takes seconds, so they take turns
+OWN_BOARDMAP_LOCK = threading.Lock()
+
+
 def matrix_run_one(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], ww_src: Optional[str],
                    keep: bool = False) -> dict[str, StepResult]:
     build_dir = matrix_build_root(scratch) / entry.name
@@ -2689,7 +2696,8 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
             cmd = ["boardmap"]
         t0 = time.monotonic()
         try:
-            proc = subprocess.run([*cmd, "render", str(boards[0])], cwd=outdir, capture_output=True, text=True)
+            with OWN_BOARDMAP_LOCK if manifest == own else contextlib.nullcontext():
+                proc = subprocess.run([*cmd, "render", str(boards[0])], cwd=outdir, capture_output=True, text=True)
             results["board"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
                                           "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
         except FileNotFoundError:
