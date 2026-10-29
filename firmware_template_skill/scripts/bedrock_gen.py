@@ -1393,7 +1393,7 @@ def leds_pwm(t: Target, framework: str, leds: list[dict], mode: str) -> dict:
             show.append(f"{c['var']}.set_level({level});")
     t.notes.append("LEDs: " + ", ".join(f"{leds[c['led']]['name']}{(' ' + 'RGB'[c['colour']]) if leds[c['led']]['rgb'] else ''}"
                                         f" {c['pin']} {c['signal']}" for c in chans) + f"; time driver {driver}")
-    return {"multi": True, "leds": leds, "timers": by_timer, "chans": chans, "driver": driver.lower(),
+    return {"multi": True, "leds": leds, "timers": by_timer, "chans": chans, "driver": driver.lower(), "freq": "1 kHz",
             "timer": and_join(tims), "signal": and_join([c["signal"] for c in chans]),
             "comp": any(c["n"] for c in chans), "simple": any(not x["comp"] for x in by_timer),
             "plain_on_comp": any(not c["n"] for x in by_timer if x["comp"] for c in x["chans"]),
