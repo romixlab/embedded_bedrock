@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.30] - 2026-10-29
+
 ### Added
 
 - `boardmap extract --rename PATTERN=REPLACEMENT` renames a pad's net/pin by a whole-string regex (`$1` groups,
