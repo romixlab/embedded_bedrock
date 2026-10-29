@@ -7,9 +7,12 @@
     // the board's buttons, read through `buttons` (src/ww/buttons.rs)
     let buttons = ww::Buttons {
     {% for b in s.buttons %}
-        {{ b.var }}: Input::new(p.{{ b.pin }}, Pull::{{ b.pull | capitalize }}),
+        {{ b.var }}: Input::new(p.{{ b.periph }}, Pull::{{ b.pull | capitalize }}),
     {% endfor %}
     };
+    {% if t.family == "rp" and t.rp_variant != "rp2040" and s.buttons | selectattr("pull", "eq", "down") | list %}
+    buttons.input_buffers_off(); // RP2350-E9 (src/ww/buttons.rs)
+    {% endif %}
   {% endif %}
   {% if s.pins %}
     // every free pin, for `pins` (src/pins.rs): take a pin out of its list there to use it here

@@ -1271,18 +1271,23 @@ def rust_ident(name: str) -> str:
     return var if var[0].isalpha() else f"x_{var}"
 
 
-def preset_hw(preset: Optional[dict], leds: list[dict]) -> dict:
+def preset_hw(preset: Optional[dict], leds: list[dict], rp: bool = False) -> dict:
     """The preset's board hardware besides the LEDs (TPL-18), checked: `buttons` ([[buttons]]: name, pin, pressed,
     pull, var), `init` ([[init]]: pin, level, what), `bring_up` ([bring_up]: use, code, takes, dependencies) and `usb`
-    ([usb]: product, manufacturer, vid, pid). Every pin once, the LEDs' too."""
+    ([usb]: product, manufacturer, vid, pid). Every pin once, the LEDs' too. Pins are named as the board map names
+    them (PB14; GP22 on RP), `periph` is the HAL's peripheral (PB14; PIN_22 on RP)."""
     if not preset:
         return {"buttons": [], "init": [], "bring_up": {}, "usb": {}}
     where = preset["dir"] / "preset.toml"
     seen = {pin: f"LED {led['name']}" for led in leds for pin in led["pins"]}
+    name_re, example = (RP_PIN_NAME_RE, "GP22") if rp else (PIN_NAME_RE, "PB14")
+
+    def periph(pin: str) -> str:
+        return f"PIN_{pin[2:]}" if rp else pin
 
     def take(pin: str, what: str) -> None:
-        if not PIN_NAME_RE.fullmatch(pin):
-            die(f"{where}: {what}: {pin!r} is not a pin like PB14")
+        if not name_re.fullmatch(pin):
+            die(f"{where}: {what}: {pin!r} is not a pin like {example}")
         if pin in seen:
             die(f"{where}: {what}: {pin} is {seen[pin]}'s")
         seen[pin] = what
@@ -1300,7 +1305,8 @@ def preset_hw(preset: Optional[dict], leds: list[dict]) -> dict:
         pressed, pull = x.get("pressed", "low"), x.get("pull", "none")
         if pressed not in ("high", "low") or pull not in ("none", "up", "down"):
             die(f"{where}: {what}: pressed = \"high\" | \"low\", pull = \"none\" | \"up\" | \"down\"")
-        buttons.append(dict(name=x["name"], pin=x["pin"], pressed=pressed, pull=pull, var=rust_ident(x["name"])))
+        buttons.append(dict(name=x["name"], pin=x["pin"], periph=periph(x["pin"]), pressed=pressed, pull=pull,
+                            var=rust_ident(x["name"]), gpio=int(x["pin"][2:]) if rp else None))
     if len({b["var"] for b in buttons}) < len(buttons):
         die(f"{where}: [[buttons]]: two names give the same property name")
     init = []
@@ -1310,11 +1316,11 @@ def preset_hw(preset: Optional[dict], leds: list[dict]) -> dict:
         take(x["pin"], what)
         if x["level"] not in ("high", "low"):
             die(f"{where}: {what}: level = \"high\" or \"low\"")
-        init.append(dict(x))
+        init.append(dict(x, periph=periph(x["pin"])))
     bring_up = preset.get("bring_up", {})
     if bring_up:
         keys(bring_up, "[bring_up]", {"use", "code", "takes", "dependencies"}, {"code"})
-        for pin in [x for x in bring_up.get("takes", []) if PIN_NAME_RE.fullmatch(x)]:
+        for pin in [x for x in bring_up.get("takes", []) if name_re.fullmatch(x)]:
             take(pin, "[bring_up]")
     usb = preset.get("usb", {})
     if usb:
@@ -1579,7 +1585,7 @@ def resolve_pins(t: Target, o: Opts, spec: Optional[str], usb: Optional[dict]) -
         {f"GP{rp_gpio(t, o.led)}" if rp else o.led: "the LED"}
     used.update({b["pin"]: f"the button {b['name']}" for b in o.hw["buttons"]})
     used.update({x["pin"]: x["what"] for x in o.hw["init"]})
-    used.update({x: "taken by [bring_up]" for x in o.hw["bring_up"].get("takes", []) if PIN_NAME_RE.fullmatch(x)})
+    used.update({x: "taken by [bring_up]" for x in o.hw["bring_up"].get("takes", []) if name_re.fullmatch(x)})
     if usb:
         used.update(usb_pins(usb))
     used.update({k: v for k, v in o.can.get("used", {}).items() if k not in SWD_PINS})
@@ -2991,9 +2997,10 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
     o.cli_name = args.cli_name or name
     o.probe = args.probe or SETUP_PROBES[t.family][1]
     o.leds = leds
-    o.hw = preset_hw(o.board, leds)
-    if (o.hw["buttons"] or o.hw["init"] or o.hw["bring_up"]) and (t.family != "stm32" or fw != "embassy"):
-        die("the preset's [[buttons]], [[init]] and [bring_up]: generated for --framework embassy on STM32 so far")
+    o.hw = preset_hw(o.board, leds, t.family == "rp")
+    if (o.hw["buttons"] or o.hw["init"] or o.hw["bring_up"]) and (t.family not in ("stm32", "rp") or fw != "embassy"):
+        die("the preset's [[buttons]], [[init]] and [bring_up]: generated for --framework embassy on STM32 and RP so "
+            "far")
     if o.hw["buttons"] and not args.wire_weaver:
         t.notes.append("[[buttons]]: served as `buttons` with --wire-weaver; without it nothing reads them")
     o.led_pwm = leds_pwm(t, fw, leds, args.led_mode) if leds and not single_led(leds) else \

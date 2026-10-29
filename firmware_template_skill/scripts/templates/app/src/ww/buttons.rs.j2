@@ -1,9 +1,20 @@
-{# `buttons` (TPL-18): the preset's [[buttons]] as read-only bool properties, `true` while pressed. #}
+{# `buttons` (TPL-18): the preset's [[buttons]] as read-only bool properties, `true` while pressed. On RP2350 a
+   button with the pad pull-down gets the RP2350-E9 workaround of pins-rp.rs.j2 (RP2350 datasheet, appendix D.5.1). #}
+{% set e9 = t.family == "rp" and t.rp_variant != "rp2040" and s.buttons | selectattr("pull", "eq", "down") | list %}
 //! `buttons`: the board's buttons as read-only properties, `true` while pressed, read when a host asks (no
 //! debouncing, no events).
+{% if e9 %}
+//!
+//! RP2350-E9 (RP2350 datasheet, appendix D.5.1, "Increased leakage current on Bank 0 GPIO when pad input is
+//! enabled", affects A2, fixed in A3): with the input buffer on, a pad between VIL and VIH sources about 120 µA and
+//! holds itself at about 2.2 V, which the pad pull-down "isn't strong enough" to overcome, so a released button that
+//! only has the pull-down reads pressed for good. The datasheet's workaround, used here on every revision: the input
+//! buffer stays off and a read turns it on "immediately before reading, and then re-disable[s it] immediately
+//! afterwards".
+{% endif %}
 
 use super::ServerState;
-use embassy_stm32::gpio::Input;
+use {{ "embassy_rp" if t.family == "rp" else "embassy_stm32" }}::gpio::Input;
 use wire_weaver::prelude::*;
 
 /// The board's buttons (the board preset's [[buttons]]).
@@ -24,7 +35,38 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
     ) -> GetResult<bool, ()> {
+{% if b in e9 %}
+        Value(read_e9({{ b.gpio }}, || self.buttons.{{ b.var }}.is_{{ b.pressed }}()))
+{% else %}
         Value(self.buttons.{{ b.var }}.is_{{ b.pressed }}())
+{% endif %}
     }
 {% endfor %}
 }
+{% if e9 %}
+
+impl Buttons {
+    /// The input buffers of the pulled-down buttons off until a read (RP2350-E9): embassy-rp's Input turns them on
+    pub fn input_buffers_off(&self) {
+  {% for b in e9 %}
+        input_buffer({{ b.gpio }}, false); // {{ b.name }}
+  {% endfor %}
+    }
+}
+
+/// `read` with the input buffer of GPIO `gpio` on just for it, through the input synchronizer (two clk_sys cycles)
+fn read_e9(gpio: usize, read: impl FnOnce() -> bool) -> bool {
+    input_buffer(gpio, true);
+    cortex_m::asm::delay(8);
+    let level = read();
+    input_buffer(gpio, false);
+    level
+}
+
+/// The input buffer (pad IE) of GPIO `gpio`: embassy-rp's Input has no call to turn it off
+fn input_buffer(gpio: usize, on: bool) {
+    embassy_rp::pac::PADS_BANK0
+        .gpio(gpio)
+        .modify(|w| w.set_ie(on));
+}
+{% endif %}

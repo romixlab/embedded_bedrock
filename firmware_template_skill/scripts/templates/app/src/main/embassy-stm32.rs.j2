@@ -109,7 +109,7 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
     // disconnect the pin
   {% for x in hw.init %}
     // {{ x.what }}
-    let _{{ x.pin | lower }} = Output::new(p.{{ x.pin }}, Level::{{ x.level | capitalize }}, Speed::Low);
+    let _{{ x.pin | lower }} = Output::new(p.{{ x.periph }}, Level::{{ x.level | capitalize }}, Speed::Low);
   {% endfor %}
 {% endif %}
 {% if hw.bring_up %}

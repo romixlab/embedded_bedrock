@@ -1,9 +1,16 @@
 {% set pw = s.led.pwm %}
-{% if not pw %}
-use embassy_rp::gpio::{Level, Output};
+{% set hw = o.hw %}
+{% set gpio = ((["Level", "Output"] if not pw or hw.init else []) + (["Input", "Pull"] if s.buttons else [])) | sort %}
+{% if gpio | length > 1 %}
+use embassy_rp::gpio::{{ "{" }}{{ gpio | join(", ") }}{{ "}" }};
+{% elif gpio %}
+use embassy_rp::gpio::{{ gpio[0] }};
 {% endif %}
 use embassy_time::Timer;
 use cortex_m_rt::exception;
+{% if hw.bring_up.get("use") %}
+use {{ hw.bring_up.use }};
+{% endif %}
 {% if o.bootloader %}
 use core::cell::RefCell;
 use embassy_boot_rp::{AlignedBuffer, BlockingFirmwareUpdater, FirmwareUpdaterConfig};
@@ -37,6 +44,20 @@ async fn main({{ "spawner" if o.ww or pw else "_spawner" }}: embassy_executor::S
     .blocking_unique_id(&mut uid);
 {% else %}
     let p = embassy_rp::init(Default::default());
+{% endif %}
+{% if hw.init %}
+
+    // Pins driven before anything else (the board preset's [[init]]), held for good: dropping an Output would
+    // disconnect the pin
+  {% for x in hw.init %}
+    // {{ x.what }}
+    let _{{ x.pin | lower }} = Output::new(p.{{ x.periph }}, Level::{{ x.level | capitalize }});
+  {% endfor %}
+{% endif %}
+{% if hw.bring_up %}
+
+    // Board bring-up (the board preset's [bring_up])
+{{ hw.bring_up.code | trim("\n") }}
 {% endif %}
 {% if s.dev.boot %}
     boot::after_init(spawner); // the reset into BOOTSEL device.boot.reboot asks for (src/boot.rs)
