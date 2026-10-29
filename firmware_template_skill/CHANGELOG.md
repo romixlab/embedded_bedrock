@@ -21,6 +21,31 @@ or options; purely internal refactors only need a line under the next version.
 
   Upgrade notes: none for existing firmware; other presets' output is unchanged.
 
+- Board preset `pico2` (TPL-63): the Raspberry Pi Pico 2 (RP2350A, 4 MB flash), `--board pico2`. Board map geometry
+  comes from Raspberry Pi's public Pico (R3) Allegro file (no Pico 2 one is published; the board layout is the
+  same), GP23/24/25/29 marked taken (SMPS mode, VBUS sense, LED, VSYS/3 ADC — the four GPIOs the datasheet says are
+  internal). Matrix entry `rp2350pico2`.
+
+- `client/tests/board_pins.rs.j2`'s generated test only matched STM32 pin names (TPL-63, found generating `pico2`):
+  the pin-table parser only kept `` | `P `` rows and `firmware_points()` only split `NAME: CAPS`, missing RP's
+  `` | `G `` rows and `NAME = PIN_n: CAPS` (the embassy field). Now the table parser keeps every `` | ` `` row and
+  the points parser drops an `= EXPR` before the name. Upgrade notes: any `--board` firmware on RP with `--pins
+  board` regenerate `<client>/tests/board_pins.rs` (byte for byte with a from-scratch `new`, confirmed on `pico2`);
+  without a board preset this test isn't generated, nothing to do.
+
+- A board preset on RP needs its own `[board] pin_nets` (TPL-63, found generating `pico2`): `bedrock_gen.py`'s
+  `--pins board` already picks `^GP\d+$` by chip family, but `boardmap` (the Rust tool, `bedrock_board`) defaults
+  `pin_nets` to STM32's `^P[A-K]\d+$` regardless of family, so an RP board's `docs/board/<preset>-pins.md` pin table
+  came out with a header and no rows. `scripts/data/boards/pico2/pico2.toml` sets it explicitly; any future RP
+  preset needs the same. No change to the generator; a preset-authoring note, not a code fix.
+
+- `suite/py/src/lib.rs.j2`'s `blink()` wrapper (TPL-63, found generating `pico2`): always the multi-line
+  `self.block(\n self.{{ B }}()?\n .blink(...),\n)` form, which is what `cargo fmt --check` wants only when the
+  board accessor `{{ B }}` is long enough to not fit on one line (true for `cannify`, `nucleo_g0b1re`, false for the
+  5-letter `pico2`, which rustfmt collapses). A length check now picks the single-line form `cargo fmt` would, same
+  as `led_on` / `led_off` already did. Upgrade notes: `cargo fmt` fixes an existing firmware's `<py>/src/lib.rs` in
+  place; a regenerate also picks it up.
+
 - `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
   when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
   change to generated output.

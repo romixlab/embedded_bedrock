@@ -376,6 +376,28 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   2026: no USB devices, no probe-rs), so the J-Link or second Donguru on the SBU is still to be found. Hardware (🧪,
   never through the Donguru J-Link): flash, the README's device steps, the hub kept through `boot reboot --updater`
   into the ROM's DFU, the pin test of a bare board (`--save`); tracked as P2528#29oct-1424.
+- 🧪 **TPL-63 Board preset `pico2`**: Raspberry Pi Pico 2 (RP2350A, 4 MB W25Q32RV flash) in
+  `scripts/data/boards/pico2/`: answers (WireWeaver over its own micro-USB, settings, counters, CLI `pico2`,
+  `--pins board`, probe `2e8a:000c` for a Raspberry Pi Debug Probe on J2, the family default), `[pins]` taking GP23
+  (SMPS mode), GP24 (VBUS sense), GP25 (the LED D2) and GP29 (VSYS/3 ADC) out, the RP2350-E9 pull-down workaround
+  (generic since TPL-48, no preset code needed), BOOTSEL / PICOBOOT boot through TPL-56 (no `--bootloader`: that is
+  embassy-boot's A/B scheme, a different thing). Raspberry Pi publishes no Pico 2 PCB/Allegro/KiCad file (board
+  layout is officially the same as the original Pico/Pico H, raspberrypi.com Pico-series documentation): the board
+  map geometry is Raspberry Pi's own public Pico (R3) Allegro file (P2624, imported with kicad-cli on omarchy-m1,
+  GPIOn/GPIOn_ADCn nets renamed to GPn), J0's single 40-pad footprint split into J0L/J0R so the connector background
+  (`draw_connector`) does not cover the whole board; electrical facts (pin functions, VBUS/SMPS/ADC wiring) come
+  from the Pico 2 Datasheet RP-008299-DS-3 instead, cross-checked against it. Matrix entry `rp2350pico2`; generated
+  as pico2_template (repo and GitHub visibility: Roman's call, publishing waits on his review). Three generator
+  gaps fixed on the way, all RP-board-preset-generic (TPL-62's pico preset hits them too): a board preset on RP
+  needs its own `[board] pin_nets` (boardmap's own default is STM32's `P[A-K]n`; `bedrock_gen.py`'s `--pins board`
+  picks the RP pattern by chip family on its own, boardmap the Rust tool does not, so the pin table came out empty
+  without it); `client/tests/board_pins.rs.j2`'s parser only matched `` | `P `` pin-table rows (STM32) and only
+  split `NAME: CAPS` (STM32), not RP's `` | `G `` rows or `NAME = PIN_n: CAPS`; `suite/py/src/lib.rs.j2`'s `blink()`
+  wrapper was always the multi-line form, which only happens to be what rustfmt wants for a long enough board
+  accessor name (`pico2` is short enough that rustfmt collapses it to one line) — now a length check picks the
+  right form. Open hardware notes (parked for Roman, `tpm work park`, never the Donguru J-Link): flashing over
+  BOOTSEL and the Debug Probe, the README's device steps, the pin test of a bare board (`--save`), the SWD / debug
+  connector's physical style (Pico 2's datasheet says it may differ from the R3 board the geometry is taken from).
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).

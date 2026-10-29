@@ -509,6 +509,13 @@ tags = ["ww", "host"]
 note = "RP2350 USB client: settings, variant from SYSINFO, BOOTSEL reboot through the ROM"
 
 [[entry]]
+name = "rp2350pico2"
+args = ["--board", "pico2"]
+builds = ["dev", "release"]
+tags = ["ww", "host"]
+note = "the Raspberry Pi Pico 2 preset (TPL-63): RP2350A, USB, settings, counters, --pins board with the RP2350-E9 pull-down workaround, GP23/24/25/29 left out; firmware/src equals pico2_template's"
+
+[[entry]]
 name = "rp2040hm"
 args = ["--chip", "rp2040", "--wire-weaver", "--host"]
 builds = ["dev"]

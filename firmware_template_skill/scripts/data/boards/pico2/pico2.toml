@@ -1,0 +1,85 @@
+# Board description for boardmap (bedrock_board): what to draw of the Raspberry Pi Pico 2 and what every pin does.
+# Facts: Raspberry Pi Pico 2 Datasheet RP-008299-DS-3 (raspberrypi.com), RP2350 datasheet appendix D.5.1 (RP2350-E9)
+# and 12.15.1 (PACKAGE_SEL) and appendix C (silicon revisions). The geometry is Raspberry Pi's own public Pico (R3)
+# Allegro board file (not a Pico 2 file: Raspberry Pi states the board layout is the same, see pico2.geometry.json's
+# "source"); electrical facts below are the Pico 2 datasheet's, not carried over from the Pico.
+
+[board]
+name = "Raspberry Pi Pico 2"
+pcb = "Pico 2 (RP2350A, 4 MB flash)"
+mcu = "RP2350A (U1, QFN-60)"
+mcu_ref = "U1"
+geometry = "pico2.geometry.json"
+sources = ["Raspberry Pi Pico 2 Datasheet RP-008299-DS-3", "RP2350 Datasheet RP-008373-DS"]
+scale = 20.0
+pin_nets = "^GP\\d+$"  # boardmap's own default is STM32's P[A-K]n; bedrock_gen.py's --pins board picks the RP
+                        # pattern by chip family on its own, but boardmap (the Rust tool) does not, so an RP board
+                        # description always needs this or its pin table (MAP-5) comes out empty
+
+[[view.connector]]
+ref = "J0L"
+label = "J0"
+labels = "left"
+numbers = true
+
+[[view.connector]]
+ref = "J0R"
+label = "J0"
+labels = "right"
+numbers = true
+
+[[view.connector]]
+ref = "J2"
+label = "J2 debug"
+labels = "right"
+numbers = true
+
+[[view.part]]
+ref = "U1"
+label = "U1\nRP2350A"
+kind = "mcu"
+
+[[view.part]]
+ref = "J1"
+label = "J1 micro-USB\nUSB FS, power in, BOOTSEL flashing"
+kind = "usb"
+dy = -6
+
+[[view.part]]
+ref = "D2"
+label = "D2 LED\nGP25"
+kind = "led"
+
+[[view.part]]
+ref = "SW1"
+label = "SW1\nBOOTSEL"
+kind = "other"
+
+[[view.part]]
+ref = "X1"
+label = "X1 12 MHz"
+kind = "other"
+
+[[view.part]]
+ref = "U2"
+label = "U2 RT6150\nSMPS"
+kind = "chip"
+
+[[view.part]]
+ref = "U3"
+label = "U3 W25Q32RV\n4 MB flash"
+kind = "chip"
+
+[[view.part]]
+ref = "D1"
+label = "D1\nVBUS→VSYS"
+kind = "other"
+
+[pins]
+# The four RP2350 GPIOs the Pico 2 datasheet (section on board IO, p.4) uses internally and does not route to J0:
+# GP23, GP24, GP25 and GP29. Every other Bank 0 GPIO the RP2350A has (GP0-22, GP26-28) reaches J0, SWD and USB use
+# dedicated pins of their own (SWCLK/SWDIO, USB_DM/USB_DP), not a GPIO, so nothing else is taken on this board.
+GP23 = { role = "taken", short = "SMPS PS", note = "U2 (RT6150)'s Power Save pin: low (default) is power-friendly PFM mode, driving it high forces low-ripple PWM mode for cleaner ADC reads. Datasheet: do not use for anything else." }
+GP24 = { role = "taken", short = "VBUS sense", note = "High when VBUS (the micro-USB supply) is present, through the R1/R10 divider; low (pulled by R1) when it is not." }
+GP25 = { role = "taken", short = "LED", note = "Drives the on-board LED D2 through R3; high lights it. Not recommended to be used for anything else (datasheet)." }
+GP29 = { role = "taken", short = "VSYS/3 ADC", note = "ADC3: reads VSYS ÷ 3 through a divider, gated by Q1 so it only loads VSYS while being read." }

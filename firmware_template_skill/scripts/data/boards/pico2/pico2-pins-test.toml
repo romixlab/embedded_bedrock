@@ -1,0 +1,8 @@
+# Pin test of a bare Pico 2 (nothing on J0), for `ww --api API pins test --plan docs/board/pico2-pins-test.toml`
+# (README "Pins"). Every free GPIO floats: the datasheet shows no pull on any J0 pin and nothing between two of
+# them. To be confirmed with `--save` on a board (HANDOFF/FEATURES: parked, hardware step).
+target = "pins"
+
+[[point]]
+names = ["GP*"]
+expect = "floating"

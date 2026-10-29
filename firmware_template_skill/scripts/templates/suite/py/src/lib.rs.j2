@@ -177,10 +177,15 @@ impl Device {
     /// Blink the LED `count` times, `period_ms` per on-off cycle.
     #[pyo3(signature = (count=3, period_ms=500))]
     fn blink(&self, count: u32, period_ms: u64) -> PyResult<()> {
+{% set flat = "        self.block(self." ~ B ~ "()?.blink(count, Duration::from_millis(period_ms)))" %}
+{% if flat | length <= 100 %}
+{{ flat }}
+{% else %}
         self.block(
             self.{{ B }}()?
                 .blink(count, Duration::from_millis(period_ms)),
         )
+{% endif %}
     }
 {% if s.leds %}
 

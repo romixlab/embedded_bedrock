@@ -1,0 +1,71 @@
+# Board preset for `bedrock_gen.py new --board pico2`: Raspberry Pi Pico 2 (RP2350A, 4 MB flash). [answers] are
+# defaults for `new`'s options (explicit flags and --answers win), the rest is what only the board knows. Facts:
+# Raspberry Pi Pico 2 Datasheet RP-008299-DS-3, RP2350 Datasheet RP-008373-DS (raspberrypi.com); the board layout is
+# officially the same as the original Pico/Pico H (see pico2.toml and pico2.geometry.json for where the geometry
+# itself comes from, since Raspberry Pi publishes no separate Pico 2 PCB file).
+
+[answers]
+chip = "RP2350"       # RP2350A (QFN-60), U1
+probe = "2e8a:000c"   # the family default already (a Raspberry Pi Debug Probe / picoprobe, CMSIS-DAP): named for clarity
+settings = true
+counters = true
+wire_weaver = true
+ww_transport = "usb"  # the board's own micro-USB (J1): the probe only flashes and gives SWD
+host = true
+cli_name = "pico2"
+pins = "board"         # PinDiag on every free pin of the board map, [pins] below
+
+[board]
+title = "Raspberry Pi Pico 2"       # prose and the README title
+maker = "Raspberry Pi"              # the README's link text: "Raspberry Pi Pico 2 board"
+product = "Raspberry Pi Pico 2"     # ww_board_info product
+url = "https://www.raspberrypi.com/products/raspberry-pi-pico-2/"
+core = "Cortex-M33 (or Hazard3)"
+client = "Pico2"                    # the client library's typed board type
+probe_name = "a Raspberry Pi Debug Probe on J2"
+probe_kind = "Debug Probe"          # the host crates' "the only Debug Probe attached"
+probe_kind_a = "a Debug Probe"
+template = true                     # a GitHub template repository: the README says how to make it yours
+repository = "https://github.com/romixlab/pico2_template"  # the template's own repository (Cargo.toml)
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "Pico 2s"                 # "with two Pico 2s attached"
+variant = "RP2350A2/A3/A4 (QFN-60), 4 MB flash"
+led = "D2"
+reset_how = "unplug and plug the USB cable back in, or short RUN to GND"
+first_item = """VBUS sense (GP24, high while the micro-USB supply is
+   present) as a readable property is a good first one."""
+
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every Pico 2 and Pico 2 with headers carries an RP2350A (QFN-60),
+what can differ is its silicon revision (A2, A3 or A4)."""
+
+[logo]
+board = "Pico 2"
+chip = "RP2350"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry (pico2.geometry.json's
+# "source": Raspberry Pi's own public Pico (R3) Allegro file, since there is no Pico 2 one; same board layout)
+[boardmap]
+toml = "pico2.toml"
+geometry = "pico2.geometry.json"
+
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "the board has no power LED, D2 is its only one"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
+# it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "GP23 (the SMPS mode pin), GP24 (VBUS sense), GP25 (the LED) or GP29 (the VSYS/3 ADC input)"
+readme_left_out = "GP23, GP24, GP25 and GP29 (the four GPIOs the board uses internally)"
+test = "pico2-pins-test.toml"
+
+# main.rs (embassy-rp): no clock tree to configure (embassy_rp::init(Default::default()) runs the RP2350 at its
+# default clock); timer_mhz is the default system clock for the LED's PWM resolution doc in src/led.rs
+[clock]
+timer_mhz = 150
+oscillator = "the 12 MHz crystal X1 through the RP2350's own PLLs, embassy-rp's default"
