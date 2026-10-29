@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.22] - 2026-10-29
+
 ### Added
 
 - `bedrock_can` 0.1.0: an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL, from B135's `b135_board::can`
