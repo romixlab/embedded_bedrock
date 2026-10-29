@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
+  when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
+  change to generated output.
+
 - `--can` without a standby pin on G0 (TPL-68): `src/can.rs`'s `can_task` signature is on one line, as rustfmt
   keeps it (it was wrapped, failing `cargo fmt --check`). Upgrade notes: `cargo fmt` fixes it in place.
 

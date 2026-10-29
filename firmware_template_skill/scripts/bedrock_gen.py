@@ -2652,16 +2652,27 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
     boards = [t for t in sorted((outdir / "docs" / "board").glob("*.toml")) if not t.stem.endswith("-pins-test")]
     if "host" in entry.tags and boards and not (outdir / "docs" / "board" / f"{boards[0].stem}-pins.md").exists():
         # `new` renders docs/board/ only with a boardmap on PATH; the pins test reads its pin table: render it with
-        # the --bedrock checkout's boardmap (in its own target dir), else the one on PATH
+        # the --bedrock checkout's boardmap (in its own target dir), else the one on PATH, else the checkout this
+        # script runs from
+        own = SKILL_DIR.parent / "Cargo.toml"
         if bedrock and bedrock != "git":
-            cmd = ["cargo", "run", "-q", "--release", "--manifest-path", str(outdir / bedrock / "Cargo.toml"),
+            manifest: Optional[Path] = outdir / bedrock / "Cargo.toml"
+        elif shutil.which("boardmap") is None and (SKILL_DIR.parent / "bedrock_board_cli").is_dir():
+            manifest = own
+        else:
+            manifest = None
+        if manifest is not None:
+            cmd = ["cargo", "run", "-q", "--release", "--manifest-path", str(manifest),
                    "-p", "bedrock_board_cli", "--bin", "boardmap", "--"]
         else:
             cmd = ["boardmap"]
         t0 = time.monotonic()
-        proc = subprocess.run([*cmd, "render", str(boards[0])], cwd=outdir, capture_output=True, text=True)
-        results["board"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
-                                      "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
+        try:
+            proc = subprocess.run([*cmd, "render", str(boards[0])], cwd=outdir, capture_output=True, text=True)
+            results["board"] = StepResult(proc.returncode == 0, time.monotonic() - t0,
+                                          "" if proc.returncode == 0 else (proc.stdout + proc.stderr)[-4000:])
+        except FileNotFoundError:
+            results["board"] = StepResult(False, 0.0, "boardmap not on PATH: cargo install bedrock_board_cli")
     if "host" in entry.tags:
         # --host (TPL-37): what frameworks.md#tested-matrix says every --host entry also passes, from the root. The
         # API's evolution test needs the current version's snapshot (TPL-51): saved first, as `new` tells a user to
