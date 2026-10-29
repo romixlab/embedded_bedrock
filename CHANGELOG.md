@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.24] - 2026-10-29
+
 ### Added
 
 - boardmap names MCU pins after the pads' KiCad pin functions where the nets carry functional labels (`LED` is
