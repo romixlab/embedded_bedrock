@@ -10,6 +10,17 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Board preset `donguru_b153a` (TPL-60): `--board donguru_b153a` generates firmware for the Donguru B153A
+  (STM32G0B1CET6, LQFP48, rev A): WireWeaver over the MCU's own USB behind the board's USB2512B hub, settings,
+  counters, backup counters, the host crates with the CLI `donguru`, `pins` on every free pin (J101's I/O lines, the
+  plug's SBU and A2 / B2 pins), HSI16 through the PLL to 64 MHz, the LEDs LD101 (red, PF0, TIM14) and LD102 (green,
+  PF1, TIM15) with embassy's time driver on TIM4, ROM boot over the hub, the board map from the B153A KiCad board and
+  README board sections. Its `[bring_up]` releases the hub's reset from RTC_OUT1 (PC13, held through a reset) and
+  configures it over I2C2 with the `usb251xb` crate. The probe defaults to `1366:0101` (a J-Link on the receptacle's
+  SBU pins). Matrix entry `g0donguru`.
+
+  Upgrade notes: none for existing firmware; other presets' output is unchanged.
+
 - `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
   when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
   change to generated output.

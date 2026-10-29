@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Fixed
+
+- boardmap reads MCU pin names from symbols that append the pad number (`PC13_1`) and name the G0's remap pads
+  either way round (`PA9/PA11`), and shows hierarchical sheets' nets without their path (MAP-12).
+
 ## [0.2.25] - 2026-10-29
 
 ### Fixed

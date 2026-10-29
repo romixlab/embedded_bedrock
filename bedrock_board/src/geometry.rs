@@ -67,7 +67,8 @@ pub struct Pad {
     /// Through-hole pads reach both sides.
     pub through: bool,
     pub net: Option<String>,
-    /// The part's pin on this pad, from KiCad's `pinfunction` up to the first `/` (`PA11/PA9` → `PA11`): names an
+    /// The part's pin on this pad, from KiCad's `pinfunction` up to the first `/` (`PA11/PA9` → `PA11`; a remap pad
+    /// takes its other name when the first is another pad's, `_<pad number>` dropped: `resolve_shared_pins`): names an
     /// MCU pin whose net carries a functional label (`LED`, `FDCAN_TX`). Imported vendor boards have none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pin: Option<String>,
@@ -193,6 +194,8 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
     );
     let (sin, cos) = rot.to_radians().sin_cos();
     let mut pads = Vec::new();
+    // every pad's `pinfunction`, for pin_names
+    let mut functions: Vec<Option<String>> = Vec::new();
     for pad in item.children("pad") {
         let number = pad.arg(1).unwrap_or("").to_string();
         let kind = pad.arg(2).unwrap_or("");
@@ -232,11 +235,11 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
                     _ => s,
                 })
         });
-        let pin = pad
-            .child("pinfunction")
-            .and_then(|f| f.arg(1))
-            .and_then(|f| f.split('/').next())
-            .filter(|f| !f.is_empty());
+        functions.push(
+            pad.child("pinfunction")
+                .and_then(|f| f.arg(1))
+                .map(str::to_string),
+        );
         pads.push(Pad {
             number,
             at: [x, y],
@@ -244,9 +247,14 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
             shape,
             through: kind == "thru_hole" || kind == "np_thru_hole",
             net: net.map(str::to_string),
-            pin: pin.map(str::to_string),
+            pin: None,
         });
     }
+    let alternatives = pin_names(&pads, &functions);
+    for (pad, names) in pads.iter_mut().zip(&alternatives) {
+        pad.pin = names.first().cloned();
+    }
+    resolve_shared_pins(&mut pads, &alternatives);
     Ok(Some((
         reference.to_string(),
         Footprint {
@@ -257,6 +265,77 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
             pads,
         },
     )))
+}
+
+/// Every pad's names from its `pinfunction`, `/`-separated (`PA11/PA9`). Some symbols append `_<pad number>` to
+/// every pin name (`PC13_1`, `PA9/PA11_33`): dropped when every pad of the footprint has it, unless that leaves
+/// them all one name (a connector's `Pin_1`, `Pin_2`).
+fn pin_names(pads: &[Pad], functions: &[Option<String>]) -> Vec<Vec<String>> {
+    let stripped: Vec<Option<&str>> = pads
+        .iter()
+        .zip(functions)
+        .map(|(pad, f)| {
+            f.as_deref()
+                .map(|f| f.strip_suffix(&format!("_{}", pad.number)))
+                .unwrap_or(Some(""))
+        })
+        .collect();
+    let mut distinct: Vec<&str> = stripped
+        .iter()
+        .flatten()
+        .copied()
+        .filter(|s| !s.is_empty())
+        .collect();
+    distinct.sort();
+    distinct.dedup();
+    let strip = stripped.iter().all(Option::is_some) && distinct.len() > 1;
+    functions
+        .iter()
+        .zip(&stripped)
+        .map(|(f, s)| {
+            let f = if strip {
+                s.unwrap_or_default()
+            } else {
+                f.as_deref().unwrap_or_default()
+            };
+            f.split('/')
+                .filter(|f| !f.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .collect()
+}
+
+/// A GPIO-shaped pin name: letters, then a number (`PA11`, `GP3`).
+fn is_gpio_name(name: &str) -> bool {
+    let digits = name.trim_start_matches(|c: char| c.is_ascii_uppercase());
+    digits.len() < name.len() && !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+}
+
+/// A pad takes its first pin name, unless another pad of the footprint has that name too and this pad lists a GPIO
+/// name no pad takes: the STM32 pads a pin remaps onto (pin 33 `PA11 [PA9]` on a G0) come either way round in a
+/// symbol (`PA11/PA9`, `PA9/PA11`), and pin 29 is PA9 itself.
+fn resolve_shared_pins(pads: &mut [Pad], alternatives: &[Vec<String>]) {
+    let mut taken: BTreeMap<String, usize> = BTreeMap::new();
+    for pin in pads.iter().filter_map(|p| p.pin.clone()) {
+        *taken.entry(pin).or_default() += 1;
+    }
+    for (pad, names) in pads.iter_mut().zip(alternatives) {
+        let Some(first) = names.first() else {
+            continue;
+        };
+        if taken[first] < 2 {
+            continue;
+        }
+        if let Some(other) = names[1..]
+            .iter()
+            .find(|n| is_gpio_name(n) && !taken.contains_key(*n))
+        {
+            *taken.get_mut(first).unwrap() -= 1;
+            taken.insert(other.clone(), 1);
+            pad.pin = Some(other.clone());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -302,5 +381,44 @@ mod tests {
         assert!(p1.through);
         assert_eq!(geo.outline.len(), 2);
         assert_eq!(geo.bbox, [0.0, 0.0, 11.0, 2.0]);
+    }
+
+    #[test]
+    fn pin_names_drop_the_pad_number_and_follow_a_remap() {
+        // B153A's STM32G0B1 symbol: `<name>_<pad>`, the remapped pad named the other way round from ST's library
+        let text = r#"(kicad_pcb
+  (footprint "lib:lqfp48" (layer "F.Cu") (at 0 0)
+    (property "Reference" "U202") (property "Value" "STM32G0B1CETx")
+    (pad "1" smd rect (at 0 0) (size 1 1) (net "unconnected-(U202-PC13-Pad1)") (pinfunction "PC13_1"))
+    (pad "29" smd rect (at 1 0) (size 1 1) (net "/MCU/DATA_CUT") (pinfunction "PA9/UCPD1_DBCC1_29"))
+    (pad "33" smd rect (at 2 0) (size 1 1) (net "/MCU/USB_D-") (pinfunction "PA9/PA11_33"))
+    (pad "34" smd rect (at 3 0) (size 1 1) (net "/MCU/USB_D+") (pinfunction "PA10/PA12_34"))
+    (pad "32" smd rect (at 4 0) (size 1 1) (net "/MCU/SBU_TO_USB") (pinfunction "PA10/UCPD1_DBCC2_32")))
+  (footprint "lib:hdr" (layer "F.Cu") (at 0 5)
+    (property "Reference" "J1") (property "Value" "Conn")
+    (pad "1" thru_hole rect (at 0 0) (size 1 1) (net "A") (pinfunction "Pin_1"))
+    (pad "2" thru_hole circle (at 2 0) (size 1 1) (net "B") (pinfunction "Pin_2")))
+  (gr_line (start 0 0) (end 10 0) (layer "Edge.Cuts"))
+)"#;
+        let dir = std::env::temp_dir().join(format!("bedrock_board_pins_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("t.kicad_pcb");
+        std::fs::write(&path, text).unwrap();
+        let geo = Geometry::extract(&path, "test", |_| true).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        let u = &geo.footprints["U202"];
+        let pin = |n: &str| u.pad(n).unwrap().pin.clone().unwrap();
+        assert_eq!(pin("1"), "PC13");
+        assert_eq!(pin("29"), "PA9");
+        assert_eq!(pin("33"), "PA11");
+        assert_eq!(pin("34"), "PA12");
+        assert_eq!(pin("32"), "PA10");
+        let j = &geo.footprints["J1"];
+        assert_eq!(
+            j.pad("1").unwrap().pin.as_deref(),
+            Some("Pin_1"),
+            "{:?}",
+            j.pads
+        );
     }
 }

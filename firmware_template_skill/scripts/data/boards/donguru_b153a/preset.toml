@@ -1,0 +1,202 @@
+# Board preset for `bedrock_gen.py new --board donguru_b153a`: Donguru B153A (rev A, the Main variant: USB2512B
+# hub), the board of donguru_template. [answers] are defaults for `new`'s options (explicit flags and --answers win),
+# the rest is what only the board knows. Facts: the B153A KiCad schematic and board
+# (hw/b153_typec_serial/source/b153a), hw/b153_typec_serial/doc/hw_b153a.md (the rework on the built boards, §0),
+# typec_dongle's fw/donguru (hub.rs, main.rs, boot.rs, led.rs) and donguru_board, DS13560 Rev 6, ES0548 Rev 4.
+
+[answers]
+chip = "STM32G0B1CE"  # U202 STM32G0B1CET6, LQFP48
+probe = "1366:0101"   # a J-Link on the receptacle's SBU (PA14 SWCLK on SBU1, PA13 SWDIO on SBU2) through a C-to-SWD cable; another Donguru's SWD-host works too
+settings = true
+counters = true
+bkp_counters = "auto"
+wire_weaver = true
+ww_transport = "usb"  # the board's own USB behind its hub: the probe only flashes
+host = true
+cli_name = "donguru"
+pins = "board"        # PinDiag on every free pin of the board map, [pins] below
+
+[board]
+title = "Donguru"                  # prose and the README title
+maker = "B153A"                    # the README's link text: "B153A Donguru board"
+product = "B153A Donguru"          # ww_board_info product
+revision = "A"                     # B153A
+url = "https://github.com/vhrdtech/hw/tree/main/b153_typec_serial"
+core = "Cortex-M0+"
+client = "Donguru"                 # the client library's typed board type
+probe_name = "the J-Link on the receptacle's SBU pins"
+probe_kind = "J-Link"              # the host crates' "the only J-Link attached"
+probe_kind_a = "a J-Link"
+template = true                    # a GitHub template repository: the README says how to make it yours
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "Dongurus"                # "with two Dongurus attached"
+variant = "STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash"
+led = "LD102"
+reset_how = "plug the USB-C cable in again"  # no reset button: NRST is only on the MCU
+first_item = """The receptacle's VBUS on PA3 (÷ 7.17) as a readable
+   property is a good first one."""
+
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every B153A has an STM32G0B1CET6 (LQFP48), what can differ is its
+silicon revision."""
+
+# src/boot.rs: the ROM bootloader on this board
+[rom_boot]
+usb = "PA11 / PA12, port 1 of the hub U301, which stays attached through the reset (RTC_OUT1 holds its RESET_N, src/main.rs)"
+healthy = "the USB host configuring the board would call it healthy earlier, `bedrock_rom_boot::usb_configured`; not wired in yet"
+rescue = "the hub is configured and held running by the board bring-up in main, which runs before this"
+
+[logo]
+board = "Donguru"
+chip = "G0B1"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from the KiCad board
+[boardmap]
+toml = "donguru_b153a.toml"
+geometry = "donguru_b153a.geometry.json"
+
+# LD101 red through R104 from PF0 (LED_RED), LD102 green through R105 from PF1 (LED_GREEN), both to GND: high lights
+# them. PF0 is TIM14_CH1, PF1 TIM15_CH1N; embassy's time driver goes to TIM4. Roles as in typec_dongle's firmware.
+[[leds]]
+name = "LD101"
+pin = "PF0"
+role = "power"
+
+[[leds]]
+name = "LD102"
+pin = "PF1"
+role = "heartbeat"
+
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "LD101 (red) is the power look, LD102 (green) the heartbeat"
+
+# R301, the hub's SDA pull-up, goes to PA4 on rev A, not to 3.3 V (hw_b153a.md §6): high for I2C to work
+[[init]]
+pin = "PA4"
+level = "high"
+what = "HUB_I2C_EN: the hub's SDA pull-up R301 (rev A), high for I2C2 to work"
+
+# The hub U301 (USB2512B) carries the MCU's own USB on its port 1: it runs and is configured over I2C2 before USB
+# starts. Its RESET_N is PC13 on rev A (rework, R304 pulls it low), driven from RTC_OUT1 so it holds through a reset
+# (typec_dongle fw/donguru/src/hub.rs, donguru_board::boot::rtc_cr_hub and hub_config, tested on B153A 21 Oct 2026)
+[bring_up]
+use = """usb251xb::{
+    Config, Milliamps, Port, Usb251xb,
+    register::{ConfigByte3, CurrentSensing, PowerSwitching, Variant},
+}"""
+takes = ["I2C2", "PB10", "PB14", "PC13"]
+code = """
+    // The hub U301 (USB2512B) carries this MCU's USB on its port 1 and comes up in SMBus configuration mode (CFG_SEL
+    // straps): it waits for its config over I2C2 (PB10 SCL, PB14 SDA, address 0x2C) and the attach command.
+    //
+    // Its RESET_N is PC13 on rev A (a rework, cut from NRST; R304 10K pulls it low), so a GPIO would put the hub in
+    // reset at every MCU reset, and the ROM bootloader would sit behind a dead USB path. RTC_OUT1 drives PC13
+    // instead (it overrides the GPIO while RTC_CR.OSEL selects an output, efton.sk gotcha 297): RTC_CR is in the
+    // backup domain and keeps its level through a system reset, so the hub stays attached through the reset into the
+    // ROM and back. A power cycle clears RTC_CR (back to the pull-down) and this runs the full bring-up. RTC_OUT1
+    // shows alarm A, never armed, push-pull, its polarity the level: a static output, so ES0548 2.2.1 (an LSI that
+    // clocks the RTC can run unstable and fast after a short VDD drop) has nothing to disturb. The RTC stays on the LSI, embassy's default: another RTC clock
+    // source would make embassy reset the backup domain.
+    fn hub_reset_pin(run: bool) {
+        // OUT2EN, TAMPALRM_TYPE, TAMPALRM_PU, COE, OSEL and POL (RM0444 RTC_CR)
+        const OUT: u32 = 1 << 31 | 1 << 30 | 1 << 29 | 1 << 23 | 0b11 << 21 | 1 << 20;
+        const OSEL_ALARM_A: u32 = 0b01 << 21;
+        const POL: u32 = 1 << 20; // TAMPALRM high while alarm A is not set
+        use embassy_stm32::pac::{RTC, rtc::regs::Wpr};
+        RTC.wpr().write_value(Wpr(0xCA));
+        RTC.wpr().write_value(Wpr(0x53));
+        RTC.cr()
+            .modify(|w| w.0 = (w.0 & !OUT) | OSEL_ALARM_A | if run { POL } else { 0 });
+        RTC.wpr().write_value(Wpr(0xFF)); // locked again
+    }
+    // RTC registers clocked and writable (init::init below does the same for the backup registers)
+    embassy_stm32::pac::RCC.apbenr1().modify(|w| {
+        w.set_pwren(true);
+        w.set_rtcapben(true);
+    });
+    let _ = embassy_stm32::pac::RCC.apbenr1().read(); // the clocks are on before the first access
+    embassy_stm32::pac::PWR.cr1().modify(|w| w.set_dbp(true));
+    let _ = p.PC13; // RTC_OUT1 drives it, the GPIO stays in its reset state
+    // 0x0030_0000: RTC_OUT1 on alarm A, high (the value above with `run`)
+    let hub_kept =
+        embassy_stm32::pac::RTC.cr().read().0 & (0b11 << 21 | 1 << 20) == 0b01 << 21 | 1 << 20;
+    if hub_kept {
+        // configured and attached before the reset, by this firmware or the one before it: left as it is
+        // (typec_dongle FW-46 reads the config back and redoes it when it differs)
+        defmt::info!("hub: kept running through the reset");
+    } else {
+        hub_reset_pin(false);
+        embassy_time::Timer::after_millis(1).await;
+        hub_reset_pin(true);
+        // I2C2's kernel clock is PCLK, 64 MHz: ES0548 2.11.1 (wrong data sampling when the setup time is shorter
+        // than one kernel clock period, 15.6 ns here) and 2.11.4 (transmission stalled after the first byte at an
+        // APB / kernel clock ratio between 1.5 and 3, 1 here) don't apply
+        let mut i2c = embassy_stm32::i2c::I2c::new_blocking(
+            p.I2C2,
+            p.PB10,
+            p.PB14,
+            embassy_stm32::i2c::Config::default(),
+        );
+        // Self-powered (VBUS from either side through the diode-OR), multi-TT, per-port power switching and
+        // current sensing (OCS_N unconnected: the internal pull-ups read as no overcurrent). Port 2 (the plug
+        // through U701) has D+ / D- crossed on the board: without the swap a full- or high-speed device looks
+        // low-speed. The Plus variant (USB2514B) swaps port 4 (SBU USB through U901) too.
+        let mut config = Config::builder(Variant::Usb2512b)
+            .self_powered(true)
+            .mtt(true)
+            .high_speed(true)
+            .power_switching(PowerSwitching::Individual)
+            .current_sensing(CurrentSensing::Individual)
+            .hub_current_self(Milliamps(2))
+            .port_swap(&[Port::Port2])
+            .into_config();
+        config.config3 = ConfigByte3::from_bytes([0x02]); // as the hub's first bring-up wrote it (typec_dongle FW-5)
+        let mut hub = Usb251xb::new(&mut i2c);
+        match hub.configure_and_attach(&config) {
+            Ok(()) => defmt::info!("hub: configured and attached"),
+            Err(e) => defmt::warn!("hub: set-up failed, no USB: {}", e),
+        }
+    }
+"""
+
+[bring_up.dependencies]
+usb251xb = { version = "0.1.0", default-features = false, features = ["defmt"] }
+
+# the firmware's own USB device (port 1 of the hub); VID:PID: wire_weaver's default c0de:cafe
+[usb]
+product = "Donguru"
+manufacturer = "vhrd.tech"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
+# it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "the SWD pins (PA13, PA14, also BOOT0), USB (PA11, PA12), the LEDs (PF0, PF1), the hub (PC13, PA4, PB10, PB14), UCPD (PA8, PB15, PD0, PD2, PA15), the SBU switch and its controls (PA9, PA10, PB2, PC15, PD3), the VBUS switches (PA6, PD1, PC14), the relay (PA5), the analog inputs (PA3, PB0, PA7), the pins tied to GND and 3.3 V (PC6, PC7) and reset (PF2)"
+readme_left_out = "The SWD pins, USB, the LEDs, the hub, UCPD, the SBU switch, the VBUS switches, the relay, the analog inputs, the pins tied to the supplies and reset"
+test = "donguru_b153a-pins-test.toml"
+
+# main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO; timer_mhz: the timers' clock (the
+# LEDs' PWM resolution in src/led.rs)
+[clock]
+timer_mhz = 64
+# where the core clock comes from (src/sync.rs, with --clock-sync)
+oscillator = "the 64 MHz comes from the HSI16 through the PLL"
+use = "embassy_stm32::rcc::{Pll, PllMul, PllPreDiv, PllRDiv, PllSource, Sysclk}"
+code = """
+    // Clock tree: no crystal for the MCU (Y301 is the hub's), so the 16 MHz HSI feeds the PLL: 16 MHz / 1 * 8 = 128 MHz
+    // VCO, R divider 2 = 64 MHz system clock, the chip's maximum. AHB and APB run at 64 MHz too (embassy's default
+    // prescalers). USB runs on the HSI48, trimmed by CRS from the host's start-of-frame packets (below).
+    config.rcc.pll = Some(Pll {
+        source: PllSource::HSI,
+        prediv: PllPreDiv::DIV1,
+        mul: PllMul::MUL8,
+        divp: None,
+        divq: None,
+        divr: Some(PllRDiv::DIV2),
+    });
+    config.rcc.sys = Sysclk::PLL1_R;
+"""

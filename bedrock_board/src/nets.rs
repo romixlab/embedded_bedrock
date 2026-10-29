@@ -92,12 +92,17 @@ impl Nets {
         self.canonical.get(net).map(String::as_str).unwrap_or(net)
     }
 
-    /// What to print for a pad on `net`: its own name, or the group's when its own is made up.
+    /// What to print for a pad on `net`: its own name, or the group's when its own is made up; a hierarchical sheet's
+    /// net without its sheet path (`/MCU/IO7_EXT` → `IO7_EXT`).
     pub fn display<'a>(&'a self, net: &'a str) -> &'a str {
-        if is_anonymous(net) {
+        let net = if is_anonymous(net) {
             self.canonical(net)
         } else {
             net
+        };
+        match net.strip_prefix('/') {
+            Some(path) => path.rsplit('/').next().unwrap_or(net),
+            None => net,
         }
     }
 }
@@ -153,6 +158,7 @@ mod tests {
             "AGND",
             "a pad keeps its own schematic label"
         );
+        assert_eq!(nets.display("/MCU/IO7_EXT"), "IO7_EXT", "no sheet path");
     }
 
     #[test]

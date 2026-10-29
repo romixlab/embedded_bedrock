@@ -328,6 +328,13 @@ tags = ["ww", "host"]
 note = "the B129A CANnify Micro preset (TPL-58): USB, HSE 12 MHz clock tree, LQFP48, --pins board; firmware/src equals cannify_micro_template's"
 
 [[entry]]
+name = "g0donguru"
+args = ["--board", "donguru_b153a"]
+builds = ["dev", "release"]
+tags = ["ww", "host"]
+note = "the B153A Donguru preset (TPL-60): USB behind a USB2512B hub set up by [bring_up] (usb251xb, RTC_OUT1 hub reset), two PWM LEDs on TIM14 / TIM15, HSI16 clock tree, --pins board; firmware/src equals donguru_template's"
+
+[[entry]]
 name = "rp2040w"
 args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--bootloader"]
 builds = ["dev", "bootloader"]

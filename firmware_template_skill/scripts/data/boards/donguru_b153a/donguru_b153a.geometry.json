@@ -1,0 +1,5479 @@
+{
+  "source": "B153A b153a_typec_serial.kicad_pcb (KiCad)",
+  "bbox": [
+    173.3,
+    49.7,
+    207.0,
+    102.4
+  ],
+  "outline": [
+    {
+      "kind": "line",
+      "from": [
+        173.3,
+        64.0
+      ],
+      "to": [
+        173.3,
+        53.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        173.3,
+        64.0
+      ],
+      "mid": [
+        175.3,
+        71.0
+      ],
+      "to": [
+        173.3,
+        78.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        173.3,
+        78.0
+      ],
+      "to": [
+        173.3,
+        101.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        174.299999,
+        50.699999
+      ],
+      "to": [
+        174.3,
+        52.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        174.3,
+        50.7
+      ],
+      "mid": [
+        174.592893,
+        49.992893
+      ],
+      "to": [
+        175.3,
+        49.7
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        174.3,
+        52.4
+      ],
+      "mid": [
+        174.007107,
+        53.107107
+      ],
+      "to": [
+        173.3,
+        53.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        174.3,
+        102.4
+      ],
+      "mid": [
+        173.592893,
+        102.107107
+      ],
+      "to": [
+        173.3,
+        101.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        174.3,
+        102.4
+      ],
+      "to": [
+        188.15,
+        102.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        175.3,
+        49.7
+      ],
+      "to": [
+        180.85,
+        49.7
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        180.85,
+        49.7
+      ],
+      "mid": [
+        181.557107,
+        49.992893
+      ],
+      "to": [
+        181.85,
+        50.7
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        181.849999,
+        50.699999
+      ],
+      "to": [
+        181.85,
+        52.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        182.85,
+        53.4
+      ],
+      "mid": [
+        182.142893,
+        53.107107
+      ],
+      "to": [
+        181.85,
+        52.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        182.85,
+        53.4
+      ],
+      "to": [
+        198.05,
+        53.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        199.050001,
+        50.699999
+      ],
+      "to": [
+        199.05,
+        52.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        199.05,
+        50.7
+      ],
+      "mid": [
+        199.342893,
+        49.992893
+      ],
+      "to": [
+        200.05,
+        49.7
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        199.05,
+        52.4
+      ],
+      "mid": [
+        198.757107,
+        53.107107
+      ],
+      "to": [
+        198.05,
+        53.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        200.05,
+        49.7
+      ],
+      "to": [
+        203.0,
+        49.7
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        203.0,
+        49.7
+      ],
+      "mid": [
+        203.707107,
+        49.992893
+      ],
+      "to": [
+        204.0,
+        50.7
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        204.000001,
+        50.699999
+      ],
+      "to": [
+        204.0,
+        52.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        205.0,
+        53.4
+      ],
+      "mid": [
+        204.292893,
+        53.107107
+      ],
+      "to": [
+        204.0,
+        52.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        205.0,
+        58.800021
+      ],
+      "to": [
+        205.0,
+        53.4
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        206.0,
+        102.4
+      ],
+      "to": [
+        188.15,
+        102.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        207.0,
+        65.8
+      ],
+      "mid": [
+        205.509811,
+        62.440065
+      ],
+      "to": [
+        205.0,
+        58.800021
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        207.0,
+        65.8
+      ],
+      "to": [
+        207.0,
+        101.4
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        207.0,
+        101.4
+      ],
+      "mid": [
+        206.707107,
+        102.107107
+      ],
+      "to": [
+        206.0,
+        102.4
+      ]
+    }
+  ],
+  "footprints": {
+    "D101": {
+      "value": "5V6",
+      "side": "F",
+      "at": [
+        195.1,
+        100.2
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            195.79999999999998,
+            100.2
+          ],
+          "size": [
+            0.6,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            194.4,
+            100.2
+          ],
+          "size": [
+            0.6,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(D101-A)",
+          "pin": "A"
+        }
+      ]
+    },
+    "D201": {
+      "value": "5V6",
+      "side": "F",
+      "at": [
+        202.6,
+        68.4
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            202.6,
+            69.10000000000001
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO7",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            202.6,
+            67.7
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "D202": {
+      "value": "5V6",
+      "side": "F",
+      "at": [
+        201.1,
+        68.4
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            201.1,
+            69.10000000000001
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO8",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            201.1,
+            67.7
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "D203": {
+      "value": "5V6",
+      "side": "F",
+      "at": [
+        199.6,
+        68.4
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            199.6,
+            69.10000000000001
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO9",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            199.6,
+            67.7
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "D204": {
+      "value": "5V6",
+      "side": "F",
+      "at": [
+        198.1,
+        68.4
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            198.1,
+            69.10000000000001
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO10",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            198.1,
+            67.7
+          ],
+          "size": [
+            0.7,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A"
+        }
+      ]
+    },
+    "D205": {
+      "value": "12V",
+      "side": "F",
+      "at": [
+        205.1,
+        69.4
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            205.45,
+            69.4
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            204.75,
+            69.4
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            205.5,
+            69.4
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            204.7,
+            69.4
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO7_EXT",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D206": {
+      "value": "12V",
+      "side": "F",
+      "at": [
+        202.15,
+        73.7
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            201.8,
+            73.7
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            202.5,
+            73.7
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            201.75,
+            73.7
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            202.55,
+            73.7
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO8_EXT",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D207": {
+      "value": "12V",
+      "side": "F",
+      "at": [
+        202.2,
+        79.3
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            201.85,
+            79.3
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            202.54999999999998,
+            79.3
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            201.79999999999998,
+            79.3
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            202.6,
+            79.3
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO9_EXT",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D208": {
+      "value": "12V",
+      "side": "F",
+      "at": [
+        202.2,
+        81.2
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            201.85,
+            81.2
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            202.54999999999998,
+            81.2
+          ],
+          "size": [
+            0.3,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            201.79999999999998,
+            81.2
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            202.6,
+            81.2
+          ],
+          "size": [
+            0.5,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO10_EXT",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D401": {
+      "value": "SMF22A",
+      "side": "F",
+      "at": [
+        181.15,
+        95.6
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            181.15,
+            94.14999999999999
+          ],
+          "size": [
+            1.4,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            181.15,
+            97.05
+          ],
+          "size": [
+            1.4,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D501": {
+      "value": "SMF22A",
+      "side": "F",
+      "at": [
+        196.95,
+        56.0
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            196.95,
+            57.45
+          ],
+          "size": [
+            1.4,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+V2",
+          "pin": "A1"
+        },
+        {
+          "number": "2",
+          "at": [
+            196.95,
+            54.55
+          ],
+          "size": [
+            1.4,
+            1.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "A2"
+        }
+      ]
+    },
+    "D801": {
+      "value": "D_Schottky",
+      "side": "F",
+      "at": [
+        178.35,
+        95.4
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            178.35,
+            94.35000000000001
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/+VIN_SUM",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            178.35,
+            96.45
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "A"
+        }
+      ]
+    },
+    "D802": {
+      "value": "D_Schottky",
+      "side": "F",
+      "at": [
+        176.4,
+        95.4
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            176.4,
+            94.35000000000001
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/+VIN_SUM",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            176.4,
+            96.45
+          ],
+          "size": [
+            0.45,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+V2",
+          "pin": "A"
+        }
+      ]
+    },
+    "J101": {
+      "value": "Conn_01x12_Pin",
+      "side": "F",
+      "at": [
+        205.2,
+        72.64
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            205.2,
+            72.64
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "/MCU/IO7_EXT",
+          "pin": "Pin_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            205.2,
+            75.18
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/MCU/IO8_EXT",
+          "pin": "Pin_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            205.2,
+            77.72
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/MCU/IO9_EXT",
+          "pin": "Pin_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            205.2,
+            80.26
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "/MCU/IO10_EXT",
+          "pin": "Pin_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            205.2,
+            82.8
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "+3V3_DCDC",
+          "pin": "Pin_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            205.2,
+            85.34
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            205.2,
+            87.88
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_7"
+        },
+        {
+          "number": "8",
+          "at": [
+            205.2,
+            90.42
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "USB3_D+",
+          "pin": "Pin_8"
+        },
+        {
+          "number": "9",
+          "at": [
+            205.2,
+            92.96000000000001
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "USB3_D-",
+          "pin": "Pin_9"
+        },
+        {
+          "number": "10",
+          "at": [
+            205.2,
+            95.5
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "+5V",
+          "pin": "Pin_10"
+        },
+        {
+          "number": "11",
+          "at": [
+            205.2,
+            98.03999999999999
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "RL1",
+          "pin": "Pin_11"
+        },
+        {
+          "number": "12",
+          "at": [
+            205.2,
+            100.58
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "RL2",
+          "pin": "Pin_12"
+        }
+      ]
+    },
+    "J401": {
+      "value": "USB_C_Receptacle_USB2.0_16P",
+      "side": "F",
+      "at": [
+        188.15,
+        98.665
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            185.26000000000002,
+            96.06
+          ],
+          "size": [
+            0.65,
+            0.65
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            191.04,
+            96.06
+          ],
+          "size": [
+            0.65,
+            0.65
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "A1",
+          "at": [
+            184.95000000000002,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "A4",
+          "at": [
+            185.75,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "VBUS"
+        },
+        {
+          "number": "A5",
+          "at": [
+            186.9,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC1_J",
+          "pin": "CC1"
+        },
+        {
+          "number": "A6",
+          "at": [
+            187.9,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D+",
+          "pin": "D+"
+        },
+        {
+          "number": "A7",
+          "at": [
+            188.4,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D-",
+          "pin": "D-"
+        },
+        {
+          "number": "A8",
+          "at": [
+            189.4,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/SBU1_J",
+          "pin": "SBU1"
+        },
+        {
+          "number": "A9",
+          "at": [
+            190.55,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "VBUS"
+        },
+        {
+          "number": "A12",
+          "at": [
+            191.35,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "B1",
+          "at": [
+            191.35,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "B4",
+          "at": [
+            190.55,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "VBUS"
+        },
+        {
+          "number": "B5",
+          "at": [
+            189.9,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC2_J",
+          "pin": "CC2"
+        },
+        {
+          "number": "B6",
+          "at": [
+            188.9,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D+",
+          "pin": "D+"
+        },
+        {
+          "number": "B7",
+          "at": [
+            187.4,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D-",
+          "pin": "D-"
+        },
+        {
+          "number": "B8",
+          "at": [
+            186.4,
+            94.985
+          ],
+          "size": [
+            0.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/SBU2_J",
+          "pin": "SBU2"
+        },
+        {
+          "number": "B9",
+          "at": [
+            185.75,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "VBUS"
+        },
+        {
+          "number": "B12",
+          "at": [
+            184.95000000000002,
+            94.985
+          ],
+          "size": [
+            0.6,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "S1",
+          "at": [
+            183.83,
+            95.56
+          ],
+          "size": [
+            1.0,
+            2.1
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            183.83,
+            99.74000000000001
+          ],
+          "size": [
+            1.0,
+            1.8
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            192.47,
+            95.56
+          ],
+          "size": [
+            1.0,
+            2.1
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            192.47,
+            99.74000000000001
+          ],
+          "size": [
+            1.0,
+            1.8
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        }
+      ]
+    },
+    "J501": {
+      "value": "USB_C_Plug",
+      "side": "F",
+      "at": [
+        190.45,
+        53.4
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "A1",
+          "at": [
+            187.7,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "A2",
+          "at": [
+            188.2,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO5",
+          "pin": "TX1+"
+        },
+        {
+          "number": "A3",
+          "at": [
+            188.7,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-TX1--PadA3)",
+          "pin": "TX1-"
+        },
+        {
+          "number": "A4",
+          "at": [
+            189.2,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+V2",
+          "pin": "VBUS"
+        },
+        {
+          "number": "A5",
+          "at": [
+            189.7,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/CC1_J",
+          "pin": "CC"
+        },
+        {
+          "number": "A6",
+          "at": [
+            190.2,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D+",
+          "pin": "D+"
+        },
+        {
+          "number": "A7",
+          "at": [
+            190.7,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D-",
+          "pin": "D-"
+        },
+        {
+          "number": "A8",
+          "at": [
+            191.2,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/SBU1_J",
+          "pin": "SBU1"
+        },
+        {
+          "number": "A9",
+          "at": [
+            191.7,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+V2",
+          "pin": "VBUS"
+        },
+        {
+          "number": "A10",
+          "at": [
+            192.2,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-RX2--PadA10)",
+          "pin": "RX2-"
+        },
+        {
+          "number": "A11",
+          "at": [
+            192.7,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-RX2+-PadA11)",
+          "pin": "RX2+"
+        },
+        {
+          "number": "A12",
+          "at": [
+            193.2,
+            55.870001
+          ],
+          "size": [
+            0.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "B1",
+          "at": [
+            193.2,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "B2",
+          "at": [
+            192.7,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO6",
+          "pin": "TX2+"
+        },
+        {
+          "number": "B3",
+          "at": [
+            192.2,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-TX2--PadB3)",
+          "pin": "TX2-"
+        },
+        {
+          "number": "B4",
+          "at": [
+            191.7,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+V2",
+          "pin": "VBUS"
+        },
+        {
+          "number": "B5",
+          "at": [
+            191.2,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/CC2_J",
+          "pin": "VCONN"
+        },
+        {
+          "number": "B6",
+          "at": [
+            190.7,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-D+(NC)-PadB6)",
+          "pin": "D+(NC)"
+        },
+        {
+          "number": "B7",
+          "at": [
+            190.2,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-D-(NC)-PadB7)",
+          "pin": "D-(NC)"
+        },
+        {
+          "number": "B8",
+          "at": [
+            189.7,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/SBU2_J",
+          "pin": "SBU2"
+        },
+        {
+          "number": "B9",
+          "at": [
+            189.2,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+V2",
+          "pin": "VBUS"
+        },
+        {
+          "number": "B10",
+          "at": [
+            188.7,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-RX1--PadB10)",
+          "pin": "RX1-"
+        },
+        {
+          "number": "B11",
+          "at": [
+            188.2,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J501-RX1+-PadB11)",
+          "pin": "RX1+"
+        },
+        {
+          "number": "B12",
+          "at": [
+            187.7,
+            54.175
+          ],
+          "size": [
+            0.3,
+            0.95
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "S1",
+          "at": [
+            194.725,
+            55.699999999999996
+          ],
+          "size": [
+            1.0,
+            2.5
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            194.02499999999998,
+            54.449999999999996
+          ],
+          "size": [
+            0.5,
+            1.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            186.875,
+            54.449999999999996
+          ],
+          "size": [
+            0.5,
+            1.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD"
+        },
+        {
+          "number": "S1",
+          "at": [
+            186.17499999999998,
+            55.699999999999996
+          ],
+          "size": [
+            1.0,
+            2.5
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD"
+        }
+      ]
+    },
+    "LD101": {
+      "value": "150060RS75000",
+      "side": "F",
+      "at": [
+        186.45,
+        62.2
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            186.45,
+            62.987500000000004
+          ],
+          "size": [
+            0.95,
+            0.875
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            186.45,
+            61.4125
+          ],
+          "size": [
+            0.95,
+            0.875
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(LD101-A)",
+          "pin": "A"
+        }
+      ]
+    },
+    "LD102": {
+      "value": "150060VS75000",
+      "side": "F",
+      "at": [
+        186.45,
+        65.3
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            186.45,
+            66.08749999999999
+          ],
+          "size": [
+            0.95,
+            0.875
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "K"
+        },
+        {
+          "number": "2",
+          "at": [
+            186.45,
+            64.5125
+          ],
+          "size": [
+            0.95,
+            0.875
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(LD102-A)",
+          "pin": "A"
+        }
+      ]
+    },
+    "SW101": {
+      "value": "Slide switch",
+      "side": "F",
+      "at": [
+        201.65,
+        58.0
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            201.65,
+            54.6
+          ],
+          "size": [
+            0.9,
+            0.9
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            201.65,
+            61.4
+          ],
+          "size": [
+            0.9,
+            0.9
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            199.45000000000002,
+            55.5
+          ],
+          "size": [
+            1.4,
+            1.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(SW101-A-Pad1)",
+          "pin": "A"
+        },
+        {
+          "number": "2",
+          "at": [
+            203.85,
+            58.0
+          ],
+          "size": [
+            1.4,
+            1.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USER_SW_BTN",
+          "pin": "C"
+        },
+        {
+          "number": "3",
+          "at": [
+            199.45000000000002,
+            60.5
+          ],
+          "size": [
+            1.4,
+            1.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(SW101-B)",
+          "pin": "B"
+        }
+      ]
+    },
+    "SW102": {
+      "value": "GSPTS0020",
+      "side": "F",
+      "at": [
+        201.6,
+        65.2
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            199.349999,
+            64.125001
+          ],
+          "size": [
+            0.9906,
+            0.7112
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USER_SW_BTN",
+          "pin": "1"
+        },
+        {
+          "number": "2",
+          "at": [
+            203.850001,
+            64.125001
+          ],
+          "size": [
+            0.9906,
+            0.7112
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USER_SW_BTN",
+          "pin": "2"
+        },
+        {
+          "number": "3",
+          "at": [
+            199.349999,
+            66.27499900000001
+          ],
+          "size": [
+            0.9906,
+            0.7112
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(SW102-A)",
+          "pin": "K"
+        },
+        {
+          "number": "4",
+          "at": [
+            203.850001,
+            66.27499900000001
+          ],
+          "size": [
+            0.9906,
+            0.7112
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(SW102-A)",
+          "pin": "A"
+        }
+      ]
+    },
+    "U101": {
+      "value": "ISOM8600",
+      "side": "F",
+      "at": [
+        177.95,
+        99.9
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            174.7369,
+            98.63000000000001
+          ],
+          "size": [
+            1.524,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "RA"
+        },
+        {
+          "number": "2",
+          "at": [
+            174.7369,
+            101.17
+          ],
+          "size": [
+            1.524,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            181.1631,
+            101.17
+          ],
+          "size": [
+            1.524,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "RL2"
+        },
+        {
+          "number": "4",
+          "at": [
+            181.1631,
+            98.63000000000001
+          ],
+          "size": [
+            1.524,
+            0.5588
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "RL1"
+        }
+      ]
+    },
+    "U201": {
+      "value": "TS5A3160DCKR",
+      "side": "F",
+      "at": [
+        177.35,
+        78.0
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            176.5125,
+            77.35
+          ],
+          "size": [
+            1.025,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC"
+        },
+        {
+          "number": "2",
+          "at": [
+            176.5125,
+            78.0
+          ],
+          "size": [
+            1.025,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            176.5125,
+            78.65
+          ],
+          "size": [
+            1.025,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+1V8_LDO"
+        },
+        {
+          "number": "4",
+          "at": [
+            178.1875,
+            78.65
+          ],
+          "size": [
+            1.025,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+V_SBU"
+        },
+        {
+          "number": "5",
+          "at": [
+            178.1875,
+            78.0
+          ],
+          "size": [
+            1.025,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "V+"
+        },
+        {
+          "number": "6",
+          "at": [
+            178.1875,
+            77.35
+          ],
+          "size": [
+            1.025,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/VSBU_SEL"
+        }
+      ]
+    },
+    "U202": {
+      "value": "STM32G0B1CETx",
+      "side": "F",
+      "at": [
+        188.3,
+        75.3
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            191.05,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U202-PC13-Pad1)",
+          "pin": "PC13"
+        },
+        {
+          "number": "2",
+          "at": [
+            190.55,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/~{PWR_FLT}",
+          "pin": "PC14"
+        },
+        {
+          "number": "3",
+          "at": [
+            190.05,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU_PU_EN",
+          "pin": "PC15"
+        },
+        {
+          "number": "4",
+          "at": [
+            189.55,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VBAT"
+        },
+        {
+          "number": "5",
+          "at": [
+            189.05,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VREF+"
+        },
+        {
+          "number": "6",
+          "at": [
+            188.55,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD"
+        },
+        {
+          "number": "7",
+          "at": [
+            188.05,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "8",
+          "at": [
+            187.55,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/LED_RED",
+          "pin": "PF0"
+        },
+        {
+          "number": "9",
+          "at": [
+            187.05,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/LED_GREEN",
+          "pin": "PF1"
+        },
+        {
+          "number": "10",
+          "at": [
+            186.55,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/~{HUB_RESET}",
+          "pin": "PF2"
+        },
+        {
+          "number": "11",
+          "at": [
+            186.05,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU2",
+          "pin": "PA0"
+        },
+        {
+          "number": "12",
+          "at": [
+            185.55,
+            71.1375
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU1",
+          "pin": "PA1"
+        },
+        {
+          "number": "13",
+          "at": [
+            184.13750000000002,
+            72.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO9",
+          "pin": "PA2"
+        },
+        {
+          "number": "14",
+          "at": [
+            184.13750000000002,
+            73.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/AN1",
+          "pin": "PA3"
+        },
+        {
+          "number": "15",
+          "at": [
+            184.13750000000002,
+            73.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/HUB_I2C_EN",
+          "pin": "PA4"
+        },
+        {
+          "number": "16",
+          "at": [
+            184.13750000000002,
+            74.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/RELAY_EN",
+          "pin": "PA5"
+        },
+        {
+          "number": "17",
+          "at": [
+            184.13750000000002,
+            74.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PWR_EN",
+          "pin": "PA6"
+        },
+        {
+          "number": "18",
+          "at": [
+            184.13750000000002,
+            75.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USER_SW_BTN",
+          "pin": "PA7"
+        },
+        {
+          "number": "19",
+          "at": [
+            184.13750000000002,
+            75.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/AN0",
+          "pin": "PB0"
+        },
+        {
+          "number": "20",
+          "at": [
+            184.13750000000002,
+            76.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PB1",
+          "pin": "PB1"
+        },
+        {
+          "number": "21",
+          "at": [
+            184.13750000000002,
+            76.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU_OE",
+          "pin": "PB2"
+        },
+        {
+          "number": "22",
+          "at": [
+            184.13750000000002,
+            77.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/HUB_I2C_SCL",
+          "pin": "PB10"
+        },
+        {
+          "number": "23",
+          "at": [
+            184.13750000000002,
+            77.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PB11",
+          "pin": "PB11"
+        },
+        {
+          "number": "24",
+          "at": [
+            184.13750000000002,
+            78.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO10",
+          "pin": "PB12"
+        },
+        {
+          "number": "25",
+          "at": [
+            185.55,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO5",
+          "pin": "PB13"
+        },
+        {
+          "number": "26",
+          "at": [
+            186.05,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/HUB_I2C_SDA",
+          "pin": "PB14"
+        },
+        {
+          "number": "27",
+          "at": [
+            186.55,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD1_CC2",
+          "pin": "PB15"
+        },
+        {
+          "number": "28",
+          "at": [
+            187.05,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD1_CC1",
+          "pin": "PA8"
+        },
+        {
+          "number": "29",
+          "at": [
+            187.55,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/DATA_CUT",
+          "pin": "PA9"
+        },
+        {
+          "number": "30",
+          "at": [
+            188.05,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "PC6"
+        },
+        {
+          "number": "31",
+          "at": [
+            188.55,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "PC7"
+        },
+        {
+          "number": "32",
+          "at": [
+            189.05,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU_TO_USB",
+          "pin": "PA10"
+        },
+        {
+          "number": "33",
+          "at": [
+            189.55,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USB_D-",
+          "pin": "PA11"
+        },
+        {
+          "number": "34",
+          "at": [
+            190.05,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USB_D+",
+          "pin": "PA12"
+        },
+        {
+          "number": "35",
+          "at": [
+            190.55,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SWDIO",
+          "pin": "PA13"
+        },
+        {
+          "number": "36",
+          "at": [
+            191.05,
+            79.46249999999999
+          ],
+          "size": [
+            0.3,
+            1.475
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SWCLK_BOOT0",
+          "pin": "PA14"
+        },
+        {
+          "number": "37",
+          "at": [
+            192.4625,
+            78.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/CC_DA_EN",
+          "pin": "PA15"
+        },
+        {
+          "number": "38",
+          "at": [
+            192.4625,
+            77.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD2_CC1",
+          "pin": "PD0"
+        },
+        {
+          "number": "39",
+          "at": [
+            192.4625,
+            77.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "5V_EN",
+          "pin": "PD1"
+        },
+        {
+          "number": "40",
+          "at": [
+            192.4625,
+            76.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD2_CC2",
+          "pin": "PD2"
+        },
+        {
+          "number": "41",
+          "at": [
+            192.4625,
+            76.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/VSBU_SEL",
+          "pin": "PD3"
+        },
+        {
+          "number": "42",
+          "at": [
+            192.4625,
+            75.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO7",
+          "pin": "PB3"
+        },
+        {
+          "number": "43",
+          "at": [
+            192.4625,
+            75.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO8",
+          "pin": "PB4"
+        },
+        {
+          "number": "44",
+          "at": [
+            192.4625,
+            74.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO6",
+          "pin": "PB5"
+        },
+        {
+          "number": "45",
+          "at": [
+            192.4625,
+            74.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PB6",
+          "pin": "PB6"
+        },
+        {
+          "number": "46",
+          "at": [
+            192.4625,
+            73.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PB7",
+          "pin": "PB7"
+        },
+        {
+          "number": "47",
+          "at": [
+            192.4625,
+            73.05
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU1_VT",
+          "pin": "PB8"
+        },
+        {
+          "number": "48",
+          "at": [
+            192.4625,
+            72.55
+          ],
+          "size": [
+            1.475,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU2_VT",
+          "pin": "PB9"
+        }
+      ]
+    },
+    "U203": {
+      "value": "TXS0102DCU",
+      "side": "F",
+      "at": [
+        178.75,
+        70.3
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            180.15,
+            71.05
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU2_VT",
+          "pin": "B2"
+        },
+        {
+          "number": "2",
+          "at": [
+            180.15,
+            70.55
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            180.15,
+            70.05
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+V_SBU",
+          "pin": "VCCA"
+        },
+        {
+          "number": "4",
+          "at": [
+            180.15,
+            69.55
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU2",
+          "pin": "A2"
+        },
+        {
+          "number": "5",
+          "at": [
+            177.35,
+            69.55
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU1",
+          "pin": "A1"
+        },
+        {
+          "number": "6",
+          "at": [
+            177.35,
+            70.05
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU_OE",
+          "pin": "OE"
+        },
+        {
+          "number": "7",
+          "at": [
+            177.35,
+            70.55
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VCCB"
+        },
+        {
+          "number": "8",
+          "at": [
+            177.35,
+            71.05
+          ],
+          "size": [
+            1.25,
+            0.35
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU1_VT",
+          "pin": "B1"
+        }
+      ]
+    },
+    "U301": {
+      "value": "USB2514B_Bi",
+      "side": "F",
+      "at": [
+        196.47,
+        86.4
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            197.7,
+            87.63000000000001
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            197.7,
+            86.4
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            197.7,
+            85.17
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            196.47,
+            87.63000000000001
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            196.47,
+            86.4
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            196.47,
+            85.17
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            195.24,
+            87.63000000000001
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            195.24,
+            86.4
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            195.24,
+            85.17
+          ],
+          "size": [
+            0.99,
+            0.99
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            199.4075,
+            88.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USB_D-",
+          "pin": "USBDM_DN1"
+        },
+        {
+          "number": "2",
+          "at": [
+            199.4075,
+            87.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USB_D+",
+          "pin": "USBDP_DN1"
+        },
+        {
+          "number": "3",
+          "at": [
+            199.4075,
+            87.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB_D+",
+          "pin": "USBDM_DN2"
+        },
+        {
+          "number": "4",
+          "at": [
+            199.4075,
+            86.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB_D-",
+          "pin": "USBDP_DN2"
+        },
+        {
+          "number": "5",
+          "at": [
+            199.4075,
+            86.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDDA33"
+        },
+        {
+          "number": "6",
+          "at": [
+            199.4075,
+            85.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB3_D-",
+          "pin": "USBDM_DN3"
+        },
+        {
+          "number": "7",
+          "at": [
+            199.4075,
+            85.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB3_D+",
+          "pin": "USBDP_DN3"
+        },
+        {
+          "number": "8",
+          "at": [
+            199.4075,
+            84.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB4_D+",
+          "pin": "USBDM_DN4"
+        },
+        {
+          "number": "9",
+          "at": [
+            199.4075,
+            84.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB4_D-",
+          "pin": "USBDP_DN4"
+        },
+        {
+          "number": "10",
+          "at": [
+            198.47,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDDA33"
+        },
+        {
+          "number": "11",
+          "at": [
+            197.97,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "TEST"
+        },
+        {
+          "number": "12",
+          "at": [
+            197.47,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-PRTPWR1{slash}BC_EN1-Pad12)",
+          "pin": "PRTPWR1"
+        },
+        {
+          "number": "13",
+          "at": [
+            196.97,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-OCS_N1-Pad13)",
+          "pin": "OCS_N1"
+        },
+        {
+          "number": "14",
+          "at": [
+            196.47,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/+1V8_CORE",
+          "pin": "CRFILT"
+        },
+        {
+          "number": "15",
+          "at": [
+            195.97,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD33"
+        },
+        {
+          "number": "16",
+          "at": [
+            195.47,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-PRTPWR2{slash}BC_EN2-Pad16)",
+          "pin": "PRTPWR2"
+        },
+        {
+          "number": "17",
+          "at": [
+            194.97,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-OCS_N2-Pad17)",
+          "pin": "OCS_N2"
+        },
+        {
+          "number": "18",
+          "at": [
+            194.47,
+            83.4625
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-PRTPWR3{slash}BC_EN3-Pad18)",
+          "pin": "PRTPWR3"
+        },
+        {
+          "number": "19",
+          "at": [
+            193.5325,
+            84.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-OCS_N3-Pad19)",
+          "pin": "OCS_N3"
+        },
+        {
+          "number": "20",
+          "at": [
+            193.5325,
+            84.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-PRTPWR4{slash}BC_EN4-Pad20)",
+          "pin": "PRTPWR4"
+        },
+        {
+          "number": "21",
+          "at": [
+            193.5325,
+            85.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U301-OCS_N4-Pad21)",
+          "pin": "OCS_N4"
+        },
+        {
+          "number": "22",
+          "at": [
+            193.5325,
+            85.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/HUB_I2C_SDA",
+          "pin": "SDA"
+        },
+        {
+          "number": "23",
+          "at": [
+            193.5325,
+            86.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDD33"
+        },
+        {
+          "number": "24",
+          "at": [
+            193.5325,
+            86.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/HUB_I2C_SCL",
+          "pin": "SCL"
+        },
+        {
+          "number": "25",
+          "at": [
+            193.5325,
+            87.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/CFG_SEL1",
+          "pin": "HS_IND"
+        },
+        {
+          "number": "26",
+          "at": [
+            193.5325,
+            87.9
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/~{HUB_RESET}",
+          "pin": "RESET_N"
+        },
+        {
+          "number": "27",
+          "at": [
+            193.5325,
+            88.4
+          ],
+          "size": [
+            0.825,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(U301-VBUS_DET)",
+          "pin": "VBUS_DET"
+        },
+        {
+          "number": "28",
+          "at": [
+            194.47,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/NON_REM0",
+          "pin": "SUSP_IND"
+        },
+        {
+          "number": "29",
+          "at": [
+            194.97,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDDA33"
+        },
+        {
+          "number": "30",
+          "at": [
+            195.47,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D-",
+          "pin": "USBDM_UP"
+        },
+        {
+          "number": "31",
+          "at": [
+            195.97,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D+",
+          "pin": "USBDP_UP"
+        },
+        {
+          "number": "32",
+          "at": [
+            196.47,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/XTAL2",
+          "pin": "XTALOUT"
+        },
+        {
+          "number": "33",
+          "at": [
+            196.97,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/XTAL1",
+          "pin": "XTALIN"
+        },
+        {
+          "number": "34",
+          "at": [
+            197.47,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/+1V8_PLL",
+          "pin": "PLLFILT"
+        },
+        {
+          "number": "35",
+          "at": [
+            197.97,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/RBIAS",
+          "pin": "RBIAS"
+        },
+        {
+          "number": "36",
+          "at": [
+            198.47,
+            89.3375
+          ],
+          "size": [
+            0.25,
+            0.825
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VDDA33"
+        },
+        {
+          "number": "37",
+          "at": [
+            196.47,
+            86.4
+          ],
+          "size": [
+            3.7,
+            3.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        }
+      ]
+    },
+    "U401": {
+      "value": "D3V3XA4B10LP",
+      "side": "F",
+      "at": [
+        188.4,
+        92.065
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            187.4,
+            92.4525
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC1_J"
+        },
+        {
+          "number": "2",
+          "at": [
+            187.9,
+            92.4525
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D-"
+        },
+        {
+          "number": "3",
+          "at": [
+            188.4,
+            92.41499999999999
+          ],
+          "size": [
+            0.45,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "4",
+          "at": [
+            188.9,
+            92.4525
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D+"
+        },
+        {
+          "number": "5",
+          "at": [
+            189.4,
+            92.4525
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC2_J"
+        },
+        {
+          "number": "6",
+          "at": [
+            189.4,
+            91.6775
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC2_J",
+          "pin": "NC"
+        },
+        {
+          "number": "7",
+          "at": [
+            188.9,
+            91.6775
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D+",
+          "pin": "NC"
+        },
+        {
+          "number": "8",
+          "at": [
+            188.4,
+            91.6525
+          ],
+          "size": [
+            0.45,
+            0.575
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "9",
+          "at": [
+            187.9,
+            91.6775
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/USB_UP_D-",
+          "pin": "NC"
+        },
+        {
+          "number": "10",
+          "at": [
+            187.4,
+            91.6775
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC1_J",
+          "pin": "NC"
+        }
+      ]
+    },
+    "U402": {
+      "value": "DPO2036",
+      "side": "F",
+      "at": [
+        185.05,
+        91.565
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            184.375,
+            92.49
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/SBU1_J",
+          "pin": "SBU1C"
+        },
+        {
+          "number": "2",
+          "at": [
+            184.82500000000002,
+            92.49
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/SBU2_J",
+          "pin": "SBU2C"
+        },
+        {
+          "number": "3",
+          "at": [
+            185.275,
+            92.49
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC1_J",
+          "pin": "CC1C"
+        },
+        {
+          "number": "4",
+          "at": [
+            185.72500000000002,
+            92.49
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CC2_J",
+          "pin": "CC2C"
+        },
+        {
+          "number": "5",
+          "at": [
+            185.97500000000002,
+            91.78999999999999
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Receptacle/CB",
+          "pin": "CB"
+        },
+        {
+          "number": "6",
+          "at": [
+            185.97500000000002,
+            91.34
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(U402-~{FAULT})",
+          "pin": "~{FAULT}"
+        },
+        {
+          "number": "7",
+          "at": [
+            185.72500000000002,
+            90.64
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD1_CC2",
+          "pin": "CC2S"
+        },
+        {
+          "number": "8",
+          "at": [
+            185.275,
+            90.64
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD1_CC1",
+          "pin": "CC1S"
+        },
+        {
+          "number": "9",
+          "at": [
+            184.82500000000002,
+            90.64
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SWDIO",
+          "pin": "SBU2S"
+        },
+        {
+          "number": "10",
+          "at": [
+            184.375,
+            90.64
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SWCLK_BOOT0",
+          "pin": "SBU1S"
+        },
+        {
+          "number": "11",
+          "at": [
+            184.125,
+            91.34
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "12",
+          "at": [
+            184.125,
+            91.78999999999999
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VSYS"
+        }
+      ]
+    },
+    "U501": {
+      "value": "DPO2036",
+      "side": "F",
+      "at": [
+        193.65,
+        60.2
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            194.32500000000002,
+            59.275000000000006
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/SBU1_J",
+          "pin": "SBU1C"
+        },
+        {
+          "number": "2",
+          "at": [
+            193.875,
+            59.275000000000006
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/SBU2_J",
+          "pin": "SBU2C"
+        },
+        {
+          "number": "3",
+          "at": [
+            193.425,
+            59.275000000000006
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/CC1_J",
+          "pin": "CC1C"
+        },
+        {
+          "number": "4",
+          "at": [
+            192.975,
+            59.275000000000006
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/CC2_J",
+          "pin": "CC2C"
+        },
+        {
+          "number": "5",
+          "at": [
+            192.725,
+            59.975
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Plug/CB",
+          "pin": "CB"
+        },
+        {
+          "number": "6",
+          "at": [
+            192.725,
+            60.425000000000004
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net-(U501-~{FAULT})",
+          "pin": "~{FAULT}"
+        },
+        {
+          "number": "7",
+          "at": [
+            192.975,
+            61.125
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD2_CC2",
+          "pin": "CC2S"
+        },
+        {
+          "number": "8",
+          "at": [
+            193.425,
+            61.125
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PD2_CC1",
+          "pin": "CC1S"
+        },
+        {
+          "number": "9",
+          "at": [
+            193.875,
+            61.125
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/SBU Data Switch/SBU2_D-",
+          "pin": "SBU2S"
+        },
+        {
+          "number": "10",
+          "at": [
+            194.32500000000002,
+            61.125
+          ],
+          "size": [
+            0.3,
+            0.45
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/SBU Data Switch/SBU1_D+",
+          "pin": "SBU1S"
+        },
+        {
+          "number": "11",
+          "at": [
+            194.57500000000002,
+            60.425000000000004
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "12",
+          "at": [
+            194.57500000000002,
+            59.975
+          ],
+          "size": [
+            0.45,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VSYS"
+        }
+      ]
+    },
+    "U502": {
+      "value": "D3V3XA4B10LP",
+      "side": "F",
+      "at": [
+        190.45,
+        59.7
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            191.45,
+            59.3125
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO6"
+        },
+        {
+          "number": "2",
+          "at": [
+            190.95,
+            59.3125
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D-"
+        },
+        {
+          "number": "3",
+          "at": [
+            190.45,
+            59.35
+          ],
+          "size": [
+            0.45,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "4",
+          "at": [
+            189.95,
+            59.3125
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D+"
+        },
+        {
+          "number": "5",
+          "at": [
+            189.45,
+            59.3125
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO5"
+        },
+        {
+          "number": "6",
+          "at": [
+            189.45,
+            60.087500000000006
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO5",
+          "pin": "NC"
+        },
+        {
+          "number": "7",
+          "at": [
+            189.95,
+            60.087500000000006
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D+",
+          "pin": "NC"
+        },
+        {
+          "number": "8",
+          "at": [
+            190.45,
+            60.112500000000004
+          ],
+          "size": [
+            0.45,
+            0.575
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS"
+        },
+        {
+          "number": "9",
+          "at": [
+            190.95,
+            60.087500000000006
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D-",
+          "pin": "NC"
+        },
+        {
+          "number": "10",
+          "at": [
+            191.45,
+            60.087500000000006
+          ],
+          "size": [
+            0.25,
+            0.625
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/IO6",
+          "pin": "NC"
+        }
+      ]
+    },
+    "U601": {
+      "value": "AOZ1375DI-02",
+      "side": "F",
+      "at": [
+        178.48,
+        62.7875
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            177.16,
+            61.6
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "VBUS"
+        },
+        {
+          "number": "2",
+          "at": [
+            177.16,
+            61.975
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+V1",
+          "pin": "VBUS"
+        },
+        {
+          "number": "3",
+          "at": [
+            177.16,
+            62.5375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/POVP",
+          "pin": "POVP"
+        },
+        {
+          "number": "4",
+          "at": [
+            177.16,
+            63.0375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/~{PWR_FLT}",
+          "pin": "FLTB"
+        },
+        {
+          "number": "5",
+          "at": [
+            177.16,
+            63.5375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/PWR_EN",
+          "pin": "EN"
+        },
+        {
+          "number": "6",
+          "at": [
+            177.16,
+            64.0375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "7",
+          "at": [
+            179.79999999999998,
+            64.0375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/SS",
+          "pin": "SS"
+        },
+        {
+          "number": "8",
+          "at": [
+            179.79999999999998,
+            63.5375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/ILIM",
+          "pin": "ILIM"
+        },
+        {
+          "number": "9",
+          "at": [
+            179.79999999999998,
+            63.0375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/CSP",
+          "pin": "CSP"
+        },
+        {
+          "number": "10",
+          "at": [
+            179.79999999999998,
+            62.5375
+          ],
+          "size": [
+            0.45,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/CSN",
+          "pin": "CSN"
+        },
+        {
+          "number": "11",
+          "at": [
+            179.79999999999998,
+            61.975
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+VINT",
+          "pin": "VINT"
+        },
+        {
+          "number": "12",
+          "at": [
+            179.79999999999998,
+            61.6
+          ],
+          "size": [
+            0.45,
+            0.375
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/+VINT",
+          "pin": "VINT"
+        },
+        {
+          "number": "13",
+          "at": [
+            178.48,
+            62.7875
+          ],
+          "size": [
+            1.5,
+            2.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "EP_GND"
+        }
+      ]
+    },
+    "U602": {
+      "value": "INA181",
+      "side": "F",
+      "at": [
+        183.15,
+        56.891985
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            184.1,
+            55.754484999999995
+          ],
+          "size": [
+            0.6,
+            1.325
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/AN0"
+        },
+        {
+          "number": "2",
+          "at": [
+            183.15,
+            55.754484999999995
+          ],
+          "size": [
+            0.6,
+            1.325
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            182.20000000000002,
+            55.754484999999995
+          ],
+          "size": [
+            0.6,
+            1.325
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/CSP",
+          "pin": "+"
+        },
+        {
+          "number": "4",
+          "at": [
+            182.20000000000002,
+            58.029485
+          ],
+          "size": [
+            0.6,
+            1.325
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/CSN",
+          "pin": "-"
+        },
+        {
+          "number": "5",
+          "at": [
+            183.15,
+            58.029485
+          ],
+          "size": [
+            0.6,
+            1.325
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power Switch/REF",
+          "pin": "REF"
+        },
+        {
+          "number": "6",
+          "at": [
+            184.1,
+            58.029485
+          ],
+          "size": [
+            0.6,
+            1.325
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "V+"
+        }
+      ]
+    },
+    "U701": {
+      "value": "TS3USB221A",
+      "side": "F",
+      "at": [
+        189.35,
+        63.7
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            190.1,
+            63.025000000000006
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D-",
+          "pin": "D1+"
+        },
+        {
+          "number": "2",
+          "at": [
+            189.6,
+            63.025000000000006
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB1_D+",
+          "pin": "D1-"
+        },
+        {
+          "number": "3",
+          "at": [
+            189.1,
+            63.025000000000006
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB2_D-",
+          "pin": "D2+"
+        },
+        {
+          "number": "4",
+          "at": [
+            188.6,
+            63.025000000000006
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB2_D+",
+          "pin": "D2-"
+        },
+        {
+          "number": "5",
+          "at": [
+            188.45,
+            63.7
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "6",
+          "at": [
+            188.6,
+            64.375
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/~{TS_OE}",
+          "pin": "~{OE}"
+        },
+        {
+          "number": "7",
+          "at": [
+            189.1,
+            64.375
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB_D+",
+          "pin": "D-"
+        },
+        {
+          "number": "8",
+          "at": [
+            189.6,
+            64.375
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Data Switch/USB_D-",
+          "pin": "D+"
+        },
+        {
+          "number": "9",
+          "at": [
+            190.1,
+            64.375
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/DATA_CUT",
+          "pin": "S"
+        },
+        {
+          "number": "10",
+          "at": [
+            190.25,
+            63.7
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VCC"
+        }
+      ]
+    },
+    "U801": {
+      "value": "AP64060WU-7",
+      "side": "F",
+      "at": [
+        175.65,
+        89.6
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            174.55,
+            88.64999999999999
+          ],
+          "size": [
+            1.0,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/BST",
+          "pin": "BST"
+        },
+        {
+          "number": "2",
+          "at": [
+            174.55,
+            89.6
+          ],
+          "size": [
+            1.0,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            174.55,
+            90.55
+          ],
+          "size": [
+            1.0,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/3V3_FB",
+          "pin": "FB"
+        },
+        {
+          "number": "4",
+          "at": [
+            176.75,
+            90.55
+          ],
+          "size": [
+            1.0,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/+VIN_SUM",
+          "pin": "EN"
+        },
+        {
+          "number": "5",
+          "at": [
+            176.75,
+            89.6
+          ],
+          "size": [
+            1.0,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/+VIN_SUM",
+          "pin": "VIN"
+        },
+        {
+          "number": "6",
+          "at": [
+            176.75,
+            88.64999999999999
+          ],
+          "size": [
+            1.0,
+            0.7
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Power/3V3_SW",
+          "pin": "SW"
+        }
+      ]
+    },
+    "U802": {
+      "value": "TLV70233",
+      "side": "F",
+      "at": [
+        177.35,
+        81.1
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            178.48749999999998,
+            82.05
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IN"
+        },
+        {
+          "number": "2",
+          "at": [
+            178.48749999999998,
+            81.1
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            178.48749999999998,
+            80.14999999999999
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "EN"
+        },
+        {
+          "number": "4",
+          "at": [
+            176.2125,
+            80.14999999999999
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U802-NC-Pad4)",
+          "pin": "NC"
+        },
+        {
+          "number": "5",
+          "at": [
+            176.2125,
+            82.05
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+1V8_LDO",
+          "pin": "OUT"
+        }
+      ]
+    },
+    "U901": {
+      "value": "TS3USB221A",
+      "side": "F",
+      "at": [
+        200.1,
+        77.5
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            199.35,
+            78.175
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU2",
+          "pin": "D1+"
+        },
+        {
+          "number": "2",
+          "at": [
+            199.85,
+            78.175
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU1",
+          "pin": "D1-"
+        },
+        {
+          "number": "3",
+          "at": [
+            200.35,
+            78.175
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB4_D-",
+          "pin": "D2+"
+        },
+        {
+          "number": "4",
+          "at": [
+            200.85,
+            78.175
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB4_D+",
+          "pin": "D2-"
+        },
+        {
+          "number": "5",
+          "at": [
+            201.0,
+            77.5
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND"
+        },
+        {
+          "number": "6",
+          "at": [
+            200.85,
+            76.825
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/SBU Data Switch/~{TS_OE}",
+          "pin": "~{OE}"
+        },
+        {
+          "number": "7",
+          "at": [
+            200.35,
+            76.825
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/SBU Data Switch/SBU1_D+",
+          "pin": "D-"
+        },
+        {
+          "number": "8",
+          "at": [
+            199.85,
+            76.825
+          ],
+          "size": [
+            0.2,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/SBU Data Switch/SBU2_D-",
+          "pin": "D+"
+        },
+        {
+          "number": "9",
+          "at": [
+            199.35,
+            76.825
+          ],
+          "size": [
+            0.25,
+            0.55
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SBU_TO_USB",
+          "pin": "S"
+        },
+        {
+          "number": "10",
+          "at": [
+            199.2,
+            77.5
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VCC"
+        }
+      ]
+    },
+    "Y301": {
+      "value": "ECS-240-8-33-AGN-TR3",
+      "side": "F",
+      "at": [
+        195.94,
+        96.1
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            194.79,
+            97.0
+          ],
+          "size": [
+            1.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/XTAL2",
+          "pin": "1"
+        },
+        {
+          "number": "2",
+          "at": [
+            197.09,
+            97.0
+          ],
+          "size": [
+            1.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "2"
+        },
+        {
+          "number": "3",
+          "at": [
+            197.09,
+            95.19999999999999
+          ],
+          "size": [
+            1.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB Hub/XTAL1",
+          "pin": "3"
+        },
+        {
+          "number": "4",
+          "at": [
+            194.79,
+            95.19999999999999
+          ],
+          "size": [
+            1.3,
+            1.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "4"
+        }
+      ]
+    }
+  }
+}

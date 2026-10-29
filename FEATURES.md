@@ -362,6 +362,17 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   ST-LINK sits on J2 (VID:PID), flash, the README's device steps, ROM boot over J3, the pin test of a bare board
   (`--save`), the ES0548 read for HSE / PLL / USB on the silicon revision fitted. CAN (FDCAN1 TX PD1, RX PB8, STB
   PC13 low) comes in with TPL-53 through a template upgrade of cannify_micro_template.
+- 🚧 **TPL-60 Board preset `donguru_b153a`**: Donguru B153A (STM32G0B1CET6 LQFP48, rev A, Main variant: USB2512B
+  hub) in `scripts/data/boards/donguru_b153a/`: answers (WireWeaver over the MCU's own USB behind the hub, settings,
+  counters, backup counters, host crates, CLI `donguru`, `--pins board`, probe `1366:0101` for a J-Link on the
+  receptacle's SBU), HSI16 through the PLL to 64 MHz (USB on HSI48 + CRS), the LEDs LD101 red PF0 (TIM14_CH1) and
+  LD102 green PF1 (TIM15_CH1N) with the time driver on TIM4, PA4 high for the hub's SDA pull-up (`[[init]]`), the hub
+  bring-up in `[bring_up]` (RESET_N on PC13 driven from RTC_OUT1 so it holds through a reset, as typec_dongle FW-46;
+  usb251xb config over I2C2 PB10 / PB14 with port 2's D+ / D- swap; kept when RTC_CR shows it running), VID:PID
+  c0de:cafe (wire_weaver's default), the analog PA7 button / slide switch documented (no digital button), ROM boot,
+  the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0donguru`. To do: the matrix
+  run, donguru_template generated. Hardware (🧪, never through the Donguru J-Link): flash, the README's device
+  steps, the hub kept through `boot reboot --updater` into the ROM's DFU, the pin test of a bare board (`--save`).
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
@@ -599,6 +610,12 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   and the pin table lists `PB14` with its label `LED` (the generator's `--pins board` reads the same); the alias
   column only where a description names any; a `+` in front of a rail (`+VIN_CAN`) keeps its class; the bottom
   view's title drops "(mirrored ...)" when a narrow board has no room for it · `geometry.rs`, `nets.rs`, `pins.rs`.
+
+- ✅ **MAP-12 Pin names from symbols that number every pin**: some KiCad symbols name pins `PC13_1` and the G0's
+  remap pads `PA9/PA11_33` (B153A Donguru): `extract` drops the `_<pad>` suffix when every pad of a footprint has
+  it (not when that would leave a connector's `Pin_1`, `Pin_2` all one name), a remap pad whose first name is
+  another pad's takes its other GPIO name (pin 33 is PA11), and views and the pin table show a hierarchical
+  sheet's net without its path (`/MCU/IO7_EXT` is `IO7_EXT`) · `geometry.rs`, `nets.rs`.
 
 ## Dropped and superseded
 

@@ -80,7 +80,7 @@ pub fn render(desc: &Desc, geo: &Geometry) -> Result<String> {
             if label == net || crate::nets::is_anonymous(label) {
                 format!("`{net}`")
             } else {
-                format!("`{net}` {label}")
+                format!("`{net}` {}", nets.display(label))
             },
             alias,
             on_headers,

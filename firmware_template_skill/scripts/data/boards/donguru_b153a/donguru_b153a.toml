@@ -1,0 +1,242 @@
+# Board description for boardmap (bedrock_board): what to draw of the Donguru B153A and what every pin does. Facts:
+# the B153A KiCad schematic and board (hw/b153_typec_serial/source/b153a), hw/b153_typec_serial/doc/hw_b153a.md
+# (the rework on the built boards, §0; pin map §11), the STM32G0B1xx datasheet DS13560 Rev 6.
+
+[board]
+name = "B153A Donguru"
+pcb = "B153A (rev A, Main variant)"
+mcu = "STM32G0B1CET6 (U202, LQFP48)"
+mcu_ref = "U202"
+geometry = "donguru_b153a.geometry.json"
+sources = ["B153A KiCad schematic and board (rev A)", "hw_b153a.md", "STM32G0B1xx datasheet DS13560 Rev 6"]
+scale = 16.0
+
+[[view.connector]]
+ref = "J101"
+label = "J101"
+labels = "right"
+numbers = true
+
+[[view.part]]
+ref = "U202"
+label = "U202\nSTM32G0B1CET6"
+kind = "mcu"
+
+[[view.part]]
+ref = "J401"
+label = "J401 USB-C receptacle\nto the PC · SWD on SBU"
+kind = "usb"
+dy = 6
+
+[[view.part]]
+ref = "J501"
+label = "J501 USB-C plug\nto the device under test"
+kind = "usb"
+dy = -6
+
+[[view.part]]
+ref = "U301"
+label = "U301 USB2512B\nhub, I2C2"
+kind = "chip"
+
+[[view.part]]
+ref = "Y301"
+label = "Y301 24 MHz\n(hub)"
+kind = "other"
+
+# LD101 red through R104 from PF0, LD102 green through R105 from PF1, both cathode to GND: high lights them. PF0 is
+# TIM14_CH1, PF1 TIM15_CH1N (hw_b153a.md §11)
+[[view.part]]
+ref = "LD101"
+label = "LD101 red\nPF0"
+kind = "led"
+dx = -24
+
+[[view.part]]
+ref = "LD102"
+label = "LD102 green\nPF1"
+kind = "led"
+dx = -24
+
+[[view.part]]
+ref = "SW102"
+label = "SW102 button\nPA7 (analog)"
+kind = "other"
+
+[[view.part]]
+ref = "SW101"
+label = "SW101 slide\nPA7 (analog)"
+kind = "other"
+
+[[view.part]]
+ref = "U601"
+label = "U601 AOZ1375\nVBUS switch"
+kind = "chip"
+
+[[view.part]]
+ref = "U801"
+label = "U801 AP64060\nbuck 3.3 V"
+kind = "chip"
+
+[[view.part]]
+ref = "U701"
+label = "U701 TS3USB221A\nplug USB data"
+kind = "chip"
+
+[[view.part]]
+ref = "U203"
+label = "U203 TXS0102\nSBU level shifter"
+kind = "chip"
+
+[[view.part]]
+ref = "U101"
+label = "U101 ISOM8600\nrelay"
+kind = "chip"
+
+# J101: the four I/O lines reach the MCU through 255 Ω (other nets), so they say which pins
+[aliases]
+"/MCU/IO7_EXT" = "PB3 + PB1"
+"/MCU/IO8_EXT" = "PB4"
+"/MCU/IO9_EXT" = "PA2"
+"/MCU/IO10_EXT" = "PB12"
+"USB3_D+" = "hub port 3 (Plus only)"
+"USB3_D-" = "hub port 3 (Plus only)"
+"+5V" = "receptacle VBUS, PD1 switches it"
+RL1 = "relay, PA5"
+RL2 = "relay, PA5"
+
+[pins]
+PA13 = { role = "taken", short = "SWDIO", note = "SWD data: the receptacle J401's SBU2 (the DPO2036 U402 removed and shorted on rev A: no over-voltage protection) and TP201." }
+PA14 = { role = "taken", short = "BOOT0", note = "SWD clock: the receptacle's SBU1 and TP202. Also BOOT0: R209 (100K) pulls it low, and the button SW102 pressed at reset pulls it high through Q204 (the ROM bootloader)." }
+PF2 = { role = "taken", short = "", note = "NRST. The schematic ties it to the hub's RESET_N (~HUB_RESET): cut on rev A. Never drive it." }
+PA11 = { role = "taken", short = "USB D-", note = "USB FS D- to the hub U301's port 1 (pin 33, the PA9 remap pin)." }
+PA12 = { role = "taken", short = "USB D+", note = "USB FS D+ to the hub U301's port 1 (pin 34, the PA10 remap pin)." }
+PF0 = { role = "taken", short = "LED red", note = "The red LED LD101 through R104: high lights it. TIM14_CH1 for a PWM breathe." }
+PF1 = { role = "taken", short = "LED green", note = "The green LED LD102 through R105: high lights it. TIM15_CH1N for a PWM breathe." }
+PC13 = { role = "taken", short = "HUB RESET", note = "The hub's RESET_N, a hand rework on rev A (the board file has it unconnected), R304 pulls it low. Driven from RTC_OUT1 so the hub keeps running through a reset." }
+PA4 = { role = "taken", short = "HUB I2C EN", note = "Feeds R301, the pull-up of the hub's SDA (rev A): high for I2C2 to work." }
+PB10 = { role = "taken", short = "HUB SCL", note = "I2C2_SCL (AF6) to the hub U301 (SMBus, address 0x2C), R302 pull-up." }
+PB14 = { role = "taken", short = "HUB SDA", note = "I2C2_SDA (AF6) to the hub U301, R301 pull-up from PA4." }
+PA8 = { role = "taken", short = "CC1 PC", note = "UCPD1_CC1, the receptacle's CC1 (a 5K1 Rd to GND on rev A)." }
+PB15 = { role = "taken", short = "CC2 PC", note = "UCPD1_CC2, the receptacle's CC2 (a 5K1 Rd to GND on rev A)." }
+PD0 = { role = "taken", short = "CC1 DUT", note = "UCPD2_CC1, the plug's CC." }
+PD2 = { role = "taken", short = "CC2 DUT", note = "UCPD2_CC2, the plug's VCONN pin." }
+PA15 = { role = "taken", short = "CC_DA_EN", note = "Debug-accessory Rp on the receptacle CC: cut on rev A, does nothing. R202 pull-down." }
+PA9 = { role = "taken", short = "DATA_CUT", note = "U701 select: high cuts the device's USB data from the hub's port 2. R702 pull-down; a UCPD1 dead-battery pin." }
+PA10 = { role = "taken", short = "SBU_TO_USB", note = "U901 select (Plus variant only), the board-variant strap: R902 pull-down only on Plus. A UCPD1 dead-battery pin." }
+PB2 = { role = "taken", short = "SBU_OE", note = "TXS0102 (U203) enable, R213 pull-down: the _VT pins reach the plug's SBU only with it high." }
+PC15 = { role = "taken", short = "SBU_PU_EN", note = "3K3 pull-ups from V_SBU on SBU1 / SBU2 (PA1 / PA0), R221 pull-down: off at reset." }
+PD3 = { role = "taken", short = "VSBU_SEL", note = "V_SBU from the LDO (low; a 3.3 V part on rev A) or 3.3 V (high), R210 pull-down. A UCPD2 dead-battery pin." }
+PA6 = { role = "taken", short = "PWR_EN", note = "The VBUS switch U601 to the plug: high powers the device under test. R601 pull-down." }
+PC14 = { role = "taken", short = "~PWR_FLT", note = "U601's fault output, open drain, no pull-up on the board: needs the MCU's." }
+PD1 = { role = "taken", short = "5V_EN", note = "The receptacle's VBUS onto J101-10 (Q101 / Q102): up to 20 V when the PC negotiated it. R109 pull-down. A UCPD2 dead-battery pin." }
+PA5 = { role = "taken", short = "RELAY", note = "The photo-MOS relay U101 (J101-11 / 12) through R106: high closes it." }
+PA3 = { role = "taken", short = "VBUS/7.17", note = "ADC1_IN3: the receptacle's VBUS through 10K / 1K62 (÷ 7.17)." }
+PB0 = { role = "taken", short = "IBUS", note = "ADC1_IN8: the VBUS current through the plug, INA181 (U602) on a 5 mΩ shunt, 0.25 V/A around 1.65 V." }
+PA7 = { role = "taken", short = "BUTTON", note = "ADC1_IN7: the button SW102 and the slide switch SW101 on one pin (R101 10K up): idle 3.3 V, switch 2.89 V, button 1.65 V, both 1.54 V." }
+PC6 = { role = "function", short = "GND", note = "Tied to GND on the board: never an output." }
+PC7 = { role = "function", short = "3V3", note = "Tied to 3.3 V on the board: never an output." }
+PA0 = { role = "free", short = "SBU2", note = "The plug's SBU2 directly (V_SBU domain, no over-voltage protection on rev A); keep it input or open drain while V_SBU is 1.8 V." }
+PA1 = { role = "free", short = "SBU1", note = "The plug's SBU1 directly (V_SBU domain, no over-voltage protection on rev A)." }
+PB3 = { role = "free", short = "IO7", note = "J101-1 through 255 Ω (5V6 Zener, 12 V TVS), tied to PB1 (NT201)." }
+PB1 = { role = "free", short = "IO7", note = "Tied to PB3 (NT201), J101-1." }
+PB4 = { role = "free", short = "IO8", note = "J101-2 through 255 Ω (5V6 Zener, 12 V TVS)." }
+PA2 = { role = "free", short = "IO9", note = "J101-3 through 255 Ω (5V6 Zener, 12 V TVS)." }
+PB12 = { role = "free", short = "IO10", note = "J101-4 through 255 Ω (5V6 Zener, 12 V TVS)." }
+PB13 = { role = "free", short = "IO5", note = "The plug's A2 (TX1+), ESD only, no series resistor." }
+PB5 = { role = "free", short = "IO6", note = "The plug's B2 (TX2+), ESD only, no series resistor." }
+PB8 = { role = "free", short = "SBU1_VT", note = "The plug's SBU1 through the TXS0102 U203 (PB2 high), tied to PB7 (NT203)." }
+PB7 = { role = "free", short = "SBU1_VT", note = "Tied to PB8 (NT203)." }
+PB9 = { role = "free", short = "SBU2_VT", note = "The plug's SBU2 through the TXS0102 U203 (PB2 high), tied to PB6 and PB11 (NT202, NT204)." }
+PB6 = { role = "free", short = "SBU2_VT", note = "Tied to PB9 (NT202)." }
+PB11 = { role = "free", short = "SBU2_VT", note = "Tied to PB9 (NT204)." }
+
+[[power.node]]
+id = "pc"
+label = "J401 receptacle VBUS\nfrom the PC · PA3 ÷ 7.17\n5K1 Rd on CC (rev A)"
+kind = "source"
+col = 0
+row = 0
+
+[[power.node]]
+id = "dut"
+label = "J501 plug VBUS\nfrom or to the device"
+kind = "source"
+col = 0
+row = 2
+
+[[power.node]]
+id = "u601"
+label = "U601 AOZ1375\nPA6 PWR_EN · PB0 current\nlimit only plug → PC"
+kind = "switch"
+col = 0
+row = 1
+
+[[power.node]]
+id = "q102"
+label = "Q102 switch\nPD1 5V_EN → J101-10"
+kind = "switch"
+col = 1
+row = 1
+
+[[power.node]]
+id = "or"
+label = "+VIN_SUM\nD801 / D802 diode-OR"
+kind = "rail"
+col = 1
+row = 0
+
+[[power.node]]
+id = "u801"
+label = "U801 AP64060 buck\n4.5–40 V in · 600 mA"
+kind = "regulator"
+col = 2
+row = 0
+
+[[power.node]]
+id = "3v3"
+label = "+3V3_DCDC\nMCU, hub, J101-5"
+kind = "rail"
+col = 3
+row = 0
+
+[[power.node]]
+id = "ldo"
+label = "U802 TLV70233\n'1V8' (3.3 V on rev A)\nV_SBU low option"
+kind = "regulator"
+col = 3
+row = 1
+
+[[power.edge]]
+from = "pc"
+to = "u601"
+
+[[power.edge]]
+from = "u601"
+to = "dut"
+
+[[power.edge]]
+from = "pc"
+to = "q102"
+
+[[power.edge]]
+from = "pc"
+to = "or"
+label = "D801"
+
+[[power.edge]]
+from = "dut"
+to = "or"
+label = "D802"
+
+[[power.edge]]
+from = "or"
+to = "u801"
+
+[[power.edge]]
+from = "u801"
+to = "3v3"
+
+[[power.edge]]
+from = "3v3"
+to = "ldo"
