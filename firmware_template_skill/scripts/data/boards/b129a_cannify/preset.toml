@@ -28,7 +28,7 @@ probe_name = "the ST-LINK on J2"
 probe_kind = "ST-LINK"             # the host crates' "the only ST-LINK attached"
 probe_kind_a = "an ST-LINK"
 template = true                    # a GitHub template repository: the README says how to make it yours
-repository = "https://github.com/vhrdtech/cannify_micro_template"  # the template's own repository (Cargo.toml)
+repository = "https://github.com/romixlab/cannify_micro_template"  # the template's own repository (Cargo.toml)
 
 # README pieces; longer ones are the readme*.md files next to this one
 [readme]

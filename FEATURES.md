@@ -335,10 +335,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   to 64 MHz with the FDCAN kernel on the HSE (as mcan's `hil/b129`), the LED D14 on PB14 (TIM15_CH1 breathe), ROM
   boot over J3, the board map from the KiCad board (`boardmap extract`, MAP-10 pin names) and README board sections.
   `[board] maker` (the README's link text, was a fixed "ST") and `[readme] reset_how` are new preset keys; board
-  README pieces take `{api}`. Matrix entry `g0cannify`; generated as cannify_micro_template. To do on hardware:
-  which ST-LINK sits on J2 (VID:PID), flash, the README's device steps, ROM boot over J3, the pin test of a bare board
-  (`--save`), the ES0548 read for HSE / PLL / USB on the silicon revision fitted; `just logo` in the repo (build-1
-  has no typst). CAN (FDCAN1 TX PD1, RX PB8, STB
+  README pieces take `{api}`. Matrix entry `g0cannify`; generated as cannify_micro_template (public,
+  romixlab/cannify_micro_template). Open hardware notes (a hobby board: landed without them, not a blocker): which
+  ST-LINK sits on J2 (VID:PID), flash, the README's device steps, ROM boot over J3, the pin test of a bare board
+  (`--save`), the ES0548 read for HSE / PLL / USB on the silicon revision fitted. CAN (FDCAN1 TX PD1, RX PB8, STB
   PC13 low) comes in with TPL-53 through a template upgrade of cannify_micro_template.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
