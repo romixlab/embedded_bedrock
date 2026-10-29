@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Fixed
+
+- boardmap extract reads the outline an enclosure footprint carries (`fp_line` / `fp_arc` on `Edge.Cuts`, KiCad 10
+  boards like rePort B200A) and `gr_rect` outlines; before, such a board failed with "no board outline" (MAP-1).
+
 ## [0.2.28] - 2026-10-29
 
 ### Added

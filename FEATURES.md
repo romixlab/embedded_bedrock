@@ -627,7 +627,8 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
 
 - ✅ **MAP-1 Geometry from a `.kicad_pcb`**: `boardmap extract` keeps the footprints of interest (connectors,
   jumpers, solder bridges, LEDs, buttons, chips, crystals) with their pads at absolute positions, nets and side,
-  and the outline (`Edge.Cuts`, arcs kept), as a small JSON the description points to; the vendor's file is not
+  and the outline (`Edge.Cuts` lines, arcs and rectangles, also those an enclosure footprint carries, as on rePort
+  B200A), as a small JSON the description points to; the vendor's file is not
   needed afterwards · `bedrock_board/src/geometry.rs`.
 - ✅ **MAP-2 Top and bottom views**: the outline, connectors pad by pad with a label each (net name, what the pin
   does, Arduino name, pin number) coloured by role (free, shared, taken, function, power rails), parts of

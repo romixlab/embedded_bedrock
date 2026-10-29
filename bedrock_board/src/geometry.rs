@@ -123,33 +123,27 @@ impl Geometry {
         for item in root.items() {
             match item.head() {
                 "footprint" => {
+                    footprint_edges(item, &mut outline);
                     if let Some((reference, fp)) = footprint(item)?
                         && keep(&reference)
                     {
                         footprints.insert(reference, fp);
                     }
                 }
-                "gr_line" | "gr_arc" if layer_of(item) == Some("Edge.Cuts") => {
-                    let pt = |name: &str| -> Option<[f64; 2]> {
-                        let c = item.child(name)?;
-                        Some([c.num(1)?, c.num(2)?])
-                    };
-                    let (Some(from), Some(to)) = (pt("start"), pt("end")) else {
-                        continue;
-                    };
-                    let mid = pt("mid").filter(|_| item.head() == "gr_arc");
-                    for p in [Some(from), Some(to), mid].into_iter().flatten() {
-                        bbox[0] = bbox[0].min(p[0]);
-                        bbox[1] = bbox[1].min(p[1]);
-                        bbox[2] = bbox[2].max(p[0]);
-                        bbox[3] = bbox[3].max(p[1]);
-                    }
-                    outline.push(match mid {
-                        Some(mid) => Segment::Arc { from, mid, to },
-                        None => Segment::Line { from, to },
-                    });
-                }
+                "gr_line" | "gr_arc" | "gr_rect" => edge(item, &|p| p, &mut outline),
                 _ => {}
+            }
+        }
+        for seg in &outline {
+            let pts = match seg {
+                Segment::Line { from, to } => vec![*from, *to],
+                Segment::Arc { from, mid, to } => vec![*from, *mid, *to],
+            };
+            for p in pts {
+                bbox[0] = bbox[0].min(p[0]);
+                bbox[1] = bbox[1].min(p[1]);
+                bbox[2] = bbox[2].max(p[0]);
+                bbox[3] = bbox[3].max(p[1]);
             }
         }
         if outline.is_empty() {
@@ -166,6 +160,63 @@ impl Geometry {
 
 fn layer_of(item: &Sx) -> Option<&str> {
     item.child("layer").and_then(|l| l.arg(1))
+}
+
+/// A footprint-local point in board coordinates. KiCad: y grows downwards, a positive angle turns counter-clockwise
+/// on screen.
+fn place(fx: f64, fy: f64, rot: f64, [px, py]: [f64; 2]) -> [f64; 2] {
+    let (sin, cos) = rot.to_radians().sin_cos();
+    [fx + px * cos + py * sin, fy - px * sin + py * cos]
+}
+
+/// The outline a footprint carries (an enclosure or panel footprint: fp_line / fp_arc on Edge.Cuts), in board
+/// coordinates.
+fn footprint_edges(item: &Sx, outline: &mut Vec<Segment>) {
+    let at = item.child("at");
+    let (fx, fy, rot) = (
+        at.and_then(|a| a.num(1)).unwrap_or(0.0),
+        at.and_then(|a| a.num(2)).unwrap_or(0.0),
+        at.and_then(|a| a.num(3)).unwrap_or(0.0),
+    );
+    let place = |p: [f64; 2]| place(fx, fy, rot, p);
+    for g in item.items() {
+        if matches!(g.head(), "fp_line" | "fp_arc" | "fp_rect") {
+            edge(g, &place, outline);
+        }
+    }
+}
+
+/// The outline segments of a line, arc or rectangle on Edge.Cuts, its points mapped by `place`.
+fn edge(item: &Sx, place: &dyn Fn([f64; 2]) -> [f64; 2], outline: &mut Vec<Segment>) {
+    if layer_of(item) != Some("Edge.Cuts") {
+        return;
+    }
+    let pt = |name: &str| -> Option<[f64; 2]> {
+        let c = item.child(name)?;
+        Some([c.num(1)?, c.num(2)?])
+    };
+    let (Some(from), Some(to)) = (pt("start"), pt("end")) else {
+        return;
+    };
+    if item.head().ends_with("_rect") {
+        let corners = [from, [to[0], from[1]], to, [from[0], to[1]]].map(place);
+        for i in 0..4 {
+            outline.push(Segment::Line {
+                from: corners[i],
+                to: corners[(i + 1) % 4],
+            });
+        }
+        return;
+    }
+    let (from, to) = (place(from), place(to));
+    outline.push(match pt("mid").filter(|_| item.head().ends_with("_arc")) {
+        Some(mid) => Segment::Arc {
+            from,
+            mid: place(mid),
+            to,
+        },
+        None => Segment::Line { from, to },
+    });
 }
 
 fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
@@ -192,7 +243,6 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
         at.num(2).unwrap_or(0.0),
         at.num(3).unwrap_or(0.0),
     );
-    let (sin, cos) = rot.to_radians().sin_cos();
     let mut pads = Vec::new();
     // every pad's `pinfunction`, for pin_names
     let mut functions: Vec<Option<String>> = Vec::new();
@@ -210,9 +260,7 @@ fn footprint(item: &Sx) -> Result<Option<(String, Footprint)>> {
             pat.num(2).unwrap_or(0.0),
             pat.num(3).unwrap_or(0.0),
         );
-        // KiCad: y grows downwards, a positive angle turns counter-clockwise on screen
-        let x = fx + px * cos + py * sin;
-        let y = fy - px * sin + py * cos;
+        let [x, y] = place(fx, fy, rot, [px, py]);
         let size = pad.child("size");
         let (mut w, mut h) = (
             size.and_then(|s| s.num(1)).unwrap_or(0.0),
@@ -419,6 +467,46 @@ mod tests {
             Some("Pin_1"),
             "{:?}",
             j.pads
+        );
+    }
+
+    #[test]
+    fn outline_from_an_enclosure_footprint() {
+        // KiCad 10 boards can take the outline from an enclosure footprint: fp_line / fp_arc on Edge.Cuts, local
+        // coordinates (rePort B200A's Hammond 1455C801)
+        let text = r#"(kicad_pcb
+  (footprint "lib:box" (layer "F.Cu") (at 100 130 90)
+    (property "Reference" "M1")
+    (fp_line (start 0 0) (end 10 0) (stroke (width 0.2)) (layer "Edge.Cuts"))
+    (fp_arc (start 10 0) (mid 11 1) (end 10 2) (layer "Edge.Cuts"))
+    (fp_line (start 0 0) (end 0 5) (layer "F.SilkS")))
+  (gr_rect (start 0 0) (end 4 3) (layer "Edge.Cuts"))
+)"#;
+        let dir = std::env::temp_dir().join(format!("bedrock_board_fp_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("t.kicad_pcb");
+        std::fs::write(&path, text).unwrap();
+        let geo = Geometry::extract(&path, "test", |_| false).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(
+            geo.outline.len(),
+            6,
+            "two from the footprint, four from the rectangle"
+        );
+        let Segment::Line { from, to } = &geo.outline[0] else {
+            panic!("{:?}", geo.outline[0]);
+        };
+        // turned 90°: local +x points up on screen (-y)
+        assert!((from[0] - 100.0).abs() < 1e-9 && (from[1] - 130.0).abs() < 1e-9);
+        assert!(
+            (to[0] - 100.0).abs() < 1e-9 && (to[1] - 120.0).abs() < 1e-9,
+            "{to:?}"
+        );
+        let want = [0.0, 0.0, 102.0, 130.0];
+        assert!(
+            geo.bbox.iter().zip(want).all(|(a, b)| (a - b).abs() < 1e-9),
+            "{:?}",
+            geo.bbox
         );
     }
 }

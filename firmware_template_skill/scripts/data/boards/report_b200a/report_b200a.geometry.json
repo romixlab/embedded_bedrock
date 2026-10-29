@@ -1,0 +1,3569 @@
+{
+  "source": "b200_re_port.kicad_pcb (rePort B200A, KiCad 10)",
+  "bbox": [
+    100.0,
+    79.5,
+    182.3,
+    130.0
+  ],
+  "outline": [
+    {
+      "kind": "line",
+      "from": [
+        100.0,
+        80.9
+      ],
+      "to": [
+        101.6,
+        80.9
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        100.0,
+        84.1
+      ],
+      "to": [
+        100.0,
+        80.9
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        100.0,
+        84.1
+      ],
+      "to": [
+        100.3,
+        84.1
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        100.0,
+        128.6
+      ],
+      "to": [
+        100.0,
+        89.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        100.0,
+        128.6
+      ],
+      "to": [
+        101.6,
+        128.6
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        100.3,
+        89.5
+      ],
+      "to": [
+        100.0,
+        89.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        101.3,
+        85.1
+      ],
+      "to": [
+        101.3,
+        88.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        102.6,
+        79.5
+      ],
+      "to": [
+        179.7,
+        79.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        102.6,
+        79.9
+      ],
+      "to": [
+        102.6,
+        79.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        102.6,
+        129.6
+      ],
+      "to": [
+        102.6,
+        130.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        179.7,
+        79.9
+      ],
+      "to": [
+        179.7,
+        79.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        179.7,
+        129.6
+      ],
+      "to": [
+        179.7,
+        130.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        179.7,
+        130.0
+      ],
+      "to": [
+        102.6,
+        130.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        182.3,
+        80.9
+      ],
+      "to": [
+        180.7,
+        80.9
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        182.3,
+        80.9
+      ],
+      "to": [
+        182.3,
+        128.6
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        182.3,
+        128.6
+      ],
+      "to": [
+        180.7,
+        128.6
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        100.3,
+        84.1
+      ],
+      "mid": [
+        101.007107,
+        84.392893
+      ],
+      "to": [
+        101.3,
+        85.1
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        101.3,
+        88.5
+      ],
+      "mid": [
+        101.007107,
+        89.20710700000001
+      ],
+      "to": [
+        100.3,
+        89.5
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        101.6,
+        128.6
+      ],
+      "mid": [
+        102.307107,
+        128.892893
+      ],
+      "to": [
+        102.6,
+        129.6
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        102.6,
+        79.9
+      ],
+      "mid": [
+        102.307107,
+        80.607107
+      ],
+      "to": [
+        101.6,
+        80.9
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        179.7,
+        129.6
+      ],
+      "mid": [
+        179.99289299999998,
+        128.892893
+      ],
+      "to": [
+        180.7,
+        128.6
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        180.7,
+        80.9
+      ],
+      "mid": [
+        179.99289299999998,
+        80.607107
+      ],
+      "to": [
+        179.7,
+        79.9
+      ]
+    }
+  ],
+  "footprints": {
+    "D102": {
+      "value": "LED",
+      "side": "F",
+      "at": [
+        103.71,
+        94.2
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            103.71,
+            94.9875
+          ],
+          "size": [
+            0.95,
+            0.875
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "LED_K",
+          "pin": "K_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            103.71,
+            93.41250000000001
+          ],
+          "size": [
+            0.95,
+            0.875
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "A_2"
+        }
+      ]
+    },
+    "J101": {
+      "value": "Conn_02x03_Odd_Even",
+      "side": "F",
+      "at": [
+        132.2,
+        84.965
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            129.2,
+            83.965
+          ],
+          "size": [
+            1.0,
+            1.0
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            129.2,
+            85.965
+          ],
+          "size": [
+            0.95,
+            0.95
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            135.2,
+            83.965
+          ],
+          "size": [
+            0.95,
+            0.95
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            135.2,
+            85.965
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            130.92999999999998,
+            85.60000000000001
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "SWDIO",
+          "pin": "Pin_1_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            130.92999999999998,
+            84.33
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "Pin_2_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            132.2,
+            85.60000000000001
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "SWCLK",
+          "pin": "Pin_3_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            132.2,
+            84.33
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "GND",
+          "pin": "Pin_4_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            133.47,
+            85.60000000000001
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "~{RST}",
+          "pin": "Pin_5_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            133.47,
+            84.33
+          ],
+          "size": [
+            0.8,
+            0.8
+          ],
+          "shape": "circle",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "Pin_6_6"
+        }
+      ]
+    },
+    "J102": {
+      "value": "Conn_02x15_Odd_Even",
+      "side": "F",
+      "at": [
+        170.5,
+        86.97
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            170.5,
+            86.97
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "+3V3_OUT",
+          "pin": "Pin_1_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            173.04,
+            86.97
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "ADPT_KIND_EXT",
+          "pin": "Pin_2_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            170.5,
+            89.51
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO0_A0_EXT",
+          "pin": "Pin_3_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            173.04,
+            89.51
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_4_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            170.5,
+            92.05
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO1_A1_EXT",
+          "pin": "Pin_5_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            173.04,
+            92.05
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_6_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            170.5,
+            94.59
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO2_A2_EXT",
+          "pin": "Pin_7_7"
+        },
+        {
+          "number": "8",
+          "at": [
+            173.04,
+            94.59
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_8_8"
+        },
+        {
+          "number": "9",
+          "at": [
+            170.5,
+            97.13
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO3_A3_EXT",
+          "pin": "Pin_9_9"
+        },
+        {
+          "number": "10",
+          "at": [
+            173.04,
+            97.13
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_10_10"
+        },
+        {
+          "number": "11",
+          "at": [
+            170.5,
+            99.67
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "RX_EXT",
+          "pin": "Pin_11_11"
+        },
+        {
+          "number": "12",
+          "at": [
+            173.04,
+            99.67
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "CTS_EXT",
+          "pin": "Pin_12_12"
+        },
+        {
+          "number": "13",
+          "at": [
+            170.5,
+            102.21
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "MISO_EXT",
+          "pin": "Pin_13_13"
+        },
+        {
+          "number": "14",
+          "at": [
+            173.04,
+            102.21
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_14_14"
+        },
+        {
+          "number": "15",
+          "at": [
+            170.5,
+            104.75
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "TX_EXT",
+          "pin": "Pin_15_15"
+        },
+        {
+          "number": "16",
+          "at": [
+            173.04,
+            104.75
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "SCK_EXT",
+          "pin": "Pin_16_16"
+        },
+        {
+          "number": "17",
+          "at": [
+            170.5,
+            107.28999999999999
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "MOSI_EXT",
+          "pin": "Pin_17_17"
+        },
+        {
+          "number": "18",
+          "at": [
+            173.04,
+            107.28999999999999
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_18_18"
+        },
+        {
+          "number": "19",
+          "at": [
+            170.5,
+            109.83
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "CS_EXT",
+          "pin": "Pin_19_19"
+        },
+        {
+          "number": "20",
+          "at": [
+            173.04,
+            109.83
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "RTS_EXT",
+          "pin": "Pin_20_20"
+        },
+        {
+          "number": "21",
+          "at": [
+            170.5,
+            112.37
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "SDA_EXT",
+          "pin": "Pin_21_21"
+        },
+        {
+          "number": "22",
+          "at": [
+            173.04,
+            112.37
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_22_22"
+        },
+        {
+          "number": "23",
+          "at": [
+            170.5,
+            114.91
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "SCL_EXT",
+          "pin": "Pin_23_23"
+        },
+        {
+          "number": "24",
+          "at": [
+            173.04,
+            114.91
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO4_EXT",
+          "pin": "Pin_24_24"
+        },
+        {
+          "number": "25",
+          "at": [
+            170.5,
+            117.45
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO5_EXT",
+          "pin": "Pin_25_25"
+        },
+        {
+          "number": "26",
+          "at": [
+            173.04,
+            117.45
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_26_26"
+        },
+        {
+          "number": "27",
+          "at": [
+            170.5,
+            119.99000000000001
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO6_EXT",
+          "pin": "Pin_27_27"
+        },
+        {
+          "number": "28",
+          "at": [
+            173.04,
+            119.99000000000001
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "IO7_EXT",
+          "pin": "Pin_28_28"
+        },
+        {
+          "number": "29",
+          "at": [
+            170.5,
+            122.53
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "+5VO_OUT",
+          "pin": "Pin_29_29"
+        },
+        {
+          "number": "30",
+          "at": [
+            173.04,
+            122.53
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_30_30"
+        }
+      ]
+    },
+    "J103": {
+      "value": "Conn_02x04_Odd_Even",
+      "side": "F",
+      "at": [
+        111.86,
+        124.61
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            111.86,
+            124.61
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "SYNC_INOUT_EXT",
+          "pin": "Pin_1_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            109.32,
+            124.61
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_2_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            111.86,
+            122.07
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "SYNC_INOUT_EXT",
+          "pin": "Pin_3_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            109.32,
+            122.07
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_4_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            111.86,
+            119.53
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "BOOT_EXT",
+          "pin": "Pin_5_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            109.32,
+            119.53
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_6_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            111.86,
+            116.99
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "VREF_EXT",
+          "pin": "Pin_7_7"
+        },
+        {
+          "number": "8",
+          "at": [
+            109.32,
+            116.99
+          ],
+          "size": [
+            1.7,
+            1.7
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": "GND",
+          "pin": "Pin_8_8"
+        }
+      ]
+    },
+    "J104": {
+      "value": "Micro_SD_Card_Det1",
+      "side": "F",
+      "at": [
+        122.3,
+        118.3375
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            117.35,
+            121.5875
+          ],
+          "size": [
+            1.0,
+            1.0
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            125.35,
+            121.5875
+          ],
+          "size": [
+            1.0,
+            1.0
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            124.55,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D2",
+          "pin": "DAT2_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            123.45,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D3",
+          "pin": "DAT3"
+        },
+        {
+          "number": "3",
+          "at": [
+            122.35,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_CMD",
+          "pin": "CMD_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            121.25,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_SD",
+          "pin": "VDD_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            120.14999999999999,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_CKJ",
+          "pin": "CLK_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            119.05,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VSS_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            117.95,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D0",
+          "pin": "DAT0_7"
+        },
+        {
+          "number": "8",
+          "at": [
+            116.85,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D1",
+          "pin": "DAT1_8"
+        },
+        {
+          "number": "9",
+          "at": [
+            115.75,
+            110.5875
+          ],
+          "size": [
+            0.7,
+            1.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_DET",
+          "pin": "DET_9"
+        },
+        {
+          "number": "10",
+          "at": [
+            114.55,
+            111.8875
+          ],
+          "size": [
+            1.2,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD_10"
+        },
+        {
+          "number": "10",
+          "at": [
+            114.55,
+            121.1875
+          ],
+          "size": [
+            1.2,
+            2.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD_10"
+        },
+        {
+          "number": "10",
+          "at": [
+            129.15,
+            111.6375
+          ],
+          "size": [
+            1.6,
+            1.5
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD_10"
+        },
+        {
+          "number": "10",
+          "at": [
+            130.05,
+            121.1875
+          ],
+          "size": [
+            1.2,
+            2.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "SHIELD_10"
+        }
+      ]
+    },
+    "J1601": {
+      "value": "USB_C_Receptacle_USB2.0_16P",
+      "side": "F",
+      "at": [
+        104.175,
+        104.75
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            106.78,
+            101.86
+          ],
+          "size": [
+            0.65,
+            0.65
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            106.78,
+            107.64
+          ],
+          "size": [
+            0.65,
+            0.65
+          ],
+          "shape": "circle",
+          "through": true,
+          "net": null
+        },
+        {
+          "number": "A1",
+          "at": [
+            107.855,
+            101.55
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_A1"
+        },
+        {
+          "number": "A4",
+          "at": [
+            107.855,
+            102.35
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_USBIN",
+          "pin": "VBUS_A4"
+        },
+        {
+          "number": "A5",
+          "at": [
+            107.855,
+            103.5
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/CC1",
+          "pin": "CC1_A5"
+        },
+        {
+          "number": "A6",
+          "at": [
+            107.855,
+            104.5
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J+",
+          "pin": "D+_A6"
+        },
+        {
+          "number": "A7",
+          "at": [
+            107.855,
+            105.0
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J-",
+          "pin": "D-_A7"
+        },
+        {
+          "number": "A8",
+          "at": [
+            107.855,
+            106.0
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J1601-SBU1-PadA8)",
+          "pin": "SBU1_A8"
+        },
+        {
+          "number": "A9",
+          "at": [
+            107.855,
+            107.15
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_USBIN",
+          "pin": "VBUS_A9"
+        },
+        {
+          "number": "A12",
+          "at": [
+            107.855,
+            107.95
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_A12"
+        },
+        {
+          "number": "B1",
+          "at": [
+            107.855,
+            107.95
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_B1"
+        },
+        {
+          "number": "B4",
+          "at": [
+            107.855,
+            107.15
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_USBIN",
+          "pin": "VBUS_B4"
+        },
+        {
+          "number": "B5",
+          "at": [
+            107.855,
+            106.5
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/CC2",
+          "pin": "CC2_B5"
+        },
+        {
+          "number": "B6",
+          "at": [
+            107.855,
+            105.5
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J+",
+          "pin": "D+_B6"
+        },
+        {
+          "number": "B7",
+          "at": [
+            107.855,
+            104.0
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/D_J-",
+          "pin": "D-_B7"
+        },
+        {
+          "number": "B8",
+          "at": [
+            107.855,
+            103.0
+          ],
+          "size": [
+            1.15,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(J1601-SBU2-PadB8)",
+          "pin": "SBU2_B8"
+        },
+        {
+          "number": "B9",
+          "at": [
+            107.855,
+            102.35
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_USBIN",
+          "pin": "VBUS_B9"
+        },
+        {
+          "number": "B12",
+          "at": [
+            107.855,
+            101.55
+          ],
+          "size": [
+            1.15,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_B12"
+        },
+        {
+          "number": "S1",
+          "at": [
+            107.28,
+            100.43
+          ],
+          "size": [
+            2.1,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD_S1"
+        },
+        {
+          "number": "S1",
+          "at": [
+            103.1,
+            100.43
+          ],
+          "size": [
+            1.8,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD_S1"
+        },
+        {
+          "number": "S1",
+          "at": [
+            107.28,
+            109.07
+          ],
+          "size": [
+            2.1,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD_S1"
+        },
+        {
+          "number": "S1",
+          "at": [
+            103.1,
+            109.07
+          ],
+          "size": [
+            1.8,
+            1.0
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND",
+          "pin": "SHIELD_S1"
+        }
+      ]
+    },
+    "SW101": {
+      "value": "SW_Push_Shielded",
+      "side": "F",
+      "at": [
+        100.692,
+        86.8
+      ],
+      "rot": -90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            105.69999999999999,
+            84.55
+          ],
+          "size": [
+            5.0,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USER_BTN",
+          "pin": "1_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            105.69999999999999,
+            89.05
+          ],
+          "size": [
+            5.0,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "2_2"
+        },
+        {
+          "number": "SH",
+          "at": [
+            101.94999999999999,
+            82.89999999999999
+          ],
+          "size": [
+            1.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "B_SH"
+        },
+        {
+          "number": "SH",
+          "at": [
+            101.94999999999999,
+            90.7
+          ],
+          "size": [
+            1.5,
+            1.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "B_SH"
+        }
+      ]
+    },
+    "U1601": {
+      "value": "RT5760",
+      "side": "F",
+      "at": [
+        113.276371,
+        83.6
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            112.591371,
+            83.1
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/3V3_FB",
+          "pin": "FB_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            112.591371,
+            83.6
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            112.591371,
+            84.1
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_USBIN",
+          "pin": "VIN_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            113.961371,
+            84.1
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/3V3_SW",
+          "pin": "SW_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            113.961371,
+            83.6
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+5V0_USBIN",
+          "pin": "EN_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            113.961371,
+            83.1
+          ],
+          "size": [
+            0.7,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/USB/3V3_PG",
+          "pin": "PG_6"
+        }
+      ]
+    },
+    "U1602": {
+      "value": "TLV70233_SOT23-5",
+      "side": "F",
+      "at": [
+        132.6375,
+        97.1
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            133.77499999999998,
+            98.05
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IN_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            133.77499999999998,
+            97.1
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            133.77499999999998,
+            96.14999999999999
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "EN_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            131.5,
+            96.14999999999999
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U1602-NC-Pad4)",
+          "pin": "NC_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            131.5,
+            98.05
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+1V8_LDO",
+          "pin": "OUT_5"
+        }
+      ]
+    },
+    "U1801": {
+      "value": "RP2350B",
+      "side": "F",
+      "at": [
+        119.7,
+        93.95
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            118.57000000000001,
+            95.08
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            119.7,
+            95.08
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            120.83,
+            95.08
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            118.57000000000001,
+            93.95
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            119.7,
+            93.95
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            120.83,
+            93.95
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            118.57000000000001,
+            92.82000000000001
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            119.7,
+            92.82000000000001
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            120.83,
+            92.82000000000001
+          ],
+          "size": [
+            0.91,
+            0.91
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            115.9,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_CK",
+          "pin": "GPIO4_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            116.3,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_CMD",
+          "pin": "GPIO5_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            116.7,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D3",
+          "pin": "GPIO6_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            117.10000000000001,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D2",
+          "pin": "GPIO7_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            117.5,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_5"
+        },
+        {
+          "number": "6",
+          "at": [
+            117.9,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/SDA",
+          "pin": "GPIO8_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            118.3,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/SCL",
+          "pin": "GPIO9_7"
+        },
+        {
+          "number": "8",
+          "at": [
+            118.7,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/DIR7",
+          "pin": "GPIO10_8"
+        },
+        {
+          "number": "9",
+          "at": [
+            119.10000000000001,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/DIR6",
+          "pin": "GPIO11_9"
+        },
+        {
+          "number": "10",
+          "at": [
+            119.5,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+1V1_CORE",
+          "pin": "DVDD_10"
+        },
+        {
+          "number": "11",
+          "at": [
+            119.9,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO0",
+          "pin": "GPIO12_11"
+        },
+        {
+          "number": "12",
+          "at": [
+            120.3,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO1",
+          "pin": "GPIO13_12"
+        },
+        {
+          "number": "13",
+          "at": [
+            120.7,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO2",
+          "pin": "GPIO14_13"
+        },
+        {
+          "number": "14",
+          "at": [
+            121.10000000000001,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO3",
+          "pin": "GPIO15_14"
+        },
+        {
+          "number": "15",
+          "at": [
+            121.5,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_15"
+        },
+        {
+          "number": "16",
+          "at": [
+            121.9,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO5",
+          "pin": "GPIO16_16"
+        },
+        {
+          "number": "17",
+          "at": [
+            122.3,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO4",
+          "pin": "GPIO17_17"
+        },
+        {
+          "number": "18",
+          "at": [
+            122.7,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO6",
+          "pin": "GPIO18_18"
+        },
+        {
+          "number": "19",
+          "at": [
+            123.10000000000001,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/IO7",
+          "pin": "GPIO19_19"
+        },
+        {
+          "number": "20",
+          "at": [
+            123.5,
+            98.9
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/DIR4",
+          "pin": "GPIO20_20"
+        },
+        {
+          "number": "21",
+          "at": [
+            124.65,
+            97.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/DIR5",
+          "pin": "GPIO21_21"
+        },
+        {
+          "number": "22",
+          "at": [
+            124.65,
+            97.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USER_BTN",
+          "pin": "GPIO22_22"
+        },
+        {
+          "number": "23",
+          "at": [
+            124.65,
+            96.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/Shift Reg/EXP.LATCH",
+          "pin": "GPIO23_23"
+        },
+        {
+          "number": "24",
+          "at": [
+            124.65,
+            96.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_24"
+        },
+        {
+          "number": "25",
+          "at": [
+            124.65,
+            96.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U1801-GPIO24-Pad25)",
+          "pin": "GPIO24_25"
+        },
+        {
+          "number": "26",
+          "at": [
+            124.65,
+            95.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/ADPT_HPULL",
+          "pin": "GPIO25_26"
+        },
+        {
+          "number": "27",
+          "at": [
+            124.65,
+            95.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SCK",
+          "pin": "GPIO26_27"
+        },
+        {
+          "number": "28",
+          "at": [
+            124.65,
+            94.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/Shift Reg/EXP.~{OE}",
+          "pin": "GPIO27_28"
+        },
+        {
+          "number": "29",
+          "at": [
+            124.65,
+            94.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_29"
+        },
+        {
+          "number": "30",
+          "at": [
+            124.65,
+            94.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/XIN",
+          "pin": "XIN_30"
+        },
+        {
+          "number": "31",
+          "at": [
+            124.65,
+            93.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/XOUT_L",
+          "pin": "XOUT_31"
+        },
+        {
+          "number": "32",
+          "at": [
+            124.65,
+            93.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+1V1_CORE",
+          "pin": "DVDD_32"
+        },
+        {
+          "number": "33",
+          "at": [
+            124.65,
+            92.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SWCLK",
+          "pin": "SWCLK_33"
+        },
+        {
+          "number": "34",
+          "at": [
+            124.65,
+            92.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SWDIO",
+          "pin": "SWDIO_34"
+        },
+        {
+          "number": "35",
+          "at": [
+            124.65,
+            92.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "~{RST}",
+          "pin": "RUN_35"
+        },
+        {
+          "number": "36",
+          "at": [
+            124.65,
+            91.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/EXP_DI",
+          "pin": "GPIO28_36"
+        },
+        {
+          "number": "37",
+          "at": [
+            124.65,
+            91.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/Shift Reg/EXP.CLK",
+          "pin": "GPIO29_37"
+        },
+        {
+          "number": "38",
+          "at": [
+            124.65,
+            90.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/CTS",
+          "pin": "GPIO30_38"
+        },
+        {
+          "number": "39",
+          "at": [
+            124.65,
+            90.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/RTS",
+          "pin": "GPIO31_39"
+        },
+        {
+          "number": "40",
+          "at": [
+            124.65,
+            90.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/TX",
+          "pin": "GPIO32_40"
+        },
+        {
+          "number": "41",
+          "at": [
+            123.5,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_41"
+        },
+        {
+          "number": "42",
+          "at": [
+            123.10000000000001,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/RX",
+          "pin": "GPIO33_42"
+        },
+        {
+          "number": "43",
+          "at": [
+            122.7,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/SCK",
+          "pin": "GPIO34_43"
+        },
+        {
+          "number": "44",
+          "at": [
+            122.3,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/MOSI",
+          "pin": "GPIO35_44"
+        },
+        {
+          "number": "45",
+          "at": [
+            121.9,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/MISO",
+          "pin": "GPIO36_45"
+        },
+        {
+          "number": "46",
+          "at": [
+            121.5,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/CS",
+          "pin": "GPIO37_46"
+        },
+        {
+          "number": "47",
+          "at": [
+            121.10000000000001,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "LED",
+          "pin": "GPIO38_47"
+        },
+        {
+          "number": "48",
+          "at": [
+            120.7,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/CTS",
+          "pin": "GPIO39_48"
+        },
+        {
+          "number": "49",
+          "at": [
+            120.3,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B0_A",
+          "pin": "GPIO40"
+        },
+        {
+          "number": "50",
+          "at": [
+            119.9,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_50"
+        },
+        {
+          "number": "51",
+          "at": [
+            119.5,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+1V1_CORE",
+          "pin": "DVDD_51"
+        },
+        {
+          "number": "52",
+          "at": [
+            119.10000000000001,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B2_A",
+          "pin": "GPIO41"
+        },
+        {
+          "number": "53",
+          "at": [
+            118.7,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B5_A",
+          "pin": "GPIO42"
+        },
+        {
+          "number": "54",
+          "at": [
+            118.3,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B4_A",
+          "pin": "GPIO43"
+        },
+        {
+          "number": "55",
+          "at": [
+            117.9,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B6_A",
+          "pin": "GPIO44"
+        },
+        {
+          "number": "56",
+          "at": [
+            117.5,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B3_A",
+          "pin": "GPIO45"
+        },
+        {
+          "number": "57",
+          "at": [
+            117.10000000000001,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/B1_A",
+          "pin": "GPIO46"
+        },
+        {
+          "number": "58",
+          "at": [
+            116.7,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/ADPT_KIND",
+          "pin": "GPIO47"
+        },
+        {
+          "number": "59",
+          "at": [
+            116.3,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+3V3_VDDA",
+          "pin": "ADC_AVDD_59"
+        },
+        {
+          "number": "60",
+          "at": [
+            115.9,
+            89.0
+          ],
+          "size": [
+            0.2,
+            0.8
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_60"
+        },
+        {
+          "number": "61",
+          "at": [
+            114.75,
+            90.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VREG_AVDD_61"
+        },
+        {
+          "number": "62",
+          "at": [
+            114.75,
+            90.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "VREG_PGND_62"
+        },
+        {
+          "number": "63",
+          "at": [
+            114.75,
+            90.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U1801-VREG_LX-Pad63)",
+          "pin": "VREG_LX_63"
+        },
+        {
+          "number": "64",
+          "at": [
+            114.75,
+            91.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VREG_VIN_64"
+        },
+        {
+          "number": "65",
+          "at": [
+            114.75,
+            91.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/R_FB",
+          "pin": "VREG_FB_65"
+        },
+        {
+          "number": "66",
+          "at": [
+            114.75,
+            92.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USB_DL-",
+          "pin": "USB_DM_66"
+        },
+        {
+          "number": "67",
+          "at": [
+            114.75,
+            92.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/USB_DL+",
+          "pin": "USB_DP_67"
+        },
+        {
+          "number": "68",
+          "at": [
+            114.75,
+            92.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "USB_OTP_VDD_68"
+        },
+        {
+          "number": "69",
+          "at": [
+            114.75,
+            93.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "QSPI_IOVDD_69"
+        },
+        {
+          "number": "70",
+          "at": [
+            114.75,
+            93.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D3",
+          "pin": "QSPI_SD3_70"
+        },
+        {
+          "number": "71",
+          "at": [
+            114.75,
+            94.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_CLK",
+          "pin": "QSPI_SCLK_71"
+        },
+        {
+          "number": "72",
+          "at": [
+            114.75,
+            94.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D0",
+          "pin": "QSPI_SD0_72"
+        },
+        {
+          "number": "73",
+          "at": [
+            114.75,
+            94.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D2",
+          "pin": "QSPI_SD2_73"
+        },
+        {
+          "number": "74",
+          "at": [
+            114.75,
+            95.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D1",
+          "pin": "QSPI_SD1_74"
+        },
+        {
+          "number": "75",
+          "at": [
+            114.75,
+            95.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/~{QSPI_CS}",
+          "pin": "~{QSPI_SS}_75"
+        },
+        {
+          "number": "76",
+          "at": [
+            114.75,
+            96.15
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "IOVDD_76"
+        },
+        {
+          "number": "77",
+          "at": [
+            114.75,
+            96.55
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/Frontend/SYNC_IO",
+          "pin": "GPIO0_77"
+        },
+        {
+          "number": "78",
+          "at": [
+            114.75,
+            96.95
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_DET",
+          "pin": "GPIO1_78"
+        },
+        {
+          "number": "79",
+          "at": [
+            114.75,
+            97.35000000000001
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D0",
+          "pin": "GPIO2_79"
+        },
+        {
+          "number": "80",
+          "at": [
+            114.75,
+            97.75
+          ],
+          "size": [
+            0.8,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SDMMC_D1",
+          "pin": "GPIO3_80"
+        },
+        {
+          "number": "81",
+          "at": [
+            119.7,
+            93.95
+          ],
+          "size": [
+            3.4,
+            3.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_81"
+        }
+      ]
+    },
+    "U1802": {
+      "value": "BY25Q40BSMIG(R)",
+      "side": "F",
+      "at": [
+        110.6,
+        96.3
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            110.6,
+            96.3
+          ],
+          "size": [
+            1.29,
+            0.16
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            109.85,
+            97.725
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/~{QSPI_CS}",
+          "pin": "~{CS}_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            110.35,
+            97.725
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D1",
+          "pin": "DO"
+        },
+        {
+          "number": "3",
+          "at": [
+            110.85,
+            97.725
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D2",
+          "pin": "~{WP}"
+        },
+        {
+          "number": "4",
+          "at": [
+            111.35,
+            97.725
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            111.35,
+            94.875
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D0",
+          "pin": "DI"
+        },
+        {
+          "number": "6",
+          "at": [
+            110.85,
+            94.875
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_CLK",
+          "pin": "SCLK_6"
+        },
+        {
+          "number": "7",
+          "at": [
+            110.35,
+            94.875
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/QSPI_D3",
+          "pin": "~{HOLD}"
+        },
+        {
+          "number": "8",
+          "at": [
+            109.85,
+            94.875
+          ],
+          "size": [
+            0.25,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VCC_8"
+        },
+        {
+          "number": "9",
+          "at": [
+            110.6,
+            96.3
+          ],
+          "size": [
+            1.6,
+            0.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "EP_9"
+        }
+      ]
+    },
+    "U1803": {
+      "value": "TLV74311PDBVR",
+      "side": "F",
+      "at": [
+        129.5,
+        89.1
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            130.6375,
+            90.05
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "VIN_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            130.6375,
+            89.1
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "GND_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            130.6375,
+            88.14999999999999
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "+3V3_DCDC",
+          "pin": "EN_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            128.3625,
+            88.14999999999999
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "unconnected-(U1803-NC-Pad4)",
+          "pin": "NC_4"
+        },
+        {
+          "number": "5",
+          "at": [
+            128.3625,
+            90.05
+          ],
+          "size": [
+            1.325,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/+1V1_CORE",
+          "pin": "VOUT_5"
+        }
+      ]
+    },
+    "Y1801": {
+      "value": "12 MHz",
+      "side": "F",
+      "at": [
+        133.3,
+        92.55
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            134.15,
+            93.64999999999999
+          ],
+          "size": [
+            1.2,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/XIN",
+          "pin": "1_1"
+        },
+        {
+          "number": "2",
+          "at": [
+            134.15,
+            91.45
+          ],
+          "size": [
+            1.2,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "G_2"
+        },
+        {
+          "number": "3",
+          "at": [
+            132.45000000000002,
+            91.45
+          ],
+          "size": [
+            1.2,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "/MCU/XOUT",
+          "pin": "3_3"
+        },
+        {
+          "number": "4",
+          "at": [
+            132.45000000000002,
+            93.64999999999999
+          ],
+          "size": [
+            1.2,
+            1.4
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND",
+          "pin": "G_4"
+        }
+      ]
+    }
+  }
+}
