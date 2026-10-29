@@ -426,6 +426,21 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   stepping fitted (`variant`, BOM orders A4), the button with the E9 read. Not done: the RP2350's own regulator
   left on (VREG_LX unconnected; the datasheet's "approximately 400 µA until it's shut down" by VREG HIZ). B200B
   (mid-Nov 2026) gets a revision of the preset.
+- 🧪 **TPL-62 Board preset `pico`**: the Raspberry Pi Pico (R3), RP2040, 2 MiB W25Q16JVUXIQ, in
+  `scripts/data/boards/pico/`: answers (WireWeaver over the board's own USB, settings, counters, the host crates
+  with the CLI `pico`, `--pins board` on GP0-22/26-28, probe `2e8a:000c` for a Raspberry Pi Debug Probe on the
+  unpopulated 3-pin SWD header), GP25 breathing on PWM slice 4 channel B (TPL-57), variant from the bootrom version
+  (TPL-55), boot and dfu through BOOTSEL (TPL-25, TPL-56), clock sync on embassy-rp's TIMER (TPL-50), the board map
+  from Raspberry Pi's public Pico R3 design files (Allegro `.brd`, imported with `kicad-cli pcb import` on another
+  PC; its net names (`GPIO0`, `GPIO26_ADC0`, ...) renamed to `GP0`.. with `boardmap extract --rename`, MAP-13; the
+  importer's one footprint for both castellated edges split by hand into two, `H1` / `H2`, so each edge gets its
+  own label column) and README board sections. `[pins]` marks GP23 (the RT6150 regulator's mode select), GP24
+  (VBUS sense) and GP29 (VSYS/3 on ADC3) `taken`, besides the LED (GP25); no user button (BOOTSEL only, wired to
+  the flash's chip-select, not a GPIO) and no CYW43 (that is the Pico W, not this preset). Matrix entry `pico`;
+  generated as pico_template (public is Roman's call, pending the G0 review). Hardware notes, parked for Roman: the
+  Debug Probe's actual VID:PID (`2e8a:000c` is Raspberry Pi's documented default, unconfirmed on this board), flash
+  and the README's device steps, BOOTSEL / PICOBOOT update over USB, the pin test of a bare board (`--save` against
+  `pico-pins-test.toml`).
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
@@ -665,6 +680,12 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   wiring picture in a docs page.
 - ✅ **MAP-9 `boardmap --version` names the git SHA**: version, SHA (`-dirty`) and build time from a small
   `build.rs` (AGENTS.md *Versions*), so `tpm install` takes it: `bedrock_board_cli/build.rs`.
+- ✅ **MAP-13 `extract --rename` for a vendor's own pin naming**: a whole-string regex rename (`$1` groups,
+  repeatable, first match wins) applied to every pad's net and pin right after extraction, before anything else
+  sees them. Raspberry Pi's own Pico schematic names its GPIOs `GPIO0`, `GPIO26_ADC0`, ...; the Pico preset's
+  `extract --rename '^GPIO(\d+)(_ADC\d)?$=GP$1'` turns them into `GP0`.. (embassy-rp's and `--pins board`'s
+  convention) before the board description or the generator ever see them · `Geometry::rename_nets`,
+  `bedrock_board_cli`'s `extract` subcommand.
 - ✅ **MAP-10 MCU pins named from KiCad's pin functions**: on a board whose nets carry functional labels (`LED`,
   `FDCAN_TX`, B129A CANnify), `extract` keeps each pad's `pinfunction` (`PA11/PA9` → `PA11`) and drops the
   root-sheet `/` of KiCad's net names; the pad's pin name joins its net, so the views colour it by the pin's role

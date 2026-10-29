@@ -9,6 +9,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `boardmap extract --rename PATTERN=REPLACEMENT` renames a pad's net/pin by a whole-string regex (`$1` groups,
+  repeatable, first match wins) before anything else sees it, for a vendor schematic that names a pin its own way:
+  Raspberry Pi's own Pico design calls its GPIOs `GPIO0`, `GPIO26_ADC0`, ...; `--rename '^GPIO(\d+)(_ADC\d)?$=GP$1'`
+  turns them into the `GP0`.. names the rest of boardmap and the generator expect (MAP-13).
+
 ## [0.2.29] - 2026-10-29
 
 ### Added

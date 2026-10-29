@@ -47,6 +47,10 @@ enum Cmd {
         /// repeatable): `--pin-names '^GPIO(\d+)(_\d+)?$=GP$1'` turns `GPIO38_47` into `GP38`
         #[arg(long, value_name = "REGEX=REPLACEMENT")]
         pin_names: Vec<String>,
+        /// Rename a pad's net/pin, before anything else: PATTERN=REPLACEMENT (a whole-string regex, $1 groups;
+        /// repeatable, first match wins), for a vendor schematic that names a pin its own way
+        #[arg(long = "rename", value_name = "PATTERN=REPLACEMENT")]
+        renames: Vec<String>,
     },
     /// Render the pictures and the pin table from a description
     Render {
@@ -71,6 +75,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             prefixes,
             source,
             pin_names,
+            renames,
         } => {
             let prefixes = prefixes.unwrap_or_else(|| {
                 ["CN", "J", "JP", "SB", "LD", "D", "B", "SW", "U", "X", "Y"]
@@ -87,6 +92,17 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                             .is_some_and(|c| c.is_ascii_digit())
                 })
             })?;
+            let renames = renames
+                .iter()
+                .map(|r| {
+                    r.split_once('=')
+                        .map(|(p, s)| (p.to_string(), s.to_string()))
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("--rename {r:?}: expected PATTERN=REPLACEMENT")
+                        })
+                })
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            geo.rename_nets(&renames)?;
             for rule in &pin_names {
                 let (re, with) = rule
                     .rsplit_once('=')

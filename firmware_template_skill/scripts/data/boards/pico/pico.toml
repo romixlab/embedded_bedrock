@@ -1,0 +1,142 @@
+# Board description for boardmap (bedrock_board): what to draw of the Raspberry Pi Pico (R3) and what every pin
+# does. Facts: Raspberry Pi's public Pico R3 design files (RP-008379-DS, Cadence Allegro, 19 Jan 2020; schematic PDF,
+# BOM, the .brd imported with `kicad-cli pcb import` on 10 Oct 2026), the RP2040 datasheet. The schematic's own net
+# names are GPIO0.. (GPIO26_ADC0, ...); `pin_nets` below and `boardmap extract --rename '^GPIO(\d+)(_ADC\d)?$=GP$1'`
+# turn them into GP0.. before anything here sees them, to match embassy-rp and the rest of the generator. The
+# importer lumps every castellated edge pad into one footprint "J0" (Pico has no real connector there): split by
+# hand into two synthetic refs, H1 (left edge, GP0-GP15) and H2 (right edge, GP16-GP28 and the supply pins), so each
+# side gets its own label column; neither name is printed on the board.
+
+[board]
+name = "Raspberry Pi Pico"
+pcb = "Pico R3"
+mcu = "RP2040 (U1, QFN-56)"
+mcu_ref = "U1"
+geometry = "pico.geometry.json"
+pin_nets = "^GP\\d+$"
+sources = ["Raspberry Pi Pico R3 public design files, RP-008379-DS (19 Jan 2020)", "RP2040 datasheet"]
+scale = 14.0
+
+[[view.connector]]
+ref = "H1"
+label = "GP0-GP15"
+labels = "left"
+
+[[view.connector]]
+ref = "H2"
+label = "GP16-GP28, 3V3, VSYS, VBUS"
+labels = "right"
+
+[[view.connector]]
+ref = "J2"
+label = "J2 SWD (unpopulated)"
+labels = "inside_right"
+
+[[view.part]]
+ref = "U1"
+label = "U1\nRP2040"
+kind = "mcu"
+
+[[view.part]]
+ref = "U3"
+label = "U3 W25Q16JVUXIQ\n2 MiB QSPI flash"
+kind = "chip"
+dy = -10
+
+[[view.part]]
+ref = "U2"
+label = "U2 RT6150B-33\nSMPS/LDO"
+kind = "chip"
+dy = 10
+
+[[view.part]]
+ref = "X1"
+label = "X1 12 MHz"
+kind = "other"
+dy = -8
+
+[[view.part]]
+ref = "SW1"
+label = "SW1 BOOTSEL"
+kind = "button"
+dx = -14
+
+[[view.part]]
+ref = "J1"
+label = "J1 USB micro-B"
+kind = "usb"
+dy = 10
+
+[aliases]
+GP26 = "ADC0"
+GP27 = "ADC1"
+GP28 = "ADC2"
+GP29 = "ADC3"
+
+[pins]
+GP23 = { role = "taken", short = "SMPS MODE", note = "RT6150's MODE select (U2-7, with R8 and test point TP4): the RP2040 datasheet's power group says low picks the SMPS's power-save mode at light load, high forces continuous PWM for lower output ripple (handy right before an ADC read). Not on a header." }
+GP24 = { role = "taken", short = "VBUS SENSE", note = "Reads VBUS through R1 / R10: high while a USB cable supplies power. Not on a header." }
+GP25 = { role = "taken", short = "LED", note = "The board's only LED, through R3: high lights it. Not on a header." }
+GP29 = { role = "taken", short = "VSYS/3 (ADC3)", note = "ADC3 reads VSYS through a divide-by-3 gated by Q1 (a FET), so sampling it draws no quiescent current the rest of the time. Not on a header." }
+
+[[power.node]]
+id = "usb"
+label = "J1 USB micro-B\nVBUS · 500 mA once enumerated"
+kind = "source"
+col = 0
+row = 0
+
+[[power.node]]
+id = "vsysin"
+label = "VSYS header pin\n1.8-5.5 V, e.g. a battery"
+kind = "source"
+col = 0
+row = 1
+
+[[power.node]]
+id = "d1"
+label = "D1 Schottky\nVBUS -> VSYS"
+kind = "switch"
+col = 1
+row = 0
+
+[[power.node]]
+id = "vsys"
+label = "VSYS"
+kind = "rail"
+col = 2
+row = 0
+
+[[power.node]]
+id = "u2"
+label = "U2 RT6150B-33\nbuck-boost SMPS/LDO"
+kind = "regulator"
+col = 3
+row = 0
+
+[[power.node]]
+id = "3v3"
+label = "3V3\nheader pin 36 · U1 VDDIO/VDD3V3"
+kind = "rail"
+col = 4
+row = 0
+
+[[power.edge]]
+from = "usb"
+to = "d1"
+
+[[power.edge]]
+from = "d1"
+to = "vsys"
+
+[[power.edge]]
+from = "vsysin"
+to = "vsys"
+
+[[power.edge]]
+from = "vsys"
+to = "u2"
+
+[[power.edge]]
+from = "u2"
+to = "3v3"

@@ -176,6 +176,32 @@ impl Geometry {
             footprints,
         })
     }
+
+    /// Renames every pad's net and pin (in every footprint) by the first `(pattern, replacement)` rule that
+    /// matches it whole (`^...$` is the caller's job; `$1` groups work), for a vendor schematic that names a pin
+    /// its own way (Raspberry Pi's own designs call RP2040/2350 GPIOs `GPIO0`, `GPIO26_ADC0`, ...; the rest of the
+    /// generator expects `GP0`, `GP26`: `--rename '^GPIO(\d+)(_ADC\d)?$=GP$1'`).
+    pub fn rename_nets(&mut self, rules: &[(String, String)]) -> Result<()> {
+        let rules: Vec<(regex_lite::Regex, &str)> = rules
+            .iter()
+            .map(|(pat, repl)| Ok((regex_lite::Regex::new(pat)?, repl.as_str())))
+            .collect::<Result<_>>()?;
+        let apply = |s: &str| -> String {
+            for (re, repl) in &rules {
+                if re.is_match(s) {
+                    return re.replace(s, *repl).into_owned();
+                }
+            }
+            s.to_string()
+        };
+        for fp in self.footprints.values_mut() {
+            for pad in &mut fp.pads {
+                pad.net = pad.net.take().map(|n| apply(&n));
+                pad.pin = pad.pin.take().map(|n| apply(&n));
+            }
+        }
+        Ok(())
+    }
 }
 
 fn layer_of(item: &Sx) -> Option<&str> {

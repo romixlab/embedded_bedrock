@@ -84,6 +84,16 @@ or options; purely internal refactors only need a line under the next version.
 - `matrix` (TPL-46): entries that render `docs/board/` with this checkout's `boardmap` take turns; two at once
   relinked the binary under each other ("Text file busy", g0board's pins test failed). No change to generated output.
 
+- Board preset `pico` (TPL-62): `--board pico` generates firmware for the Raspberry Pi Pico (R3), RP2040, 2 MiB
+  W25Q16JVUXIQ: WireWeaver over the board's own USB, settings, counters, the host crates with the CLI `pico`,
+  `pins` on every free GPIO of the two edges (GP0-22, GP26-28), variant from the bootrom silicon revision, boot and
+  dfu through BOOTSEL, GP25 breathing on PWM slice 4 channel B, clock sync on embassy-rp's TIMER, the board map
+  from Raspberry Pi's public Pico R3 design files and README board sections. The probe defaults to `2e8a:000c` (a
+  Raspberry Pi Debug Probe), to be confirmed on hardware; there is no user button (BOOTSEL only) and no reset
+  button (a power cycle). Matrix entry `pico`.
+
+  Upgrade notes: none for existing firmware; no other preset's output is affected.
+
 - `matrix` (TPL-46): a `--host` entry with a board preset renders `docs/board/` with this checkout's `boardmap`
   when none is on PATH, and reports a missing `boardmap` as a failed `board` step instead of crashing the run. No
   change to generated output.

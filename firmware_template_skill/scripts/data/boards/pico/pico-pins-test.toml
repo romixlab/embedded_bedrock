@@ -1,0 +1,8 @@
+# Pin test of a bare Pico (R3, nothing on the two edges), for `ww --api API pins test --plan
+# docs/board/pico-pins-test.toml` (README "Pins"). Every free pin floats: the board has no pull on any of them and
+# nothing between two of them (schematic). To be confirmed with `--save` on a board.
+target = "pins"
+
+[[point]]
+names = ["GP0..=GP22", "GP26..=GP28"]
+expect = "floating"

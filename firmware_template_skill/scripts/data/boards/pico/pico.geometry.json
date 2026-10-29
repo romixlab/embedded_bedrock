@@ -1,0 +1,2184 @@
+{
+  "source": "Raspberry Pi's public Pico R3 design files (Allegro, imported with kicad-cli), board-netlist.py",
+  "bbox": [
+    0.0,
+    -51.0,
+    21.0,
+    0.0
+  ],
+  "outline": [
+    {
+      "kind": "line",
+      "from": [
+        0.0,
+        -50.5
+      ],
+      "to": [
+        0.0,
+        -0.5
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        0.0,
+        -50.5
+      ],
+      "mid": [
+        0.146447,
+        -50.853553
+      ],
+      "to": [
+        0.5,
+        -51.0
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        0.5,
+        0.0
+      ],
+      "mid": [
+        0.146447,
+        -0.146447
+      ],
+      "to": [
+        0.0,
+        -0.5
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        0.5,
+        0.0
+      ],
+      "to": [
+        20.5,
+        0.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        20.5,
+        -51.0
+      ],
+      "to": [
+        0.5,
+        -51.0
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        20.5,
+        -51.0
+      ],
+      "mid": [
+        20.853553,
+        -50.853553
+      ],
+      "to": [
+        21.0,
+        -50.5
+      ]
+    },
+    {
+      "kind": "arc",
+      "from": [
+        21.0,
+        -0.5
+      ],
+      "mid": [
+        20.853553,
+        -0.146447
+      ],
+      "to": [
+        20.5,
+        0.0
+      ]
+    },
+    {
+      "kind": "line",
+      "from": [
+        21.0,
+        -0.5
+      ],
+      "to": [
+        21.0,
+        -50.5
+      ]
+    }
+  ],
+  "footprints": {
+    "D1": {
+      "value": "",
+      "side": "F",
+      "at": [
+        16.5,
+        -44.4
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            16.5,
+            -42.85
+          ],
+          "size": [
+            1.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "VSYS"
+        },
+        {
+          "number": "2",
+          "at": [
+            16.5,
+            -45.949999999999996
+          ],
+          "size": [
+            1.3,
+            1.15
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "VBUS"
+        }
+      ]
+    },
+    "D2": {
+      "value": "",
+      "side": "F",
+      "at": [
+        4.8,
+        -46.2
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            4.05,
+            -46.2
+          ],
+          "size": [
+            0.85,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "2",
+          "at": [
+            5.55,
+            -46.2
+          ],
+          "size": [
+            0.85,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "N1283798"
+        }
+      ]
+    },
+    "J1": {
+      "value": "",
+      "side": "F",
+      "at": [
+        10.5,
+        -49.5
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "",
+          "at": [
+            11.46,
+            -49.55
+          ],
+          "size": [
+            1.42,
+            2.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "",
+          "at": [
+            9.54,
+            -49.55
+          ],
+          "size": [
+            1.42,
+            2.1
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": null
+        },
+        {
+          "number": "1",
+          "at": [
+            11.8,
+            -46.675
+          ],
+          "size": [
+            0.4,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "VBUS"
+        },
+        {
+          "number": "2",
+          "at": [
+            11.15,
+            -46.675
+          ],
+          "size": [
+            0.4,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB_DM"
+        },
+        {
+          "number": "3",
+          "at": [
+            10.5,
+            -46.675
+          ],
+          "size": [
+            0.4,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB_DP"
+        },
+        {
+          "number": "4",
+          "at": [
+            9.85,
+            -46.675
+          ],
+          "size": [
+            0.4,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net_1"
+        },
+        {
+          "number": "5",
+          "at": [
+            9.2,
+            -46.675
+          ],
+          "size": [
+            0.4,
+            1.75
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        }
+      ]
+    },
+    "J2": {
+      "value": "",
+      "side": "F",
+      "at": [
+        10.5,
+        -1.6
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            7.96,
+            -1.6
+          ],
+          "size": [
+            1.6,
+            3.2
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "SWCLK"
+        },
+        {
+          "number": "2",
+          "at": [
+            10.5,
+            -1.6
+          ],
+          "size": [
+            1.6,
+            3.2
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            13.04,
+            -1.6
+          ],
+          "size": [
+            1.6,
+            3.2
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "SWDIO"
+        }
+      ]
+    },
+    "SW1": {
+      "value": "",
+      "side": "F",
+      "at": [
+        7.0,
+        -39.0
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            5.925,
+            -36.925
+          ],
+          "size": [
+            0.65,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "N1327876"
+        },
+        {
+          "number": "2",
+          "at": [
+            5.925,
+            -41.075
+          ],
+          "size": [
+            0.65,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "N1327876"
+        },
+        {
+          "number": "3",
+          "at": [
+            8.075,
+            -36.925
+          ],
+          "size": [
+            0.65,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "4",
+          "at": [
+            8.075,
+            -41.075
+          ],
+          "size": [
+            0.65,
+            1.05
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        }
+      ]
+    },
+    "U1": {
+      "value": "",
+      "side": "F",
+      "at": [
+        10.5,
+        -25.0
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            7.15,
+            -27.6
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "2",
+          "at": [
+            7.15,
+            -27.2
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP0"
+        },
+        {
+          "number": "3",
+          "at": [
+            7.15,
+            -26.8
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP1"
+        },
+        {
+          "number": "4",
+          "at": [
+            7.15,
+            -26.4
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP2"
+        },
+        {
+          "number": "5",
+          "at": [
+            7.15,
+            -26.0
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP3"
+        },
+        {
+          "number": "6",
+          "at": [
+            7.15,
+            -25.6
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP4"
+        },
+        {
+          "number": "7",
+          "at": [
+            7.15,
+            -25.2
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP5"
+        },
+        {
+          "number": "8",
+          "at": [
+            7.15,
+            -24.8
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP6"
+        },
+        {
+          "number": "9",
+          "at": [
+            7.15,
+            -24.4
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP7"
+        },
+        {
+          "number": "10",
+          "at": [
+            7.15,
+            -24.0
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "11",
+          "at": [
+            7.15,
+            -23.6
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP8"
+        },
+        {
+          "number": "12",
+          "at": [
+            7.15,
+            -23.2
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP9"
+        },
+        {
+          "number": "13",
+          "at": [
+            7.15,
+            -22.8
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP10"
+        },
+        {
+          "number": "14",
+          "at": [
+            7.15,
+            -22.4
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP11"
+        },
+        {
+          "number": "15",
+          "at": [
+            7.9,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP12"
+        },
+        {
+          "number": "16",
+          "at": [
+            8.3,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP13"
+        },
+        {
+          "number": "17",
+          "at": [
+            8.7,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP14"
+        },
+        {
+          "number": "18",
+          "at": [
+            9.1,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP15"
+        },
+        {
+          "number": "19",
+          "at": [
+            9.5,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "20",
+          "at": [
+            9.9,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "XIN"
+        },
+        {
+          "number": "21",
+          "at": [
+            10.3,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "XOUT"
+        },
+        {
+          "number": "22",
+          "at": [
+            10.7,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "23",
+          "at": [
+            11.1,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "1V1"
+        },
+        {
+          "number": "24",
+          "at": [
+            11.5,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SWCLK"
+        },
+        {
+          "number": "25",
+          "at": [
+            11.9,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "SWDIO"
+        },
+        {
+          "number": "26",
+          "at": [
+            12.3,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "RUN"
+        },
+        {
+          "number": "27",
+          "at": [
+            12.7,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP16"
+        },
+        {
+          "number": "28",
+          "at": [
+            13.1,
+            -21.65
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP17"
+        },
+        {
+          "number": "29",
+          "at": [
+            13.85,
+            -22.4
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP18"
+        },
+        {
+          "number": "30",
+          "at": [
+            13.85,
+            -22.8
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP19"
+        },
+        {
+          "number": "31",
+          "at": [
+            13.85,
+            -23.2
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP20"
+        },
+        {
+          "number": "32",
+          "at": [
+            13.85,
+            -23.6
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP21"
+        },
+        {
+          "number": "33",
+          "at": [
+            13.85,
+            -24.0
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "34",
+          "at": [
+            13.85,
+            -24.4
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP22"
+        },
+        {
+          "number": "35",
+          "at": [
+            13.85,
+            -24.8
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP23"
+        },
+        {
+          "number": "36",
+          "at": [
+            13.85,
+            -25.2
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP24"
+        },
+        {
+          "number": "37",
+          "at": [
+            13.85,
+            -25.6
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP25"
+        },
+        {
+          "number": "38",
+          "at": [
+            13.85,
+            -26.0
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP26"
+        },
+        {
+          "number": "39",
+          "at": [
+            13.85,
+            -26.4
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP27"
+        },
+        {
+          "number": "40",
+          "at": [
+            13.85,
+            -26.8
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP28"
+        },
+        {
+          "number": "41",
+          "at": [
+            13.85,
+            -27.2
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP29"
+        },
+        {
+          "number": "42",
+          "at": [
+            13.85,
+            -27.6
+          ],
+          "size": [
+            0.6,
+            0.23
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "43",
+          "at": [
+            13.1,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "ADC_AVDD"
+        },
+        {
+          "number": "44",
+          "at": [
+            12.7,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "45",
+          "at": [
+            12.3,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "1V1"
+        },
+        {
+          "number": "46",
+          "at": [
+            11.9,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB_DMX"
+        },
+        {
+          "number": "47",
+          "at": [
+            11.5,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "USB_DPX"
+        },
+        {
+          "number": "48",
+          "at": [
+            11.1,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "49",
+          "at": [
+            10.7,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "50",
+          "at": [
+            10.3,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "1V1"
+        },
+        {
+          "number": "51",
+          "at": [
+            9.9,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD3"
+        },
+        {
+          "number": "52",
+          "at": [
+            9.5,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SCLK"
+        },
+        {
+          "number": "53",
+          "at": [
+            9.1,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD0"
+        },
+        {
+          "number": "54",
+          "at": [
+            8.7,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD2"
+        },
+        {
+          "number": "55",
+          "at": [
+            8.3,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD1"
+        },
+        {
+          "number": "56",
+          "at": [
+            7.9,
+            -28.35
+          ],
+          "size": [
+            0.23,
+            0.6
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SS"
+        },
+        {
+          "number": "57",
+          "at": [
+            10.5,
+            -25.0
+          ],
+          "size": [
+            3.2,
+            3.2
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        }
+      ]
+    },
+    "U2": {
+      "value": "",
+      "side": "F",
+      "at": [
+        13.4,
+        -40.1
+      ],
+      "rot": 180.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            14.55,
+            -39.1
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "2",
+          "at": [
+            14.55,
+            -39.6
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "N1248352"
+        },
+        {
+          "number": "3",
+          "at": [
+            14.55,
+            -40.1
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "4",
+          "at": [
+            14.55,
+            -40.6
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "N1248345"
+        },
+        {
+          "number": "5",
+          "at": [
+            14.55,
+            -41.1
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "VSYS"
+        },
+        {
+          "number": "6",
+          "at": [
+            12.25,
+            -41.1
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3_EN"
+        },
+        {
+          "number": "7",
+          "at": [
+            12.25,
+            -40.6
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GP23"
+        },
+        {
+          "number": "8",
+          "at": [
+            12.25,
+            -40.1
+          ],
+          "size": [
+            0.6,
+            0.3
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "VSYS"
+        },
+        {
+          "number": "9",
+          "at": [
+            12.25,
+            -39.6
+          ],
+          "size": [
+            0.6,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "10",
+          "at": [
+            12.25,
+            -39.1
+          ],
+          "size": [
+            0.6,
+            0.28
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "11",
+          "at": [
+            13.4,
+            -40.1
+          ],
+          "size": [
+            1.25,
+            2.0
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        }
+      ]
+    },
+    "U3": {
+      "value": "",
+      "side": "F",
+      "at": [
+        6.7,
+        -31.9
+      ],
+      "rot": 90.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            5.95,
+            -30.5
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SS"
+        },
+        {
+          "number": "2",
+          "at": [
+            6.45,
+            -30.5
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD1"
+        },
+        {
+          "number": "3",
+          "at": [
+            6.95,
+            -30.5
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD2"
+        },
+        {
+          "number": "4",
+          "at": [
+            7.45,
+            -30.5
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "5",
+          "at": [
+            7.45,
+            -33.3
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD0"
+        },
+        {
+          "number": "6",
+          "at": [
+            6.95,
+            -33.3
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SCLK"
+        },
+        {
+          "number": "7",
+          "at": [
+            6.45,
+            -33.3
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "QSPI_SD3"
+        },
+        {
+          "number": "8",
+          "at": [
+            5.95,
+            -33.3
+          ],
+          "size": [
+            0.3,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "3V3"
+        },
+        {
+          "number": "9",
+          "at": [
+            6.7,
+            -31.9
+          ],
+          "size": [
+            1.65,
+            0.25
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "Net_7"
+        }
+      ]
+    },
+    "X1": {
+      "value": "",
+      "side": "F",
+      "at": [
+        8.2,
+        -16.45
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            7.1,
+            -15.649999999999999
+          ],
+          "size": [
+            1.4,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "XIN"
+        },
+        {
+          "number": "2",
+          "at": [
+            9.299999999999999,
+            -15.649999999999999
+          ],
+          "size": [
+            1.4,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        },
+        {
+          "number": "3",
+          "at": [
+            9.299999999999999,
+            -17.25
+          ],
+          "size": [
+            1.4,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "XR"
+        },
+        {
+          "number": "4",
+          "at": [
+            7.1,
+            -17.25
+          ],
+          "size": [
+            1.4,
+            0.9
+          ],
+          "shape": "rect",
+          "through": false,
+          "net": "GND"
+        }
+      ]
+    },
+    "H1": {
+      "value": "",
+      "side": "F",
+      "at": [
+        10.5,
+        -25.5
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "1",
+          "at": [
+            1.6099999999999994,
+            -49.629999999999995
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP0"
+        },
+        {
+          "number": "2",
+          "at": [
+            1.6099999999999994,
+            -47.09
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP1"
+        },
+        {
+          "number": "3",
+          "at": [
+            1.6099999999999994,
+            -44.55
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "4",
+          "at": [
+            1.6099999999999994,
+            -42.010000000000005
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP2"
+        },
+        {
+          "number": "5",
+          "at": [
+            1.6099999999999994,
+            -39.47
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP3"
+        },
+        {
+          "number": "6",
+          "at": [
+            1.6099999999999994,
+            -36.93
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP4"
+        },
+        {
+          "number": "7",
+          "at": [
+            1.6099999999999994,
+            -34.39
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP5"
+        },
+        {
+          "number": "8",
+          "at": [
+            1.6099999999999994,
+            -31.85
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "9",
+          "at": [
+            1.6099999999999994,
+            -29.31
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP6"
+        },
+        {
+          "number": "10",
+          "at": [
+            1.6099999999999994,
+            -26.77
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP7"
+        },
+        {
+          "number": "11",
+          "at": [
+            1.6099999999999994,
+            -24.23
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP8"
+        },
+        {
+          "number": "12",
+          "at": [
+            1.6099999999999994,
+            -21.69
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP9"
+        },
+        {
+          "number": "13",
+          "at": [
+            1.6099999999999994,
+            -19.15
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "14",
+          "at": [
+            1.6099999999999994,
+            -16.61
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP10"
+        },
+        {
+          "number": "15",
+          "at": [
+            1.6099999999999994,
+            -14.07
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP11"
+        },
+        {
+          "number": "16",
+          "at": [
+            1.6099999999999994,
+            -11.53
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP12"
+        },
+        {
+          "number": "17",
+          "at": [
+            1.6099999999999994,
+            -8.989999999999998
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP13"
+        },
+        {
+          "number": "18",
+          "at": [
+            1.6099999999999994,
+            -6.449999999999999
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "19",
+          "at": [
+            1.6099999999999994,
+            -3.91
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP14"
+        },
+        {
+          "number": "20",
+          "at": [
+            1.6099999999999994,
+            -1.370000000000001
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP15"
+        }
+      ]
+    },
+    "H2": {
+      "value": "",
+      "side": "F",
+      "at": [
+        10.5,
+        -25.5
+      ],
+      "rot": 0.0,
+      "pads": [
+        {
+          "number": "21",
+          "at": [
+            19.39,
+            -1.370000000000001
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP16"
+        },
+        {
+          "number": "22",
+          "at": [
+            19.39,
+            -3.91
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP17"
+        },
+        {
+          "number": "23",
+          "at": [
+            19.39,
+            -6.449999999999999
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "24",
+          "at": [
+            19.39,
+            -8.989999999999998
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP18"
+        },
+        {
+          "number": "25",
+          "at": [
+            19.39,
+            -11.53
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP19"
+        },
+        {
+          "number": "26",
+          "at": [
+            19.39,
+            -14.07
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP20"
+        },
+        {
+          "number": "27",
+          "at": [
+            19.39,
+            -16.61
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP21"
+        },
+        {
+          "number": "28",
+          "at": [
+            19.39,
+            -19.15
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "29",
+          "at": [
+            19.39,
+            -21.69
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP22"
+        },
+        {
+          "number": "30",
+          "at": [
+            19.39,
+            -24.23
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "RUN"
+        },
+        {
+          "number": "31",
+          "at": [
+            19.39,
+            -26.77
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP26"
+        },
+        {
+          "number": "32",
+          "at": [
+            19.39,
+            -29.31
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP27"
+        },
+        {
+          "number": "33",
+          "at": [
+            19.39,
+            -31.85
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "34",
+          "at": [
+            19.39,
+            -34.39
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GP28"
+        },
+        {
+          "number": "35",
+          "at": [
+            19.39,
+            -36.93
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "ADC_VREF"
+        },
+        {
+          "number": "36",
+          "at": [
+            19.39,
+            -39.47
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "3V3"
+        },
+        {
+          "number": "37",
+          "at": [
+            19.39,
+            -42.010000000000005
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "3V3_EN"
+        },
+        {
+          "number": "38",
+          "at": [
+            19.39,
+            -44.55
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "GND"
+        },
+        {
+          "number": "39",
+          "at": [
+            19.39,
+            -47.09
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "VSYS"
+        },
+        {
+          "number": "40",
+          "at": [
+            19.39,
+            -49.629999999999995
+          ],
+          "size": [
+            3.2,
+            1.6
+          ],
+          "shape": "rect",
+          "through": true,
+          "net": "VBUS"
+        }
+      ]
+    }
+  }
+}

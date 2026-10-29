@@ -349,6 +349,13 @@ tags = ["ww", "host"]
 note = "the B200A rePort preset (TPL-61): RP2350B with 512 KiB flash, [bring_up] (595 chain), [[buttons]] with the RP2350-E9 read, --pins board with read-only pins, settings in the last 4 sectors; the project named report as report_template, which caught the Python accessor `report()` clashing with Device.report"
 
 [[entry]]
+name = "pico"
+args = ["--board", "pico"]
+builds = ["dev"]
+tags = ["ww", "host"]
+note = "the Raspberry Pi Pico preset (TPL-62): USB, GP25 LED breathe, settings, variant, BOOTSEL boot/dfu, clock sync, --pins board on GP0-22/26-28; firmware/src equals pico_template's"
+
+[[entry]]
 name = "rp2040w"
 args = ["--chip", "rp2040", "--wire-weaver", "--counters", "--bootloader"]
 builds = ["dev", "bootloader"]

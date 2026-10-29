@@ -1,0 +1,64 @@
+# Board preset for `bedrock_gen.py new --board pico`: the Raspberry Pi Pico (R3), RP2040, 2 MiB W25Q16JVUXIQ. No
+# user button (BOOTSEL only), no CYW43 (that is the Pico W, not covered here: TPL-62). Facts: Raspberry Pi's public
+# Pico R3 design files (RP-008379-DS, 19 Jan 2020), the RP2040 datasheet.
+
+[answers]
+chip = "rp2040"
+led = "PIN_25"        # GP25, the only LED; high lights it
+probe = "2e8a:000c"   # a Raspberry Pi Debug Probe on the 3-pin SWD header (J2 on the schematic, unpopulated)
+settings = true
+counters = true
+wire_weaver = true
+ww_transport = "usb"  # the board's own micro-B USB
+host = true
+cli_name = "pico"
+pins = "board"        # PinDiag on every free GPIO of the board map, [pins] below
+
+[board]
+title = "Raspberry Pi Pico"        # prose and the README title
+maker = "Raspberry Pi"             # the README's link text: "Raspberry Pi Pico board"
+product = "Raspberry Pi Pico"      # ww_board_info product
+revision = "R3"                    # Pico R3
+url = "https://www.raspberrypi.com/products/raspberry-pi-pico/"
+core = "Cortex-M0+ (dual-core; this firmware runs on core 0)"
+client = "Pico"                    # the client library's typed board type
+probe_name = "a Raspberry Pi Debug Probe on the SWD header"
+probe_kind = "Debug Probe"         # the host crates' "the only Debug Probe attached"
+probe_kind_a = "a Debug Probe"
+template = true                    # a GitHub template repository: the README says how to make it yours
+repository = "https://github.com/romixlab/pico_template"  # the template's own repository (Cargo.toml)
+
+# README pieces; longer ones are the readme*.md files next to this one
+[readme]
+plural = "Picos"                   # "with two Picos attached"
+variant = "RP2040 B0, B1 or B2"
+reset_how = "unplug and plug the USB cable back in, or BOOTSEL + RUN to the ROM bootloader"
+first_item = """VBUS sense (GP24, high while the USB cable supplies power) as a
+   readable property is a good first one."""
+
+# the API's Variant type (device.variant): the chip the board carries
+[variant]
+doc = """every Pico carries an RP2040, what can differ is its silicon
+revision (B0, B1 or B2, from the boot ROM version) and the 2 MiB W25Q16JVUXIQ flash chip next to it."""
+
+[logo]
+board = "Pico"
+chip = "RP2040"
+subtitle = "WireWeaver firmware template"
+
+# docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from the board's KiCad
+# file (the Allegro .brd Raspberry Pi publishes, imported with kicad-cli)
+[boardmap]
+toml = "pico.toml"
+geometry = "pico.geometry.json"
+
+# src/led.rs and src/ww/leds.rs: why `OnlyEssential` hides the user LED too
+[led]
+essential = "the board has no separate power LED; GP25 is its only one"
+
+# src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
+# it names every pin the board map takes) and the pin test of a bare board (docs/board/)
+[pins]
+left_out = "the LED (GP25), the switching regulator's power-save mode select (GP23), the VBUS sense divider (GP24) or the VSYS/3 monitor (GP29)"
+readme_left_out = "The LED, the regulator's mode select, the VBUS sense divider and the VSYS monitor"
+test = "pico-pins-test.toml"
