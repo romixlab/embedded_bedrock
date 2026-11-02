@@ -445,6 +445,13 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   Debug Probe's actual VID:PID (`2e8a:000c` is Raspberry Pi's documented default, unconfirmed on this board), flash
   and the README's device steps, BOOTSEL / PICOBOOT update over USB, the pin test of a bare board (`--save` against
   `pico-pins-test.toml`).
+- ✅ **TPL-72 `device.board.set_reworks` omitted**: wire_weaver STD-98 adds the optional
+  `BoardInfo::set_reworks`; the generated `ww.rs.j2` adds it to `omit` next to `device.board.REWORKS` (neither is
+  served), so generated firmware keeps building once STD-98 lands on wire_weaver main. Verified by regenerating a
+  firmware from `bedrock_fw.json` and diffing the rendered `omit` list; `rustfmt --edition 2024 --check` passes on
+  it. The tested matrix (`uv run bedrock_gen.py matrix`) wasn't run: it builds every preset, and hit an unrelated,
+  pre-existing exact_units git-HEAD / wire_weaver_core incompatibility in every downstream repo this was checked
+  against (vb135_fdcan_iso_usb_fw, typec_dongle, donguru_template), unrelated to this change.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).

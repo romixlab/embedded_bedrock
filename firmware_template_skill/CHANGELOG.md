@@ -10,6 +10,13 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- `device.board.set_reworks` omitted (TPL-72): wire_weaver STD-98 adds the optional `BoardInfo::set_reworks`;
+  `app/src/ww.rs.j2` adds it to `omit` next to `device.board.REWORKS` (neither is served by generated firmware).
+
+  Upgrade notes: regenerate `src/ww.rs` (or add `"device.board.set_reworks"` to its `omit` by hand); otherwise the
+  firmware stops building once STD-98 lands on wire_weaver main. No answers/options involved, no hardware test
+  needed.
+
 - Board preset `donguru_b153a` (TPL-60): `--board donguru_b153a` generates firmware for the Donguru B153A
   (STM32G0B1CET6, LQFP48, rev A): WireWeaver over the MCU's own USB behind the board's USB2512B hub, settings,
   counters, backup counters, the host crates with the CLI `donguru`, `pins` on every free pin (J101's I/O lines, the
