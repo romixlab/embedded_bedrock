@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.34] - 2026-11-03
+
 ### Added
 
 - Detail pages for the catalogue's PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF and TEST categories
