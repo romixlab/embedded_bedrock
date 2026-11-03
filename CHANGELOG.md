@@ -71,6 +71,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   hands the value to: `unwrap`, indexing, division, overflow, `assert!`, `todo!`), HOST-3 (a host value's unknown
   variant mapped to a default instead of refused), HOST-5 (a truncated or oversized request refused without a
   counter) (LINT-6).
+- `bedrock-lint` counter checks: CNT-1 (an `Err` arm, `if let Err`, `is_err()`, `let Ok(..) else` or a select's
+  timer arm that neither counts, hands the error on nor panics) and CNT-2 (`&mut`, `as_mut_ptr` or a u64 pointer on
+  the `cnt` counter buffers) (LINT-6).
 
 ## [0.2.35] - 2026-11-03
 

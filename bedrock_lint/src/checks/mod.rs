@@ -8,6 +8,8 @@ mod cfg_5;
 mod cfg_6;
 mod cfg_7;
 mod clk_2;
+mod cnt_1;
+mod cnt_2;
 mod cnt_3;
 mod dma_1;
 mod err_3;

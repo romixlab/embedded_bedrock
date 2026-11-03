@@ -1,0 +1,43 @@
+checks = ["CNT-1", "CNT-2"]
+
+# only logged
+[[finding]]
+check = "CNT-1"
+at = "src/main.rs:11"
+confidence = "estimate"
+
+[[finding]]
+check = "CNT-1"
+at = "src/main.rs:13"
+confidence = "estimate"
+
+[[finding]]
+check = "CNT-1"
+at = "src/main.rs:14"
+confidence = "estimate"
+
+# the timer arm of a select
+[[finding]]
+check = "CNT-1"
+at = "src/main.rs:19"
+confidence = "estimate"
+
+# handled by code that may count
+[[finding]]
+check = "CNT-1"
+at = "src/main.rs:21"
+confidence = "candidate"
+
+[[finding]]
+check = "CNT-1"
+at = "src/main.rs:34"
+confidence = "estimate"
+waived = true
+
+[[finding]]
+check = "CNT-2"
+at = "src/main.rs:44"
+
+[[finding]]
+check = "CNT-2"
+at = "src/main.rs:45"
