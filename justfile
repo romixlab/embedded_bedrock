@@ -22,9 +22,9 @@ test-all:
 
 # Format check, clippy on the host, and bedrock_led / bedrock_sync / bedrock_can as no_std firmware code for the
 # Cortex-M0+, bedrock_rom_boot for the G0 (Cortex-M0+) and the H7 (Cortex-M7), bedrock_clocks_rt for the H7
-# --locked: a gate recipe must only check, never rewrite Cargo.lock (the `../wire_weaver` path patch in
-# .cargo/config.toml makes the lock sensitive to whatever commit that sibling is at; without --locked a moved
-# sibling makes cargo silently relock instead of erroring)
+# --locked: a gate recipe must only check, never rewrite Cargo.lock (WireWeaver comes from git at the commit the lock
+# names; a lock left in the `just dev-local` state names sibling paths and fails here instead of building against
+# whatever the sibling holds)
 lint:
     cargo fmt --all --check
     cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -43,3 +43,16 @@ install:
     cargo build --profile deploy --locked -p bedrock_lint_cli
     # With tpm on PATH: tpm install (kept-releases stack, one copy on PATH); otherwise: cargo install
     if command -v tpm >/dev/null; then tpm install target/deploy/bedrock-lint; else cargo install --locked --path bedrock_lint_cli; fi
+
+# Build against the sibling WireWeaver checkout ../wire_weaver (co-development): .cargo/sibling-patch.toml becomes
+# the gitignored .cargo/config.toml. Cargo.lock then names the sibling paths: don't commit it in this state.
+dev-local:
+    cp .cargo/sibling-patch.toml .cargo/config.toml
+    cargo tree --workspace -i wire_weaver --target all --depth 0
+
+# Back to WireWeaver from git, the committed setup. Cargo relocks to wire_weaver's main if the lock lost its git
+# pin under dev-local: `git diff Cargo.lock` shows whether the pin moved (commit it as a bump, or check out the lock).
+dev-git:
+    rm -f .cargo/config.toml
+    cargo tree --workspace -i wire_weaver --target all --depth 0
+    git diff --stat Cargo.lock

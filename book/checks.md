@@ -250,6 +250,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="cfg-6"></a>⚠️ `CFG-6` thumbv6m without `portable-atomic` + `critical-section` where a crate needs CAS (`static_cell`) · check: cfg easy · chip: M0+ · 📖 [detail](checks/cfg.md#cfg-6) · <!-- mcan P2 -->
 - <a id="cfg-7"></a>⚠️ `CFG-7` Dirty build flashed without a mark: build info carries the git SHA and a dirty flag, read back from the device · check: cfg easy · 📖 [detail](checks/cfg.md#cfg-7) · <!-- notion; embedded_bedrock BLD -->
 - <a id="cfg-8"></a>⚠️ `CFG-8` Git consumers not built: a dependency from git (not path) breaks where path builds pass · check: cfg mid · 📖 [detail](checks/cfg.md#cfg-8) · <!-- embedded_bedrock TPL-43, BLD-8 -->
+- <a id="cfg-9"></a>⚠️ `CFG-9` Committed path dependency or `[patch]` to a sibling checkout (`../wire_weaver`): the lock follows each PC's sibling and `--locked` passes on one PC, fails on the next; take it by git, pinned in Cargo.lock · check: cfg easy · 📖 [detail](checks/cfg.md#cfg-9) · <!-- embedded_bedrock BLD-10; vb135_fdcan_iso_usb_fw 0.2.8 -->
 
 ### ⚡ PERF - Speed
 - <a id="perf-1"></a>⚠️ `PERF-1` Speed or size claims without numbers at the opt-level that ships, in their own units with the clock (instructions in QEMU, cycles with DWT) · check: review · 📖 [detail](checks/perf.md#perf-1) · <!-- tpm firmware pack; wire_weaver AGENTS.md -->

@@ -167,3 +167,22 @@ be consumed standalone.
 **Detection:** check: cfg mid — CI running outside the workspace's own `.cargo/config.toml` patch (a fresh
 clone, or `cargo package`'s isolated build) is the natural place this surfaces; a lint can at least check that a
 generated API crate ships a `Cargo.lock`.
+
+## <a id="cfg-9"></a>`CFG-9` — a committed path dependency or `[patch]` to a sibling checkout
+
+A dependency taken by `path = "../wire_weaver/..."`, or a committed `.cargo/config.toml` / `[patch]` that redirects
+a git source to the sibling checkout, has no commit in `Cargo.lock`: the lock records whatever that sibling held
+when it was last written. The same commit of the repo then builds different code on different PCs, and a `--locked`
+lint or test passes on one PC and fails on the next, depending only on which commit that PC's sibling is at.
+
+**Example:** on 3 Nov 2026 embedded_bedrock's land gate built with the sibling wire_weaver at `c440491e` while the
+lock was made against `a39ddd9`, and another PC's older sibling took exact_units at git HEAD instead of the pinned
+revision, so `--locked` failed there too (BLD-10, P2528#3nov-1235); vb135_fdcan_iso_usb_fw 0.2.8 hit the same.
+
+**Fix:** committed manifests take such crates by git only and `Cargo.lock` pins the commit; bump with
+`cargo update -p CRATE` and commit the lock. Keep co-development explicit and uncommitted: a gitignored
+`.cargo/config.toml` made from a committed template (`just dev-local`, `just dev-git`), never a committed patch.
+
+**Detection:** check: cfg easy — a lint over every `Cargo.toml` and committed `.cargo/config.toml` flags a `path`
+that leaves the repository (`../`) and any `[patch]` entry with a `path` outside it; a clean clone with no siblings
+running the `--locked` recipes is the end-to-end test.

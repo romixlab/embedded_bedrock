@@ -15,6 +15,12 @@ What works and what is planned (firmware template, device contract, build info, 
 for the template, [CHANGELOG.md](CHANGELOG.md) for the crates. Rules for contributors and agents:
 [AGENTS.md](AGENTS.md).
 
+## Building
+
+WireWeaver comes from git, pinned to a commit in `Cargo.lock`, so `cargo build --locked` needs no other checkout.
+To build against a local WireWeaver checkout next to this one (`../wire_weaver`), run `just dev-local`; `just
+dev-git` switches back. Details in [AGENTS.md](AGENTS.md#wireweaver-dependency).
+
 The firmware template is the `firmware-template` agent skill in [firmware_template_skill/](firmware_template_skill/SKILL.md).
 
 ### Template disclaimer

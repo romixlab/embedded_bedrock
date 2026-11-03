@@ -100,10 +100,27 @@ so a missing entry means work nobody sees.
 - `book/` — notes on build info, counters, blink codes and common issues; the firmware check catalogue `checks.md`
   (detail pages in `checks/`) with the review and bring-up checklists condensed from it (FEATURES.md area `LINT`).
 
-WireWeaver crates come from git (root `Cargo.toml`), patched to the sibling `../wire_weaver` for local work in
-`.cargo/config.toml` (add a crate to both). Fix WireWeaver problems there, with its own
-FEATURES.md and CHANGELOG, rather than working around them here. The GUI side of the debug tool lives in RockFace;
-items here are for the scriptable CLI and the shared crates.
+Fix WireWeaver problems in WireWeaver, with its own FEATURES.md and CHANGELOG, rather than working around them
+here (see *WireWeaver dependency*). The GUI side of the debug tool lives in RockFace; items here are for the
+scriptable CLI and the shared crates.
+
+## WireWeaver dependency
+
+WireWeaver crates (and exact_units, at the revision WireWeaver itself takes) come from git only: the root
+`Cargo.toml` names the source, `Cargo.lock` pins the commit. Nothing committed points at a sibling checkout, so a
+`--locked` build gives the same result on every PC, with or without `../wire_weaver` next to this checkout, and at
+whatever commit that sibling is (BLD-10).
+
+- **Bump WireWeaver:** `cargo update -p wire_weaver` (moves every crate of the wire_weaver repository to its main
+  together; `--precise SHA` for a given commit), build and test, commit `Cargo.lock` as `build: wire_weaver <sha>`.
+- **Work on both repos at once:** `just dev-local` copies `.cargo/sibling-patch.toml` to the gitignored
+  `.cargo/config.toml`, so builds take WireWeaver from `../wire_weaver`. Push the WireWeaver change first, then
+  `just dev-git` (back to git), `cargo update -p wire_weaver`, commit the lock. Never commit `Cargo.lock` while
+  dev-local is on: it names sibling paths, and the `--locked` gate refuses it.
+- **A new WireWeaver crate:** add it to `[workspace.dependencies]` by git and to `.cargo/sibling-patch.toml`.
+- **One source per crate:** `cargo tree -d` must not show wire_weaver, shrink_wrap, a `ww_*` crate or exact_units
+  from two sources (CFG-4). exact_units' `rev` here equals the one in wire_weaver's root `Cargo.toml`; change both
+  together.
 
 ## Commands
 

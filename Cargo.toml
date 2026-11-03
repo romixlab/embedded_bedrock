@@ -36,9 +36,9 @@ debug = "line-tables-only"
 split-debuginfo = "unpacked"
 
 [workspace.dependencies]
-# WireWeaver by git, so the crates build when embedded_bedrock itself comes from git (firmware's bedrock_build,
-# `cargo install --git ... bedrock_board_cli`). Local work takes the sibling checkout ../wire_weaver instead, through
-# the [patch] in .cargo/config.toml.
+# WireWeaver by git only, pinned to a commit by Cargo.lock: every PC builds the same thing, and the crates build when
+# embedded_bedrock itself comes from git (firmware's bedrock_build, `cargo install --git ... bedrock_board_cli`).
+# Bump: `cargo update -p wire_weaver`. Co-development with ../wire_weaver: `just dev-local` (AGENTS.md).
 wire_weaver = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_can_bus = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_clock_sync = { git = "https://github.com/vhrdtech/wire_weaver" }
