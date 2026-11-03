@@ -42,7 +42,7 @@ IDs per area (`TPL-4`, `DEV-2`, ...). It replaces the README checklists.
   [firmware_template_skill/SKILL.md](firmware_template_skill/SKILL.md) *Maintaining the script*.
 - [CHANGELOG.md](CHANGELOG.md) at the root covers the Rust crates: entries under `## [Unreleased]` with `### Added`,
   `### Changed`, `### Fixed`, `### Removed`, short and user-facing, with the feature ID in parentheses. Mark breaking
-  changes to the build-info format with **Breaking:** (deployed firmware carries it). A commit that bumps a crate
+  changes to the build-info format with **Breaking:** (firmware and host tools read it). A commit that bumps a crate
   version moves the `[Unreleased]` entries under a new `## [x.y.z] - YYYY-MM-DD` heading, so every version has its
   own section.
 
@@ -125,8 +125,8 @@ repos.
   revision in use, and for STM32 also http://www.efton.sk/STM32/gotcha/; errata are quoted from the document, not
   from memory. Where to find them per vendor and the errata the template already handles (ES0548 flash prefetch on
   dual-bank G0B1): `firmware_template_skill/references/errata.md`.
-- The build-info format is read by deployed firmware and host tools (RockFace): change it only compatibly, or bump
-  its version and keep reading the old one.
+- The build-info format is read by firmware and host tools (RockFace). It changes freely until
+  `~/git/tpm/area/ops/in-use.md` lists it; then follow that line.
 
 ## Tests
 
