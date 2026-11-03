@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.33] - 2026-11-03
+
 ### Added
 
 - `bedrock_lint` and its CLI `bedrock-lint` (crate `bedrock_lint_cli`): reads a firmware crate (source with syn,
