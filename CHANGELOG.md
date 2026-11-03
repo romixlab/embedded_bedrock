@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.44] - 2026-11-03
+
 ### Added
 
 - `bedrock_clocks`: exact STM32H72x/73x (RM0468) clock planning on the host. The tree is evaluated as exact
