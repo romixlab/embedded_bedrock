@@ -1,6 +1,6 @@
 [package]
 name = "embedded-bedrock"
-version = "0.2.37"
+version = "0.2.38"
 edition = "2024"
 
 [workspace]
