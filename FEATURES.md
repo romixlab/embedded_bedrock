@@ -102,6 +102,12 @@ The generator in `firmware_template_skill/` (template 0.5.0).
 - 🐛 **TPL-23 `init_ram.rs` not rustfmt clean for long bank names**: `xf3` (F303VC), `xg4` (G474RE) and `xl4`
   (L476RG) of the tested matrix fail `rustfmt --edition 2024 --check`: the `let count = ...` line for banks like
   `CCMRAM_ICODE` is over 100 columns and rustfmt breaks it after `=`. Found 15 Oct 2026.
+- 🐛 **TPL-78 Fault handlers log and count (FLT-2)**: the generated `DefaultHandler` runs `cnt!`, `bkp_cnt!` and
+  `error!`, and `HardFault` runs `bkp_cnt!` and `error!` with `Debug2Format` (`app/src/main.rs.j2`); the bootloader's
+  `DefaultHandler` panics with a formatted message. That is what panicked in typec_dongle FW-48. `bedrock-lint`
+  FLT-2 flags it on nucleo_g0b1re_template, pico2_template, typec_dongle, b135_fw and usb_io_fw. To do: record the
+  IRQ number raw (a backup register or a static the next boot reads), keep HardFault to capture and reset. Found
+  3 Nov 2026.
 - ✅ **TPL-27 `just flash-bootsel` for RP targets**: a generated `justfile` (`app/justfile.j2`, `t.family == "rp"`
   only, both the plain and `--wire-weaver` layouts) with one recipe, `flash-bootsel [SERIAL]`: build release, then
   `ww dfu rp flash` (wire_weaver CLT-21) writes the ELF straight through PICOBOOT in the RP2040/RP2350 boot ROM

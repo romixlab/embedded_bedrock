@@ -1,0 +1,18 @@
+checks = ["FLT"]
+
+[[finding]]
+check = "FLT-1"
+at = "src/main.rs:7"
+
+[[finding]]
+check = "FLT-4"
+at = "src/main.rs:13"
+confidence = "estimate"
+
+[[finding]]
+check = "FLT-7"
+at = "src/main.rs:7"
+
+[[finding]]
+check = "FLT-8"
+at = "src/main.rs:7"

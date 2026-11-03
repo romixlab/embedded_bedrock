@@ -1,0 +1,54 @@
+# typec_dongle FW-48, usb_io_fw PLAT-7, embedded_bedrock TPL-64
+checks = ["FLT"]
+
+# HardFault spins
+[[finding]]
+check = "FLT-1"
+at = "src/main.rs:46"
+
+# cnt! and error! in DefaultHandler, error! and Debug2Format in HardFault before the record is saved
+[[finding]]
+check = "FLT-2"
+at = "src/main.rs:37"
+
+[[finding]]
+check = "FLT-2"
+at = "src/main.rs:38"
+
+[[finding]]
+check = "FLT-2"
+at = "src/main.rs:43"
+
+[[finding]]
+check = "FLT-2"
+at = "src/main.rs:43"
+
+# exc_return! after a log call
+[[finding]]
+check = "FLT-3"
+at = "src/main.rs:44"
+
+# Cortex-M4/M7 without the configurable fault handlers
+[[finding]]
+check = "FLT-4"
+at = "src/main.rs:8"
+
+# no reset cause
+[[finding]]
+check = "FLT-5"
+at = "src/main.rs:8"
+
+# fed blindly on a timer, fed from an interrupt
+[[finding]]
+check = "FLT-7"
+at = "src/main.rs:20"
+confidence = "estimate"
+
+[[finding]]
+check = "FLT-7"
+at = "src/main.rs:32"
+
+# healthy_watch with USB, no usb_configured()
+[[finding]]
+check = "FLT-9"
+at = "src/main.rs:27"

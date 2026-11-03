@@ -74,6 +74,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 - `bedrock-lint` counter checks: CNT-1 (an `Err` arm, `if let Err`, `is_err()`, `let Ok(..) else` or a select's
   timer arm that neither counts, hands the error on nor panics) and CNT-2 (`&mut`, `as_mut_ptr` or a u64 pointer on
   the `cnt` counter buffers) (LINT-6).
+- `bedrock-lint` fault checks: FLT-1 (HardFault missing or spinning), FLT-2 (defmt, `cnt!`, `unwrap` or a panic in
+  HardFault / DefaultHandler), FLT-3 (`exc_return!()` not HardFault's first statement), FLT-4 (UsageFault,
+  MemManage, BusFault handlers missing or not enabled on M3 and up), FLT-5 (reset cause never read), FLT-7 (no
+  watchdog, or one fed from an interrupt or a loop that only waits), FLT-8 (no boot-loop rescue), FLT-9 (USB
+  firmware that waits for a healthy mark but never calls `usb_configured()`) (LINT-6).
 
 ## [0.2.35] - 2026-11-03
 

@@ -159,6 +159,88 @@ fn is_test(attrs: &[syn::Attribute]) -> bool {
     })
 }
 
+/// An identifier of the code, where it is written
+#[derive(Clone, Debug)]
+pub struct CodeIdent {
+    pub name: String,
+    pub loc: Loc,
+}
+
+/// Every identifier of the source outside test code, macro bodies included; string literals and doc comments are
+/// left out, so a name in a comment or a message does not count as code using it
+pub fn code_idents(fw: &Firmware) -> Vec<CodeIdent> {
+    use quote::ToTokens;
+    fn tokens_of(file: &SourceFile, ts: proc_macro2::TokenStream, out: &mut Vec<CodeIdent>) {
+        let mut iter = ts.into_iter().peekable();
+        while let Some(t) = iter.next() {
+            match t {
+                proc_macro2::TokenTree::Ident(i) => out.push(CodeIdent {
+                    name: i.to_string(),
+                    loc: loc(file, i.span()),
+                }),
+                proc_macro2::TokenTree::Group(g) => tokens_of(file, g.stream(), out),
+                // `#[doc = ".."]` and other attributes: skip the bracket group after `#`
+                proc_macro2::TokenTree::Punct(p) if p.as_char() == '#' => {
+                    if let Some(proc_macro2::TokenTree::Punct(b)) = iter.peek()
+                        && b.as_char() == '!'
+                    {
+                        iter.next();
+                    }
+                    iter.next();
+                }
+                _ => {}
+            }
+        }
+    }
+    fn items_of(file: &SourceFile, list: &[syn::Item], out: &mut Vec<CodeIdent>) {
+        for item in list {
+            match item {
+                syn::Item::Mod(m) if is_test(&m.attrs) => {}
+                syn::Item::Fn(f) if is_test(&f.attrs) => {}
+                syn::Item::Mod(m) => {
+                    if let Some((_, inner)) = &m.content {
+                        items_of(file, inner, out);
+                    }
+                }
+                other => tokens_of(file, other.to_token_stream(), out),
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for f in &fw.sources {
+        items_of(f, &f.ast.items, &mut out);
+    }
+    out
+}
+
+/// The first place the code names one of `names`
+pub fn first_ident<'a>(idents: &'a [CodeIdent], names: &[&str]) -> Option<&'a CodeIdent> {
+    idents.iter().find(|i| names.contains(&i.name.as_str()))
+}
+
+/// Where an absence is reported: the entry point (`main`), else the crate's `src/main.rs`
+pub fn entry_span(fw: &Firmware) -> crate::Span {
+    match fw.facts.entries.first() {
+        Some(e) => e.loc.span(),
+        None => crate::Span::new(
+            fw.sources
+                .iter()
+                .find(|s| s.rel.ends_with("main.rs"))
+                .map_or("src/main.rs", |s| s.rel.as_str()),
+            0,
+        ),
+    }
+}
+
+/// Whether the firmware runs on a Cortex-M: a thumb target, or cortex-m-rt among its dependencies
+pub fn cortex_m(fw: &Firmware) -> bool {
+    core(fw).is_some()
+        || fw
+            .dependencies()
+            .iter()
+            .any(|d| d.package() == "cortex-m-rt")
+}
+
 /// The last segment of a macro's path (`defmt::unwrap` → `unwrap`)
 pub fn macro_name(m: &syn::Macro) -> String {
     m.path
