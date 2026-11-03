@@ -173,3 +173,9 @@ cycles, 40/40 on both. `bedrock_clocks_rt::h72x::set_fracn` reads back and holds
 (`FracnRange::latch_hold_reads`). The same pattern is in the embassy fork's `Pll::fracn` steering and in
 bedrock_sync's steering on b135_fw.
 
+**Detection:** check: src mid, chip H7. A write sequence `pllfracen(.., false)`, `pllfracr` write, `pllfracen(.., true)`
+with no delay between the two PLLCFGR writes is a candidate. Only a frequency measurement shows the miss itself.
+
+**References:** RM0468 Rev 3 §8.5.5 "PLL initialization phase" step 4 and §8.7.12 PLLxFRACEN. ES0491 Rev 9 has
+no PLL erratum.
+
