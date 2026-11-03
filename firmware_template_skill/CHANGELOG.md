@@ -17,8 +17,6 @@ or options; purely internal refactors only need a line under the next version.
   firmware stops building once STD-98 lands on wire_weaver main. No answers/options involved, no hardware test
   needed.
 
-||||||| parent of 6b75715 (feat(template): pinned nightly, trim-paths, no panic locations, build-std core (TPL-81))
-
 - No `defmt::Debug2Format` in generated firmware (TPL-81): `src/settings.rs` (settings read, write, erase ahead) and `src/ww/device.rs` (settings save) log the `ww_settings` error with `{}` through its `defmt::Format`, `ww_ecc_flash` gets its `defmt` feature with `--log defmt`, and the HardFault handler logs pc, lr, xpsr, r0-r3 and r12 as hex words instead of `ExceptionFrame`'s Debug. `Debug2Format` pulled core::fmt's Debug machinery and every variant name into flash. donguru release: 146,804 B → 140,756 B (−6,048 B) for the settings errors, → 140,048 B (−708 B) for the HardFault line.
 
   Upgrade notes: in `src/settings.rs` and `src/ww/device.rs` replace `Debug2Format(&e)` with `e` (drop the `Debug2Format` import), add `"defmt"` to the `ww_ecc_flash` features, and take the new `error!` line of the HardFault handler in `src/main.rs`. A firmware with its own `Debug2Format` calls gains the same way where the type has `defmt::Format`.
