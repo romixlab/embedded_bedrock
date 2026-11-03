@@ -189,6 +189,8 @@ pub struct Call {
     /// The arguments as single names where they are one (`spawner`, `self.spawner` → `spawner`), else empty;
     /// a method call's receiver is not among them
     pub args: Vec<String>,
+    /// A method call on `self`
+    pub on_self: bool,
     pub loc: Loc,
 }
 
@@ -362,9 +364,12 @@ impl<'a> Walker<'a> {
         let loc = self.loc(span);
         let args = args.map(|a| expr_name(a).unwrap_or_default()).collect();
         if let Some((_, i)) = self.fns.last() {
-            self.facts.functions[*i]
-                .calls
-                .push(Call { name, args, loc });
+            self.facts.functions[*i].calls.push(Call {
+                name,
+                args,
+                on_self: false,
+                loc,
+            });
         }
     }
 
@@ -615,6 +620,12 @@ impl<'a> Walker<'a> {
             _ => {}
         }
         self.call(format!(".{method}"), m.args.iter(), span);
+        if matches!(&*m.receiver, Expr::Path(p) if p.path.is_ident("self"))
+            && let Some((_, i)) = self.fns.last()
+            && let Some(c) = self.facts.functions[*i].calls.last_mut()
+        {
+            c.on_self = true;
+        }
     }
 }
 

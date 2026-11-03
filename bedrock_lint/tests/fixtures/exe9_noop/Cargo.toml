@@ -1,0 +1,7 @@
+[package]
+name = "exe9_noop"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embassy-time = "0.5"

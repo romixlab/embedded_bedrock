@@ -1,0 +1,8 @@
+# EX at P2: the time alarm (P1) is above it; UCPD1_2 at P2, which pd_task is handed, and I2C1 at P3 are not: an
+# estimate. EX_OK at P4 is below everything.
+checks = ["EXE-4"]
+
+[[finding]]
+check = "EXE-4"
+at = "src/main.rs:17:19"
+confidence = "estimate"

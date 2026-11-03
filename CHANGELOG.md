@@ -9,6 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock-lint` executor checks EXE-1 (deadline task beside bulk work on the thread executor, a candidate), EXE-2
+  (blocking call in interrupt context), EXE-4 (interrupt executor not below the interrupts that wake it), EXE-5
+  (executor on a vector a driver binds or a used peripheral raises), EXE-6 (state shared across contexts behind a
+  thread-only mutex or `static mut`), EXE-7 (unbounded drain or log loop without a yield), EXE-8 (request handler
+  awaiting a bus), EXE-9 (no-op waker), EXE-12 (`async fn` that never awaits) and EXE-13 (ring reader without
+  batching). The model resolves calls by name and traces each spawner to its executor, so a check knows which code
+  runs in interrupt context and which in thread mode (LINT-3).
+
 ## [0.2.41] - 2026-11-03
 
 ### Added

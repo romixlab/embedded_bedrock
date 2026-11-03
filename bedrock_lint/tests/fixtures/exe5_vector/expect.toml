@@ -1,0 +1,10 @@
+checks = ["EXE-5"]
+
+[[finding]]
+check = "EXE-5"
+at = "src/main.rs:13:23"
+
+[[finding]]
+check = "EXE-5"
+at = "src/main.rs:15:22"
+confidence = "estimate"

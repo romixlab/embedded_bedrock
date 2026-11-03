@@ -224,7 +224,7 @@ fn baseline_holds_back_known_findings() {
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exe3_order");
     let (fw, _) = load(&fixture);
     let opts = RunOptions {
-        only: vec!["EXE".into()],
+        only: vec!["EXE-3".into()],
         ..Default::default()
     };
     let first = run(&fw, &opts).unwrap();

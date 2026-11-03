@@ -1,0 +1,11 @@
+checks = ["EXE-7"]
+
+[[finding]]
+check = "EXE-7"
+at = "src/main.rs:6:9"
+confidence = "estimate"
+
+[[finding]]
+check = "EXE-7"
+at = "src/main.rs:34:9"
+confidence = "candidate"

@@ -1,0 +1,11 @@
+# SHARED: the high task and main use it directly; COUNT through bump() from both; FINE and THREAD_ONLY are fine
+checks = ["EXE-6"]
+
+[[finding]]
+check = "EXE-6"
+at = "src/main.rs:2:8"
+
+[[finding]]
+check = "EXE-6"
+at = "src/main.rs:4:12"
+confidence = "estimate"

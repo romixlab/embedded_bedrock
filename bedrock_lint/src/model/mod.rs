@@ -27,6 +27,7 @@ pub use source::{
     Binding, Call, Entry, ExecutorStart, Facts, Function, Handler, HandlerKind, Loc, PeripheralUse,
     PrioritySet, SourceFile, Spawn, Static, StaticUse, Task,
 };
+pub(crate) use source::{has_await, is_upper_name};
 
 use serde::Serialize;
 use std::fs;

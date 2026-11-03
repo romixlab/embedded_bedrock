@@ -779,7 +779,17 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   each with fixtures under `bedrock_lint/tests/fixtures/`. No `cargo metadata` and no chip tables yet: the
   checks that need resolved features or per-chip data add them (LINT-3, LINT-4). Clean on usb_io_fw, typec_dongle,
   vb135_fdcan_iso_usb_fw and the nucleo_g0b1re and pico templates (3 Nov 2026).
-- 📋 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
+- 🚧 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
+  The model's `context` module (`bedrock_lint/src/model/context.rs`) resolves calls by name (a method call on
+  `self` to the caller's type, another only when one method has that name), traces each spawner through function
+  parameters to its interrupt executor or to thread mode, and marks what runs in interrupt context and what in
+  thread mode, with the chain from its task or handler; findings reached only through calls are estimates.
+  - ✅ EXE-1, EXE-2, EXE-4, EXE-5, EXE-6, EXE-7, EXE-8, EXE-9, EXE-12, EXE-13 (`bedrock_lint/src/checks/exe_*.rs`),
+    a fixture each. On our firmware (3 Nov 2026): typec_dongle's ADC and UART ring readers beside the USB device
+    (EXE-1 candidates), usb_io_fw's `safe_off` awaiting I2C in the server (EXE-8) and the `Waker::noop` of
+    sd_proto's simulator (EXE-9), and EXE-12 on most WireWeaver handlers (134 in usb_io_fw); no false positive
+    left in the rest. EXE-10 is a `cfg` check (LINT-4), EXE-11 an `elf` one (LINT-5).
+  - 📋 IRQ-1, IRQ-2, IRQ-4, IRQ-5, IRQ-6, IRQ-8, DMA-2, DMA-4, DMA-6.
 - 🚧 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
   EXE-10, CNT-3) on the LINT-2 model, no new model fields. Done: CFG-1, CFG-2, CFG-4, CFG-5 (STM32 only), CFG-6,
   CFG-7, SIZ-3, SIZ-4, LOG-2, CLK-2 (cfg half: `time-driver-any` only, the src half is LINT-3), MEM-1, MEM-2, MEM-7,

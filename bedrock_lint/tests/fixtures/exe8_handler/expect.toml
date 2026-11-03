@@ -1,0 +1,6 @@
+checks = ["EXE-8"]
+
+[[finding]]
+check = "EXE-8"
+at = "src/main.rs:15:18"
+confidence = "estimate"

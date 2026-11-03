@@ -1,0 +1,10 @@
+checks = ["EXE-12"]
+
+[[finding]]
+check = "EXE-12"
+at = "src/main.rs:2:14"
+
+[[finding]]
+check = "EXE-12"
+at = "src/main.rs:11:14"
+waived = true

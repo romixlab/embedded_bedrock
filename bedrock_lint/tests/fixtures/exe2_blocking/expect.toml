@@ -1,0 +1,21 @@
+# TIMER_IRQ_1 blocks itself; sense_task on the interrupt executor blocks itself and through settle(); thread_task
+# may block
+checks = ["EXE-2"]
+
+[[finding]]
+check = "EXE-2"
+at = "src/main.rs:10:5"
+
+[[finding]]
+check = "EXE-2"
+at = "src/main.rs:30:25"
+
+[[finding]]
+check = "EXE-2"
+at = "src/main.rs:37:9"
+confidence = "estimate"
+
+[[finding]]
+check = "EXE-2"
+at = "src/main.rs:38:9"
+confidence = "estimate"

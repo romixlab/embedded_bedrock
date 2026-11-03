@@ -1,0 +1,7 @@
+# a PD PHY task on the thread executor beside the USB device; main sets the PHY up and spawns: setup, no finding
+checks = ["EXE-1"]
+
+[[finding]]
+check = "EXE-1"
+at = "src/main.rs:11:10"
+confidence = "candidate"

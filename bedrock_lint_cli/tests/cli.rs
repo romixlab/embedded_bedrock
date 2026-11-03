@@ -172,11 +172,11 @@ fn explain_and_list() {
     assert!(s.contains("STK-7"), "{s}");
     let s = stdout(&bin(&["checks", "list"]));
     assert!(
-        s.contains("EXE-3") && s.contains("STK-1") && !s.contains("EXE-1 "),
+        s.contains("EXE-3") && s.contains("STK-1") && !s.contains("EXE-10 "),
         "{s}"
     );
     let s = stdout(&bin(&["checks", "list", "--all", "--category", "EXE"]));
-    assert!(s.contains("EXE-1") && s.contains("not yet"), "{s}");
+    assert!(s.contains("EXE-10") && s.contains("not yet"), "{s}");
     let v: serde_json::Value =
         serde_json::from_slice(&bin(&["checks", "list", "--json"]).stdout).unwrap();
     assert_eq!(

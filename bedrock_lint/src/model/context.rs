@@ -3,10 +3,11 @@
 //! the thread executor). Also the function bodies as syntax, for checks that look at what a body does.
 //!
 //! Calls are resolved by name, without types: a path call (`led::led_task`) to the functions whose path ends with
-//! what is written, a method call (`.poll`) to every method of that name. That over-approximates, so a check that
-//! reaches a function only through calls reports an estimate.
+//! what is written, a method call on `self` to the caller's type's method of that name, another method call only
+//! when one method of the source has that name. That is a guess either way, so a check that reaches a function only
+//! through calls reports an estimate.
 
-use super::source::{Facts, Function, Loc, SourceFile, Spawn};
+use super::source::{Call, Facts, Function, Loc, SourceFile, Spawn};
 use std::collections::{BTreeMap, VecDeque};
 use syn::visit::{self, Visit};
 
@@ -144,6 +145,8 @@ impl Reach {
 pub struct Context<'a> {
     pub facts: &'a Facts,
     by_name: BTreeMap<&'a str, Vec<usize>>,
+    /// By function index: an executor task
+    is_task: Vec<bool>,
     /// Task name → the executors it is spawned on, with the spawn
     pub task_execs: BTreeMap<String, Vec<(Exec, &'a Spawn)>>,
     /// Functions running in interrupt context, by function index
@@ -158,9 +161,19 @@ impl<'a> Context<'a> {
         for (i, f) in facts.functions.iter().enumerate() {
             by_name.entry(f.name.as_str()).or_default().push(i);
         }
+        let is_task = facts
+            .functions
+            .iter()
+            .map(|f| {
+                f.attrs
+                    .iter()
+                    .any(|a| a.rsplit("::").next() == Some("task"))
+            })
+            .collect();
         let mut cx = Context {
             facts,
             by_name,
+            is_task,
             task_execs: BTreeMap::new(),
             interrupt: BTreeMap::new(),
             thread: BTreeMap::new(),
@@ -225,20 +238,43 @@ impl<'a> Context<'a> {
         cx
     }
 
-    /// The functions a call may resolve to
+    /// The functions a call in function `caller` may resolve to: a method call on `self` to the methods of that
+    /// name of the caller's own type, any other method call to the one method of that name when there is only one
+    pub fn resolve_call(&self, caller: usize, call: &Call) -> Vec<usize> {
+        let fns = &self.facts.functions;
+        let Some(method) = call.name.strip_prefix('.') else {
+            return self.resolve(&call.name);
+        };
+        let methods: Vec<usize> = self
+            .by_name
+            .get(method)
+            .map(|v| {
+                v.iter()
+                    .copied()
+                    .filter(|&i| fns[i].params.first().is_some_and(|p| p == "self"))
+                    .collect()
+            })
+            .unwrap_or_default();
+        if call.on_self {
+            let ty = fns[caller].path.rsplit_once("::").map(|(t, _)| t);
+            return methods
+                .into_iter()
+                .filter(|&i| fns[i].path.rsplit_once("::").map(|(t, _)| t) == ty)
+                .collect();
+        }
+        if methods.len() == 1 {
+            methods
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// The functions a path call may resolve to (`led::led_task`: those whose path ends with it); method calls
+    /// (`.name`) need their caller: [`Context::resolve_call`]
     pub fn resolve(&self, name: &str) -> Vec<usize> {
         let fns = &self.facts.functions;
-        if let Some(method) = name.strip_prefix('.') {
-            return self
-                .by_name
-                .get(method)
-                .map(|v| {
-                    v.iter()
-                        .copied()
-                        .filter(|&i| fns[i].params.first().is_some_and(|p| p == "self"))
-                        .collect()
-                })
-                .unwrap_or_default();
+        if name.starts_with('.') {
+            return Vec::new();
         }
         let segs: Vec<&str> = name
             .split("::")
@@ -265,8 +301,9 @@ impl<'a> Context<'a> {
         &self.facts.functions[i]
     }
 
-    /// Breadth first from the roots: each function once, with the shortest chain from the first root that reaches it
-    fn reach(&self, roots: &[usize]) -> BTreeMap<usize, Reach> {
+    /// Breadth first from the roots: each function once, with the shortest chain from the first root that reaches
+    /// it; calls into task functions are not followed
+    pub fn reach(&self, roots: &[usize]) -> BTreeMap<usize, Reach> {
         let mut out: BTreeMap<usize, Reach> = BTreeMap::new();
         let mut queue = VecDeque::new();
         for &r in roots {
@@ -281,8 +318,9 @@ impl<'a> Context<'a> {
         while let Some(i) = queue.pop_front() {
             let here = out[&i].clone();
             for c in &self.facts.functions[i].calls {
-                for j in self.resolve(&c.name) {
-                    if out.contains_key(&j) {
+                for j in self.resolve_call(i, c) {
+                    // calling a task function only makes its spawn token: its body runs where it is spawned
+                    if out.contains_key(&j) || self.is_task[j] {
                         continue;
                     }
                     let mut chain = here.chain.clone();
@@ -336,9 +374,9 @@ impl<'a> Context<'a> {
         }
         let is_method = f.params.first().is_some_and(|p| p == "self");
         let mut found = false;
-        for caller in &facts.functions {
+        for (ci, caller) in facts.functions.iter().enumerate() {
             for c in &caller.calls {
-                if !self.resolve(&c.name).contains(&fi) {
+                if !self.resolve_call(ci, c).contains(&fi) {
                     continue;
                 }
                 // a method call's arguments leave out the receiver
