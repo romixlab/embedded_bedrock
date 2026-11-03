@@ -18,6 +18,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   awaiting a bus), EXE-9 (no-op waker), EXE-12 (`async fn` that never awaits) and EXE-13 (ring reader without
   batching). The model resolves calls by name and traces each spawner to its executor, so a check knows which code
   runs in interrupt context and which in thread mode (LINT-3).
+- `bedrock-lint` interrupt and DMA source checks: IRQ-1 (flags cleared wholesale), IRQ-2 (status register cleared
+  with `modify()`, always a candidate), IRQ-4 (several drivers on one shared NVIC vector), IRQ-5 (interrupt
+  unmasked without a handler bound or `bind_interrupts!` binding, and M_CAN `ILS` routed without `ILE`), IRQ-6
+  (nested disable / enable of interrupts by hand), IRQ-8 (`DefaultHandler` missing, or present but not counting
+  or logging), DMA-2 (D-cache on with DMA in use and no clean / invalidate or MPU setup, on an M7 part), DMA-4
+  (a DMA ring consumer whose overrun isn't counted with `cnt!`) and DMA-6 (STM32G0B1 / G0C1 UCPD_TXDR written by
+  software instead of DMA, ES0548 2.17.1) (LINT-3).
 
 ## [0.2.41] - 2026-11-03
 

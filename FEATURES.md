@@ -789,7 +789,15 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
     (EXE-1 candidates), usb_io_fw's `safe_off` awaiting I2C in the server (EXE-8) and the `Waker::noop` of
     sd_proto's simulator (EXE-9), and EXE-12 on most WireWeaver handlers (134 in usb_io_fw); no false positive
     left in the rest. EXE-10 is a `cfg` check (LINT-4), EXE-11 an `elf` one (LINT-5).
-  - 📋 IRQ-1, IRQ-2, IRQ-4, IRQ-5, IRQ-6, IRQ-8, DMA-2, DMA-4, DMA-6.
+  - ✅ IRQ-1, IRQ-2, IRQ-4, IRQ-5, IRQ-6, IRQ-8, DMA-2, DMA-4, DMA-6 (`bedrock_lint/src/checks/{irq,dma}_*.rs`),
+    a fixture each. On our firmware (3 Nov 2026): IRQ-4 on usb_io_fw's `DMA_IRQ_0` and typec_dongle's
+    `DMA1_CHANNEL2_3` (two DMA channel handlers sharing a vector); IRQ-6 on typec_dongle's `cpu.rs` idle-time
+    measurement (disable / wfe / enable, not nested — a real, benign finding, waived there with its reason);
+    IRQ-8 finds all three firmwares' `DefaultHandler` logging instead of only counting. IRQ-1, IRQ-2 and IRQ-5
+    give nothing on the three today (no wholesale flag clear, no ISR `modify()`, every unmasked vector has a
+    handler or binding); DMA-2 needs an M7 part (none of the three), DMA-4's ring consumers (typec_dongle's UART
+    and ADC) already count their overruns, and DMA-6 needs software writes to UCPD_TXDR (typec_dongle's UCPD is
+    CC-PHY only) — only their fixtures exercise those three. No false positive left in the rest.
 - 🚧 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
   EXE-10, CNT-3) on the LINT-2 model, no new model fields. Done: CFG-1, CFG-2, CFG-4, CFG-5 (STM32 only), CFG-6,
   CFG-7, SIZ-3, SIZ-4, LOG-2, CLK-2 (cfg half: `time-driver-any` only, the src half is LINT-3), MEM-1, MEM-2, MEM-7,

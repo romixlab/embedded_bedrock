@@ -18,6 +18,8 @@ mod cnt_2;
 mod cnt_3;
 mod dma_1;
 mod dma_2;
+mod dma_4;
+mod dma_6;
 mod err_11;
 mod err_2;
 mod err_3;
