@@ -9,6 +9,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.43] - 2026-11-03
+
+### Fixed
+
+- `firmware_template_skill` 0.2.43: firmware_template_skill/CHANGELOG.md, section [Unreleased]
+
 ## [0.2.42] - 2026-11-03
 
 ### Added
