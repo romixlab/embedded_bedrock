@@ -124,6 +124,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="flt-11"></a>💡 `FLT-11` `exc_return` relied on for crash capture on Cortex-M0+ (reads 0 there) · check: review · chip: M0+ · <!-- typec_dongle FW-13 -->
 - <a id="flt-12"></a>⚠️ `FLT-12` Runaway conditions not handled (AN1015): control registers of critical peripherals never re-written or checked periodically, illegal-opcode bytes in unused flash · check: review · <!-- notion -->
 - <a id="flt-13"></a>⚠️ `FLT-13` Critical data used without a validity check (CRC, redundant copy, range) · check: review · <!-- notion -->
+- <a id="flt-14"></a>🛑 `FLT-14` Reset-cause flags read as fresh when a core-only reset leaves them: RP2040 / RP2350 `CHIP_RESET` keeps `HAD_POR` across `SYSRESETREQ` and the boot ROM's reboots, so every crash after a power-up looked like a power loss and wiped the record; tell fresh from stale (a marker in a register only the chip-level reset clears) and test a crash after a cold power-up, not only after a flash · check: bench · chip: RP · <!-- embedded_bedrock ROB-14; usb_io_fw B200 report-hwtest -->
 
 ### 🚀 BOOT - Boot, ROM bootloader and updates
 - <a id="boot-1"></a>🛑 `BOOT-1` Firmware entered by a jump (ROM DfuSe leave, bootloader) not detected: VTOR, PLL, SysTick, enabled IRQs of the ROM are still set; detect (RCC_CFGR SWS, VTOR, NVIC) and reset once · check: src mid · <!-- vb135 BOOT-6; typec_dongle FW-12 -->

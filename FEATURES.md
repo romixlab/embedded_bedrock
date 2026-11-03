@@ -639,10 +639,20 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `.uninit` RAM across the reset (magic + CRC, never read after power loss), decodes the reset cause (STM32 `RCC_CSR` /
   `RCC_RSR`, RP `CHIP_RESET` + `WATCHDOG.REASON`) and counts boots; record logic tested on the host. Template: on by
   default on Cortex-M (`--no-crash-capture`), HardFault / panic handlers, `src/last_reset.rs`, served as
-  `ww_firmware_info::LastReset` with `--wire-weaver`; builds for the tested matrix. Open: a forced HardFault on a
-  Pico 2 and an H7 reported after reset and symbolized with the ELF (no probe on the mesh yet); the RP235x
-  `CHIP_RESET` after `SYSRESETREQ` (stale flags?) and H7 ECC RAM behaviour checked there too; nRF `RESETREAS` and
-  RISC-V (`Fault::RiscV`) not done.
+  `ww_firmware_info::LastReset` with `--wire-weaver`; builds for the tested matrix. On an RP2350 (B200 rev A,
+  usb_io_fw, 3 Nov 2026) a forced panic and HardFault are reported after the reset and symbolized with the ELF, and
+  the boot count and `Updated` hold (ROB-14). Open: the same on an H7 (and its ECC RAM behaviour) and an RP2040;
+  nRF `RESETREAS` and RISC-V (`Fault::RiscV`) not done.
+- 🧪 **ROB-14 RP crash record wiped as a power loss** (bug, fixed 3 Nov 2026): RP2040 / RP2350 `CHIP_RESET` holds the last
+  chip-level reset and its `HAD_*` bits are read-only, while `SYSRESETREQ` resets only the core and the boot ROM's
+  reboots don't reach chip level either. So `HAD_POR` from the power-up stayed set, every reset read `PowerOn` and
+  `bedrock_crash::boot` discarded the record: crashes, the boot count and `Updated` were lost (B200, usb_io_fw).
+  Fix: `bedrock_crash::rp` (marker in `WATCHDOG.SCRATCH1`, which every chip-level reset clears; `CHIP_RESET` read
+  only when fresh) and the template's `src/last_reset.rs`; `Updated` rides the same marker through BOOTSEL
+  (`UPDATE_PENDING`, written by `src/boot.rs` before `reset_to_usb_boot`), since the ROM erases all SRAM before
+  BOOTSEL (RP2350 datasheet 5.2.2). No RP2350 erratum covers it (Appendix D, A2 to A4). Tested on the B200 (RP2350
+  A4): panic, HardFault, software reset, BOOTSEL flash, power-on. Open: RP2040 not tried on hardware; the boot
+  count restarts at 1 after a BOOTSEL flash (RAM erased).
 - 🧪 **ROB-13 Panic call chain in the crash record**: a panic record keeps up to 32 return addresses found on the
   stack (`bedrock_crash::is_return_address`: Thumb bit, inside `__stext..__etext`, right after a `BL` / `BLX`)
   instead of the raw 32 words above `capture_panic`'s own frame, which never reached the panic site. With

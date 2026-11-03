@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- RP crash capture survives the reset (ROB-14): `src/last_reset.rs` reads `CHIP_RESET` only when the marker in `WATCHDOG.SCRATCH1` says a chip-level reset happened since the last boot (`bedrock_crash::rp::chip_reset_fresh`), and writes the marker. Before, `HAD_POR` from the power-up stayed set across `SYSRESETREQ`, every reset read `PowerOn` and the crash record was wiped: a panic image reset-looped without ever showing the panic (B200, RP2350). `src/boot.rs` writes `bedrock_crash::rp::UPDATE_PENDING` there before `reset_to_usb_boot`, so the first boot after a BOOTSEL flash reports `Updated` (the ROM erases RAM before BOOTSEL, the record can't carry it). STM32 output unchanged.
+
+  Upgrade notes (RP firmware with crash capture): needs `bedrock_crash` with ROB-14. In `src/last_reset.rs` `reset_cause()`, take the new body: read `WATCHDOG.SCRATCH1` first, write `CHIP_RESET_SEEN`, read `CHIP_RESET` only when `chip_reset_fresh`, and set `updated: bedrock_crash::rp::update_pending(scratch)` in `ResetFlags` (an RP235x firmware that lists every field fails to build until it does). With `--wire-weaver`, add the `UPDATE_PENDING` write before `reset_to_usb_boot` in `src/boot.rs` (or wherever the firmware enters BOOTSEL). A firmware that uses `WATCHDOG.SCRATCH1` itself moves that to SCRATCH0. Hardware test: power-on, then a forced panic: the next boot reads `Panic`, not `PowerOn`; a BOOTSEL flash reads `Updated`.
+
 - `device.board.set_reworks` omitted (TPL-72): wire_weaver STD-98 adds the optional `BoardInfo::set_reworks`;
   `app/src/ww.rs.j2` adds it to `omit` next to `device.board.REWORKS` (neither is served by generated firmware).
 

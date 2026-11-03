@@ -36,6 +36,13 @@ async fn reboot_task() {
     Timer::after_millis(REPLY_MS).await;
     if into == Reboot::Rom {
         info!("boot: reset into BOOTSEL");
+  {% if o.crash %}
+        // the next boot reports `Updated`: the ROM erases RAM (and the crash record) before BOOTSEL, the watchdog
+        // scratch registers survive its reboots (bedrock_crash::rp)
+        embassy_rp::pac::WATCHDOG
+            .scratch1()
+            .write_value(bedrock_crash::rp::UPDATE_PENDING);
+  {% endif %}
   {% if t.rp_variant == "rp2040" %}
         // both interfaces (mass storage and PICOBOOT), no activity LED
   {% else %}

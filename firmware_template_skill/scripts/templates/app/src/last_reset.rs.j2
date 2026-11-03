@@ -75,12 +75,23 @@ fn reset_cause() -> Cause {
     flags.cause()
 }
 {% elif rp and t.rp_variant == "rp2040" %}
-/// `CHIP_RESET` and `WATCHDOG.REASON`. An Arm `SYSRESETREQ` (the crash handler's reset) sets neither; a crash is
-/// recognised from the record.
+/// `CHIP_RESET` and `WATCHDOG.REASON`. An Arm `SYSRESETREQ` (the crash handler's reset) resets only the core and
+/// leaves `CHIP_RESET` as the last chip-level reset (a power-on, say), so it is read only when the marker in
+/// `WATCHDOG.SCRATCH1` says a chip-level reset cleared it ([bedrock_crash::rp]). The marker also carries `Updated`
+/// through BOOTSEL (src/boot.rs); a crash is recognised from the record.
 fn reset_cause() -> Cause {
-    let c = embassy_rp::pac::VREG_AND_CHIP_RESET.chip_reset().read();
-    let w = embassy_rp::pac::WATCHDOG.reason().read();
+    const _: () = assert!(bedrock_crash::rp::CHIP_RESET_SCRATCH == 1);
+    let wd = embassy_rp::pac::WATCHDOG;
+    let scratch = wd.scratch1().read();
+    wd.scratch1().write_value(bedrock_crash::rp::CHIP_RESET_SEEN);
+    let c = if bedrock_crash::rp::chip_reset_fresh(scratch) {
+        embassy_rp::pac::VREG_AND_CHIP_RESET.chip_reset().read()
+    } else {
+        Default::default()
+    };
+    let w = wd.reason().read();
     ResetFlags {
+        updated: bedrock_crash::rp::update_pending(scratch),
         power_on: c.had_por(),
         run_pin: c.had_run(),
         debugger: c.had_psm_restart(),
@@ -91,12 +102,24 @@ fn reset_cause() -> Cause {
     .cause()
 }
 {% elif rp %}
-/// `POWMAN.CHIP_RESET` and `WATCHDOG.REASON`. An Arm `SYSRESETREQ` (the crash handler's reset) sets neither; a
-/// crash is recognised from the record.
+/// `POWMAN.CHIP_RESET` and `WATCHDOG.REASON`. An Arm `SYSRESETREQ` (the crash handler's reset) resets only the core
+/// and leaves `CHIP_RESET` as the last chip-level reset (`HAD_POR` from the power-up, say), so it is read only when
+/// the marker in `WATCHDOG.SCRATCH1` says a chip-level reset cleared it ([bedrock_crash::rp]). The marker also
+/// carries `Updated` through BOOTSEL (src/boot.rs), whose ROM erases the RAM record; a crash is recognised from the
+/// record.
 fn reset_cause() -> Cause {
-    let c = embassy_rp::pac::POWMAN.chip_reset().read();
-    let w = embassy_rp::pac::WATCHDOG.reason().read();
+    const _: () = assert!(bedrock_crash::rp::CHIP_RESET_SCRATCH == 1);
+    let wd = embassy_rp::pac::WATCHDOG;
+    let scratch = wd.scratch1().read();
+    wd.scratch1().write_value(bedrock_crash::rp::CHIP_RESET_SEEN);
+    let c = if bedrock_crash::rp::chip_reset_fresh(scratch) {
+        embassy_rp::pac::POWMAN.chip_reset().read()
+    } else {
+        Default::default()
+    };
+    let w = wd.reason().read();
     ResetFlags {
+        updated: bedrock_crash::rp::update_pending(scratch),
         power_on: c.had_por(),
         brownout: c.had_bor(),
         glitch: c.had_glitch_detect(),

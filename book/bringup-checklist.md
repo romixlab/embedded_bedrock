@@ -13,7 +13,8 @@ board side (rails, crystals, DNP parts) is the board bring-up checklist in tpm (
    LSE start-up time [[CLK-4]](checks.md#clk-4).
 4. *Stack and faults:* provoke a stack overflow, a HardFault and a panic; each ends in a reset that the next boot
    reports with the ELF symbolized [[STK-7]](checks.md#stk-7), [[FLT-10]](checks.md#flt-10). Check the reset cause
-   for power-on, pin, watchdog and software reset [[FLT-5]](checks.md#flt-5).
+   for power-on, pin, watchdog and software reset [[FLT-5]](checks.md#flt-5), and a crash right after a cold
+   power-up [[FLT-14]](checks.md#flt-14).
 5. *Boot and update:* enter the ROM bootloader without a probe and come back; update from the previous released
    version over the field path [[BOOT-4]](checks.md#boot-4), [[BOOT-1]](checks.md#boot-1),
    [[BOOT-7]](checks.md#boot-7). On H7, after a ROM DFU session, check the supply config the firmware runs on
