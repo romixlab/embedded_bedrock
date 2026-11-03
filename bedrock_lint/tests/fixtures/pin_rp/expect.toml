@@ -1,0 +1,17 @@
+# usb_io_fw IF-2
+checks = ["PIN-4"]
+
+[[finding]]
+check = "PIN-4"
+at = "src/main.rs:7"
+confidence = "estimate"
+
+[[finding]]
+check = "PIN-4"
+at = "src/main.rs:8"
+confidence = "estimate"
+
+[[finding]]
+check = "PIN-4"
+at = "src/main.rs:19"
+confidence = "candidate"

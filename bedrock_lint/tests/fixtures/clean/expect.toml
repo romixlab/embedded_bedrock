@@ -7,4 +7,5 @@ ran = [
   "MEM-1", "MEM-2", "MEM-7", "MEM-12",
   "CNT-3", "EXE-10",
   "HOST-1", "CNT-1", "CNT-2", "FLT-1", "FLT-2", "FLT-3", "FLT-5", "FLT-7", "FLT-8",
+  "PIN-1", "PIN-2", "PIN-6", "PIN-9", "PIN-16",
 ]

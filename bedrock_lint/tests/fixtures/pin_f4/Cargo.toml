@@ -1,0 +1,7 @@
+[package]
+name = "pin_f4"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embassy-stm32 = { version = "0.4", features = ["stm32f411ce"] }

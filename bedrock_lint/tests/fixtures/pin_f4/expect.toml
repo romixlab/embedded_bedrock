@@ -1,0 +1,6 @@
+checks = ["PIN"]
+
+[[finding]]
+check = "PIN-8"
+at = "src/main.rs:7"
+confidence = "estimate"

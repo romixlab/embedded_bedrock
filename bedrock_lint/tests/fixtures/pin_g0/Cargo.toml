@@ -1,0 +1,10 @@
+[package]
+name = "pin_g0"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embassy-stm32 = { version = "0.4", features = ["stm32g0b1re"] }
+
+[features]
+rev_b = []

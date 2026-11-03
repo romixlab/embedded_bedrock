@@ -79,6 +79,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   MemManage, BusFault handlers missing or not enabled on M3 and up), FLT-5 (reset cause never read), FLT-7 (no
   watchdog, or one fed from an interrupt or a loop that only waits), FLT-8 (no boot-loop rescue), FLT-9 (USB
   firmware that waits for a healthy mark but never calls `usb_configured()`) (LINT-6).
+- `bedrock-lint` pin checks: PIN-1 (a GPIO driver dropped at once or when `main` returns), PIN-2 (an `.await`, a
+  spawn or a USB device before the first output is set up), PIN-4 (RP FUNCSEL switched at run time, a GPIO on a
+  stolen pin), PIN-6 (a pin taken with `steal()` that has another owner), PIN-8 (unused pins left floating on STM32
+  families that reset to inputs), PIN-9 (a pin map chosen by a cargo feature), PIN-16 (G0 pin read before the UCPD
+  strobe, or the strobe cleared again) (LINT-6).
 
 ## [0.2.35] - 2026-11-03
 

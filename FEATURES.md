@@ -794,11 +794,24 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   SIZ-5, PERF-3 and ERR-3 have only their `elf` part so far; their `src` part goes into the same check file.
   `bedrock-lint frames <ELF>` lists the largest frames and the deepest path. Fixtures are synthetic ELFs written
   by the test from an `elf.toml`; checked by hand on a generated G0B1 embassy firmware (3 Nov 2026).
-- 🚧 **LINT-6 Host input, error path, fault handler and pin source checks** (`bedrock_lint/src/checks/`): the `src`
-  checks of HOST, CNT, FLT and PIN on a body walker that enters macro calls (`model/scan.rs`). Done: HOST-1 (panics a
-  host value reaches in a WireWeaver handler and the crate-local functions it is handed to, followed by name),
-  HOST-3 (a host value's catch-all mapped to a default), HOST-5 (a refused request not counted). Next: CNT-1, CNT-2,
-  FLT-1..5, FLT-7..9, PIN-1, PIN-2, PIN-4, PIN-6, PIN-8, PIN-9, PIN-16. The other `src` checks are LINT-11.
+- ✅ **LINT-6 Host input, error path, fault handler and pin source checks** (`bedrock_lint/src/checks/`): the `src`
+  checks of HOST, CNT, FLT and PIN, on a body walker that enters macro calls and an index of code identifiers
+  (`model/scan.rs`). HOST-1 (panics a host value reaches in a WireWeaver handler and the crate-local functions it
+  is handed to, followed by name: `unwrap`, indexing, division, overflow, `assert!`, `todo!`), HOST-3 (a host
+  value's catch-all mapped to a default), HOST-5 (a refused request not counted), CNT-1 (an error branch without a
+  counter), CNT-2 (`&mut` or a u64 pointer on the counter buffers), FLT-1 (HardFault spins or is missing), FLT-2
+  (logging, counting or a panic in HardFault / DefaultHandler), FLT-3 (`exc_return!()` not first), FLT-4 (no
+  UsageFault / MemManage / BusFault handlers, or not enabled, on M3 and up), FLT-5 (reset cause never read), FLT-7
+  (no watchdog, or fed from an interrupt or a loop that checks nothing), FLT-8 (no boot-loop rescue), FLT-9 (USB
+  firmware that never calls `usb_configured()`), PIN-1 (a pin driver dropped), PIN-2 (something slow before the
+  first output is set up, the source part), PIN-4 (RP FUNCSEL switched at run time), PIN-6 (a stolen pin with a
+  second owner), PIN-8 (unused pins left floating on F0/F1/F2/F3/F4/F7/L1), PIN-9 (a pin map chosen by a cargo
+  feature), PIN-16 (G0 pin read under the UCPD dead-battery pull-down). Fixtures from typec_dongle FW-19, FW-22,
+  FW-48, FW-62, usb_io_fw API-5, IF-2, IF-16, PLAT-7, PLAT-9. Name resolution without types keeps findings in
+  callees at estimate or candidate. On usb_io_fw, typec_dongle, b135_fw and the templates the real findings are
+  no watchdog anywhere (FLT-7), the template's fault handlers (FLT-2, TPL-78), usb_io_fw's spinning HardFault
+  (FLT-1, its PLAT-7) and run-time FUNCSEL switches (PIN-4), one HOST-3 in b135_fw `led::set_mode`, and uncounted
+  error branches (CNT-1): LINT-9 works through them (3 Nov 2026). The other `src` checks are LINT-11.
 - ✅ **LINT-7 Detail pages, first half**: `book/checks/` pages for EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT, PWR,
   FLS, LOG, CNT (12 pages, 98 checks), each with what it catches, why it matters, a concrete example (mostly from
   the catalogue's own sourced comments), how it's checked and the fix, cross-linked to the other detail pages and

@@ -1,0 +1,50 @@
+# donguru_template, usb_io_fw PLAT-9 and IF-16, P2424 sd_card.md, typec_dongle FW-22
+checks = ["PIN"]
+
+# USB built before the first output
+[[finding]]
+check = "PIN-2"
+at = "src/main.rs:11"
+confidence = "estimate"
+
+# let _ = and a temporary
+[[finding]]
+check = "PIN-1"
+at = "src/main.rs:12"
+
+[[finding]]
+check = "PIN-1"
+at = "src/main.rs:13"
+
+# enable is never handed on and main returns
+[[finding]]
+check = "PIN-1"
+at = "src/main.rs:14"
+confidence = "estimate"
+
+[[finding]]
+check = "PIN-1"
+at = "src/main.rs:16"
+confidence = "estimate"
+
+# a pin picked by a feature
+[[finding]]
+check = "PIN-9"
+at = "src/main.rs:15"
+confidence = "estimate"
+
+# PA9 stolen beside its owner
+[[finding]]
+check = "PIN-6"
+at = "src/main.rs:25"
+confidence = "estimate"
+
+# read before the strobe, strobe cleared
+[[finding]]
+check = "PIN-16"
+at = "src/main.rs:18"
+confidence = "estimate"
+
+[[finding]]
+check = "PIN-16"
+at = "src/main.rs:26"
