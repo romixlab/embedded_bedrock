@@ -1015,7 +1015,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-bedrock"
-version = "0.2.41"
+version = "0.2.42"
 
 [[package]]
 name = "embedded-hal"

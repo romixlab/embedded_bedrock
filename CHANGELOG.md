@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.42] - 2026-11-03
+
 ### Added
 
 - `bedrock-lint` executor checks EXE-1 (deadline task beside bulk work on the thread executor, a candidate), EXE-2
