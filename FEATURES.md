@@ -947,7 +947,7 @@ document section it comes from, and a FRACN steering range is checked at both en
   +81 988.99 Hz (plan 988.77), with 0.4 Hz drift of the nominal over the 8 s capture as the error bar. USB HS / FDCAN /
   SDMMC, and USB after the ROM's leave (USBSEL left on HSI48 with HSI48 off), belong to RCC-8. Results: P2528
   design/h7-clock-plan.md "Hardware test".
-- ✅ **RCC-13 `set_fracn` latch could miss** (found on B135 rev B by RCC-10, fixed by 3e813ba): FRACEN cleared, FRACR
+- ✅ **RCC-13 `set_fracn` latch could miss** (found on B135 rev B by RCC-10, fixed by 990395d): FRACEN cleared, FRACR
   written and FRACEN set back to back sometimes left the PLL on the old FRACN while FRACR read back the new one (back to
   back: PLL1 35/40 and 29/40, PLL2 27/40 and 29/40 steps latched). `set_fracn` now reads back each write and holds
   FRACEN low for `FracnRange::latch_hold_reads` (2 ref_ck periods): 240/240 for both PLLs on B135. Check catalogue
