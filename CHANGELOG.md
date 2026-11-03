@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.37] - 2026-11-03
+
 ### Fixed
 
 - The workspace builds from a fresh checkout again: `.cargo/config.toml`'s `[patch."https://github.com/vhrdtech/wire_weaver"]`
