@@ -3555,6 +3555,8 @@ name = "wire_weaver"
 version = "0.5.0"
 dependencies = [
  "defmt",
+ "exact_units",
+ "futures-core",
  "shrink_wrap",
  "wire_weaver_derive",
  "ww_error",
@@ -3567,6 +3569,7 @@ version = "0.5.0"
 dependencies = [
  "anyhow",
  "either",
+ "exact_units",
  "futures-lite",
  "hex",
  "libc",
