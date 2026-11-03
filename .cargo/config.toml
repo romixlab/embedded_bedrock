@@ -11,3 +11,5 @@ ww_indication = { path = "../wire_weaver/ww_stdlib/ww_indication" }
 ww_si = { path = "../wire_weaver/ww_stdlib/ww_si" }
 ww_timebase = { path = "../wire_weaver/ww_stdlib/ww_timebase" }
 ww_version = { path = "../wire_weaver/ww_stdlib/ww_version" }
+# exact_units (through ww_si) takes shrink_wrap from this git source: patch it too, or the tree has two
+shrink_wrap = { path = "../wire_weaver/shrink_wrap/shrink_wrap" }
