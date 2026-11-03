@@ -41,9 +41,10 @@ impl Check for Clk3 {
                 .any(|s| matches!(s.as_str(), "lsecsson" | "lsecss"))
                 || (segs.iter().any(|s| s == "css") && segs.iter().any(|s| s == "lse"))
         });
-        if let Some(hse) = words.iter().find(|w| w.has("hse")) {
-            if hse_css.is_none() {
-                out.push(
+        if let Some(hse) = words.iter().find(|w| w.has("hse"))
+            && hse_css.is_none()
+        {
+            out.push(
                     Finding::new(
                         "CLK-3",
                         "hse",
@@ -52,11 +53,11 @@ impl Check for Clk3 {
                     .span(hse.loc.span())
                     .fix("set RCC_CR.CSSON after the HSE is ready, and handle the failure in NonMaskableInt (clear CSSF, count it, run on the HSI)"),
                 );
-            }
         }
-        if let Some(lse) = words.iter().find(|w| w.has("lse")) {
-            if lse_css.is_none() {
-                out.push(
+        if let Some(lse) = words.iter().find(|w| w.has("lse"))
+            && lse_css.is_none()
+        {
+            out.push(
                     Finding::new(
                         "CLK-3",
                         "lse",
@@ -65,7 +66,6 @@ impl Check for Clk3 {
                     .span(lse.loc.span())
                     .fix("set RCC_BDCR.LSECSSON once the LSE is ready and handle LSECSSD (an RTC / TAMP interrupt)"),
                 );
-            }
         }
         let has_nmi = fw.facts.handlers.iter().any(|h| h.name == "NonMaskableInt");
         if let Some(css) = hse_css
