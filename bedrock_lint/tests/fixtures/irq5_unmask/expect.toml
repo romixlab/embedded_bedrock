@@ -1,0 +1,14 @@
+checks = ["IRQ-5"]
+
+[[finding]]
+check = "IRQ-5"
+at = "src/main.rs:32"
+
+[[finding]]
+check = "IRQ-5"
+at = "src/main.rs:40"
+
+[[finding]]
+check = "IRQ-5"
+at = "src/main.rs:55"
+confidence = "estimate"

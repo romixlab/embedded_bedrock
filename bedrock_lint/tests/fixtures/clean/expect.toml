@@ -12,4 +12,5 @@ ran = [
   "CLK-3", "CLK-5", "ERR-2", "ERR-4", "ERR-5", "ERR-6", "ERR-7", "ERR-8", "ERR-11",
   "EXT-4", "EXT-7", "EXT-12", "USB-1", "USB-3", "LOG-1",
   "EXE-1", "EXE-2", "EXE-4", "EXE-5", "EXE-6", "EXE-7", "EXE-8", "EXE-9", "EXE-12", "EXE-13",
+  "IRQ-1", "IRQ-2", "IRQ-4", "IRQ-5", "IRQ-6",
 ]
