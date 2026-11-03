@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.39] - 2026-11-03
+
 ### Added
 
 - `bedrock_lint` config checks (LINT-4): CFG-1 (probe-rs runner without `--probe VID:PID`), CFG-2 (probe-rs
