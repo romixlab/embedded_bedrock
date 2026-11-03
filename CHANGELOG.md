@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- `bedrock_crash`: a panic record keeps the return addresses found on the stack (up to 32, innermost first), the call chain to the panic site, instead of the 32 words above `capture_panic`'s own frame (ROB-13). `is_return_address` is the test it uses (Thumb bit, inside `.text`, after a `BL` / `BLX`). A host turns them into `file:line` with the ELF, which keeps panics readable in firmware built without panic locations (`-Zlocation-detail=none`). Fault records are unchanged.
+
 ## [0.2.37] - 2026-11-03
 
 ### Fixed

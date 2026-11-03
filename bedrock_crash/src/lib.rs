@@ -381,6 +381,33 @@ impl core::fmt::Write for CrashWriter<'_> {
     }
 }
 
+/// Whether `word`, a word found on the stack, is a return address of Thumb code: the Thumb bit set, inside `text`
+/// (the `.text` section, `__stext..__etext`), and right after a `BL` or `BLX` instruction. `halfword` reads the
+/// code at an address inside `text`.
+///
+/// A heuristic, as every stack scan without frame pointers: a stale return address left in a frame's unused
+/// space passes too, so a host shows these as a likely call chain, not an exact one.
+pub fn is_return_address(
+    word: u32,
+    text: core::ops::Range<u32>,
+    halfword: impl Fn(u32) -> u16,
+) -> bool {
+    if word & 1 == 0 {
+        return false;
+    }
+    let ra = word & !1;
+    if ra < text.start.saturating_add(4) || ra > text.end {
+        return false;
+    }
+    let last = halfword(ra - 2);
+    // BLX Rm: 0100 0111 1mmm m000
+    if last & 0xFF87 == 0x4780 {
+        return true;
+    }
+    // BL imm / BLX imm (T32): 11110 S imm10, then 11 J1 1 J2 imm11 (BL) or 11 J1 0 J2 imm10 H (BLX)
+    halfword(ra - 4) & 0xF800 == 0xF000 && last & 0xC000 == 0xC000
+}
+
 /// What a [Record] says, borrowed from it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct View<'a> {
@@ -401,9 +428,13 @@ pub struct Crash<'a> {
     pub uptime_ms: Option<u64>,
     /// Registers at a fault, `None` for a panic.
     pub regs: Option<CortexMRegs>,
-    /// Stack words from the stack pointer at the crash, innermost first.
+    /// At a fault: the stack words from the stack pointer at the fault, innermost first. At a panic: the return
+    /// addresses found on the stack ([is_return_address]), innermost first, so the first ones past the
+    /// `core::panicking` frames name the panic site and its callers. A host turns them into `file:line` with the
+    /// ELF of [Self::build_id], which matters when the firmware is built without panic locations
+    /// (`-Zlocation-detail=none`).
     pub stack: &'a [u32],
-    /// Panic message (with its location) or fault text.
+    /// Panic message (with its location, unless built without) or fault text.
     pub message: &'a str,
     /// Build id of the firmware that crashed, empty when it had none.
     pub build_id: &'a [u8],

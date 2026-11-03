@@ -284,3 +284,46 @@ fn a_new_crash_restarts_the_age() {
     assert_eq!(r.on_boot(Cause::Software), Cause::Fault);
     assert_eq!(r.view().crash.unwrap().boots_since, 0);
 }
+
+/// Code at 0x0800_0100..0x0800_0110: a BL (two halfwords), a BLX r3, a plain `movs` and an `add`.
+fn code(a: u32) -> u16 {
+    match a {
+        0x0800_0100 => 0xF000, // bl ... (first halfword)
+        0x0800_0102 => 0xF8A0, // bl ... (second halfword)
+        0x0800_0104 => 0x4798, // blx r3
+        0x0800_0106 => 0x2001, // movs r0, #1
+        0x0800_0108 => 0x1840, // adds r0, r0, r1
+        _ => 0,
+    }
+}
+
+#[test]
+fn return_addresses_follow_a_call() {
+    let text = 0x0800_0000..0x0800_1000;
+    assert!(
+        is_return_address(0x0800_0105, text.clone(), code),
+        "after the BL"
+    );
+    assert!(
+        is_return_address(0x0800_0107, text.clone(), code),
+        "after the BLX r3"
+    );
+    assert!(
+        !is_return_address(0x0800_0109, text.clone(), code),
+        "after a movs"
+    );
+    assert!(
+        !is_return_address(0x0800_010B, text.clone(), code),
+        "after an add"
+    );
+    assert!(
+        !is_return_address(0x0800_0104, text.clone(), code),
+        "no Thumb bit: data"
+    );
+    assert!(!is_return_address(0x2000_0105, text.clone(), code), "RAM");
+    assert!(
+        !is_return_address(0x0800_0001, text.clone(), code),
+        "start of .text"
+    );
+    assert!(!is_return_address(0x0800_2001, text, code), "past .text");
+}

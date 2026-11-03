@@ -608,6 +608,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   Pico 2 and an H7 reported after reset and symbolized with the ELF (no probe on the mesh yet); the RP235x
   `CHIP_RESET` after `SYSRESETREQ` (stale flags?) and H7 ECC RAM behaviour checked there too; nRF `RESETREAS` and
   RISC-V (`Fault::RiscV`) not done.
+- 🧪 **ROB-13 Panic call chain in the crash record**: a panic record keeps up to 32 return addresses found on the
+  stack (`bedrock_crash::is_return_address`: Thumb bit, inside `__stext..__etext`, right after a `BL` / `BLX`)
+  instead of the raw 32 words above `capture_panic`'s own frame, which never reached the panic site. With
+  `-Zlocation-detail=none` (TPL-81) the message has no `file:line`, so the host names the panic site from these
+  addresses and the ELF of the record's build id. Heuristic tested on the host; open: a forced panic on a board
+  decoded by the host side.
 - ✅ **ROB-12 flip-link was never used**: the template's `build.rs` printed `cargo:rustc-linker=flip-link`, which is
   not a build-script directive (Cargo ignored it), so generated firmware linked with plain rust-lld and `.data` /
   `.bss` sat at the start of RAM. Fixed 15 Oct 2026: `linker = "flip-link"` under `[target.<triple>]` in

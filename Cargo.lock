@@ -1148,7 +1148,7 @@ dependencies = [
 [[package]]
 name = "exact_units"
 version = "0.1.0"
-source = "git+https://github.com/romixlab/exact_units?rev=e89f64edb1fd7522d8a53f4f26f67550c4c8d8f9#e89f64edb1fd7522d8a53f4f26f67550c4c8d8f9"
+source = "git+https://github.com/romixlab/exact_units#90364e1df72696af85c01d0a55226b6cf7710fa5"
 dependencies = [
  "defmt",
  "serde",

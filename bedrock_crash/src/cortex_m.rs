@@ -151,13 +151,14 @@ pub fn reset() -> ! {
     cortex_m::peripheral::SCB::sys_reset()
 }
 
-/// Save a panic (message with its location, up to 32 stack words from here). Then log it and call [panic_reset].
+/// Save a panic (its message, and up to 32 return addresses found on the stack: the call chain that led to the
+/// panic, see [crate::Crash::stack]). Then log it and call [panic_reset].
 pub fn capture_panic(info: &core::panic::PanicInfo<'_>, uptime_ms: Option<u64>) {
     cortex_m::interrupt::disable();
     let sp = cortex_m::register::msp::read() as usize;
     let mut r = load();
     r.capture(Cause::Panic, uptime_ms, build_id(), |w| {
-        dump_stack(w, sp);
+        dump_return_addresses(w, sp);
         let _ = write!(w, "{info}");
     });
     store(&r);
@@ -186,6 +187,32 @@ fn dump_stack(w: &mut CrashWriter<'_>, sp: usize) {
         // SAFETY: inside the stack region [sp, _stack_start)
         let word = unsafe { read_volatile(a as *const u32) };
         if !w.push_stack(word) {
+            break;
+        }
+        a += 4;
+    }
+}
+
+/// Return addresses on the stack from `sp` to its top, until 32 ([crate::is_return_address]). The words right
+/// above `sp` are this crate's own frames, so a plain dump of 32 words would not reach the panic site.
+fn dump_return_addresses(w: &mut CrashWriter<'_>, sp: usize) {
+    unsafe extern "C" {
+        static _stack_start: u32;
+        static __stext: u32;
+        static __etext: u32;
+    }
+    let top = addr_of!(_stack_start) as usize;
+    let text = addr_of!(__stext) as u32..addr_of!(__etext) as u32;
+    if !sp.is_multiple_of(4) || sp >= top {
+        return;
+    }
+    // SAFETY: `is_return_address` only reads inside `text`, the firmware's own code in flash
+    let halfword = |a: u32| unsafe { read_volatile(a as *const u16) };
+    let mut a = sp;
+    while a + 4 <= top {
+        // SAFETY: inside the stack region [sp, _stack_start)
+        let word = unsafe { read_volatile(a as *const u32) };
+        if crate::is_return_address(word, text.clone(), halfword) && !w.push_stack(word) {
             break;
         }
         a += 4;
