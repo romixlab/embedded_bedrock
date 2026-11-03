@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- Detail pages under `book/checks/` for the first half of the catalogue (EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT,
+  PWR, FLS, LOG, CNT): what each check catches, why it matters, an example, how it's checked and the fix (LINT-7).
+
 ## [0.2.31] - 2026-11-03
 
 ### Added

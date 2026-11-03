@@ -27,7 +27,9 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
   (tpm `roles/checklists/firmware.md`). A lesson found on a board becomes a new entry here with its source, so the
   list grows from real failures.
 - **Detail pages** under [checks/](checks/), one per category, explain each check: what goes wrong, why, an example,
-  the fix, how it is detected, references (errata quoted from the document). Pages are being written (LINT-7, LINT-8).
+  the fix, how it is detected, references (errata quoted from the document). EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT,
+  PWR, FLS, LOG and CNT are written (LINT-7); PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF and TEST are still planned
+  (LINT-8).
 
 ## Concurrency
 
