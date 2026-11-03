@@ -1,0 +1,6 @@
+checks = ["DMA-2"]
+
+[[finding]]
+check = "DMA-2"
+at = "src/main.rs:17"
+confidence = "estimate"

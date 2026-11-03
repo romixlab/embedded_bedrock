@@ -14,4 +14,5 @@ ran = [
   "EXE-1", "EXE-2", "EXE-4", "EXE-5", "EXE-6", "EXE-7", "EXE-8", "EXE-9", "EXE-12", "EXE-13",
   "IRQ-1", "IRQ-2", "IRQ-4", "IRQ-5", "IRQ-6",
   "IRQ-8",
+  "DMA-2",
 ]
