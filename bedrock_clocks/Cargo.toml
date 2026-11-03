@@ -1,0 +1,12 @@
+[package]
+name = "bedrock_clocks"
+version = "0.1.0"
+edition = "2024"
+description = "Exact STM32 clock planning on the host: the clock tree as exact rationals, checked against the reference manual, emitted as register words and exact frequencies for bedrock_clocks_rt"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+[dev-dependencies]
+# Field positions of the encoded register words are held to the PAC's register types in a test
+stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32h725ig"] }

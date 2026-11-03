@@ -71,6 +71,10 @@ so a missing entry means work nobody sees.
 - `bedrock_can/` — an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL (bit timing, configuration and
   filter checks against a `Controller` layout, frames to send, error state), from B135; the template's `--can`
   firmware and its host client use it. Firmware takes it by path, like `bedrock_led`.
+- `bedrock_clocks/` — exact clock planning on the host (FEATURES.md area `RCC`): a board's clock tree as exact
+  rationals, checked against RM0468 / DS13311 / ES0491 / AN5337 (each limit in `h72x/limits.rs` names its section),
+  encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its
+  `clocks.toml`. Golden test for B135 in `tests/`; `BLESS=1 cargo test -p bedrock_clocks` rewrites the golden file.
 - `bedrock_rom_boot/` — firmware updates through the STM32 ROM bootloader (G0, H7): boot word in a backup
   register, `early()` before the HAL (jump to system memory, reset after the ROM's leave, boot-loop rescue),
   reboots, ROM USB serial; `embassy` and `ww-dfu` features (`BootControl` / `UpdateNode` in place). Firmware takes

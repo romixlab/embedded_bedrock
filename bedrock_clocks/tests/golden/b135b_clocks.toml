@@ -1,0 +1,54 @@
+# B135 rev B clock plan (sketch of the RCC-2 format; the test only hashes this file)
+part = "STM32H725IGK6"
+vdd = "3.3 V"
+supply = "direct-smps"
+vos = 1                         # VOS0 is ~2 years at TJ 105 °C busy (AN5337 Rev 4 §7)
+
+[hse]
+freq = "24 MHz"
+mode = "bypass"                 # X301, shared with the USB3315 ULPI PHY
+
+[pll]
+source = "hse"
+
+[pll1]
+m = 8
+n = 266
+fracn = 5188
+p = 2
+q = 8
+steer = "±100 ppm"
+
+[pll2]
+m = 8
+n = 133
+fracn = 2730
+q = 5
+r = 4
+steer = "±100 ppm"
+
+[pll3]
+m = 2
+n = 16
+p = 2
+q = 4
+r = 4
+
+[sys]
+source = "pll1_p"
+d1cpre = 1
+hpre = 2
+d1ppre = 2
+d2ppre1 = 2
+d2ppre2 = 2
+d3ppre = 2
+
+[kernel]
+fdcan = "pll2_q"
+sdmmc = "pll2_r"
+usb = "pll3_q"
+adc = "pll3_r"
+
+[expect]
+usb = "48 MHz"
+fdcan = { freq = "80 MHz", tolerance = "1 ppm" }

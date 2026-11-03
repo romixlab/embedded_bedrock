@@ -1,13 +1,20 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_can`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_can`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock_clocks`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_clocks`: exact STM32H72x/73x (RM0468) clock planning on the host. The tree is evaluated as exact
+  rationals, checked against RM0468 Rev 3, DS13311 Rev 3, ES0491 Rev 9 and AN5337 Rev 4 with every finding naming
+  its config key, value, range and document section, and written as a reviewable `clocks.rs` (register words with
+  their fields, exact frequencies as exact_units constants, FRACN steer ranges) (RCC-1, RCC-3).
 
 ## [0.2.43] - 2026-11-03
 

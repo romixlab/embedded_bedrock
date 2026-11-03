@@ -214,6 +214,13 @@ name = "bedrock_cli"
 version = "0.1.0"
 
 [[package]]
+name = "bedrock_clocks"
+version = "0.1.0"
+dependencies = [
+ "stm32-metapac",
+]
+
+[[package]]
 name = "bedrock_crash"
 version = "0.1.0"
 dependencies = [
@@ -2635,6 +2642,15 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "stm32-metapac"
+version = "21.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e74b78632cea498cfb28386a29f8bfae7476d6570a78733eb5fecbee66c2f4ce"
+dependencies = [
+ "cortex-m",
+]
 
 [[package]]
 name = "stm32_dfu_host"
