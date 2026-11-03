@@ -82,7 +82,8 @@ so a missing entry means work nobody sees.
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md
   TPL-20).
-- `book/` — notes on build info, counters and common issues.
+- `book/` — notes on build info, counters and common issues; the firmware check catalogue `checks.md` (detail
+  pages in `checks/`) with the review and bring-up checklists condensed from it (FEATURES.md area `LINT`).
 
 WireWeaver crates come from git (root `Cargo.toml`), patched to the sibling `../wire_weaver` for local work in
 `.cargo/config.toml` (add a crate to both). Fix WireWeaver problems there, with its own
@@ -125,6 +126,10 @@ repos.
   revision in use, and for STM32 also http://www.efton.sk/STM32/gotcha/; errata are quoted from the document, not
   from memory. Where to find them per vendor and the errata the template already handles (ES0548 flash prefetch on
   dual-bank G0B1): `firmware_template_skill/references/errata.md`.
+- Firmware lessons go into the check catalogue ([book/checks.md](book/checks.md)): a bug found on a board that a
+  review, a lint or a bring-up step could have caught becomes a new entry (next free number of its category,
+  severity, `check:` tier, the source repo and FEATURES id in the comment), and the review or bring-up checklist
+  gets its ID when it belongs there. Template changes that act on a check name its ID.
 - The build-info format is read by firmware and host tools (RockFace). It changes freely until
   `~/git/tpm/area/ops/in-use.md` lists it; then follow that line.
 

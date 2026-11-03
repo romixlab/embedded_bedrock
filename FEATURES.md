@@ -711,6 +711,37 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   another pad's takes its other GPIO name (pin 33 is PA11), and views and the pin table show a hierarchical
   sheet's net without its path (`/MCU/IO7_EXT` is `IO7_EXT`) · `geometry.rs`, `nets.rs`.
 
+## Firmware checks (`LINT`)
+
+Every firmware lesson and checklist item in one catalogue, and a tool that checks what can be checked
+automatically, the way better_erc does for schematics. The catalogue ([book/checks.md](book/checks.md)) holds the
+checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked (`src`, `cfg`, `elf`, `test`,
+`review`, `bench`); the items here track the code and the docs around it.
+
+- 🚧 **LINT-1 Check catalogue and checklists**: [book/checks.md](book/checks.md) (177 checks in 22 categories, each
+  with its source: the repo and FEATURES id of the bug, or the Notion firmware checklist imported into tpm
+  `roles/checklists/firmware.md`), the [review checklist](book/review-checklist.md) and the
+  [bring-up checklist](book/bringup-checklist.md) condensed from it. Detail pages per category are LINT-7 and LINT-8.
+- 📋 **LINT-2 Check engine** (crate `bedrock_lint` and its CLI): reads a firmware crate (source with syn,
+  `Cargo.toml`, `.cargo/config.toml`, `memory.x`, `build.rs`, `bedrock_fw.json`, optionally its ELF) into a firmware
+  model (tasks, executors with their interrupt and priority, spawns, interrupt handlers, statics, pins, chip); one
+  finding type with catalogue ID, severity, confidence, location, fix and fingerprint; text, JSON and SARIF reports;
+  waivers in the source with a reason, a baseline so only new findings fail; `explain ID` and `checks list` from the
+  catalogue; a report of the checks that could not run and why. Proves itself with STK-1, STK-2, STK-4 and EXE-3.
+- 📋 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
+- 📋 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
+  EXE-10, CNT-3).
+- 📋 **LINT-5 ELF checks**: the `elf` checks (STK-3, STK-5, STK-6, SIZ-1, SIZ-5, SIZ-6, MEM-3, MEM-6, MEM-10,
+  DMA-1, PERF-2, PERF-3, ERR-3).
+- 📋 **LINT-6 Host input, error path, fault handler and pin source checks**: HOST, CNT-1, FLT, PIN and the remaining
+  `src` checks.
+- 📋 **LINT-7 Detail pages, first half**: `book/checks/` pages for EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT, PWR,
+  FLS, LOG, CNT.
+- 📋 **LINT-8 Detail pages, second half**: PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF, TEST.
+- 📋 **LINT-9 Clean on our firmware**: the lint runs on usb_io_fw, typec_dongle, vb135_fdcan_iso_usb_fw and the
+  board templates; real bugs filed in those repos' FEATURES.md, false positives fixed in the checks, the rest in a
+  baseline.
+
 ## Dropped and superseded
 
 - **MAP-14 Two MCU pins on one net in the pin table** (B200A's GP26 / GP34, GP30 / GP39): superseded by MAP-11,

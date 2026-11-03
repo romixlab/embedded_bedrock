@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- Firmware check catalogue `book/checks.md`: 177 checks from our boards' bugs and the firmware checklist, by ID,
+  severity and where each is checked, with a review checklist and a bring-up checklist condensed from it (LINT-1).
+
 ## [0.2.30] - 2026-10-29
 
 ### Added
