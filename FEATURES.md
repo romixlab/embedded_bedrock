@@ -936,18 +936,18 @@ document section it comes from, and a FRACN steering range is checked at both en
 - 📋 **RCC-9 Flash and boot time measured** against embassy's RCC init for the same tree. Baseline: embassy's init
   adds 5620 B of `.text` on thumbv7em at opt-level "z", fat LTO (P2528 design note).
 - 🚧 **RCC-10 B135 rev B on hardware** (bare firmware `vb135_fdcan_iso_usb_fw/dev/b135b_clocks_hwtest`, silicon rev Z,
-  REV_ID 0x1001): `apply` Ok and `verify` Ok on every boot so far, all 21 RCC / PWR / FLASH registers equal the plan
-  words. A fresh-boot `apply` takes about 208 µs, 69 µs of it the PLL lock. sys_ck at seven FRACN points is within
-  ±72 ppb of the plan against HSE, and PLL2 within ±205 ppb when the step latched. `.text` of apply + verify:
-  +1620 B. Still to do: the power-on, watchdog and ROM-bootloader reset paths, and MCO1 on a counter (no instrument
-  on the bench PC). USB HS / FDCAN / SDMMC belong to RCC-8. Results: P2528 design/h7-clock-plan.md "Hardware test".
-- 🐛 **RCC-13 `set_fracn` latch can miss** (found on B135 rev B by RCC-10): it clears PLLxFRACEN, writes FRACR and
-  sets PLLxFRACEN back to back, and on silicon the new FRACN is sometimes not taken while FRACR reads back the new
-  value. 40 steps between the ends of a ±100 ppm range: PLL1 (8 MHz ref) 34/40 and PLL2 (4.8 MHz ref) 29/40 latched.
-  With a readback after each write: 40/40 and 37/40. With a readback and FRACEN held low for 40 or more CPU cycles
-  at 398 MHz: 40/40 for both. RM0468 Rev 3 §8.5.5 and §8.7.12 give no minimum. The 0 → 1 edge seems to need the
-  reference clock's domain, so the fix is to hold FRACEN low for two ref_ck periods, which the planner can emit
-  with the range. Check catalogue CLK-10; the same pattern is in vb135 PLAT-10.
+  REV_ID 0x1001): `apply` Ok and `verify` Ok on all 24 boots, all 21 RCC / PWR / FLASH registers equal the plan words.
+  Reset paths: debugger and watchdog reset take the already-set supply path (no `SupplyLocked`), a power-on the write
+  path (PWR_CR3 0x46 → 0x44), and a start after the ROM bootloader's jump works too. A fresh-boot `apply` takes about
+  208 µs, 69 µs of it the PLL lock. sys_ck at seven FRACN points is within ±72 ppb of the plan against HSE, PLL2
+  within ±205 ppb. `.text` of apply + verify: +1620 B (embassy +5620 B). Still to do: MCO1 (pll1_q ÷ 10 on PA8) on a
+  counter, no instrument on the bench PC. USB HS / FDCAN / SDMMC, and USB after the ROM's leave (USBSEL left on
+  HSI48 with HSI48 off), belong to RCC-8. Results: P2528 design/h7-clock-plan.md "Hardware test".
+- ✅ **RCC-13 `set_fracn` latch could miss** (found on B135 rev B by RCC-10, fixed by 3e813ba): FRACEN cleared, FRACR
+  written and FRACEN set back to back sometimes left the PLL on the old FRACN while FRACR read back the new one (back to
+  back: PLL1 35/40 and 29/40, PLL2 27/40 and 29/40 steps latched). `set_fracn` now reads back each write and holds
+  FRACEN low for `FracnRange::latch_hold_reads` (2 ref_ck periods): 240/240 for both PLLs on B135. Check catalogue
+  CLK-10; vb135 PLAT-10 has the same pattern.
 - 💡 **RCC-11 Solver**: targets in, dividers out, written back into clocks.toml.
 - 📋 **RCC-12 Template**: H7 board presets carry clocks.toml and the generated clocks.rs.
 
