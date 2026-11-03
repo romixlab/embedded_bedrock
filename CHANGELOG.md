@@ -9,13 +9,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
-### Fixed
-
-- `bedrock_crash::rp`: RP2040 / RP2350 crash records no longer vanish as a power loss (ROB-14). `CHIP_RESET` keeps `HAD_POR` from the power-up across `SYSRESETREQ` and the boot ROM's reboots, so every reset read `PowerOn` and `boot` wiped the record. New `CHIP_RESET_SCRATCH`, `CHIP_RESET_SEEN` and `chip_reset_fresh`: a marker in `WATCHDOG.SCRATCH1`, which every chip-level reset clears, tells a fresh `CHIP_RESET` from a stale one.
+## [0.2.47] - 2026-11-03
 
 ### Added
 
 - `bedrock_crash::rp::UPDATE_PENDING`, `update_pending` and `ResetFlags::updated`: `Updated` carried through BOOTSEL in the same scratch register, since the boot ROM erases all SRAM (and the record) before BOOTSEL (ROB-14).
+
+### Fixed
+
+- `bedrock_crash::rp`: RP2040 / RP2350 crash records no longer vanish as a power loss (ROB-14). `CHIP_RESET` keeps `HAD_POR` from the power-up across `SYSRESETREQ` and the boot ROM's reboots, so every reset read `PowerOn` and `boot` wiped the record. New `CHIP_RESET_SCRATCH`, `CHIP_RESET_SEEN` and `chip_reset_fresh`: a marker in `WATCHDOG.SCRATCH1`, which every chip-level reset clears, tells a fresh `CHIP_RESET` from a stale one.
 
 ## [0.2.46] - 2026-11-03
 
