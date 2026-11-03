@@ -239,8 +239,10 @@ version = "0.1.0"
 dependencies = [
  "anstyle",
  "inventory",
+ "object 0.38.1",
  "proc-macro2",
  "quote",
+ "rustc-demangle",
  "serde",
  "serde_json",
  "syn 2.0.119",
@@ -256,8 +258,10 @@ dependencies = [
  "bedrock_lint",
  "clap",
  "clap_complete",
+ "serde",
  "serde_json",
  "tempfile",
+ "toml 1.1.6+spec-1.1.0",
 ]
 
 [[package]]
@@ -2303,6 +2307,12 @@ name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97"
+
+[[package]]
+name = "rustc-demangle"
+version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b74b56ffa8bb2830709a538c2cbcae9aa062db0d2a42563bfb09bdaae44020eb"
 
 [[package]]
 name = "rustc_version"

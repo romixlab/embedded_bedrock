@@ -1,0 +1,6 @@
+# flip-link with RAM sections that take the whole region: a zero-size stack
+checks = ["STK-3"]
+
+[[finding]]
+check = "STK-3"
+at = "memory.x:4"

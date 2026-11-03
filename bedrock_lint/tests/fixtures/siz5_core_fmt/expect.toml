@@ -1,0 +1,6 @@
+# core::fmt linked in, pulled in by app::report (fmt-bytes lowered to fit the small synthetic functions)
+checks = ["SIZ-5"]
+
+[[finding]]
+check = "SIZ-5"
+at = "<elf>"

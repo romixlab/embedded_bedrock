@@ -1,0 +1,37 @@
+[[section]]
+name = ".bss"
+addr = 0x2000_0000
+size = 0x1000
+flags = "aw"
+nobits = true
+
+[[section]]
+name = ".axisram"
+addr = 0x2400_0000
+size = 0x200
+flags = "aw"
+nobits = true
+
+[[symbol]]
+name = "app::SD_DMA"
+addr = 0x2000_0000
+size = 0x200
+kind = "object"
+
+[[symbol]]
+name = "app::RX_BUF"
+addr = 0x2000_0200
+size = 0x100
+kind = "object"
+
+[[symbol]]
+name = "app::COUNT"
+addr = 0x2000_0300
+size = 4
+kind = "object"
+
+[[symbol]]
+name = "app::TX_DMA"
+addr = 0x2400_0000
+size = 0x200
+kind = "object"

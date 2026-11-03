@@ -1,0 +1,6 @@
+# linked without flip-link: the stack starts at the end of RAM, above .data and .bss
+checks = ["STK-3"]
+
+[[finding]]
+check = "STK-3"
+at = "memory.x:4"

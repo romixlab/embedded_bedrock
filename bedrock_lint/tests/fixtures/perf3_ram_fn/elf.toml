@@ -1,0 +1,21 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[section]]
+name = ".data"
+addr = 0x2000_0000
+flags = "awx"
+load = 0x0800_0100
+
+[[function]]
+name = "app::main"
+addr = 0x0800_0000
+frame = 8
+
+[[function]]
+name = "app::kept"
+addr = 0x2000_0000
+frame = 8
+section = ".data"

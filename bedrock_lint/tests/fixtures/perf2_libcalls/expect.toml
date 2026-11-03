@@ -1,0 +1,7 @@
+# a 64-bit division from the firmware's code; the 32-bit one only from the runtime's own routines
+checks = ["PERF-2"]
+
+[[finding]]
+check = "PERF-2"
+at = "<elf>"
+confidence = "candidate"

@@ -1,0 +1,7 @@
+# 29 KiB of code and 1 KiB of .data initializers in 32 KiB of flash; RAM has room; the full backup-register
+# region is not a memory budget
+checks = ["SIZ-1"]
+
+[[finding]]
+check = "SIZ-1"
+at = "memory.x:3"

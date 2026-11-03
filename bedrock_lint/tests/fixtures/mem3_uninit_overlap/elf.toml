@@ -1,0 +1,36 @@
+[[section]]
+name = ".bss"
+addr = 0x2000_0000
+size = 0x100
+flags = "aw"
+nobits = true
+
+[[section]]
+name = ".uninit"
+addr = 0x2000_0100
+size = 0x40
+flags = "aw"
+nobits = true
+
+[[section]]
+name = ".uninit.sram2"
+addr = 0x2000_4000
+size = 0x40
+flags = "aw"
+nobits = true
+
+[[symbol]]
+name = "__sbss"
+addr = 0x2000_0000
+
+[[symbol]]
+name = "__ebss"
+addr = 0x2000_0140
+
+[[symbol]]
+name = "__sram2_start"
+addr = 0x2000_4000
+
+[[symbol]]
+name = "__sram2_end"
+addr = 0x2000_8000

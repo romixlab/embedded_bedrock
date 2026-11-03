@@ -1,0 +1,31 @@
+[[section]]
+name = ".data"
+addr = 0x2000_0000
+size = 0x900
+flags = "aw"
+load = 0x0800_1000
+
+[[section]]
+name = ".bss"
+addr = 0x2000_0900
+size = 0x1000
+flags = "aw"
+nobits = true
+
+[[symbol]]
+name = "app::TABLE"
+addr = 0x2000_0000
+size = 0x800
+kind = "object"
+
+[[symbol]]
+name = "app::SMALL"
+addr = 0x2000_0800
+size = 0x10
+kind = "object"
+
+[[symbol]]
+name = "app::ZEROED"
+addr = 0x2000_0900
+size = 0x1000
+kind = "object"

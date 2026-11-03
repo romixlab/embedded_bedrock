@@ -1,0 +1,14 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[function]]
+name = "app::setup"
+addr = 0x0800_0000
+frame = 4200
+
+[[function]]
+name = "app::small"
+addr = 0x0800_0040
+frame = 64

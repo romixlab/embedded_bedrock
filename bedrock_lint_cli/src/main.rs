@@ -34,6 +34,8 @@ const VERSION: &str = concat!(
   bedrock-lint check --write-baseline bedrock-lint.baseline.json   accept today's findings
   bedrock-lint explain EXE-3              what EXE-3 is about and how to fix it
   bedrock-lint checks list --all          every catalogue check and which are automated
+  bedrock-lint check --elf target/thumbv6m-none-eabi/release/fw   with the elf checks (stack, sizes, libcalls)
+  bedrock-lint frames target/thumbv6m-none-eabi/release/fw        the largest stack frames, the deepest path
 
 Completion: source <(COMPLETE=bash bedrock-lint)   (zsh, fish likewise)"
 )]
@@ -121,6 +123,21 @@ bedrock-lint.toml in the crate sets severities, skips checks with a reason and n
     Checks {
         #[command(subcommand)]
         command: ChecksCmd,
+    },
+    /// The largest stack frames of a linked ELF and the deepest call path (Arm Thumb code)
+    #[command(
+        after_help = "Frames come from each function's prologue, the paths from its direct calls (bl, tail calls); \
+        calls through pointers (async task polls, dyn methods) are not followed, so a path can end early."
+    )]
+    Frames {
+        /// The linked ELF (target/<triple>/release/<name>)
+        elf: PathBuf,
+        /// How many functions to list
+        #[arg(long, default_value_t = 20)]
+        top: usize,
+        /// The deepest path from this function (default: Reset)
+        #[arg(long)]
+        from: Option<String>,
     },
     /// Print the firmware model as JSON: files read, chip, source facts (tasks, executors, spawns, ...)
     Model {
@@ -210,6 +227,7 @@ fn main() -> ExitCode {
                 },
         } => list(all, category.as_deref(), json),
         Cmd::Model { dir, elf, root } => model(&dir, elf, root),
+        Cmd::Frames { elf, top, from } => frames(&elf, top, from.as_deref()),
     };
     match result {
         Ok(code) => code,
@@ -417,5 +435,53 @@ fn model(dir: &Path, elf: Option<PathBuf>, root: Option<PathBuf>) -> Result<Exit
     let json = serde_json::to_string_pretty(&fw).map_err(|e| e.to_string())?;
     std::io::Write::write_all(&mut std::io::stdout(), format!("{json}\n").as_bytes())
         .map_err(|e| e.to_string())?;
+    Ok(ExitCode::SUCCESS)
+}
+
+fn frames(path: &Path, top: usize, from: Option<&str>) -> Result<ExitCode, String> {
+    use bedrock_lint::model::elf::{CallDepths, Elf};
+    let elf = Elf::load(path, Path::new(".")).map_err(|e| format!("{}: {e}", path.display()))?;
+    if elf.code.is_empty() {
+        return Err(format!(
+            "{}: no Arm Thumb functions: frames are read from Thumb code only",
+            path.display()
+        ));
+    }
+    let bold = anstyle::Style::new().bold();
+    let dim = anstyle::Style::new().dimmed();
+    let mut d = CallDepths::new(&elf);
+    let mut rows: Vec<(u32, u64, &str)> = Vec::new();
+    for c in &elf.code {
+        rows.push((
+            c.frame.unwrap_or(0),
+            d.depth(c.symbol),
+            &elf.symbols[c.symbol].name,
+        ));
+    }
+    rows.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)));
+    println!("{bold}{:>7}  {:>7}  function{bold:#}", "frame", "deepest");
+    for (frame, depth, name) in rows.iter().take(top) {
+        println!("{frame:>7}  {depth:>7}  {name}");
+    }
+    let start = from.unwrap_or("Reset");
+    let Some(root) = elf
+        .symbols
+        .iter()
+        .position(|s| s.name == start || s.raw == start)
+    else {
+        return Err(format!("no function {start} in the ELF"));
+    };
+    let total = d.depth(root);
+    println!();
+    println!("{bold}deepest path from {start}: {total} bytes{bold:#}");
+    for i in d.path(root) {
+        let frame = elf.code_of(i).and_then(|c| c.frame).unwrap_or(0);
+        println!("{frame:>7}  {}", elf.symbols[i].name);
+    }
+    let indirect: u32 = elf.code.iter().map(|c| c.indirect).sum();
+    println!(
+        "{dim}{} functions, {indirect} calls through pointers not followed{dim:#}",
+        elf.code.len()
+    );
     Ok(ExitCode::SUCCESS)
 }

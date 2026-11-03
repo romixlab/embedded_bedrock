@@ -1,0 +1,16 @@
+# a frame over the 2 KiB budget, a worst case over the stack, a recursion
+checks = ["STK-6"]
+
+[[finding]]
+check = "STK-6"
+at = "src/main.rs:6"
+
+[[finding]]
+check = "STK-6"
+at = "memory.x:4"
+confidence = "estimate"
+
+[[finding]]
+check = "STK-6"
+at = "<elf>"
+confidence = "candidate"

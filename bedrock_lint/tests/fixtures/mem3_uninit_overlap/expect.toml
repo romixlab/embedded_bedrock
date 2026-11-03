@@ -1,0 +1,11 @@
+# __ebss past the start of .uninit (certain); init_ram.rs zeroes SRAM2, which holds .uninit.sram2 (estimate)
+checks = ["MEM-3"]
+
+[[finding]]
+check = "MEM-3"
+at = "<elf>"
+
+[[finding]]
+check = "MEM-3"
+at = "<elf>"
+confidence = "estimate"

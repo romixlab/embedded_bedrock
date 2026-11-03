@@ -1,0 +1,12 @@
+# H7: a DMA buffer and a buffer in DTCM (RAM at 0x2000_0000); the one in AXI SRAM is fine
+checks = ["DMA-1"]
+
+[[finding]]
+check = "DMA-1"
+at = "src/main.rs:4"
+confidence = "estimate"
+
+[[finding]]
+check = "DMA-1"
+at = "src/main.rs:5"
+confidence = "candidate"

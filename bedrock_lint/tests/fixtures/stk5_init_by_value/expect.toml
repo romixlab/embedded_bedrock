@@ -1,0 +1,7 @@
+# Big::new() built on setup's stack, then moved into the StaticCell; small's cell is small
+checks = ["STK-5"]
+
+[[finding]]
+check = "STK-5"
+at = "src/main.rs:16"
+confidence = "estimate"

@@ -1,0 +1,7 @@
+# code runs over the bank boundary at 0x0804_0000 of a 512 KiB G0B1
+checks = ["ERR-3"]
+
+[[finding]]
+check = "ERR-3"
+at = "memory.x:3"
+confidence = "estimate"

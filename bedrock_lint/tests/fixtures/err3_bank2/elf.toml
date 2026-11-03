@@ -1,0 +1,21 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[section]]
+name = ".text.bank2"
+addr = 0x0803_FFF0
+size = 0x40
+flags = "ax"
+
+[[function]]
+name = "Reset"
+addr = 0x0800_0000
+frame = 8
+calls = ["late"]
+
+[[function]]
+name = "late"
+addr = 0x0803_FFF0
+frame = 8

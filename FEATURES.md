@@ -746,8 +746,16 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
 - 📋 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
 - 📋 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
   EXE-10, CNT-3).
-- 📋 **LINT-5 ELF checks**: the `elf` checks (STK-3, STK-5, STK-6, SIZ-1, SIZ-5, SIZ-6, MEM-3, MEM-6, MEM-10,
-  DMA-1, PERF-2, PERF-3, ERR-3).
+- ✅ **LINT-5 ELF checks**: the `elf` checks STK-3, STK-5, STK-6, SIZ-1, SIZ-5, SIZ-6, MEM-3, MEM-6, MEM-10, DMA-1,
+  PERF-2, PERF-3 and ERR-3 on `--elf` (`checks/`), with the model's ELF (`model/elf.rs`: sections with their load
+  address, LOAD segments, demangled symbols; `CallDepths` for the deepest path), the `MEMORY` regions of memory.x
+  (`model/memory_x.rs`) and Thumb code read without a disassembler (`model/thumb.rs`: frames from `push` / `sub sp`
+  / literal-loaded prologues, calls from `bl` and tail branches; calls through pointers are counted, not followed,
+  so STK-6's depth is an estimate). Thresholds in `[limits]` of `bedrock-lint.toml`. Chip tables: G0 / H7 backup
+  registers (MEM-6), H7 DTCM (DMA-1), G0B0 / G0B1 / G0C1 bank 2 (ERR-3), the M0 / M0+ families (PERF-2). STK-5,
+  SIZ-5, PERF-3 and ERR-3 have only their `elf` part so far; their `src` part goes into the same check file.
+  `bedrock-lint frames <ELF>` lists the largest frames and the deepest path. Fixtures are synthetic ELFs written
+  by the test from an `elf.toml`; checked by hand on a generated G0B1 embassy firmware (3 Nov 2026).
 - 📋 **LINT-6 Host input, error path, fault handler and pin source checks**: HOST, CNT-1, FLT, PIN and the remaining
   `src` checks.
 - ✅ **LINT-7 Detail pages, first half**: `book/checks/` pages for EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT, PWR,

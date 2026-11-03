@@ -2,7 +2,10 @@
 //! all when absent), the findings they must give (`[[finding]]`: check, place, confidence, waived) and nothing else,
 //! the checks that must not run (`not_run`), must run (`ran`), waivers written wrong (`problems`), tasks the model
 //! must see (`tasks`). `dir` is the crate inside the fixture when it is not the fixture itself; the fixture is the
-//! discovery root.
+//! discovery root. An `elf.toml` describes the linked ELF ([`synth`]): the test writes it and passes it as `--elf`
+//! would. A `bedrock-lint.toml` in the crate is the project's configuration (the thresholds of the elf checks).
+
+mod synth;
 
 use bedrock_lint::{
     Baseline, Confidence, FailOn, Firmware, LoadOptions, RunOptions, Severity, run,
@@ -58,11 +61,19 @@ fn load(fixture: &Path) -> (Firmware, Expect) {
         .dir
         .as_ref()
         .map_or(fixture.to_path_buf(), |d| fixture.join(d));
+    let elf = fixture.join("elf.toml").is_file().then(|| {
+        let spec: synth::Spec =
+            toml::from_str(&std::fs::read_to_string(fixture.join("elf.toml")).unwrap()).unwrap();
+        let name = fixture.file_name().unwrap().to_string_lossy().into_owned();
+        let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}.elf"));
+        std::fs::write(&out, synth::write(&spec)).unwrap();
+        out
+    });
     let fw = Firmware::load(
         &dir,
         &LoadOptions {
             root: Some(fixture.to_path_buf()),
-            elf: None,
+            elf,
         },
     )
     .unwrap();
@@ -87,19 +98,36 @@ fn fixtures_give_their_findings() {
             &fw,
             &RunOptions {
                 only: expect.checks.clone(),
+                config: bedrock_lint::Config::load(&fw.dir).unwrap(),
                 ..Default::default()
             },
         )
         .unwrap();
+        let elf_file = fw.elf.as_ref().map(|e| e.rel.clone());
         let mut got: Vec<String> = report
             .findings
             .iter()
             .map(|f| {
-                let at = expect
+                // a span in the written ELF is `<elf>` in expect.toml
+                let mut f = f.clone();
+                for s in &mut f.spans {
+                    if Some(&s.file) == elf_file.as_ref() {
+                        s.file = "<elf>".into();
+                    }
+                }
+                // the form of an expected place of this check that matches, else of the first
+                let ats: Vec<&str> = expect
                     .finding
                     .iter()
-                    .find(|e| e.check == f.check)
-                    .map_or(":", |e| e.at.as_str());
+                    .filter(|e| e.check == f.check)
+                    .map(|e| e.at.as_str())
+                    .collect();
+                let at = f
+                    .primary()
+                    .and_then(|s| ats.iter().find(|at| place(s, at) == **at))
+                    .or(ats.first())
+                    .copied()
+                    .unwrap_or(":");
                 format!(
                     "{} {} {}{}",
                     f.check,

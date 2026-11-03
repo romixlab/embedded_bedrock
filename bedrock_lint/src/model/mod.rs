@@ -6,14 +6,21 @@
 //! - the Rust source of the crate and of its path dependencies inside the repository, parsed with syn, and the facts
 //!   drawn from it ([`Facts`]: tasks, executors, spawns, interrupt handlers and bindings, statics, priorities, a call
 //!   graph by name);
-//! - the ELF, when one is given (its checks come with LINT-5).
+//! - the `MEMORY` regions of `memory.x` ([`memory_x`]);
+//! - the linked ELF, when one is given ([`elf`]): sections, LOAD segments, demangled symbols, and for Arm Thumb code
+//!   each function's frame and calls ([`thumb`]).
 //!
 //! What could not be read is a [`Note`], not an error: the checks that need it are reported as not run.
 
 pub mod build_script;
+pub mod elf;
+pub mod memory_x;
 mod source;
+pub mod thumb;
 
 pub use build_script::{BuildScript, Directive};
+pub use elf::Elf;
+pub use memory_x::Region;
 pub use source::{
     Binding, Call, Entry, ExecutorStart, Facts, Function, Handler, HandlerKind, Loc, PrioritySet,
     SourceFile, Spawn, Static, Task,
@@ -303,12 +310,14 @@ pub struct Firmware {
     pub cargo_configs: Vec<TomlFile>,
     pub build_script: Option<BuildScript>,
     pub memory_x: Option<TextFile>,
+    /// The `MEMORY` regions of memory.x
+    pub memory: Vec<Region>,
     pub bedrock_fw: Option<BedrockFw>,
     /// The parsed Rust files: the crate's `src/` and its path dependencies in the repository
     pub sources: Vec<SourceFile>,
     pub facts: Facts,
-    /// The linked ELF, when given and present
-    pub elf: Option<PathBuf>,
+    /// The linked ELF, when given and readable
+    pub elf: Option<Elf>,
     /// What could not be read
     pub notes: Vec<Note>,
 }
@@ -459,8 +468,30 @@ impl Firmware {
         }
         let facts = Facts::extract(&sources);
 
+        let memory = memory_x
+            .as_ref()
+            .map(|m| memory_x::regions(&m.text))
+            .unwrap_or_default();
+        if let Some(m) = &memory_x
+            && memory.is_empty()
+        {
+            notes.push(Note {
+                file: m.rel.clone(),
+                message: "no MEMORY regions could be read".into(),
+            });
+        }
+
         let elf = match &opts.elf {
-            Some(p) if p.is_file() => Some(absolute(p)),
+            Some(p) if p.is_file() => match Elf::load(&absolute(p), &dir) {
+                Ok(e) => Some(e),
+                Err(message) => {
+                    notes.push(Note {
+                        file: p.display().to_string(),
+                        message,
+                    });
+                    None
+                }
+            },
             Some(p) => {
                 notes.push(Note {
                     file: p.display().to_string(),
@@ -480,6 +511,7 @@ impl Firmware {
             cargo_configs,
             build_script,
             memory_x,
+            memory,
             bedrock_fw,
             sources,
             facts,

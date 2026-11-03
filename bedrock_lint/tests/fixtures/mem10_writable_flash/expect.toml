@@ -1,0 +1,10 @@
+# a static mut with a .rodata link section: .rodata writable in flash, one RWX segment
+checks = ["MEM-10"]
+
+[[finding]]
+check = "MEM-10"
+at = "<elf>"
+
+[[finding]]
+check = "MEM-10"
+at = "src/main.rs:5"

@@ -1,0 +1,6 @@
+[[section]]
+name = ".cnt_bkp_buffer"
+addr = 0x4000_B000
+size = 20
+flags = "aw"
+nobits = true

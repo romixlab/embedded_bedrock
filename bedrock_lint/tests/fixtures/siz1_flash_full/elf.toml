@@ -1,0 +1,19 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+size = 0x7400
+flags = "ax"
+
+[[section]]
+name = ".data"
+addr = 0x2000_1000
+size = 0x400
+flags = "aw"
+load = 0x0800_7400
+
+[[section]]
+name = ".cnt_bkp_buffer"
+addr = 0x4000_B100
+size = 20
+flags = "aw"
+nobits = true

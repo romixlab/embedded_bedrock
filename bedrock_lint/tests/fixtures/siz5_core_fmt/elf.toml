@@ -1,0 +1,21 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[function]]
+name = "core::fmt::write"
+addr = 0x0800_0000
+frame = 64
+
+[[function]]
+name = "<u32 as core::fmt::Display>::fmt"
+addr = 0x0800_0040
+frame = 32
+calls = ["core::fmt::write"]
+
+[[function]]
+name = "app::report"
+addr = 0x0800_0080
+frame = 16
+calls = ["<u32 as core::fmt::Display>::fmt"]

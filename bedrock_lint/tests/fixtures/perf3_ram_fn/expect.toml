@@ -1,0 +1,6 @@
+# fast_isr was inlined back into flash; kept has #[inline(never)] and is in RAM
+checks = ["PERF-3"]
+
+[[finding]]
+check = "PERF-3"
+at = "src/main.rs:5"

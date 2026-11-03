@@ -162,7 +162,10 @@ fn explain_and_list() {
     assert!(s.contains("EXE-1") && s.contains("not yet"), "{s}");
     let v: serde_json::Value =
         serde_json::from_slice(&bin(&["checks", "list", "--json"]).stdout).unwrap();
-    assert_eq!(v.as_array().unwrap().len(), 4);
+    assert_eq!(
+        v.as_array().unwrap().len(),
+        bedrock_lint::registered().len()
+    );
 }
 
 #[test]
@@ -174,4 +177,52 @@ fn completes_check_ids_with_titles() {
         .unwrap();
     let s = stdout(&o);
     assert!(s.contains("EXE-3\tInterrupt executor started"), "{s}");
+}
+
+#[path = "../../bedrock_lint/tests/synth/mod.rs"]
+mod synth;
+
+/// The ELF a fixture's elf.toml describes, written into `dir`
+fn write_elf(fixture: &str, dir: &Path) -> PathBuf {
+    let spec: synth::Spec = toml::from_str(
+        &std::fs::read_to_string(fixtures().join(fixture).join("elf.toml")).unwrap(),
+    )
+    .unwrap();
+    let out = dir.join("fw.elf");
+    std::fs::write(&out, synth::write(&spec)).unwrap();
+    out
+}
+
+#[test]
+fn elf_checks_and_frames() {
+    let d = copy("stk6_frames_and_depth");
+    let dir = d.path().to_str().unwrap();
+    let elf = write_elf("stk6_frames_and_depth", d.path());
+    let elf = elf.to_str().unwrap();
+
+    let o = bin(&["check", dir, "--root", dir, "--elf", elf, "--only", "STK-6"]);
+    assert_eq!(o.status.code(), Some(1), "{}", stdout(&o));
+    let s = stdout(&o);
+    assert!(
+        s.contains("warning[STK-6]: `app::huge` takes 2.9 KiB"),
+        "{s}"
+    );
+    assert!(s.contains("worst-case stack about"), "{s}");
+
+    // without --elf the elf checks say why they did not run
+    let o = bin(&["check", dir, "--root", dir, "--only", "STK-6"]);
+    assert!(stdout(&o).contains("no ELF given"), "{}", stdout(&o));
+
+    let o = bin(&["frames", elf, "--top", "2"]);
+    assert_eq!(o.status.code(), Some(0));
+    let s = stdout(&o);
+    let first = s.lines().nth(1).unwrap();
+    assert!(
+        first.contains("3000") && first.ends_with("app::huge"),
+        "{s}"
+    );
+    assert!(s.contains("deepest path from Reset: 3072 bytes"), "{s}");
+
+    let o = bin(&["frames", dir]);
+    assert_eq!(o.status.code(), Some(2));
 }

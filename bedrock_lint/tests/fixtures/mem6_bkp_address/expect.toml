@@ -1,0 +1,6 @@
+# the BKP counters at TAMP's base, not at TAMP_BKP0R (+0x100)
+checks = ["MEM-6"]
+
+[[finding]]
+check = "MEM-6"
+at = "memory.x:5"

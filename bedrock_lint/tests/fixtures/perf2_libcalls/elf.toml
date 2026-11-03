@@ -1,0 +1,26 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[function]]
+name = "__aeabi_uldivmod"
+addr = 0x0800_0000
+frame = 16
+calls = ["__udivmoddi4"]
+
+[[function]]
+name = "__udivmoddi4"
+addr = 0x0800_0040
+frame = 16
+calls = ["__aeabi_uidiv"]
+
+[[function]]
+name = "__aeabi_uidiv"
+addr = 0x0800_0080
+
+[[function]]
+name = "app::filter"
+addr = 0x0800_00C0
+frame = 16
+calls = ["__aeabi_uldivmod"]

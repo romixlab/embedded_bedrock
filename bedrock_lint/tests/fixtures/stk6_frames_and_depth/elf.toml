@@ -1,0 +1,44 @@
+# a 3 KiB stack under flip-link; Reset → main → huge needs 3072 B, the HardFault handler on top 72 more
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[section]]
+name = ".bss"
+addr = 0x2000_0C00
+size = 0x100
+flags = "aw"
+nobits = true
+
+[[function]]
+name = "Reset"
+addr = 0x0800_0000
+frame = 8
+calls = ["app::main"]
+
+[[function]]
+name = "app::main"
+addr = 0x0800_0040
+frame = 64
+calls = ["app::huge", "app::walk"]
+
+[[function]]
+name = "app::huge"
+addr = 0x0800_0080
+frame = 3000
+
+[[function]]
+name = "app::walk"
+addr = 0x0800_00C0
+frame = 16
+calls = ["app::walk"]
+
+[[function]]
+name = "HardFault"
+addr = 0x0800_0100
+frame = 40
+
+[[symbol]]
+name = "_stack_start"
+addr = 0x2000_0C00

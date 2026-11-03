@@ -17,6 +17,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   build.rs), STK-4 (cortex-m-rt `paint-stack` on) and EXE-3 (interrupt executor started before its priority is
   set). Text, JSON and SARIF reports, waivers with a reason in the firmware's files, a baseline, `explain`,
   `checks list`, `model` (LINT-2).
+- `bedrock-lint check --elf <ELF>` runs the elf checks on the linked firmware: STK-3 (stack not below .data / .bss,
+  or no room), STK-5 (a `StaticCell::init` by value with a big frame), STK-6 (a frame over the budget, a worst-case
+  stack depth over the stack, recursion), SIZ-1 (a memory.x region over 90 % used), SIZ-5 (core::fmt linked in, and
+  from where), SIZ-6 (a big `.data` initializer), MEM-3 (startup init over `.uninit`), MEM-6 (BKP counters not at the
+  backup registers), MEM-10 (an RWX segment or a writable section in flash), DMA-1 (H7 DMA buffers in DTCM), PERF-2
+  (64-bit and 32-bit division and multiply routines on an M0+, with the callers), PERF-3 (a RAM function inlined
+  back into flash) and ERR-3 (G0B1 code in flash bank 2). Thresholds in `[limits]` of `bedrock-lint.toml`. Frames
+  and calls are read from the Thumb code (prologues, `bl`), without a disassembler (LINT-5).
+- `bedrock-lint frames <ELF>`: the largest stack frames and the deepest call path from `Reset` (LINT-5).
 
 ## [0.2.35] - 2026-11-03
 

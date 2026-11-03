@@ -100,7 +100,7 @@ pub fn run_with(
             continue;
         }
         ran.push(meta.id.to_string());
-        findings.extend(c.run(fw));
+        findings.extend(c.run_with(fw, &opts.config));
     }
 
     for f in &mut findings {

@@ -2,6 +2,7 @@
 //! registry every check file adds itself to with `inventory::submit!`. Severity and title come from the catalogue,
 //! so a check can't disagree with the book.
 
+use crate::config::Config;
 use crate::finding::Finding;
 use crate::model::Firmware;
 
@@ -20,6 +21,10 @@ pub enum Need {
     Chip,
     /// The linked ELF (`--elf`)
     Elf,
+    /// Arm Thumb code in the ELF: frames and calls are read from it
+    Thumb,
+    /// `memory.x` with a `MEMORY` block that could be read
+    Regions,
 }
 
 impl Need {
@@ -32,6 +37,8 @@ impl Need {
             Need::BedrockFw => "bedrock-fw",
             Need::Chip => "chip",
             Need::Elf => "elf",
+            Need::Thumb => "thumb-code",
+            Need::Regions => "memory-regions",
         }
     }
 
@@ -44,6 +51,8 @@ impl Need {
             Need::BedrockFw => fw.bedrock_fw.is_none(),
             Need::Chip => fw.chip().is_none(),
             Need::Elf => fw.elf.is_none(),
+            Need::Thumb => fw.elf.as_ref().is_none_or(|e| e.code.is_empty()),
+            Need::Regions => fw.memory.is_empty(),
         };
         missing.then(|| {
             match self {
@@ -55,6 +64,10 @@ impl Need {
                 }
                 Need::Chip => "bedrock_fw.json names no chip (answers.chip)",
                 Need::Elf => "no ELF given: pass --elf target/<triple>/release/<name>",
+                Need::Thumb => {
+                    "no Arm Thumb functions in the ELF (or no ELF): frames and calls are read from Thumb code only"
+                }
+                Need::Regions => "no MEMORY regions: memory.x is missing or could not be read",
             }
             .to_string()
         })
@@ -73,7 +86,17 @@ pub struct CheckMeta {
 pub trait Check: Sync {
     fn meta(&self) -> &'static CheckMeta;
     /// The findings on the firmware; called only when every need is there
-    fn run(&self, fw: &Firmware) -> Vec<Finding>;
+    fn run(&self, fw: &Firmware) -> Vec<Finding> {
+        let _ = fw;
+        Vec::new()
+    }
+
+    /// The findings with the project's `bedrock-lint.toml` at hand (the thresholds in `limits`); a check that
+    /// measures something implements this instead of [`Check::run`]
+    fn run_with(&self, fw: &Firmware, cfg: &Config) -> Vec<Finding> {
+        let _ = cfg;
+        self.run(fw)
+    }
 }
 
 /// A check in the static registry; each check file submits one

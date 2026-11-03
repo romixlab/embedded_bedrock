@@ -1,0 +1,27 @@
+[[section]]
+name = ".text"
+addr = 0x0800_0000
+flags = "ax"
+
+[[function]]
+name = "Reset"
+addr = 0x0800_0000
+frame = 8
+
+[[section]]
+name = ".data"
+addr = 0x2000_0000
+size = 0x20
+flags = "aw"
+load = 0x0800_0100
+
+[[section]]
+name = ".bss"
+addr = 0x2000_0020
+size = 0x100
+flags = "aw"
+nobits = true
+
+[[symbol]]
+name = "_stack_start"
+addr = 0x2002_4000

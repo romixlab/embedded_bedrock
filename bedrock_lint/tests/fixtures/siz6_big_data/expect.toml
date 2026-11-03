@@ -1,0 +1,6 @@
+# a 2 KiB .data initializer; a small one and a big zeroed .bss static are fine
+checks = ["SIZ-6"]
+
+[[finding]]
+check = "SIZ-6"
+at = "src/main.rs:4"
