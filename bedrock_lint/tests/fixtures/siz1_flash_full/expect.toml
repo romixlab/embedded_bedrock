@@ -1,5 +1,5 @@
 # 29 KiB of code and 1 KiB of .data initializers in 32 KiB of flash; RAM has room; the full backup-register
-# region is not a memory budget
+# region and a BOOT2 region one blob fills are not memory budgets
 checks = ["SIZ-1"]
 
 [[finding]]

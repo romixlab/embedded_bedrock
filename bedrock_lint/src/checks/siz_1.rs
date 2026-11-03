@@ -20,7 +20,7 @@ impl Check for Siz1 {
         &META
     }
 
-    /// Per memory.x region (not register regions): the sections that run there, and the initial values of `.data` stored there. The
+    /// Per memory.x region (not register regions, not a region one section fills exactly, like BOOT2): the sections that run there, and the initial values of `.data` stored there. The
     /// stack is not counted: with flip-link it takes what is left of its RAM (STK-6 compares it with the calls).
     fn run_with(&self, fw: &Firmware, cfg: &Config) -> Vec<Finding> {
         let Some(elf) = &fw.elf else {
@@ -39,7 +39,13 @@ impl Check for Siz1 {
                     used += s.size;
                 }
             }
-            if used * 100 >= limit * r.length {
+            // a region made for one fixed-size blob (the RP2040's BOOT2) is full by design
+            let one_blob = elf
+                .alloc_sections()
+                .filter(|s| r.contains(s.addr))
+                .map(|s| s.size)
+                .eq([r.length]);
+            if used * 100 >= limit * r.length && !one_blob {
                 out.push(
                     Finding::new(
                         "SIZ-1",

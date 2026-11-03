@@ -57,6 +57,7 @@ const M0: &[&str] = &["stm32g0", "stm32c0", "stm32l0", "stm32f0", "rp2040"];
 /// A routine of the runtime itself (its callers are not the firmware's hot paths)
 fn is_runtime(name: &str) -> bool {
     name.starts_with("__")
+        || name.starts_with("OUTLINED_FUNCTION")
         || name.starts_with("compiler_builtins::")
         || name.contains("core::fmt::")
 }

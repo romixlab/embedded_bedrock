@@ -17,3 +17,9 @@ addr = 0x4000_B100
 size = 20
 flags = "aw"
 nobits = true
+
+[[section]]
+name = ".boot2"
+addr = 0x1000_0000
+size = 256
+flags = "a"

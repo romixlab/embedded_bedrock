@@ -44,7 +44,11 @@ impl Check for Siz5 {
         let mut from: Vec<&str> = Vec::new();
         for c in &elf.code {
             let s = &elf.symbols[c.symbol];
-            if !is_fmt(s) && c.calls.iter().any(|t| fmt.contains(t)) {
+            // OUTLINED_FUNCTION_n: code the compiler factored out, not a place in the firmware
+            if !is_fmt(s)
+                && !s.name.starts_with("OUTLINED_FUNCTION")
+                && c.calls.iter().any(|t| fmt.contains(t))
+            {
                 from.push(&s.name);
             }
         }
