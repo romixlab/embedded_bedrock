@@ -11,28 +11,28 @@ mode = "bypass"                 # X301, shared with the USB3315 ULPI PHY
 [pll]
 source = "hse"
 
-[pll1]
-m = 8
-n = 266
-fracn = 5188
+[pll1]                          # 8 MHz × (99 + 4096/8192) = 796 MHz VCO, P 398 MHz
+m = 3
+n = 99
+fracn = 4096
 p = 2
 q = 8
 steer = "±100 ppm"
 
-[pll2]
-m = 8
-n = 133
-fracn = 2730
-q = 5
-r = 4
+[pll2]                          # 4.8 MHz × (166 + 5461/8192) = 799.9998046875 MHz VCO
+m = 5
+n = 166
+fracn = 5461
+q = 10                          # FDCAN 79.99998046875 MHz (−0.244140625 ppm)
+r = 8                           # SDMMC 99.9999755859375 MHz
 steer = "±100 ppm"
 
-[pll3]
-m = 2
-n = 16
-p = 2
-q = 4
-r = 4
+[pll3]                          # 8 MHz × 96 = 768 MHz VCO, integer mode
+m = 3
+n = 96
+p = 8
+q = 16                          # USB 48 MHz
+r = 16                          # ADC 48 MHz
 
 [sys]
 source = "pll1_p"

@@ -195,8 +195,8 @@ fn fracn_steps_inside_the_planned_range() {
     assert_eq!(s.writes[2].1 & 1, 1);
     assert!(h72x::set_fracn(&mut s, &r, r.max + 1).is_err());
     assert!(h72x::set_fracn(&mut s, &r, r.min - 1).is_err());
-    // 0.458 ppm per step at B135's PLL1: 10¹² / (266·8192 + 5188) = 457 820.4
-    assert_eq!(r.step_ppt_at(r.nominal), 457_820);
+    // 1.227 ppm per step at B135's PLL1: 10¹² / (99·8192 + 4096) = 1 226 837.0
+    assert_eq!(r.step_ppt_at(r.nominal), 1_226_837);
 }
 
 #[test]

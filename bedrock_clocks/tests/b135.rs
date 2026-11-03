@@ -92,14 +92,14 @@ fn today() -> Config {
     c
 }
 
-/// The plan for B135 rev B: VOS1 for lifetime (AN5337 Rev 4 §7), CPU just under the VOS1 400 MHz limit with
-/// ±100 ppm of FRACN steering on PLL1 and PLL2.
+/// The plan for B135 rev B: VOS1 for lifetime (AN5337 Rev 4 §7), a round 398 MHz CPU (8 MHz × (99 + 4096/8192)
+/// ÷ 2) with FRACN mid-range, so ±100 ppm of steering on PLL1 and PLL2 keeps every VOS1 limit at both ends.
 pub fn planned() -> Config {
     let mut c = base();
     c.pll = [
-        pll(8, 266, Some(5188), Some(2), Some(8), None),
-        pll(8, 133, Some(2730), None, Some(5), Some(4)),
-        pll(2, 16, None, Some(2), Some(4), Some(4)),
+        pll(3, 99, Some(4096), Some(2), Some(8), None),
+        pll(5, 166, Some(5461), None, Some(10), Some(8)),
+        pll(3, 96, None, Some(8), Some(16), Some(16)),
     ];
     for i in 0..2 {
         c.pll[i].as_mut().unwrap().steer = Some(SteerPpm {
@@ -138,18 +138,18 @@ fn planned_tree_is_clean_and_exact() {
     let t = &p.tree;
     assert_eq!(
         t.sys_ck,
-        Some(Hz(Ratio::new(399_949_951_171_875, 1_000_000)))
+        Some(Hz::mhz(398))
     );
     assert_eq!(t.kernel[&Periph::UsbOtgHs], Some(Hz::mhz(48)));
     assert_eq!(
         t.kernel[&Periph::Fdcan].unwrap().to_string(),
-        "79.999951171875 MHz"
+        "79.99998046875 MHz"
     );
-    // flash: AXI 199.97 MHz at VOS1 is 2 wait states (RM0468 Table 16)
+    // flash: AXI 199 MHz at VOS1 is 2 wait states (RM0468 Table 16)
     assert_eq!(p.regs.flash_acr, 0x22);
-    // PLL1 DIVR: DIVN 265, DIVP 1 (÷2), DIVQ 7 (÷8), DIVR 0 (off)
-    assert_eq!(p.regs.plldivr[0], 265 | (1 << 9) | (7 << 16));
-    assert_eq!(p.regs.pllfracr[0], 5188 << 3);
+    // PLL1 DIVR: DIVN 98, DIVP 1 (÷2), DIVQ 7 (÷8), DIVR 0 (off)
+    assert_eq!(p.regs.plldivr[0], 98 | (1 << 9) | (7 << 16));
+    assert_eq!(p.regs.pllfracr[0], 4096 << 3);
     // VOS1 is 0b11 in PWR_D3CR
     assert_eq!(p.regs.pwr_d3cr_vos, 0b11 << 14);
     // direct SMPS: SDEN only, bit 6 at its reset value
@@ -191,12 +191,12 @@ fn golden_clocks_rs() {
 #[test]
 fn findings_name_key_value_and_source() {
     let mut c = planned();
-    c.pll[0].as_mut().unwrap().n = 300; // VCO 3 MHz × 300.6 = 901.9 MHz
+    c.pll[0].as_mut().unwrap().n = 110; // VCO 8 MHz × 110.5 = 884 MHz
     let f = check(&c);
     let vco = f.iter().find(|f| f.key == "pll1.n").expect("a VCO finding");
     assert_eq!(
         vco.to_string(),
-        "error: pll1.n: PLL1 VCO (wide) 901.89990234375 MHz outside 192 MHz..=836 MHz [RM0468 Rev 3 §8.7.11 p.381]"
+        "error: pll1.n: PLL1 VCO (wide) 884 MHz outside 192 MHz..=836 MHz [RM0468 Rev 3 §8.7.11 p.381]"
     );
     let mut c = planned();
     c.cpu_boost = true;
@@ -221,7 +221,7 @@ fn findings_name_key_value_and_source() {
 #[test]
 fn steer_end_outside_fracn_is_refused() {
     let mut c = planned();
-    c.pll[0].as_mut().unwrap().fracn = Some(100); // -100 ppm is ~218 steps below
+    c.pll[0].as_mut().unwrap().fracn = Some(50); // -100 ppm is ~82 steps below
     let f = check(&c);
     assert!(
         f.iter()
@@ -299,21 +299,23 @@ fn field_positions_match_the_pac() {
         p.m = 8;
         p.steer = None;
     }
-    c2.pll[2].as_mut().unwrap().n = 96; // 192 MHz VCO
+    let p3 = c2.pll[2].as_mut().unwrap();
+    p3.n = 96; // 192 MHz VCO
+    (p3.p, p3.q, p3.r) = (Some(2), Some(4), Some(4));
     let p2 = plan(&c2).unwrap_or_else(|f| panic!("{f:#?}"));
     assert_eq!(cr.0, p2.regs.rcc_cr_osc);
 
     let mut ck = rr::Pllckselr(0);
     ck.set_pllsrc(rv::Pllsrc::from_bits(2));
-    ck.set_divm(0, rv::Pllm::from_bits(8));
-    ck.set_divm(1, rv::Pllm::from_bits(8));
-    ck.set_divm(2, rv::Pllm::from_bits(2));
+    ck.set_divm(0, rv::Pllm::from_bits(3));
+    ck.set_divm(1, rv::Pllm::from_bits(5));
+    ck.set_divm(2, rv::Pllm::from_bits(3));
     assert_eq!(ck.0, r.pllckselr);
 
     let mut cfg = rr::Pllcfgr(0);
     for (i, frac, rge, pen, qen, ren) in [
-        (0, true, 1, true, true, false),
-        (1, true, 1, false, true, true),
+        (0, true, 3, true, true, false),
+        (1, true, 2, false, true, true),
         (2, false, 3, true, true, true),
     ] {
         cfg.set_pllfracen(i, frac);
@@ -326,12 +328,12 @@ fn field_positions_match_the_pac() {
     assert_eq!(cfg.0, r.pllcfgr);
 
     let mut d = rr::Plldivr(0);
-    d.set_plln(rv::Plln::from_bits(265));
+    d.set_plln(rv::Plln::from_bits(98));
     d.set_pllp(rv::Plldiv::from_bits(1));
     d.set_pllq(rv::Plldiv::from_bits(7));
     assert_eq!(d.0, r.plldivr[0]);
     let mut f = rr::Pllfracr(0);
-    f.set_fracn(5188);
+    f.set_fracn(4096);
     assert_eq!(f.0, r.pllfracr[0]);
 
     let mut cfgr = rr::Cfgr(0);
