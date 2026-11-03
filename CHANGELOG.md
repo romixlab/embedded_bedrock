@@ -67,6 +67,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   back into flash) and ERR-3 (G0B1 code in flash bank 2). Thresholds in `[limits]` of `bedrock-lint.toml`. Frames
   and calls are read from the Thumb code (prologues, `bl`), without a disassembler (LINT-5).
 - `bedrock-lint frames <ELF>`: the largest stack frames and the deepest call path from `Reset` (LINT-5).
+- `bedrock-lint` checks on host input: HOST-1 (a panic a host value reaches in a WireWeaver handler or a function it
+  hands the value to: `unwrap`, indexing, division, overflow, `assert!`, `todo!`), HOST-3 (a host value's unknown
+  variant mapped to a default instead of refused), HOST-5 (a truncated or oversized request refused without a
+  counter) (LINT-6).
 
 ## [0.2.35] - 2026-11-03
 

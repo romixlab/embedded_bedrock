@@ -1,0 +1,7 @@
+[package]
+name = "host_requests"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+overflow-checks = true

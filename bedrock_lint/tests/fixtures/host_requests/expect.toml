@@ -1,0 +1,70 @@
+# typec_dongle FW-19 (a DAP request indexed past its end), usb_io_fw API-5 (an unknown mode served as the default)
+checks = ["HOST"]
+
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:15"
+
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:16"
+
+# in a callee: resolved by name
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:22"
+confidence = "estimate"
+
+# index_chain is checked by the dispatcher
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:32"
+confidence = "candidate"
+
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:49"
+
+# overflow-checks on in release
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:60"
+confidence = "estimate"
+
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:63"
+confidence = "estimate"
+waived = true
+
+# bounded by min(): may be guarded
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:70"
+confidence = "candidate"
+
+[[finding]]
+check = "HOST-1"
+at = "src/ww.rs:71"
+
+[[finding]]
+check = "HOST-3"
+at = "src/ww.rs:36"
+confidence = "estimate"
+
+[[finding]]
+check = "HOST-3"
+at = "src/ww.rs:38"
+confidence = "estimate"
+
+# dropped silently
+[[finding]]
+check = "HOST-5"
+at = "src/ww.rs:50"
+confidence = "estimate"
+
+# answered with an error
+[[finding]]
+check = "HOST-5"
+at = "src/ww.rs:57"
+confidence = "candidate"

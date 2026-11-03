@@ -346,7 +346,21 @@ pub fn call_name(e: &Expr) -> Option<String> {
 
 /// An expression's tokens as text (`interrupt::USB` with `::` folded)
 pub fn text(e: &impl quote::ToTokens) -> String {
-    tokens(e)
+    let mut t = tokens(e);
+    for (from, to) in [
+        (" (", "("),
+        ("( ", "("),
+        (" )", ")"),
+        (" [", "["),
+        ("[ ", "["),
+        (" ]", "]"),
+        (" .", "."),
+        (". ", "."),
+        (" ,", ","),
+    ] {
+        t = t.replace(from, to);
+    }
+    t
 }
 
 /// The span of an expression's head: the method name of a method call, the path of a call, else the whole

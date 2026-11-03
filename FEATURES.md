@@ -788,8 +788,11 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   SIZ-5, PERF-3 and ERR-3 have only their `elf` part so far; their `src` part goes into the same check file.
   `bedrock-lint frames <ELF>` lists the largest frames and the deepest path. Fixtures are synthetic ELFs written
   by the test from an `elf.toml`; checked by hand on a generated G0B1 embassy firmware (3 Nov 2026).
-- 📋 **LINT-6 Host input, error path, fault handler and pin source checks**: HOST, CNT-1, FLT, PIN and the remaining
-  `src` checks.
+- 🚧 **LINT-6 Host input, error path, fault handler and pin source checks** (`bedrock_lint/src/checks/`): the `src`
+  checks of HOST, CNT, FLT and PIN on a body walker that enters macro calls (`model/scan.rs`). Done: HOST-1 (panics a
+  host value reaches in a WireWeaver handler and the crate-local functions it is handed to, followed by name),
+  HOST-3 (a host value's catch-all mapped to a default), HOST-5 (a refused request not counted). Next: CNT-1, CNT-2,
+  FLT-1..5, FLT-7..9, PIN-1, PIN-2, PIN-4, PIN-6, PIN-8, PIN-9, PIN-16. The other `src` checks are LINT-11.
 - ✅ **LINT-7 Detail pages, first half**: `book/checks/` pages for EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT, PWR,
   FLS, LOG, CNT (12 pages, 98 checks), each with what it catches, why it matters, a concrete example (mostly from
   the catalogue's own sourced comments), how it's checked and the fix, cross-linked to the other detail pages and
