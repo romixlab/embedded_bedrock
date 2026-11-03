@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.46] - 2026-11-03
+
 ### Changed
 
 - WireWeaver comes from git only, pinned to a commit in `Cargo.lock`: the committed `[patch]` in
