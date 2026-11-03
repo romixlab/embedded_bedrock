@@ -911,8 +911,14 @@ document section it comes from, and a FRACN steering range is checked at both en
   `bedrock_clocks_rt`). Golden file `bedrock_clocks/tests/golden/b135b_clocks.rs`.
 - 📋 **RCC-2 clocks.toml and the bedrock-clocks CLI**: TOML front end with spans so a finding points at a file line
   and key; `bedrock-clocks check | gen | explain`.
-- 📋 **RCC-4 Runtime apply and verify** (crate `bedrock_clocks_rt`, no_std, no PAC): `h72x::apply(&Plan)` in the
-  RM0468 order with bounded waits, `verify(&Plan)`.
+- 🧪 **RCC-4 Runtime apply and verify** (crate `bedrock_clocks_rt`, no_std, no PAC): `h72x::apply(&Plan)` in the
+  RM0468 order (supply, VOS with VOSRDY and for VOS0 ACTVOS, HSEBYP before HSEON, PLLs in the Figure 48 order,
+  FLASH_ACR and prescalers read back before the switch, SWS, kernel muxes last, HSI off when unused), every wait
+  bounded and named in `Error::Timeout(Step)`; PWR_CR3 written once and read back, `Error::SupplyLocked` when an
+  earlier writer since power-on left another value; back to HSI first when a PLL already runs. `verify(&Plan)`
+  names the first register that differs; `set_fracn` steps a running PLL within the planned range. Host tests on a
+  simulated chip with B135's golden `clocks.rs` (`bedrock_clocks_rt/tests/apply.rs`); addresses and bits held to
+  stm32-metapac. Hardware: RCC-10.
 - 📋 **RCC-5 FRACN steering** in `bedrock_clocks_rt` as a `bedrock_sync::Oscillator`, from the plan's FRACN range.
 - 📋 **RCC-6 Derived settings with named tolerances**: USART / LPUART BRR, FDCAN bit timing, SDMMC CLKDIV, timer
   tick, I2C timing, each with its achieved value and signed error.

@@ -1,0 +1,18 @@
+[package]
+name = "bedrock_clocks_rt"
+version = "0.1.0"
+edition = "2024"
+description = "Applies a clock plan from bedrock_clocks at boot: fixed register writes and bounded ready-waits in the reference manual's order, readback verify, FRACN steering; no_std, no PAC"
+license = "MIT OR Apache-2.0"
+
+[features]
+defmt = ["dep:defmt"]
+
+[dependencies]
+defmt = { version = "1.0", optional = true }
+# The generated clocks.rs names its exact frequencies through this re-export, so firmware needs no extra dependency
+exact_units = { workspace = true, features = ["time"] }
+
+[dev-dependencies]
+# Register addresses are held to the PAC in a test
+stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32h725ig"] }

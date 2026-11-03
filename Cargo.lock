@@ -221,6 +221,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bedrock_clocks_rt"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "exact_units",
+ "stm32-metapac",
+]
+
+[[package]]
 name = "bedrock_crash"
 version = "0.1.0"
 dependencies = [

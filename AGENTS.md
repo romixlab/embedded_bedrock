@@ -75,6 +75,8 @@ so a missing entry means work nobody sees.
   rationals, checked against RM0468 / DS13311 / ES0491 / AN5337 (each limit in `h72x/limits.rs` names its section),
   encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its
   `clocks.toml`. Golden test for B135 in `tests/`; `BLESS=1 cargo test -p bedrock_clocks` rewrites the golden file.
+- `bedrock_clocks_rt/` — applies such a plan at boot (no_std, no PAC): `apply`, `verify`, `set_fracn` against a
+  `Regs` trait, tested on a simulated chip with the golden `clocks.rs`. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_rom_boot/` — firmware updates through the STM32 ROM bootloader (G0, H7): boot word in a backup
   register, `early()` before the HAL (jump to system memory, reset after the ROM's leave, boot-loop rescue),
   reboots, ROM USB serial; `embassy` and `ww-dfu` features (`BootControl` / `UpdateNode` in place). Firmware takes
