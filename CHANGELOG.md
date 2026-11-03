@@ -9,6 +9,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_lint` and its CLI `bedrock-lint` (crate `bedrock_lint_cli`): reads a firmware crate (source with syn,
+  `Cargo.toml`, `.cargo/config.toml`, `build.rs`, `memory.x`, `bedrock_fw.json`) into a model and runs the
+  automatic checks of the catalogue on it: first STK-1 (flip-link not the linker), STK-2 (unknown `cargo:` key in
+  build.rs), STK-4 (cortex-m-rt `paint-stack` on) and EXE-3 (interrupt executor started before its priority is
+  set). Text, JSON and SARIF reports, waivers with a reason in the firmware's files, a baseline, `explain`,
+  `checks list`, `model` (LINT-2).
+
 ## [0.2.35] - 2026-11-03
 
 ### Added
