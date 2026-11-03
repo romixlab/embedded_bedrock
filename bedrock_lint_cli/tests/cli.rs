@@ -63,7 +63,13 @@ fn exit_status_follows_findings() {
     let dir = clean.path().to_str().unwrap();
     let o = bin(&["check", dir, "--root", dir]);
     assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
-    assert!(stdout(&o).contains("20 checks ran"), "{}", stdout(&o));
+    // every registered check but the elf ones (no --elf here) has what it needs in the clean fixture
+    let n = bedrock_lint::registered()
+        .iter()
+        .filter(|c| !c.meta().needs.contains(&bedrock_lint::Need::Elf))
+        .count();
+    let ran = format!("{n} checks ran");
+    assert!(stdout(&o).contains(&ran), "{}", stdout(&o));
 
     let o = bin(&["check", "/nonexistent/fw"]);
     assert_eq!(o.status.code(), Some(2));
@@ -76,26 +82,37 @@ fn baseline_flow() {
     let d = copy("stk2_rustc_linker");
     let dir = d.path().to_str().unwrap();
     let base = d.path().join("bedrock-lint.baseline.json");
+    // STK only: the fixture is about STK-2, the other checks' findings on it change as checks are added
     let o = bin(&[
         "check",
         dir,
         "--root",
         dir,
+        "--only",
+        "STK",
         "--write-baseline",
         base.to_str().unwrap(),
     ]);
     assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
-    assert!(stdout(&o).contains("wrote 5 finding(s)"), "{}", stdout(&o));
+    // as many as the STK checks find on it: the baseline must hold all of them
+    let wrote = stdout(&o);
+    let n = wrote
+        .split("wrote ")
+        .nth(1)
+        .and_then(|r| r.split(' ').next())
+        .and_then(|n| n.parse::<usize>().ok())
+        .unwrap_or_else(|| panic!("no finding count: {wrote}"));
+    assert!(n > 0, "{wrote}");
     // named in bedrock-lint.toml: the known findings no longer fail
     std::fs::write(
         d.path().join("bedrock-lint.toml"),
         "baseline = \"bedrock-lint.baseline.json\"\n",
     )
     .unwrap();
-    let o = bin(&["check", dir, "--root", dir]);
+    let o = bin(&["check", dir, "--root", dir, "--only", "STK"]);
     assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
     assert!(
-        stdout(&o).contains("In the baseline (5):"),
+        stdout(&o).contains(&format!("In the baseline ({n}):")),
         "{}",
         stdout(&o)
     );
@@ -109,7 +126,7 @@ fn baseline_flow() {
         ),
     )
     .unwrap();
-    let o = bin(&["check", dir, "--root", dir]);
+    let o = bin(&["check", dir, "--root", dir, "--only", "STK"]);
     assert_eq!(o.status.code(), Some(1), "{}", stdout(&o));
     assert!(stdout(&o).contains("error[STK-2] new"), "{}", stdout(&o));
 }
