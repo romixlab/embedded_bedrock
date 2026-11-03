@@ -114,9 +114,9 @@ whatever commit that sibling is (BLD-10).
 - **Bump WireWeaver:** `cargo update -p wire_weaver` (moves every crate of the wire_weaver repository to its main
   together; `--precise SHA` for a given commit), build and test, commit `Cargo.lock` as `build: wire_weaver <sha>`.
 - **Work on both repos at once:** `just dev-local` copies `.cargo/sibling-patch.toml` to the gitignored
-  `.cargo/config.toml`, so builds take WireWeaver from `../wire_weaver`. Push the WireWeaver change first, then
-  `just dev-git` (back to git), `cargo update -p wire_weaver`, commit the lock. Never commit `Cargo.lock` while
-  dev-local is on: it names sibling paths, and the `--locked` gate refuses it.
+  `.cargo/dev-local.toml`, which `.cargo/config.toml` includes, so builds take WireWeaver from `../wire_weaver`.
+  Push the WireWeaver change first, then `just dev-git` (back to git), `cargo update -p wire_weaver`, commit the
+  lock. Never commit `Cargo.lock` while dev-local is on: it names sibling paths, and the `--locked` gate refuses it.
 - **A new WireWeaver crate:** add it to `[workspace.dependencies]` by git and to `.cargo/sibling-patch.toml`.
 - **One source per crate:** `cargo tree -d` must not show wire_weaver, shrink_wrap, a `ww_*` crate or exact_units
   from two sources (CFG-4). exact_units' `rev` here equals the one in wire_weaver's root `Cargo.toml`; change both

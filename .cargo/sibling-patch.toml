@@ -1,6 +1,6 @@
 # Co-development with the sibling WireWeaver checkout (../wire_weaver): `just dev-local` copies this file to
-# .cargo/config.toml (gitignored), so builds here take WireWeaver from the sibling and a change there is picked up
-# at once; `just dev-git` removes it again. Cargo reads only .cargo/config.toml, so this file does nothing by itself.
+# .cargo/dev-local.toml (gitignored, included by .cargo/config.toml), so builds here take WireWeaver from the sibling
+# and a change there is picked up at once; `just dev-git` removes it again. Cargo does not read this file by itself.
 # Committed builds never see it: Cargo.toml takes WireWeaver by git, pinned to a commit in Cargo.lock.
 # While it is active Cargo.lock names the sibling paths instead of the git commit: never commit the lock in that
 # state (the --locked gate refuses it). exact_units (pulled by ww_si) names shrink_wrap by the same git source:

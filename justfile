@@ -45,14 +45,14 @@ install:
     if command -v tpm >/dev/null; then tpm install target/deploy/bedrock-lint; else cargo install --locked --path bedrock_lint_cli; fi
 
 # Build against the sibling WireWeaver checkout ../wire_weaver (co-development): .cargo/sibling-patch.toml becomes
-# the gitignored .cargo/config.toml. Cargo.lock then names the sibling paths: don't commit it in this state.
+# the gitignored .cargo/dev-local.toml. Cargo.lock then names the sibling paths: don't commit it in this state.
 dev-local:
-    cp .cargo/sibling-patch.toml .cargo/config.toml
+    cp .cargo/sibling-patch.toml .cargo/dev-local.toml
     cargo tree --workspace -i wire_weaver --target all --depth 0
 
 # Back to WireWeaver from git, the committed setup. Cargo relocks to wire_weaver's main if the lock lost its git
 # pin under dev-local: `git diff Cargo.lock` shows whether the pin moved (commit it as a bump, or check out the lock).
 dev-git:
-    rm -f .cargo/config.toml
+    rm -f .cargo/dev-local.toml
     cargo tree --workspace -i wire_weaver --target all --depth 0
     git diff --stat Cargo.lock

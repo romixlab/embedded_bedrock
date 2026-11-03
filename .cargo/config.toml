@@ -1,0 +1,4 @@
+# `just dev-local` copies sibling-patch.toml to dev-local.toml (gitignored), which builds against the sibling WireWeaver
+# checkout ../wire_weaver instead of the git commit Cargo.lock pins; `just dev-git` removes it (AGENTS.md "WireWeaver
+# dependency").
+include = [{ path = "dev-local.toml", optional = true }]

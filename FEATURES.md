@@ -625,7 +625,8 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   from git only and Cargo.lock pins the commit, so `--locked` lint and test pass the same on every PC, with no
   `../wire_weaver` next to the checkout or one at any other commit (P2528#3nov-1235: the committed path patch made
   the lock follow each PC's sibling). Co-development is explicit: `just dev-local` copies
-  `.cargo/sibling-patch.toml` to the gitignored `.cargo/config.toml`, `just dev-git` removes it; bumping is
+  `.cargo/sibling-patch.toml` to the gitignored `.cargo/dev-local.toml` (included by `.cargo/config.toml`), `just
+  dev-git` removes it; bumping is
   `cargo update -p wire_weaver` plus a commit (AGENTS.md *WireWeaver dependency*). Supersedes BLD-8's local patch.
 
 ## Robustness (`ROB`)
