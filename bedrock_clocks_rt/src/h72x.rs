@@ -63,7 +63,9 @@ pub struct FracnRange {
     /// one run of 40 min / max steps per PLL and setting): back-to-back 0 / 1 latched PLL1 34/40, PLL2 29/40; with a
     /// readback after each write 40/40 and 37/40; readback plus FRACEN low for 40, 80, 160 or 400 CPU cycles 40/40
     /// for both. PLL2 (ref 4.8 MHz) missing more than PLL1 (8 MHz) suggests the edge must be seen in the ref_ck
-    /// domain, hence 2 ref_ck periods.
+    /// domain, hence 2 ref_ck periods. With this hold as shipped (51 / 84 reads): 6 runs of 40 steps between the
+    /// steer ends, 240/240 latched on PLL1 and 240/240 on PLL2; the back-to-back control in the same sessions
+    /// latched PLL1 35/40 and 29/40, PLL2 27/40 and 29/40, each miss keeping the previous FRACN.
     pub latch_hold_reads: u32,
 }
 
