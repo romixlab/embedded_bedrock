@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.40] - 2026-11-03
+
 ### Added
 
 - `bedrock-lint` checks on host input: HOST-1 (a panic a host value reaches in a WireWeaver handler or a function it
