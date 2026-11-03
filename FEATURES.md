@@ -651,7 +651,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   only when fresh) and the template's `src/last_reset.rs`; `Updated` rides the same marker through BOOTSEL
   (`UPDATE_PENDING`, written by `src/boot.rs` before `reset_to_usb_boot`), since the ROM erases all SRAM before
   BOOTSEL (RP2350 datasheet 5.2.2). No RP2350 erratum covers it (Appendix D, A2 to A4). Tested on the B200 (RP2350
-  A4): panic, HardFault, software reset, BOOTSEL flash, power-on. Open: RP2040 not tried on hardware; the boot
+  A4) with usb_io_fw: panic, HardFault, software reset, BOOTSEL flash and power-on report Panic, Fault, Software, Updated and PowerOn, the boot count holds, crashes decode with the ELF; RP template matrix builds. Open: RP2040 not tried on hardware; the boot
   count restarts at 1 after a BOOTSEL flash (RAM erased).
 - 🧪 **ROB-13 Panic call chain in the crash record**: a panic record keeps up to 32 return addresses found on the
   stack (`bedrock_crash::is_return_address`: Thumb bit, inside `__stext..__etext`, right after a `BL` / `BLX`)

@@ -83,7 +83,8 @@ fn reset_cause() -> Cause {
     const _: () = assert!(bedrock_crash::rp::CHIP_RESET_SCRATCH == 1);
     let wd = embassy_rp::pac::WATCHDOG;
     let scratch = wd.scratch1().read();
-    wd.scratch1().write_value(bedrock_crash::rp::CHIP_RESET_SEEN);
+    wd.scratch1()
+        .write_value(bedrock_crash::rp::CHIP_RESET_SEEN);
     let c = if bedrock_crash::rp::chip_reset_fresh(scratch) {
         embassy_rp::pac::VREG_AND_CHIP_RESET.chip_reset().read()
     } else {
@@ -111,7 +112,8 @@ fn reset_cause() -> Cause {
     const _: () = assert!(bedrock_crash::rp::CHIP_RESET_SCRATCH == 1);
     let wd = embassy_rp::pac::WATCHDOG;
     let scratch = wd.scratch1().read();
-    wd.scratch1().write_value(bedrock_crash::rp::CHIP_RESET_SEEN);
+    wd.scratch1()
+        .write_value(bedrock_crash::rp::CHIP_RESET_SEEN);
     let c = if bedrock_crash::rp::chip_reset_fresh(scratch) {
         embassy_rp::pac::POWMAN.chip_reset().read()
     } else {
