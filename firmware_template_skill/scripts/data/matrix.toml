@@ -131,6 +131,20 @@ builds = ["dev"]
 tags = []
 
 [[entry]]
+name = "g0stable"
+args = ["--chip", "STM32G0B1RE", "--counters", "--toolchain", "stable"]
+builds = ["dev", "release"]
+tags = []
+note = "TPL-81: the stable toolchain still builds (no build-std, trim-paths or location-detail)"
+
+[[entry]]
+name = "g0pia"
+args = ["--chip", "STM32G0B1RE", "--counters", "--panic-immediate-abort"]
+builds = ["dev", "release"]
+tags = []
+note = "TPL-81: panic = immediate-abort in release (cargo-features)"
+
+[[entry]]
 name = "l4rtc"
 args = ["--chip", "STM32L476RG", "--rtc"]
 builds = ["dev"]

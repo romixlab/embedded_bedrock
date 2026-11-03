@@ -11,7 +11,8 @@ rtt-target 0.6 · cortex-m 0.7 · cortex-m-rt 0.7 · build-info-build 0.0.46.
 
 Pitfalls with older documentation / examples:
 - `embassy-executor` `task-arena-size-*` and `nightly` features: gone since 0.10, tasks are statically allocated on
-  stable → no nightly needed, no `#![feature(impl_trait_in_assoc_type)]`.
+  stable → no `#![feature(impl_trait_in_assoc_type)]`. The template still builds on a pinned nightly by default, for
+  flash (TPL-81: build-std core, trim-paths, no panic locations); `--toolchain stable` works too.
 - `cnt 0.5`: `cnt!(name: u32)` counts unconditionally, `cnt_if!(cond, name: u32)` conditionally (0.2 needed
   `cnt_if!(true, name: u32 += 1)`). Needs Rust 1.88+, host `cnt_cli` 0.5 (format version 2, same as 0.4; rejects 0.2/0.3
   firmware).

@@ -130,6 +130,14 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   API crate first (TPL-43). `frameworks.md`, `SKILL.md` and `AGENTS.md` point at it instead of a hand-run block. Run
   against the whole matrix: the only failures are the known bugs TPL-22, TPL-23 and TPL-34.
 
+- 🚧 **TPL-81 Flash diet of the toolchain** (decided by the person, 3 Nov 2026): `--toolchain auto` (default, not ESP)
+  pins `nightly-<date>` from `scripts/data/versions.toml` with rustfmt, clippy and rust-src; `trim-paths = "all"` in
+  dev and release (app and bootloader); `-Zlocation-detail=none` for release through `profile-rustflags`;
+  `build-std = ["core"]` with `optimize_for_size` for the app. `--toolchain stable` keeps the old output;
+  `--panic-immediate-abort` is the release profile's `panic = "immediate-abort"`. Matrix checks every Cortex-M ELF for
+  home and cargo paths. donguru: 159,048 → 146,804 B (template CHANGELOG has the steps). Open: the host side of the
+  panic call chain (ROB-13) in ww_report (session crash-frames).
+
 ## Device contract (`DEV`)
 
 What every device built on bedrock should offer, so host tools (RockFace, IOWeaver, CLIs) can treat all boards the

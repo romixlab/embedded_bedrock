@@ -47,17 +47,28 @@ CNT_BKP_MEMORY_REGION = "{{ bkp_region }}" # cnt.x places the BKP buffer there (
   {% endif %}
 {% endif %}
 
-{% set build_std = o.build_core or t.family == "esp" %}
-{% if build_std or o.panic_immediate_abort %}
+{% if o.toolchain == "nightly" and t.family != "esp" %}
+# Release firmware without panic locations (the file, line and column of every panic site: about 13 KB on a
+# WireWeaver firmware): a panic record keeps the return addresses instead, and the host names the site from the ELF
+[profile.release]
+rustflags = ["-Zlocation-detail=none"]
+
 [unstable]
-  {% if build_std %}
-build-std = ["core"]{{ " # smaller binaries; needs nightly + rust-src" if t.family != "esp" else "" }}
+profile-rustflags = true
+  {% if o.build_core %}
+# core built with the firmware (opt-level z, inside fat LTO) instead of the prebuilt one, with its size-first code paths
+build-std = ["core"]
+build-std-features = ["optimize_for_size"]
   {% endif %}
-  {% if o.panic_immediate_abort %}
-build-std-features = ["panic_immediate_abort"]
-  {% endif %}
+{% elif t.family == "esp" %}
+[unstable]
+build-std = ["core"]
 {% else %}
+# With the nightly toolchain (bedrock_gen.py --toolchain nightly, the default) the template sets:
+# [profile.release]
+# rustflags = ["-Zlocation-detail=none"]           # no panic locations in release
 # [unstable]
-# build-std = ["core"]                              # smaller binaries (nightly + rust-src)
-# build-std-features = ["panic_immediate_abort"]   # even smaller, panics become aborts
+# profile-rustflags = true
+# build-std = ["core"]                             # core built at the firmware's opt-level
+# build-std-features = ["optimize_for_size"]
 {% endif %}

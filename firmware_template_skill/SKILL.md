@@ -144,7 +144,8 @@ For firmware without `bedrock_fw.json` (pre-0.4.0) see the 0.4.0 upgrade notes i
 | option | effect |
 |---|---|
 | `--build-info` | embeds bedrock build info (needs `--log defmt` and a buildable `embedded_bedrock`; `--bedrock <path>` for a local checkout). Off by default; builds with `--bedrock git` too (its WireWeaver comes from git, patched to a local `--ww-src`). |
-| `--nightly`, `--build-core`, `--panic-immediate-abort` | pin nightly / `build-std` for smaller binaries. Not required for embassy any more (executor 0.10 statically allocates tasks on stable). |
+| `--toolchain auto\|nightly\|stable` | `auto` (default): the nightly pinned in `scripts/data/versions.toml` with the flash diet (TPL-81): `core` built at opt-level z (`build-std`, `optimize_for_size`), `trim-paths = "all"` (no home or registry paths in the ELF), release without panic locations (`-Zlocation-detail=none`; the crash record's return addresses name the site). ESP keeps its own toolchain. `stable`: none of these. Replaces `--nightly` / `--build-core` (old answers map to `auto` or `nightly`). |
+| `--panic-immediate-abort` | release panics become traps (`panic = "immediate-abort"`): about 14 KB less on a WireWeaver firmware, but no panic message, and a crash record names the panicking function without the line. Nightly only. |
 | `--no-flip-link` | disable stack-overflow protection linker |
 | `--min-bootloader 24K` | bootloader region, rounded up to erase sectors; dev+release profiles of the bootloader are `opt-level = "z"` so it fits |
 | `--main-ram AXISRAM` | which RAM becomes `RAM` (default: AXISRAM > RAM/SRAM > largest) |

@@ -17,6 +17,37 @@ or options; purely internal refactors only need a line under the next version.
   firmware stops building once STD-98 lands on wire_weaver main. No answers/options involved, no hardware test
   needed.
 
+||||||| parent of 6b75715 (feat(template): pinned nightly, trim-paths, no panic locations, build-std core (TPL-81))
+
+- No `defmt::Debug2Format` in generated firmware (TPL-81): `src/settings.rs` (settings read, write, erase ahead) and `src/ww/device.rs` (settings save) log the `ww_settings` error with `{}` through its `defmt::Format`, `ww_ecc_flash` gets its `defmt` feature with `--log defmt`, and the HardFault handler logs pc, lr, xpsr, r0-r3 and r12 as hex words instead of `ExceptionFrame`'s Debug. `Debug2Format` pulled core::fmt's Debug machinery and every variant name into flash. donguru release: 146,804 B → 140,756 B (−6,048 B) for the settings errors, → 140,048 B (−708 B) for the HardFault line.
+
+  Upgrade notes: in `src/settings.rs` and `src/ww/device.rs` replace `Debug2Format(&e)` with `e` (drop the `Debug2Format` import), add `"defmt"` to the `ww_ecc_flash` features, and take the new `error!` line of the HardFault handler in `src/main.rs`. A firmware with its own `Debug2Format` calls gains the same way where the type has `defmt::Format`.
+
+- Flash diet of the toolchain (TPL-81): generated firmware builds on a pinned nightly by default, with core built at the firmware's opt-level, no home paths in the binary and release builds without panic locations. Measured on donguru (STM32G0B1CE, WireWeaver over USB, release, llvm-size text + data), step by step:
+
+  | step | flash B | change |
+  |---|---:|---:|
+  | stable 1.99.1 (before) | 159,048 | |
+  | pinned `nightly-2026-11-02` | 165,704 | +6,656 (the nightly's prebuilt core is larger) |
+  | `trim-paths = "all"` | 163,820 | −1,884 |
+  | `-Zlocation-detail=none` in release | 150,548 | −13,272 (`line,column` would be −3,656, `file` −7,664) |
+  | `build-std = ["core"]` | 147,964 | −2,584 |
+  | `optimize_for_size` | 146,804 | −1,160 |
+  | total | | −12,244 (−7.7 %) |
+
+  Measured and left out: `--panic-immediate-abort` −13,936 B more (now an option, see below), lld `--icf=all` −604 B (may fold defmt's one-byte string symbols), `-Zmerge-functions=aliases` −16 B.
+
+  What the generated files get with `--toolchain auto` (the default; ESP keeps its own toolchain):
+  - `rust-toolchain.toml`: `channel = "nightly-2026-11-02"` (`nightly` in `scripts/data/versions.toml`), components rustfmt, clippy and rust-src. It used to pin whatever nightly the generating PC had, with `--nightly` only.
+  - `Cargo.toml` (app and bootloader): `trim-paths = "all"` in the dev and release profiles. It is stable in this nightly's cargo, so no `cargo-features` line. Panic locations and debug info name `src/...`, `/cargo/git/<hash>/<rev>/...`, `/cargo/registry/<hash>/<crate>-<version>/...` and `/rustc/<hash>/...`.
+  - `.cargo/config.toml`: `[profile.release] rustflags = ["-Zlocation-detail=none"]` with `[unstable] profile-rustflags = true` (dev builds keep the locations), and for the app `build-std = ["core"]`, `build-std-features = ["optimize_for_size"]`. The bootloader has no build-std, as before.
+  - The unused `assign-resources` dependency is gone (embassy on Cortex-M; the nightly cargo warns about it).
+  - A panic no longer says where in its message. `bedrock_crash` now keeps the return addresses of the call chain for a panic (ROB-13); the host names the site from them and the ELF.
+
+  Options: `--toolchain auto|nightly|stable` replaces `--nightly` and `--build-core`; `--toolchain stable` gives the old output. `--panic-immediate-abort` is now `panic = "immediate-abort"` in the release profile with `cargo-features = ["panic-immediate-abort"]` (the build-std feature of that name is gone from core) and needs the nightly. The matrix checks every Cortex-M ELF for home or cargo paths (`dev-paths`, `release-paths`); new entries `g0stable` and `g0pia`.
+
+  Upgrade notes: the answers `nightly` and `build_core` become `toolchain` (`auto`, or `nightly` where either was true); `check-answers` shows it as MERGED. Take the new `rust-toolchain.toml`, the two `trim-paths` lines per profile, the `[profile.release]` and `[unstable]` blocks of `.cargo/config.toml`, and drop `assign-resources` if the firmware doesn't use it. Then `rustup toolchain install` in the firmware directory, and in CI add `rustup toolchain install` in the firmware directory before the first cargo command (a `dtolnay`/`actions-rust-lang` step for stable does not read the firmware's toolchain file). The firmware must take a `bedrock_crash` with ROB-13 (a `cargo update -p bedrock_crash`) or panics lose their location without the call chain that replaces it. Check: release flash before and after, and `strings <elf> | grep -c /home/` is 0. A firmware that must stay on stable answers `--toolchain stable`.
+
 - Board preset `donguru_b153a` (TPL-60): `--board donguru_b153a` generates firmware for the Donguru B153A
   (STM32G0B1CET6, LQFP48, rev A): WireWeaver over the MCU's own USB behind the board's USB2512B hub, settings,
   counters, backup counters, the host crates with the CLI `donguru`, `pins` on every free pin (J101's I/O lines, the

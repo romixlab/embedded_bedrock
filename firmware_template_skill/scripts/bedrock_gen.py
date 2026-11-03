@@ -72,6 +72,12 @@ EXECUTABLE = {".githooks/pre-commit"}  # generated files written with the execut
 NON_ANSWERS = {"cmd", "func", "out", "force", "dry_run", "cache", "answers"}
 # answers renamed by a template version: old key -> new key, the value carries over (template CHANGELOG has the why)
 RENAMED_ANSWERS = {"config_page": "settings"}
+# answers folded into one new answer by a template version: old keys -> (new key, value from the old values)
+MERGED_ANSWERS = {
+    # TPL-81: `--nightly` and `--build-core` became `--toolchain`; stable was the default, not a choice, so a firmware
+    # that had neither takes the new default
+    ("nightly", "build_core"): ("toolchain", lambda nightly=False, build_core=False: "nightly" if nightly or build_core else "auto"),
+}
 
 
 def load_toml(name: str) -> dict:
@@ -830,18 +836,9 @@ def and_join(items: list[str]) -> str:
     return ", ".join(items[:-1]) + " and " + items[-1] if len(items) > 1 else "".join(items)
 
 
-def nightly_date() -> Optional[str]:
-    try:
-        v = subprocess.run(["rustc", "+nightly", "--version"], capture_output=True, text=True, timeout=20).stdout
-        m = re.search(r"(\d{4}-\d{2}-\d{2})", v)
-        return m.group(1) if m else None
-    except Exception:
-        return None
-
-
 def nightly_channel() -> str:
-    date = nightly_date()
-    return f"nightly-{date}" if date else "nightly"
+    """The pinned nightly of versions.toml (TPL-81): the same on every PC and in CI, moved forward with the template."""
+    return f"nightly-{V['nightly']}"
 
 
 JINJA = jinja2.Environment(
@@ -904,8 +901,8 @@ class Opts:
     bkp: Optional[tuple[str, int, int]]
     bkp_mode: str
     flip_link: bool
-    nightly: bool
-    build_core: bool
+    toolchain: str  # "nightly" or "stable" (ESP: its own toolchain, see rust-toolchain.toml.j2)
+    build_core: bool  # build-std core with optimize_for_size (nightly, not ESP, not the bootloader)
     panic_immediate_abort: bool
     defmt_log: str
     rtt_buffer: int
@@ -2207,6 +2204,19 @@ def gen_project(t: Target, o: Opts, lay: Optional[Layout], usb: Optional[dict] =
     return files
 
 
+def resolve_toolchain(t: Target, args) -> str:
+    """`--toolchain auto`: the pinned nightly (TPL-81: build-std core, no home paths, release without panic
+    locations), except on ESP, which keeps its own toolchain choice."""
+    tc = getattr(args, "toolchain", "auto")
+    if tc == "auto":
+        tc = "stable" if t.family == "esp" else "nightly"
+    if tc == "nightly" and t.arch == "xtensa":
+        die("--toolchain nightly: Xtensa builds with the `esp` toolchain (espup)")
+    if getattr(args, "panic_immediate_abort", False) and tc != "nightly":
+        die("--panic-immediate-abort needs the nightly toolchain (drop --toolchain stable)")
+    return tc
+
+
 def gen_bootloader(t: Target, o: Opts, lay: Layout, root: str = "") -> dict[str, str]:
     ctx = dict(t=t, o=o, flash_size=lay.regions[0].length, root=root, embassy_crates=embassy_crates(o, bootloader_crate=True),
                max_erase_size=max(m.erase_size for m in t.memories if m.kind == "flash"))
@@ -2334,7 +2344,8 @@ def fw_json(p_new: argparse.ArgumentParser, args, prev: Optional[dict]) -> str:
 
 
 def renamed_answers(answers: dict, note: bool = False) -> dict:
-    """The answers with RENAMED_ANSWERS keys under their new name (an explicit new key wins)."""
+    """The answers with RENAMED_ANSWERS keys under their new name and MERGED_ANSWERS folded into theirs (an explicit
+    new key wins)."""
     out = dict(answers)
     for old, new in RENAMED_ANSWERS.items():
         if old in out:
@@ -2343,6 +2354,12 @@ def renamed_answers(answers: dict, note: bool = False) -> dict:
                 out[new] = v
                 if note:
                     warn(f"answer {old} is now {new} (value {v!r} kept)")
+    for olds, (new, convert) in MERGED_ANSWERS.items():
+        found = {k: out.pop(k) for k in olds if k in out}
+        if found and new not in out:
+            out[new] = convert(**found)
+            if note:
+                warn(f"answers {', '.join(f'{k}={v!r}' for k, v in found.items())} are now {new}={out[new]!r}")
     return out
 
 
@@ -2390,6 +2407,10 @@ def cmd_check_answers(args, p_new: argparse.ArgumentParser) -> None:
     for old, new in RENAMED_ANSWERS.items():
         if old in answers and new not in answers:
             print(f"RENAMED  {old:24} -> {new} (value {answers[old]!r} kept)")
+    for olds, (new, convert) in MERGED_ANSWERS.items():
+        found = {k: answers[k] for k in olds if k in answers}
+        if found and new not in answers:
+            print(f"MERGED   {', '.join(found):24} -> {new}={convert(**found)!r}")
     answers = renamed_answers(answers)
     acts = answer_actions(p_new)
     tpl = prev.get("template", {})
@@ -2522,6 +2543,11 @@ def load_matrix() -> list[MatrixEntry]:
             for e in load_toml("matrix.toml")["entry"]]
 
 
+def matrix_arg(args: list[str], name: str) -> str:
+    """The value after option `name` in a matrix entry's args, "" when it isn't there."""
+    return next((args[i + 1] for i, a in enumerate(args[:-1]) if a == name), "")
+
+
 def matrix_chip(args: list[str]) -> Optional[str]:
     for i, a in enumerate(args):
         if a == "--chip" and i + 1 < len(args):
@@ -2602,6 +2628,15 @@ def flip_link_check(elf: Path) -> tuple[bool, str]:
     return ok, f"_stack_start=0x{stack_start:x} .data=0x{data_start:x}" + ("" if ok else " (flip-link not in effect)")
 
 
+def home_paths_check(elf: Path) -> tuple[bool, str]:
+    """trim-paths (TPL-81): no home directory and no ~/.cargo/registry or ~/.cargo/git path anywhere in the ELF, flash
+    or debug info."""
+    data = elf.read_bytes()
+    needles = [str(Path.home()).encode(), b"/.cargo/registry/", b"/.cargo/git/"]
+    found = [n.decode() for n in needles if n in data]
+    return not found, ("found " + ", ".join(found)) if found else "no home or cargo paths"
+
+
 def matrix_build_root(scratch: Path) -> Path:
     """Where the matrix's cargo build dirs go: a shared `build-dir` (`~/.cargo/config.toml`) would keep one per
     scratch path for ever, a few GB per entry and run, so each entry gets its own under the cache, removed after it."""
@@ -2666,6 +2701,9 @@ def matrix_run_entry(entry: MatrixEntry, scratch: Path, bedrock: Optional[str], 
             if ok and cortex_m and elf is not None:
                 fl_ok, fl_msg = flip_link_check(elf)
                 results[f"{b}-flip-link"] = StepResult(fl_ok, 0.0, fl_msg)
+            if ok and cortex_m and elf is not None and "stable" not in matrix_arg(entry.args, "--toolchain"):
+                hp_ok, hp_msg = home_paths_check(elf)
+                results[f"{b}-paths"] = StepResult(hp_ok, 0.0, hp_msg)
         elif b in ("bootloader", "bootloader-nodefmt"):
             boot_root = app_root / "bootloader"
             if not boot_root.is_dir():
@@ -2787,7 +2825,8 @@ def matrix_api_evolve(entry: MatrixEntry, scratch: Path, bedrock: Optional[str],
     return StepResult(True, time.monotonic() - t0, "")
 
 
-MATRIX_STEPS = ["generate", "rustfmt", "lockfile", "dev", "dev-flip-link", "release", "release-flip-link",
+MATRIX_STEPS = ["generate", "rustfmt", "lockfile", "dev", "dev-flip-link", "dev-paths", "release",
+               "release-flip-link", "release-paths",
                "bootloader", "bootloader-nodefmt", "api-evolve", "board", "host-test", "host-clippy", "host-fmt",
                "host-test-py"]
 
@@ -2996,13 +3035,14 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
 
     rom_boot = rom_boot_family(t, args)
     lay = make_layout(t, args, regs, rom_boot)
+    toolchain = resolve_toolchain(t, args)
     leds = preset_leds(getattr(args, "preset", None))
     if leds and args.led:
         die("--led and the preset's [[leds]] both name the LED: drop --led, or edit [[leds]]")
     led = leds[0]["pins"][0] if leds else (args.led or t.default_led)
     o = Opts(name=name, framework=fw, log=log, bootloader=args.bootloader, settings=args.settings,
              counters=args.counters, ram_counters=args.ram_counters, bkp=regs.bkp if regs else None, bkp_mode=args.bkp_counters,
-             flip_link=not args.no_flip_link, nightly=args.nightly, build_core=args.build_core,
+             flip_link=not args.no_flip_link, toolchain=toolchain, build_core=toolchain == "nightly" and t.family != "esp",
              panic_immediate_abort=args.panic_immediate_abort, defmt_log=args.log_level, rtt_buffer=args.rtt_buffer,
              rtc=args.rtc, supply_config=args.supply_config or "", smps_voltage=args.smps_voltage or "",
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
@@ -3227,9 +3267,14 @@ def main(argv=None) -> None:
     p.add_argument("--no-crash-capture", action="store_true",
                    help="leave out crash capture (bedrock_crash: HardFault / panic record kept across reset, reset cause, "
                         "boot counter, served as ww_firmware_info::LastReset with --wire-weaver); on by default on Cortex-M")
-    p.add_argument("--nightly", action="store_true", help="pin the installed nightly in rust-toolchain.toml")
-    p.add_argument("--build-core", action="store_true", help="build-std core (smaller binary, implies nightly)")
-    p.add_argument("--panic-immediate-abort", action="store_true", help="build-std-features panic_immediate_abort (implies nightly)")
+    p.add_argument("--toolchain", choices=["auto", "nightly", "stable"], default="auto",
+                   help="auto (default): the nightly pinned in versions.toml, with core built at opt-level z "
+                        "(build-std, optimize_for_size), no home or registry paths in the binary (trim-paths) and "
+                        "release builds without panic locations (-Zlocation-detail=none; the crash record's return "
+                        "addresses name the site); ESP keeps its own toolchain. stable: none of these")
+    p.add_argument("--panic-immediate-abort", action="store_true",
+                   help="release builds turn a panic into a trap: smaller still (-14 KB on donguru), but no panic "
+                        "message and a crash record names the panicking function without the line (nightly)")
     p.add_argument("--rtc", action="store_true", help="RTC will be used: do not reset the backup domain at boot")
     p.add_argument("--supply-config", help="STM32H7 SupplyConfig variant (required when the part has SMPS pins)")
     p.add_argument("--smps-voltage", choices=["V1_8", "V2_5"], help="SMPS output voltage for SMPS*LDO configs")

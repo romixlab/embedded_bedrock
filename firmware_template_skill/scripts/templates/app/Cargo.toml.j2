@@ -2,6 +2,10 @@
 {% set defmt = o.log == "defmt" %}
 {% set ww_rtt = o.ww and ww.rtt %}
 {% set d = s.dev %}
+{% if o.panic_immediate_abort %}
+cargo-features = ["panic-immediate-abort"]
+
+{% endif %}
 [package]
 name = "{{ o.name }}"
 version = "0.1.0"
@@ -72,9 +76,6 @@ cortex-m-rt = "{{ V["cortex-m-rt"] }}"
 {{ dep("embassy-time", feats(defmt and "defmt", defmt and "defmt-timestamp-uptime")) }}
 {{ dep("embassy-sync", feats(defmt and "defmt")) }}
 static_cell = "{{ V["static_cell"] }}"
-  {% if t.cortex_m %}
-assign-resources = "{{ V["assign-resources"] }}"
-  {% endif %}
 {% elif o.framework == "stm32-hal2" %}
 hal = { package = "stm32-hal2", version = "{{ V["stm32-hal2"] }}", features = {{ feats(hal2_feature, hal2_rt, defmt and "defmt") | toml_list }} }
 critical-section = "1.2"
@@ -145,7 +146,7 @@ mcan = { {% if o.mcan_src == "git" %}git = "{{ MCAN_GIT }}"{% else %}path = "{{ 
 {{ ww_dep("ww_settings", "ww_settings/ww_settings", o.ww_src, root, (', features = ["defmt"]' if defmt else "")) }}
   {% if o.settings_flash in ("g0", "h7") %}
 # flash reads that survive an ECC error left by a power cut
-{{ ww_dep("ww_ecc_flash", "mcu/ww_ecc_flash", o.ww_src, root, ', features = ["stm32' ~ o.settings_flash ~ '"]') }}
+{{ ww_dep("ww_ecc_flash", "mcu/ww_ecc_flash", o.ww_src, root, ', features = ["stm32' ~ o.settings_flash ~ '"' ~ (', "defmt"' if o.log == "defmt" else '') ~ ']') }}
   {% else %}
 embassy-embedded-hal = "{{ V["embassy-embedded-hal"] }}" # BlockingAsync: the flash as an async NorFlash
   {% endif %}
@@ -238,6 +239,9 @@ debug-assertions = true
 incremental = false
 opt-level = 3           # embedded dev builds are usually unusable at opt-level 0
 overflow-checks = true
+{% if o.toolchain == "nightly" %}
+trim-paths = "all"      # no home or registry paths in the binary (panic locations, debug info)
+{% endif %}
 
 [profile.release]
 codegen-units = 1
@@ -247,6 +251,12 @@ incremental = false
 lto = "fat"
 opt-level = "z"         # 3 = speed, s = size, z = smaller
 overflow-checks = false
+{% if o.toolchain == "nightly" %}
+trim-paths = "all"
+{% endif %}
+{% if o.panic_immediate_abort %}
+panic = "immediate-abort" # a panic is a trap: no message, the crash record names the function (cargo-features above)
+{% endif %}
 
 # Do not optimize build scripts / proc-macros: faster clean builds
 [profile.dev.build-override]

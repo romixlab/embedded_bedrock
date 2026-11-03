@@ -249,7 +249,7 @@ impl ServerState {
     async fn persist_settings(&mut self) -> Result<(), CommonError<'static>> {
         self.settings.persist().await.map_err(|_e| {
   {% if defmt %}
-            defmt::error!("settings not saved: {}", defmt::Debug2Format(&_e));
+            defmt::error!("settings not saved: {}", _e);
   {% elif o.log == "rtt" %}
             rtt_target::rprintln!("settings not saved: {:?}", _e);
   {% endif %}

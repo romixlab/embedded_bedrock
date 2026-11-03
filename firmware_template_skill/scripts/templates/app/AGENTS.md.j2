@@ -68,7 +68,7 @@ a template update/upgrade, **first produce a report, change nothing** until the 
    files (whitespace-insensitive): `take-new` (template changed, file untouched locally), `merge` (both changed),
    `added-upstream`, `removed-upstream`, `deleted-locally`, `up-to-date`. Then read the diffs yourself: the firmware
    was edited by humans, so match template changes to the corresponding code by meaning (renamed functions, moved
-   blocks, reformatted `Cargo.toml`), not by line. Ignore noise that is not an upgrade: generated nightly date,
+   blocks, reformatted `Cargo.toml`), not by line. Ignore noise that is not an upgrade:
    `bedrock_fw.json`, `Cargo.lock`, stm32-data differences unrelated to the change.
 6. **Report** to the user, grouped per logical upgrade (not per file), each with: id/short title, source (commits,
    changelog entry), what it changes in *this* firmware, files, risk / manual work (merge conflicts, API changes,

@@ -62,7 +62,7 @@ use embassy_time::Instant;
 use embassy_embedded_hal::adapter::BlockingAsync;
 {% endif %}
 {% if o.log == "defmt" %}
-use defmt::{Debug2Format, error, info};
+use defmt::{error, info};
 {% elif o.log == "rtt" %}
 use rtt_target::rprintln;
 {% endif %}
@@ -145,7 +145,7 @@ impl SettingsStore {
         match this.settings.load(&mut this.store).await {
 {% if o.log == "defmt" %}
             Ok(report) => info!("settings: {}", report),
-            Err(e) => error!("settings not read, defaults: {}", Debug2Format(&e)),
+            Err(e) => error!("settings not read, defaults: {}", e),
 {% elif o.log == "rtt" %}
             Ok(report) => rprintln!("settings: {:?}", report),
             Err(e) => rprintln!("settings not read, defaults: {:?}", e),
@@ -205,7 +205,7 @@ impl SettingsStore {
                 // kept in RAM, tried again in RETRY_MS
                 self.retry_at = Instant::now() + embassy_time::Duration::from_millis(RETRY_MS);
 {% if o.log == "defmt" %}
-                error!("settings not written: {}", Debug2Format(&_e));
+                error!("settings not written: {}", _e);
 {% elif o.log == "rtt" %}
                 rprintln!("settings not written: {:?}", _e);
 {% endif %}
@@ -221,7 +221,7 @@ impl SettingsStore {
 {% else %}
         if let Err(e) = self.store.maintain().await {
   {% if o.log == "defmt" %}
-            error!("settings erase ahead failed: {}", Debug2Format(&e));
+            error!("settings erase ahead failed: {}", e);
   {% else %}
             rprintln!("settings erase ahead failed: {:?}", e);
   {% endif %}
