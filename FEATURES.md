@@ -919,9 +919,12 @@ document section it comes from, and a FRACN steering range is checked at both en
   FLASH_ACR and prescalers read back before the switch, SWS, kernel muxes last, HSI off when unused), every wait
   bounded and named in `Error::Timeout(Step)`; PWR_CR3 written once and read back, `Error::SupplyLocked` when an
   earlier writer since power-on left another value; back to HSI first when a PLL already runs. `verify(&Plan)`
-  names the first register that differs; `set_fracn` steps a running PLL within the planned range. Host tests on a
-  simulated chip with B135's golden `clocks.rs` (`bedrock_clocks_rt/tests/apply.rs`); addresses and bits held to
-  stm32-metapac. Hardware: RCC-10.
+  names the first register that differs; `set_fracn` steps a running PLL within the planned range, reading each
+  write back and holding PLLxFRACEN low for 2 ref_ck periods (`FracnRange::latch_hold_reads`, emitted by the
+  planner): back to back, B135 missed the latch 6/40 (PLL1) and 11/40 (PLL2) times; no document gives the hold, it
+  is measured (book CLK-10). Host tests on a simulated chip with B135's golden `clocks.rs`
+  (`bedrock_clocks_rt/tests/apply.rs`); addresses and bits held to stm32-metapac. Hardware: RCC-10 (readback
+  matches the plan, FRACN steps exact within ±72 ppb, apply + verify +1620 B .text against embassy's +5620 B).
 - 📋 **RCC-5 FRACN steering** in `bedrock_clocks_rt` as a `bedrock_sync::Oscillator`, from the plan's FRACN range.
 - 📋 **RCC-6 Derived settings with named tolerances**: USART / LPUART BRR, FDCAN bit timing, SDMMC CLKDIV, timer
   tick, I2C timing, each with its achieved value and signed error.

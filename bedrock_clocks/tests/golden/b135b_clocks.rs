@@ -175,6 +175,7 @@ pub const PLL1_FRACN: FracnRange = FracnRange {
     max: 4177,
     vco_step_hz_num: 15625,
     vco_step_hz_den: 16,
+    latch_hold_reads: 51,
 };
 /// PLL2: 585.9375 Hz of VCO per FRACN step; steer range -100..=+100 ppm
 pub const PLL2_FRACN: FracnRange = FracnRange {
@@ -185,4 +186,5 @@ pub const PLL2_FRACN: FracnRange = FracnRange {
     max: 5597,
     vco_step_hz_num: 9375,
     vco_step_hz_den: 16,
+    latch_hold_reads: 84,
 };

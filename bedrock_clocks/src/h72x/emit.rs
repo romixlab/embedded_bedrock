@@ -460,6 +460,14 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             None => (f, f),
         };
         let step = po.ref_ck.0.div_int(8192).expect("small");
+        // FRACEN low for 2 ref_ck periods, counted in PLLCFGR reads of at least one hclk cycle each (RCC-10)
+        let hclk = t.hclk.expect("checked").0;
+        let hold = hclk
+            .mul_int(2)
+            .and_then(|h| h.checked_div(po.ref_ck.0))
+            .expect("small")
+            .ceil()
+            + 1;
         let _ = writeln!(
             o,
             "/// PLL{}: {} of VCO per FRACN step; steer range {}",
@@ -472,7 +480,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         );
         let _ = writeln!(
             o,
-            "pub const PLL{}_FRACN: FracnRange = FracnRange {{\n    pll: {},\n    n: {},\n    nominal: {f},\n    min: {min},\n    max: {max},\n    vco_step_hz_num: {},\n    vco_step_hz_den: {},\n}};",
+            "pub const PLL{}_FRACN: FracnRange = FracnRange {{\n    pll: {},\n    n: {},\n    nominal: {f},\n    min: {min},\n    max: {max},\n    vco_step_hz_num: {},\n    vco_step_hz_den: {},\n    latch_hold_reads: {hold},\n}};",
             i + 1,
             i + 1,
             p.n,

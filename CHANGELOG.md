@@ -20,7 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 - `bedrock_clocks_rt`: applies a `clocks.rs` plan at boot on the H72x/73x without a PAC: fixed writes and bounded
   ready-waits in the RM0468 order, the supply configuration written once and read back (a clear error when an
   earlier writer locked another one), `verify` readback naming the first register that differs, and `set_fracn`
-  within the planned steering range (RCC-4).
+  within the planned steering range, holding PLLxFRACEN low long enough for the new FRACN to latch (RCC-4).
 
 ## [0.2.43] - 2026-11-03
 

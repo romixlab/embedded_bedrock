@@ -54,6 +54,17 @@ pub struct FracnRange {
     /// One FRACN step moves the VCO by num/den Hz (ref_ck / 8192).
     pub vco_step_hz_num: u64,
     pub vco_step_hz_den: u64,
+    /// Reads of RCC_PLLCFGR [set_fracn] makes while PLLxFRACEN is low: 2 ref_ck periods in rcc_hclk cycles plus
+    /// one, as each read takes at least one hclk cycle.
+    ///
+    /// No document gives a minimum FRACEN low time. RM0468 Rev 3 only says "The SH_REG is updated with the FRACNx
+    /// value when PLLxFRACEN bit goes from 0 to 1" (§8.5.5 p.327, §8.7.11 p.381), ES0491 Rev 9 has no PLL erratum,
+    /// and the efton.sk gotcha list has no FRACN item. The hold is measured (RCC-10, B135 rev B, STM32H725IG rev Z,
+    /// one run of 40 min / max steps per PLL and setting): back-to-back 0 / 1 latched PLL1 34/40, PLL2 29/40; with a
+    /// readback after each write 40/40 and 37/40; readback plus FRACEN low for 40, 80, 160 or 400 CPU cycles 40/40
+    /// for both. PLL2 (ref 4.8 MHz) missing more than PLL1 (8 MHz) suggests the edge must be seen in the ref_ck
+    /// domain, hence 2 ref_ck periods.
+    pub latch_hold_reads: u32,
 }
 
 impl FracnRange {
@@ -404,7 +415,10 @@ pub struct OutOfRange {
 }
 
 /// Sets a running PLL's FRACN on the fly (RM0468 §8.5.5 p.329, §8.7.13): PLLxFRACEN 0, write FRACN, PLLxFRACEN 1.
-/// Refuses a value outside the plan's range, which the planner checked against every limit at both ends.
+/// Each write is read back, and FRACEN stays low for [FracnRange::latch_hold_reads] reads (at least 2 ref_ck
+/// periods): without that the new value was sometimes not taken on silicon (measured, not documented: see
+/// [FracnRange::latch_hold_reads]). Refuses a value outside the
+/// plan's range, which the planner checked against every limit at both ends.
 pub fn set_fracn(r: &mut impl Regs, range: &FracnRange, fracn: u16) -> Result<(), OutOfRange> {
     if fracn < range.min || fracn > range.max {
         return Err(OutOfRange {
@@ -416,7 +430,12 @@ pub fn set_fracn(r: &mut impl Regs, range: &FracnRange, fracn: u16) -> Result<()
     let i = (range.pll as usize).saturating_sub(1).min(2);
     let fracen = 1 << (4 * i);
     modify(r, addr::RCC_PLLCFGR, fracen, 0);
+    let _ = r.read(addr::RCC_PLLCFGR);
     r.write(addr::rcc_pllfracr(i), (fracn as u32) << 3);
+    let _ = r.read(addr::rcc_pllfracr(i));
+    for _ in 0..range.latch_hold_reads {
+        let _ = r.read(addr::RCC_PLLCFGR);
+    }
     modify(r, addr::RCC_PLLCFGR, 0, fracen);
     Ok(())
 }

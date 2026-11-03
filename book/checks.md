@@ -182,6 +182,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="clk-6"></a>⚠️ `CLK-6` A kernel clock that can't divide the rates needed exactly (FDCAN 135 MHz for 2/4/8 Mbit/s, USART OVER8 drops a bit of USARTDIV): read back the achieved rate and count a mismatch · check: test · 📖 [detail](checks/clk.md#clk-6) · <!-- vb135 CAN-1; typec_dongle API-14 -->
 - <a id="clk-7"></a>⚠️ `CLK-7` Clock run at the part's maximum just because it can (lifetime at small nodes, ECC RAM limits: H7 TCM ECC at 520 MHz) · check: review · 📖 [detail](checks/clk.md#clk-7) · <!-- notion; vb135 PLAT-8 -->
 - <a id="clk-8"></a>⚠️ `CLK-8` Fractional PLL math not checked: embassy refuses a core above the limit at boot, a FRACN at 0 is integer mode, a truncated prescaler runs the time driver 0.39 % fast · check: test · chip: H7 · 📖 [detail](checks/clk.md#clk-8) · <!-- vb135 PLAT-9 -->
+- <a id="clk-10"></a>⚠️ `CLK-10` FRACN changed on the fly with PLLxFRACEN cleared and set back to back: the new value is sometimes not latched (read back, hold FRACEN low ≥ 2 ref_ck periods) · check: src mid · chip: H7 · 📖 [detail](checks/clk.md#clk-10) · <!-- embedded_bedrock RCC-10 -->
 
 ### 🐞 ERR - Silicon errata
 - <a id="err-1"></a>🛑 `ERR-1` Errata sheet for the silicon revision on the board not read for the peripherals, clocks, flash, DMA, low power and boot path in use; STM32 also efton.sk gotchas · check: review · 📖 [detail](checks/err.md#err-1) · <!-- tpm firmware pack; embedded_bedrock AGENTS.md -->

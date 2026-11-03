@@ -14,6 +14,7 @@ mod clocks;
 struct Sim {
     regs: HashMap<u32, u32>,
     writes: Vec<(u32, u32)>,
+    reads: usize,
     cr3_written: bool,
     hse_dead: bool,
 }
@@ -35,6 +36,7 @@ impl Sim {
         Sim {
             regs,
             writes: Vec::new(),
+            reads: 0,
             cr3_written: false,
             hse_dead: false,
         }
@@ -50,6 +52,7 @@ impl Sim {
 
 impl Regs for Sim {
     fn read(&mut self, a: u32) -> u32 {
+        self.reads += 1;
         *self.regs.get(&a).unwrap_or(&0)
     }
 
@@ -185,6 +188,7 @@ fn fracn_steps_inside_the_planned_range() {
     let mut s = Sim::new();
     h72x::apply(&mut s, &clocks::PLAN).unwrap();
     s.writes.clear();
+    s.reads = 0;
     let r = clocks::PLL1_FRACN;
     h72x::set_fracn(&mut s, &r, r.max).unwrap();
     // FRACEN off, FRACN, FRACEN on (RM0468 §8.5.5 p.329)
@@ -193,6 +197,10 @@ fn fracn_steps_inside_the_planned_range() {
     assert_eq!(s.writes[0].1 & 1, 0);
     assert_eq!(s.writes[1], (addr::rcc_pllfracr(0), (r.max as u32) << 3));
     assert_eq!(s.writes[2].1 & 1, 1);
+    // FRACEN held low: 2 PLL1 ref_ck periods (8 MHz) at hclk 199 MHz are 49.75 cycles, so 51 reads
+    assert_eq!(r.latch_hold_reads, 51);
+    assert_eq!(clocks::PLL2_FRACN.latch_hold_reads, 84);
+    assert!(s.reads as u32 >= r.latch_hold_reads + 2, "{}", s.reads);
     assert!(h72x::set_fracn(&mut s, &r, r.max + 1).is_err());
     assert!(h72x::set_fracn(&mut s, &r, r.min - 1).is_err());
     // 1.227 ppm per step at B135's PLL1: 10¹² / (99·8192 + 4096) = 1 226 837.0

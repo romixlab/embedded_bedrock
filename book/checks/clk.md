@@ -159,3 +159,17 @@ embassy accept it at boot means the rate obtained is the rate intended.
 **Detection:** check: test — chip: H7. This needs either a register read-back computation or a real timing
 measurement; embassy's boot-time acceptance only rules out grossly invalid configurations, not small fractional
 error.
+
+## <a id="clk-10"></a>`CLK-10` — Hold PLLxFRACEN low long enough when steering FRACN
+
+RM0468 describes on-the-fly FRACN tuning as three steps: PLLxFRACEN to 0, write PLLxFRACR, PLLxFRACEN to 1, the
+0 → 1 edge latching FRACN into the sigma-delta modulator. It gives no minimum time between the steps, and ES0491
+has no erratum about it. Done back to back from a 398 MHz core, the latch is sometimes missed and the PLL keeps
+the old fraction, so a clock-steering loop sees steps that did nothing.
+
+**Example:** B135 rev B (STM32H725IG rev Z), RCC-10: 40 min / max steps per PLL latched 34/40 on PLL1 (ref 8 MHz)
+and 29/40 on PLL2 (ref 4.8 MHz) back to back; with a readback after each write and FRACEN low for at least 40 CPU
+cycles, 40/40 on both. `bedrock_clocks_rt::h72x::set_fracn` reads back and holds FRACEN low for 2 ref_ck periods
+(`FracnRange::latch_hold_reads`). The same pattern is in the embassy fork's `Pll::fracn` steering and in
+bedrock_sync's steering on b135_fw.
+
