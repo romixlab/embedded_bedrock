@@ -5,12 +5,20 @@ test *flags:
     if [ "{{flags}}" = "--changed" ]; then tpm test changed -- cargo nextest run --workspace; else {{just_executable()}} test-all {{flags}}; fi
 
 # Host tests of the workspace crates, bedrock_led and bedrock_sync with every feature, bedrock_rom_boot with its
-# host features (a chip family is firmware only)
+# host features (a chip family is firmware only). Two nextest runs, not four cargo test runs: the first is every
+# crate at its default (no extra) features, which is the only run that still covers bedrock_led / bedrock_sync /
+# bedrock_rom_boot's HAL-free, feature-off build (nextest can't tell "no features" from "fewer features", so this
+# run must stay separate, never folded into the second); the second unions the three crates' extra feature passes
+# into one build instead of three, so wire_weaver, embassy-time and friends compile once for all of them instead
+# of once per crate. `pkg/feature` scopes each feature to its crate: a bare `--features embassy` would also turn
+# embassy on for bedrock_rom_boot, which needs a chip family (firmware only) for that to make sense.
+# Doctests separately: nextest doesn't run them (its own limitation), and they're cheap next to the unit tests'
+# linking cost.
 test-all:
-    cargo test --workspace --locked
-    cargo test -p bedrock_led --all-features --locked
-    cargo test -p bedrock_sync --all-features --locked
-    cargo test -p bedrock_rom_boot --features ww-dfu,defmt --locked
+    cargo nextest run --workspace --locked
+    cargo nextest run --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
+    cargo test --doc --workspace --locked
+    cargo test --doc --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
 
 # Format check, clippy on the host, and bedrock_led / bedrock_sync / bedrock_can as no_std firmware code for the
 # Cortex-M0+, bedrock_rom_boot for the G0 (Cortex-M0+) and the H7 (Cortex-M7), bedrock_clocks_rt for the H7

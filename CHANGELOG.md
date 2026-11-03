@@ -9,6 +9,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- `just test-all` (the `tpm land` gate's full run) uses `cargo nextest` instead of four separate `cargo test`
+  invocations, cuts test-binary debug info to `line-tables-only` with `split-debuginfo = "unpacked"`
+  (`[profile.test]`), and folds the `bedrock_led` / `bedrock_sync` / `bedrock_rom_boot` extra-feature passes into
+  one nextest run (`-p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features pkg/feature,...`) instead of
+  three separate `-p PKG --all-features` runs, so `wire_weaver` and `embassy-time` compile once for all three
+  instead of once per crate; the no-extra-features workspace run stays separate, since it is the only run that
+  still exercises `bedrock_led` / `bedrock_sync` / `bedrock_rom_boot`'s HAL-free, feature-off build. Doctests still
+  run through plain `cargo test --doc` (nextest doesn't run them) for both feature sets.
+  Same 234 nextest-run tests and 3 passed doctests (237 total) before and after, verified by `cargo nextest list`
+  and the doctest pass/ignore counts, name for name. Measured on build-1 (14 cores; its global cargo config
+  already set `debug = "line-tables-only"` for `profile.test`, so that part of the win doesn't show here, only
+  `split-debuginfo` and the folded feature passes do): clean target dir, 14 jobs, 111.4s/4.07 GB/5.5G →
+  113.1s/3.58 GB/4.8G; clean, 8 jobs, 119.9s/2.65 GB/5.5G → 101.5s/2.52 GB/4.8G; warm target dir is ~2-3s and
+  under 0.25 GB either way, before and after. The gate's own learned peak was 19.5 GB at 24 jobs on gpd-omarchy for
+  only 237 tests that each run in under 0.1s, all in compiling and linking (2026-11-03).
+
 ## [0.2.44] - 2026-11-03
 
 ### Added

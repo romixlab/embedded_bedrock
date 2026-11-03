@@ -28,6 +28,13 @@ members = [
 inherits = "release"
 incremental = true
 
+# just test: line-tables-only keeps panic locations and backtraces useful without the full type and variable
+# info rustc otherwise writes for every one of the ~23 test binaries; split-debuginfo off the binary so a
+# rebuild after a one-line change doesn't relink everything else's debug info into it too.
+[profile.test]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
 [workspace.dependencies]
 # WireWeaver by git, so the crates build when embedded_bedrock itself comes from git (firmware's bedrock_build,
 # `cargo install --git ... bedrock_board_cli`). Local work takes the sibling checkout ../wire_weaver instead, through
