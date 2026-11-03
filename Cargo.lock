@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-bedrock"
-version = "0.2.31"
+version = "0.2.32"
 
 [[package]]
 name = "embedded-hal"
