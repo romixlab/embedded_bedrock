@@ -656,7 +656,7 @@ impl<'ast> Visit<'ast> for Walker<'_> {
 }
 
 /// Tokens as text, as `quote` prints them (`interrupt :: SWI_IRQ_0` with spaces folded around `::`)
-fn tokens(t: &impl ToTokens) -> String {
+pub(crate) fn tokens(t: &impl ToTokens) -> String {
     t.to_token_stream()
         .to_string()
         .replace(" :: ", "::")
@@ -664,7 +664,7 @@ fn tokens(t: &impl ToTokens) -> String {
         .replace(" . ", ".")
 }
 
-fn path_text(p: &syn::Path) -> String {
+pub(crate) fn path_text(p: &syn::Path) -> String {
     p.segments
         .iter()
         .map(|s| s.ident.to_string())
@@ -771,7 +771,7 @@ fn pat_name(p: &syn::Pat) -> Option<String> {
     }
 }
 
-fn type_name(t: &syn::Type) -> String {
+pub(crate) fn type_name(t: &syn::Type) -> String {
     match t {
         syn::Type::Path(p) => p
             .path

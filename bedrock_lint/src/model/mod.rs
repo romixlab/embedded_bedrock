@@ -15,6 +15,7 @@
 pub mod build_script;
 pub mod elf;
 pub mod memory_x;
+pub mod scan;
 mod source;
 pub mod thumb;
 
