@@ -15,9 +15,16 @@ members = [
     "bedrock_build_info",
     "bedrock_board",
     "bedrock_board_cli",
+    "bedrock_lint",
+    "bedrock_lint_cli",
     "bedrock_cli",
     "fw_registry",
 ]
+
+# just install: release, but incremental so a rebuild after a small change is quick
+[profile.deploy]
+inherits = "release"
+incremental = true
 
 [workspace.dependencies]
 # WireWeaver by git, so the crates build when embedded_bedrock itself comes from git (firmware's bedrock_build,

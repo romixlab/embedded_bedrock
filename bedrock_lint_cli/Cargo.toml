@@ -1,0 +1,21 @@
+[package]
+name = "bedrock_lint_cli"
+version = "0.1.0"
+edition = "2024"
+description = "bedrock-lint: checks a bare-metal Rust firmware crate against the firmware check catalogue"
+license = "MIT"
+
+[[bin]]
+name = "bedrock-lint"
+path = "src/main.rs"
+
+[dependencies]
+bedrock_lint = { path = "../bedrock_lint" }
+anstream = "1"
+anstyle = "1"
+clap = { version = "4.5", features = ["derive", "env", "wrap_help"] }
+clap_complete = { version = "4.6", features = ["unstable-dynamic"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,0 +1,6 @@
+[workspace]
+members = ["fw", "board"]
+
+[workspace.dependencies]
+cortex-m-rt = { version = "0.7", features = ["device", "paint-stack"] }
+board = { path = "board" }

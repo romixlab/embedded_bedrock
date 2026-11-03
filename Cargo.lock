@@ -234,6 +234,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "bedrock_lint"
+version = "0.1.0"
+dependencies = [
+ "anstyle",
+ "inventory",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.119",
+ "toml 1.1.6+spec-1.1.0",
+]
+
+[[package]]
+name = "bedrock_lint_cli"
+version = "0.1.0"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "bedrock_lint",
+ "clap",
+ "clap_complete",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "bedrock_rom_boot"
 version = "0.1.0"
 dependencies = [
@@ -1121,7 +1148,7 @@ source = "git+https://github.com/romixlab/exact_units#90364e1df72696af85c01d0a55
 dependencies = [
  "defmt",
  "serde",
- "shrink_wrap",
+ "shrink_wrap 0.2.0 (git+https://github.com/vhrdtech/wire_weaver)",
 ]
 
 [[package]]
@@ -1266,6 +1293,18 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "r-efi",
+ "wasip2",
 ]
 
 [[package]]
@@ -1493,6 +1532,15 @@ dependencies = [
  "hashbrown",
  "serde",
  "serde_core",
+]
+
+[[package]]
+name = "inventory"
+version = "0.3.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6928282826c822ad91bf1c9a1cb90a30ba1c26770749929b4656cd6be829cd7c"
+dependencies = [
+ "rustversion",
 ]
 
 [[package]]
@@ -2136,6 +2184,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "r-efi"
+version = "5.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
+
+[[package]]
 name = "radium"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2511,12 +2565,35 @@ dependencies = [
  "either",
  "paste",
  "serde",
- "shrink_wrap_derive",
+ "shrink_wrap_derive 0.2.0",
+]
+
+[[package]]
+name = "shrink_wrap"
+version = "0.2.0"
+source = "git+https://github.com/vhrdtech/wire_weaver#d53e747498269220bc01dd50a90b206f76311fa7"
+dependencies = [
+ "defmt",
+ "either",
+ "paste",
+ "serde",
+ "shrink_wrap_derive 0.2.0 (git+https://github.com/vhrdtech/wire_weaver)",
 ]
 
 [[package]]
 name = "shrink_wrap_derive"
 version = "0.2.0"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+]
+
+[[package]]
+name = "shrink_wrap_derive"
+version = "0.2.0"
+source = "git+https://github.com/vhrdtech/wire_weaver#d53e747498269220bc01dd50a90b206f76311fa7"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2692,6 +2769,19 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "tempfile"
+version = "3.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d31c77bdf42a745371d260a26ca7163f1e0924b64afa0b688e61b5a9fa02f16"
+dependencies = [
+ "fastrand",
+ "getrandom",
+ "once_cell",
+ "rustix 1.0.8",
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "terminal_size"
@@ -3128,6 +3218,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasip2"
+version = "1.0.4+wasi-0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b67efb37e106e55ce722a510d6b5f9c17f083e5fc79afc2badeb12cc313d9487"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
 name = "wasm-bindgen"
 version = "0.2.129"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3469,7 +3568,7 @@ name = "wire_weaver"
 version = "0.5.0"
 dependencies = [
  "defmt",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "wire_weaver_derive",
  "ww_error",
  "ww_version",
@@ -3533,7 +3632,7 @@ dependencies = [
  "ron",
  "semver 1.0.28",
  "serde",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "syn 3.0.6",
  "toml 1.1.6+spec-1.1.0",
  "wire_weaver_snapshots",
@@ -3565,7 +3664,7 @@ dependencies = [
  "exact_units",
  "ron",
  "serde",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "wire_weaver_snapshots",
  "ww_numeric",
  "ww_self",
@@ -3580,6 +3679,12 @@ dependencies = [
  "ww_self",
  "ww_version",
 ]
+
+[[package]]
+name = "wit-bindgen"
+version = "0.57.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "writeable"
@@ -3627,7 +3732,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "defmt",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
 ]
 
 [[package]]
@@ -3643,7 +3748,7 @@ name = "ww_error"
 version = "0.1.0"
 dependencies = [
  "defmt",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
 ]
 
 [[package]]
@@ -3651,7 +3756,7 @@ name = "ww_framer"
 version = "0.5.0"
 dependencies = [
  "crc",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
 ]
 
 [[package]]
@@ -3662,7 +3767,7 @@ dependencies = [
  "defmt",
  "serde",
  "serde_json",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
 ]
 
 [[package]]
@@ -3678,7 +3783,7 @@ dependencies = [
 name = "ww_link"
 version = "0.5.0"
 dependencies = [
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "wire_weaver",
  "ww_block",
  "ww_framer",
@@ -3706,7 +3811,7 @@ version = "0.2.0"
 dependencies = [
  "defmt",
  "serde",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
 ]
 
 [[package]]
@@ -3718,7 +3823,7 @@ dependencies = [
  "quote",
  "serde",
  "sha2 0.11.0",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "syn 3.0.6",
  "ww_numeric",
  "ww_version",
@@ -3730,7 +3835,7 @@ version = "0.2.0"
 dependencies = [
  "defmt",
  "exact_units",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "ww_numeric",
 ]
 
@@ -3759,7 +3864,7 @@ name = "ww_tape"
 version = "0.1.0"
 dependencies = [
  "crc",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "ww_version",
 ]
 
@@ -3781,7 +3886,7 @@ dependencies = [
  "hex",
  "semver 1.0.28",
  "serde",
- "shrink_wrap",
+ "shrink_wrap 0.2.0",
  "ww_global",
 ]
 

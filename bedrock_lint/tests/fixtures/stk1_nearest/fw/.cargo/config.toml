@@ -1,0 +1,3 @@
+# the nearer file wins in cargo
+[target.thumbv6m-none-eabi]
+linker = "rust-lld"

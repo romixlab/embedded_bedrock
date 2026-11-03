@@ -1,0 +1,4 @@
+[package]
+name = "stk1_dotted_triple"
+version = "0.1.0"
+edition = "2024"

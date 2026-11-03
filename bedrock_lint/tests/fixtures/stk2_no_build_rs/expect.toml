@@ -1,0 +1,2 @@
+checks = ["STK-2"]
+not_run = ["STK-2"]

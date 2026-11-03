@@ -722,12 +722,21 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   with its source: the repo and FEATURES id of the bug, or the Notion firmware checklist imported into tpm
   `roles/checklists/firmware.md`), the [review checklist](book/review-checklist.md) and the
   [bring-up checklist](book/bringup-checklist.md) condensed from it. Detail pages per category are LINT-7 and LINT-8.
-- 📋 **LINT-2 Check engine** (crate `bedrock_lint` and its CLI): reads a firmware crate (source with syn,
-  `Cargo.toml`, `.cargo/config.toml`, `memory.x`, `build.rs`, `bedrock_fw.json`, optionally its ELF) into a firmware
-  model (tasks, executors with their interrupt and priority, spawns, interrupt handlers, statics, pins, chip); one
-  finding type with catalogue ID, severity, confidence, location, fix and fingerprint; text, JSON and SARIF reports;
-  waivers in the source with a reason, a baseline so only new findings fail; `explain ID` and `checks list` from the
-  catalogue; a report of the checks that could not run and why. Proves itself with STK-1, STK-2, STK-4 and EXE-3.
+- ✅ **LINT-2 Check engine** (crate `bedrock_lint`, CLI `bedrock-lint` in `bedrock_lint_cli`): reads a firmware
+  crate into a model (`model/`: its `Cargo.toml` and the workspace root's, the `.cargo/config.toml` files cargo
+  reads, `build.rs` and its `cargo:` directives, `memory.x`, `bedrock_fw.json` with the chip, and the source of the
+  crate and its path dependencies parsed with syn: tasks, entry points, executors with the vector and the place of
+  their `start`, priority calls, spawns, `#[interrupt]` / `#[exception]` handlers, `bind_interrupts!` lines,
+  statics with their raw mutex, functions with their calls by name); checks register themselves (`checks/`, one
+  file per catalogue id, severity and title from the embedded catalogue); one `Finding` with catalogue id,
+  severity (overridable in `bedrock-lint.toml`), confidence (`certain`, `estimate`, `candidate`: never fails),
+  spans, fix and fingerprint; checks whose data is missing are reported as not run with the reason; waivers in the
+  firmware's files with a required reason (`// bedrock-lint: allow(EXE-3) ...`), unused ones listed; a baseline file
+  so only new findings fail; text, JSON and SARIF reports; `explain ID`, `checks list [--all]`, `model` (the model
+  as JSON); shell completion of check ids with their titles. Proves itself with STK-1, STK-2, STK-4 and EXE-3,
+  each with fixtures under `bedrock_lint/tests/fixtures/`. No `cargo metadata` and no chip tables yet: the
+  checks that need resolved features or per-chip data add them (LINT-3, LINT-4). Clean on usb_io_fw, typec_dongle,
+  vb135_fdcan_iso_usb_fw and the nucleo_g0b1re and pico templates (3 Nov 2026).
 - 📋 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
 - 📋 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
   EXE-10, CNT-3).
@@ -743,6 +752,9 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
 - 📋 **LINT-9 Clean on our firmware**: the lint runs on usb_io_fw, typec_dongle, vb135_fdcan_iso_usb_fw and the
   board templates; real bugs filed in those repos' FEATURES.md, false positives fixed in the checks, the rest in a
   baseline.
+- 📋 **LINT-10 bedrock-lint CLI polish**: record each invocation per subcommand locally (the CLI usage rule), bash
+  completion through wire_weaver `ww`'s adapter (`wire_weaver_cli/src/complete.rs`) instead of clap's own, and
+  `check` on a virtual workspace runs every firmware member instead of naming them.
 
 ## Dropped and superseded
 

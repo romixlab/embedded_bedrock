@@ -78,6 +78,12 @@ so a missing entry means work nobody sees.
 - `bedrock_board/`, `bedrock_board_cli/` — board infographics (`boardmap`: top and bottom views, power tree, pin
   table) from a `.kicad_pcb` and a TOML description, for the templates' `docs/board/`; FEATURES.md area `MAP`,
   example in the template's board preset `firmware_template_skill/scripts/data/boards/nucleo_g0b1re/`.
+- `bedrock_lint/`, `bedrock_lint_cli/` — the firmware lint `bedrock-lint` (FEATURES.md area `LINT`): a firmware
+  model (`model/`: manifests, cargo configuration, build script, memory.x, bedrock_fw.json, syn facts), one file per
+  check in `checks/` named by its catalogue id, waivers, baseline, text / JSON / SARIF reports. The catalogue
+  `book/checks.md` is embedded at build time: a check's severity and title come from there, and a test holds every
+  registered check to it and to a fixture under `bedrock_lint/tests/fixtures/` (a small firmware with an
+  `expect.toml` of the findings it must give). A new check: a file in `checks/`, its `mod` line, a fixture.
 - `bedrock/` — host-side prototype: reads targets through probe-rs, ELF symbol scan (`nm.rs`).
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md

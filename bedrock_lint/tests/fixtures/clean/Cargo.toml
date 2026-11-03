@@ -1,0 +1,8 @@
+[package]
+name = "clean_fw"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cortex-m-rt = { version = "0.7", features = ["device"] }
+embassy-executor = { version = "0.9", features = ["arch-cortex-m", "executor-thread", "executor-interrupt"] }

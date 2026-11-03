@@ -1,0 +1,10 @@
+# a bare triple with a dot is nested tables in TOML; cargo reads it as the triple
+[target.thumbv8m.main-none-eabihf]
+runner = "probe-rs run --chip RP235x"
+linker = "flip-link"
+
+[target."thumbv8m.base-none-eabi"]
+runner = "probe-rs run --chip RP235x"
+
+[build]
+target = "thumbv8m.main-none-eabihf"

@@ -1,0 +1,13 @@
+checks = ["STK-4"]
+dir = "fw"
+# the path dependency `board` is read too
+tasks = ["board::board_task"]
+
+[[finding]]
+check = "STK-4"
+at = "../Cargo.toml:5"
+
+[[finding]]
+check = "STK-4"
+at = "Cargo.toml:8"
+confidence = "estimate"

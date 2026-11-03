@@ -1,0 +1,13 @@
+[package]
+name = "stk4-fw"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+debug-stack = ["rt/paint-stack"]
+
+[dependencies]
+rt = { package = "cortex-m-rt", version = "0.7" }
+cortex-m-rt.workspace = true
+board = { workspace = true }

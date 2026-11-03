@@ -1,13 +1,22 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_can`, `bedrock_rom_boot`, `bedrock_board`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_can`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_lint` and its CLI `bedrock-lint` (crate `bedrock_lint_cli`): reads a firmware crate (source with syn,
+  `Cargo.toml`, `.cargo/config.toml`, `build.rs`, `memory.x`, `bedrock_fw.json`) into a model and runs the
+  automatic checks of the catalogue on it: first STK-1 (flip-link not the linker), STK-2 (unknown `cargo:` key in
+  build.rs), STK-4 (cortex-m-rt `paint-stack` on) and EXE-3 (interrupt executor started before its priority is
+  set). Text, JSON and SARIF reports, waivers with a reason in the firmware's files, a baseline, `explain`,
+  `checks list`, `model` (LINT-2).
 
 ## [0.2.32] - 2026-11-03
 

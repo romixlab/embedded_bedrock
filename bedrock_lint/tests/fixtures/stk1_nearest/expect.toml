@@ -1,0 +1,6 @@
+checks = ["STK-1"]
+dir = "fw"
+
+[[finding]]
+check = "STK-1"
+at = ".cargo/config.toml:3"

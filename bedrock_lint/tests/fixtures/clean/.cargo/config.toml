@@ -1,0 +1,6 @@
+[target.thumbv6m-none-eabi]
+runner = "probe-rs run --chip STM32G0B1RE"
+linker = "flip-link"
+
+[build]
+target = "thumbv6m-none-eabi"

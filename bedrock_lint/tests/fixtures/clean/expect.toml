@@ -1,0 +1,2 @@
+# Everything right: every check runs and finds nothing
+ran = ["STK-1", "STK-2", "STK-4", "EXE-3"]

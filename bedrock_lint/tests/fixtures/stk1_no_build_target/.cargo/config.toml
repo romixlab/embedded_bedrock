@@ -1,0 +1,5 @@
+[target.thumbv8m.main-none-eabihf]
+linker = "flip-link"
+
+[target."thumbv8m.base-none-eabi"]
+runner = "probe-rs run --chip RP235x"

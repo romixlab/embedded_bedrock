@@ -25,3 +25,9 @@ lint:
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt -- -D warnings
+
+# Build bedrock-lint (the firmware lint) and install it on this PC
+install:
+    cargo build --profile deploy --locked -p bedrock_lint_cli
+    # With tpm on PATH: tpm install (kept-releases stack, one copy on PATH); otherwise: cargo install
+    if command -v tpm >/dev/null; then tpm install target/deploy/bedrock-lint; else cargo install --locked --path bedrock_lint_cli; fi

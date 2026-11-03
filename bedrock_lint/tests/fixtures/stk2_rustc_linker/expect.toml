@@ -1,0 +1,9 @@
+checks = ["STK-2"]
+
+[[finding]]
+check = "STK-2"
+at = "build.rs:6"
+
+[[finding]]
+check = "STK-2"
+at = "build.rs:8"

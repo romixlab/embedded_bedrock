@@ -26,6 +26,10 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
   (`typec_dongle FW-62`), or `notion` for the generic firmware checklist imported from Notion on 3 Oct 2026
   (tpm `roles/checklists/firmware.md`). A lesson found on a board becomes a new entry here with its source, so the
   list grows from real failures.
+- **Automatic checks** run with `bedrock-lint check` in the firmware crate (embedded_bedrock `bedrock_lint_cli`);
+  `bedrock-lint checks list --all` shows which entries are automated. A finding that is acceptable gets a waiver
+  with its reason in the firmware's file, on the item or at the end of the line: `// bedrock-lint: allow(EXE-3) the
+  ROM leaves this vector at P2` (`#` in TOML).
 - **Detail pages** under [checks/](checks/), one per category, explain each check: what goes wrong, why, an example,
   the fix, how it is detected, references (errata quoted from the document). EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT,
   PWR, FLS, LOG and CNT are written (LINT-7); PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF and TEST are still planned

@@ -1,0 +1,20 @@
+checks = ["EXE-3"]
+problems = ["src/main.rs:28"]
+
+[[finding]]
+check = "EXE-3"
+at = "src/main.rs:9:25"
+
+[[finding]]
+check = "EXE-3"
+at = "src/main.rs:12:35"
+
+[[finding]]
+check = "EXE-3"
+at = "src/main.rs:17:35"
+confidence = "estimate"
+
+[[finding]]
+check = "EXE-3"
+at = "src/main.rs:20:29"
+waived = true

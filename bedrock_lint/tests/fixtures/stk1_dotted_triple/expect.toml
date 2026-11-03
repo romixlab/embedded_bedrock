@@ -1,0 +1,3 @@
+# flip-link found under the bare dotted triple: nothing to report
+checks = ["STK-1"]
+ran = ["STK-1"]

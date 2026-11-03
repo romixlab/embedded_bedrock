@@ -1,0 +1,5 @@
+checks = ["STK-1"]
+
+[[finding]]
+check = "STK-1"
+at = ".cargo/config.toml:1"
