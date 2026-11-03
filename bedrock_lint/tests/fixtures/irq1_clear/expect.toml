@@ -1,0 +1,26 @@
+checks = ["IRQ-1"]
+
+[[finding]]
+check = "IRQ-1"
+at = "src/main.rs:38:16"
+
+[[finding]]
+check = "IRQ-1"
+at = "src/main.rs:42:16"
+
+[[finding]]
+check = "IRQ-1"
+at = "src/main.rs:46:15"
+
+[[finding]]
+check = "IRQ-1"
+at = "src/main.rs:50:17"
+
+[[finding]]
+check = "IRQ-1"
+at = "src/main.rs:54:14"
+
+[[finding]]
+check = "IRQ-1"
+at = "src/main.rs:59:16"
+waived = true

@@ -1,0 +1,6 @@
+checks = ["IRQ-2"]
+
+[[finding]]
+check = "IRQ-2"
+at = "src/main.rs:22:15"
+confidence = "candidate"
