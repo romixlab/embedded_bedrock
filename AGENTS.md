@@ -88,8 +88,8 @@ so a missing entry means work nobody sees.
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md
   TPL-20).
-- `book/` — notes on build info, counters and common issues; the firmware check catalogue `checks.md` (detail
-  pages in `checks/`) with the review and bring-up checklists condensed from it (FEATURES.md area `LINT`).
+- `book/` — notes on build info, counters, blink codes and common issues; the firmware check catalogue `checks.md`
+  (detail pages in `checks/`) with the review and bring-up checklists condensed from it (FEATURES.md area `LINT`).
 
 WireWeaver crates come from git (root `Cargo.toml`), patched to the sibling `../wire_weaver` for local work in
 `.cargo/config.toml` (add a crate to both). Fix WireWeaver problems there, with its own

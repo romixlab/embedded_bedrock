@@ -3,7 +3,8 @@
 //! shown through one indication state ([Leds]): which LEDs are visible, one peak brightness for all, a colour per RGB
 //! LED, and an identify blink that overrides everything for a while.
 //!
-//! What a LED shows for what it means (ok, busy, fault, ... in a status colour) is [look], the same on every board.
+//! What a LED shows for what it means (ok, busy, fault, ... in a status colour) is [look], the same on every board;
+//! why a firmware won't start is a blink [code], also the same on every board.
 //!
 //! The layers, each usable on its own:
 //! - [Animation] steps a [Mode] every [TICK_MS] and gives its perceptual level (0..=65535); [scale] applies a peak
@@ -20,6 +21,7 @@
 //! All per-tick math is u32, without 64-bit libcalls: the Cortex-M0+ has no 64-bit multiply and no hardware divide.
 //! Only aligning to shared time after a mode change or a clock step takes one 64-bit remainder.
 
+pub mod code;
 #[cfg(feature = "embassy")]
 mod driver;
 #[cfg(feature = "ww-indication")]

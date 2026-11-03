@@ -524,6 +524,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `HEARTBEAT`), rePort (`OK`, was a 4 s breath) and B135 (SD `OK` in `STORAGE` / `FAULT`, CAN `OK` / `WARN` /
   `ALERT`). Kept on a module of `bedrock_led`: it holds `Mode`, the fades and the peaks already; a buzzer or display
   vocabulary would get its own module next to it when one exists. Flashed on all three boards (21 Oct 2026); the looks themselves not yet looked at by a person.
+- ✅ **DEV-18 Blink codes** (`bedrock_led::code`): why a firmware won't start, on the status LED, the same on every
+  board: one long flash (1 s), then `n` short ones (0.25 s, 0.4 s apart), 1.5 s dark, repeated for about 10 s, red
+  on an RGB LED. `blink(code, set_led, delay_ms)` is blocking and HAL-free for the first lines of `main`, before any
+  init; then the board reboots into its ROM bootloader. Codes: 1 `UnknownRework` (wire_weaver STD-101, the rework
+  guard), 2 `RecordUnreadable`; new reasons take the next number. Host tests of the pattern; the table for people
+  is `book/blink_codes.md`. First user: usb_io_fw PLAT-18.
 - 🧪 **DEV-16 STM32 ROM bootloader entry crate** (`bedrock_rom_boot`): firmware alone at the start of flash, updated
   by the STM32 ROM bootloader's USB DFU (`ww dfu stm32 flash`); extracted from Donguru (typec_dongle FW-12, FW-45,
   G0B1) and B135 (BOOT-4, BOOT-5, BOOT-9, BOOT-10, H725). `BootWord` in the family's last backup register (G0
