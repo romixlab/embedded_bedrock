@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.41] - 2026-11-03
+
 ### Added
 
 - bedrock-lint source checks for boot, supply, flash, clocks, errata, external chips, USB and logging: BOOT-1,
