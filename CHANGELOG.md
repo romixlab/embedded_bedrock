@@ -9,6 +9,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock-lint` checks on host input: HOST-1 (a panic a host value reaches in a WireWeaver handler or a function it
+  hands the value to: `unwrap`, indexing, division, overflow, `assert!`, `todo!`), HOST-3 (a host value's unknown
+  variant mapped to a default instead of refused), HOST-5 (a truncated or oversized request refused without a
+  counter) (LINT-6).
+- `bedrock-lint` counter checks: CNT-1 (an `Err` arm, `if let Err`, `is_err()`, `let Ok(..) else` or a select's
+  timer arm that neither counts, hands the error on nor panics) and CNT-2 (`&mut`, `as_mut_ptr` or a u64 pointer on
+  the `cnt` counter buffers) (LINT-6).
+- `bedrock-lint` fault checks: FLT-1 (HardFault missing or spinning), FLT-2 (defmt, `cnt!`, `unwrap` or a panic in
+  HardFault / DefaultHandler), FLT-3 (`exc_return!()` not HardFault's first statement), FLT-4 (UsageFault,
+  MemManage, BusFault handlers missing or not enabled on M3 and up), FLT-5 (reset cause never read), FLT-7 (no
+  watchdog, or one fed from an interrupt or a loop that only waits), FLT-8 (no boot-loop rescue), FLT-9 (USB
+  firmware that waits for a healthy mark but never calls `usb_configured()`) (LINT-6).
+- `bedrock-lint` pin checks: PIN-1 (a GPIO driver dropped at once or when `main` returns), PIN-2 (an `.await`, a
+  spawn or a USB device before the first output is set up), PIN-4 (RP FUNCSEL switched at run time, a GPIO on a
+  stolen pin), PIN-6 (a pin taken with `steal()` that has another owner), PIN-8 (unused pins left floating on STM32
+  families that reset to inputs), PIN-9 (a pin map chosen by a cargo feature), PIN-16 (G0 pin read before the UCPD
+  strobe, or the strobe cleared again) (LINT-6).
+
 ## [0.2.39] - 2026-11-03
 
 ### Added
@@ -67,23 +87,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   back into flash) and ERR-3 (G0B1 code in flash bank 2). Thresholds in `[limits]` of `bedrock-lint.toml`. Frames
   and calls are read from the Thumb code (prologues, `bl`), without a disassembler (LINT-5).
 - `bedrock-lint frames <ELF>`: the largest stack frames and the deepest call path from `Reset` (LINT-5).
-- `bedrock-lint` checks on host input: HOST-1 (a panic a host value reaches in a WireWeaver handler or a function it
-  hands the value to: `unwrap`, indexing, division, overflow, `assert!`, `todo!`), HOST-3 (a host value's unknown
-  variant mapped to a default instead of refused), HOST-5 (a truncated or oversized request refused without a
-  counter) (LINT-6).
-- `bedrock-lint` counter checks: CNT-1 (an `Err` arm, `if let Err`, `is_err()`, `let Ok(..) else` or a select's
-  timer arm that neither counts, hands the error on nor panics) and CNT-2 (`&mut`, `as_mut_ptr` or a u64 pointer on
-  the `cnt` counter buffers) (LINT-6).
-- `bedrock-lint` fault checks: FLT-1 (HardFault missing or spinning), FLT-2 (defmt, `cnt!`, `unwrap` or a panic in
-  HardFault / DefaultHandler), FLT-3 (`exc_return!()` not HardFault's first statement), FLT-4 (UsageFault,
-  MemManage, BusFault handlers missing or not enabled on M3 and up), FLT-5 (reset cause never read), FLT-7 (no
-  watchdog, or one fed from an interrupt or a loop that only waits), FLT-8 (no boot-loop rescue), FLT-9 (USB
-  firmware that waits for a healthy mark but never calls `usb_configured()`) (LINT-6).
-- `bedrock-lint` pin checks: PIN-1 (a GPIO driver dropped at once or when `main` returns), PIN-2 (an `.await`, a
-  spawn or a USB device before the first output is set up), PIN-4 (RP FUNCSEL switched at run time, a GPIO on a
-  stolen pin), PIN-6 (a pin taken with `steal()` that has another owner), PIN-8 (unused pins left floating on STM32
-  families that reset to inputs), PIN-9 (a pin map chosen by a cargo feature), PIN-16 (G0 pin read before the UCPD
-  strobe, or the strobe cleared again) (LINT-6).
 
 ## [0.2.35] - 2026-11-03
 
