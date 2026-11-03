@@ -1590,7 +1590,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "shrink_wrap"
-version = "0.4.0"
+version = "0.2.0"
 dependencies = [
  "paste",
 ]
@@ -2179,7 +2179,7 @@ dependencies = [
 
 [[package]]
 name = "wire_weaver"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "pathsearch",
  "shrink_wrap",
@@ -2190,7 +2190,7 @@ dependencies = [
 
 [[package]]
 name = "wire_weaver_core"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "convert_case",
@@ -2205,7 +2205,7 @@ dependencies = [
 
 [[package]]
 name = "wire_weaver_derive"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "convert_case",
  "darling 0.20.11",
@@ -2226,7 +2226,7 @@ checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 
 [[package]]
 name = "ww_client_server"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "wire_weaver",
  "ww_version",
@@ -2242,7 +2242,7 @@ dependencies = [
 
 [[package]]
 name = "ww_version"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "semver",
  "wire_weaver",
