@@ -1,10 +1,13 @@
-//! `IRQ-8` Unused interrupt vectors not caught: `DefaultHandler` must count the IRQ number (and not log)
+//! `IRQ-8` Unused interrupt vectors not caught: `DefaultHandler` must record the IRQ number
 
 use super::util::{is_log_macro, macro_name, walk_macros};
 use crate::check::{Check, CheckMeta, Need, Registered};
 use crate::finding::{Confidence, Finding};
 use crate::model::context::bodies;
 use crate::model::{Firmware, HandlerKind};
+use syn::Token;
+use syn::punctuated::Punctuated;
+use syn::visit::Visit;
 
 pub struct Irq8;
 
@@ -18,6 +21,55 @@ inventory::submit!(Registered(&Irq8));
 /// `cnt!` and its backup-register counterpart
 fn is_count_macro(name: &str) -> bool {
     matches!(name, "cnt" | "bkp_cnt")
+}
+
+/// Whether a counter macro is in the block
+fn counted_by_macro(block: &syn::Block) -> bool {
+    let mut found = false;
+    walk_macros(block, &mut |m| found |= is_count_macro(&macro_name(m)));
+    found
+}
+
+/// Whether the parameter is named outside the bodies of log macros
+fn used_outside_logs(block: &syn::Block, param: &str) -> bool {
+    struct V<'p> {
+        param: &'p str,
+        found: bool,
+    }
+    impl<'ast> Visit<'ast> for V<'_> {
+        fn visit_expr_path(&mut self, p: &'ast syn::ExprPath) {
+            self.found |= p.path.is_ident(self.param);
+        }
+        fn visit_macro(&mut self, m: &'ast syn::Macro) {
+            if is_log_macro(&macro_name(m)) {
+                return;
+            }
+            if let Ok(args) =
+                m.parse_body_with(Punctuated::<syn::Expr, Token![,]>::parse_terminated)
+            {
+                for a in &args {
+                    self.visit_expr(a);
+                }
+            }
+        }
+    }
+    let mut v = V {
+        param,
+        found: false,
+    };
+    v.visit_block(block);
+    v.found
+}
+
+/// The name of the handler's IRQ number parameter (`irqn`)
+fn h_param(sig: &syn::Signature) -> Option<String> {
+    match sig.inputs.first()? {
+        syn::FnArg::Typed(t) => match &*t.pat {
+            syn::Pat::Ident(i) => Some(i.ident.to_string()),
+            _ => None,
+        },
+        syn::FnArg::Receiver(_) => None,
+    }
 }
 
 impl Check for Irq8 {
@@ -49,7 +101,7 @@ impl Check for Irq8 {
                      vector goes unnoticed instead of being counted",
                 )
                 .span(crate::Span::new(dep.file.rel(), dep.file.line_of(&path)))
-                .fix("add #[exception] fn DefaultHandler(irqn: i16) that counts irqn with cnt! and does not log")
+                .fix("add #[exception] fn DefaultHandler(irqn: i16) that records irqn raw (a static, the crash record or cnt!)")
                 .confidence(Confidence::Estimate),
             ];
         };
@@ -57,41 +109,20 @@ impl Check for Irq8 {
         let Some(fb) = bodies.iter().find(|b| b.path == h.path) else {
             return Vec::new();
         };
+        // the IRQ number recorded: a counter macro, or the parameter used outside a log call (stored raw, as FLT-2
+        // asks); logging inside the handler is FLT-2's finding, not this one's
+        let recorded = counted_by_macro(fb.block)
+            || h_param(fb.sig).is_some_and(|p| used_outside_logs(fb.block, &p));
         let mut out = Vec::new();
-        let mut counted = false;
-        let mut logged: Option<(String, crate::Span)> = None;
-        walk_macros(fb.block, &mut |m| {
-            let name = macro_name(m);
-            if is_count_macro(&name) {
-                counted = true;
-            }
-            if logged.is_none() && is_log_macro(&name) {
-                logged = Some((name, fb.loc(syn::spanned::Spanned::span(&m.path)).span()));
-            }
-        });
-        if !counted {
+        if !recorded {
             out.push(
                 Finding::new(
                     "IRQ-8",
-                    format!("{}:no-count", h.path),
-                    "DefaultHandler does not count the IRQ number: an unbound vector that fires goes unnoticed",
+                    format!("{}:no-record", h.path),
+                    "DefaultHandler does not record the IRQ number: an unbound vector that fires goes unnoticed",
                 )
                 .span(h.loc.span())
-                .fix("count irqn with cnt! (and bkp_cnt! if it should survive a reset)"),
-            );
-        }
-        if let Some((name, at)) = logged {
-            out.push(
-                Finding::new(
-                    "IRQ-8",
-                    format!("{}:logs", h.path),
-                    format!(
-                        "DefaultHandler logs ({name}!): the catalogue asks it to count and not log, since the \
-                         context it fires in is not safe to format or send in"
-                    ),
-                )
-                .span(at)
-                .fix("drop the log call; count irqn with cnt! instead"),
+                .fix("record irqn raw: store it in a static or the crash record, or count it with cnt!"),
             );
         }
         out

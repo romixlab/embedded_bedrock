@@ -793,7 +793,7 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
     a fixture each. On our firmware (3 Nov 2026): IRQ-4 candidates on usb_io_fw's `DMA_IRQ_0` and typec_dongle's
     `DMA1_CHANNEL2_3` (two channels of one DMA driver sharing a vector, by design); IRQ-6 on typec_dongle's `cpu.rs`
     idle-time measurement (disable / wfe / enable, not nested: benign, to waive in typec_dongle, LINT-9);
-    IRQ-8 finds all three firmwares' `DefaultHandler` logging instead of only counting. IRQ-1, IRQ-2 and IRQ-5
+    IRQ-8 asks for the IRQ number recorded (raw, as FLT-2 asks; their logging is FLT-2's finding). IRQ-1, IRQ-2 and IRQ-5
     give nothing on the three today (no wholesale flag clear, no ISR `modify()`, every unmasked vector has a
     handler or binding); DMA-2 needs an M7 part (none of the three), DMA-4's ring consumers (typec_dongle's UART
     and ADC) already count their overruns, and DMA-6 needs software writes to UCPD_TXDR (typec_dongle's UCPD is

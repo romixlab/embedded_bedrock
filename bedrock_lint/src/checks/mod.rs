@@ -1,8 +1,8 @@
 //! The checks, one file per catalogue id. Each declares its [`CheckMeta`](crate::CheckMeta) and submits itself to the
 //! registry; `tests/fixtures/` holds a small firmware per check with the findings it must give.
 
-mod boot_10;
 mod boot_1;
+mod boot_10;
 mod boot_2;
 mod cfg_1;
 mod cfg_2;
@@ -28,11 +28,10 @@ mod err_5;
 mod err_6;
 mod err_7;
 mod err_8;
-mod exe_10;
 mod exe_1;
+mod exe_10;
 mod exe_12;
 mod exe_13;
-mod exe_1;
 mod exe_2;
 mod exe_3;
 mod exe_4;
@@ -69,9 +68,9 @@ mod irq_6;
 mod irq_8;
 mod log_1;
 mod log_2;
+mod mem_1;
 mod mem_10;
 mod mem_12;
-mod mem_1;
 mod mem_2;
 mod mem_3;
 mod mem_6;
@@ -80,8 +79,8 @@ mod memx;
 mod perf_2;
 mod perf_3;
 mod pin;
-mod pin_16;
 mod pin_1;
+mod pin_16;
 mod pin_2;
 mod pin_4;
 mod pin_6;

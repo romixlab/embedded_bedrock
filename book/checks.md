@@ -60,7 +60,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="irq-5"></a>⚠️ `IRQ-5` Interrupt line routed (ILS) but not enabled (ILE), or enabled without a handler bound · check: src mid · <!-- mcan I2 -->
 - <a id="irq-6"></a>⚠️ `IRQ-6` Nested disable / enable of interrupts by hand: an inner enable turns them on under an outer section; use `critical_section::with` · check: src easy · <!-- notion -->
 - <a id="irq-7"></a>💡 `IRQ-7` Interrupt does more than capture (formatting, encoding, logging): a few stores and a counter, the rest in task context · check: elf mid · <!-- wire_weaver AGENTS.md -->
-- <a id="irq-8"></a>⚠️ `IRQ-8` Unused interrupt vectors not caught: `DefaultHandler` must count the IRQ number (and not log) · check: src easy · <!-- notion; typec_dongle FW-48 -->
+- <a id="irq-8"></a>⚠️ `IRQ-8` Unused interrupt vectors not caught: `DefaultHandler` must record the IRQ number (raw: a static, the crash record or a counter; not logging it, FLT-2) · check: src easy · <!-- notion; typec_dongle FW-48 -->
 
 ### 🔁 DMA - DMA and caches
 - <a id="dma-1"></a>🛑 `DMA-1` DMA buffer in memory the DMA master can't reach (H7 DTCM for IDMA, SDMMC, USB OTG; flash for some masters): it hangs or reads zeros · check: elf mid, chip table · <!-- vb135 PLAT-5; notion -->
