@@ -9,6 +9,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Fixed
+
+- The workspace builds from a fresh checkout again: `.cargo/config.toml`'s `[patch."https://github.com/vhrdtech/wire_weaver"]`
+  names `shrink_wrap` too, so exact_units (pulled in by `ww_si`, used by `bedrock_sync`) uses the sibling
+  checkout's shrink_wrap and not a second one from git (E0277 `SeriesCells`/`SeriesColumns`/`SeriesStore` in
+  `ww_si`). `just test` and `just lint` pass clean again.
+
 ## [0.2.36] - 2026-11-03
 
 ### Added
