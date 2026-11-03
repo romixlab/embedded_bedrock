@@ -901,7 +901,10 @@ document section it comes from, and a FRACN steering range is checked at both en
   and medium-VCO FRACN refused, steer ends outside FRACN, buses per VOS, D1CPRE / HPRE without ÷32, timer clocks,
   kernel clocks per Table 56, 50 % duty for SDMMC / ADC, USB exactly 48 MHz and AHB above 30 MHz, the H725 VFQFPN
   without LDO, VOS0 VDD minimum, boost refused unless allowed by name, VOS0 lifetime warning, ES0491 2.16.1 /
-  2.18.1 / 2.18.4). Tested on the host with B135's tree (`bedrock_clocks/tests/b135.rs`). Open: the H723 / H730 /
+  2.18.1 / 2.18.4). Tested on the host with B135's tree (`bedrock_clocks/tests/b135.rs`: VOS1, 398 MHz exact with
+  FRACN mid-range) and at every voltage scale (`tests/vos.rs`: a valid tree at each of VOS0..VOS3, a refusal one
+  FRACN step over each CPU / AXI / APB / PLL output / FDCAN kernel limit, the flash wait-state band edges, VOS0 and
+  the boost behind their allows, every PLL and sys_ck source, integer and fractional, wide and medium VCO). Open: the H723 / H730 /
   H733 / H735 datasheets (supply per package), MCO1/2, LSE / LSI and the RTC domain, HSI / CSI tolerance.
 - 🧪 **RCC-3 Register encoding and clocks.rs**: `h72x::regs` (PWR_CR3, PWR_D3CR VOS, FLASH_ACR computed from Table 16,
   RCC_CR, PLLCKSELR, PLLCFGR, PLLxDIVR, PLLxFRACR, CFGR, D1/D2/D3CFGR, the four kernel mux registers; bit positions

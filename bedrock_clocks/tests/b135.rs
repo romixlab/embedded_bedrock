@@ -4,7 +4,7 @@
 
 use bedrock_clocks::h72x::emit::{Origin, emit};
 use bedrock_clocks::h72x::*;
-use bedrock_clocks::{Hz, Ratio, source_hash};
+use bedrock_clocks::{Hz, source_hash};
 
 fn pll(
     m: u8,
@@ -136,10 +136,7 @@ fn planned_tree_is_clean_and_exact() {
     let p = plan(&c).unwrap_or_else(|f| panic!("{f:#?}"));
     assert!(p.warnings.is_empty(), "{:#?}", p.warnings);
     let t = &p.tree;
-    assert_eq!(
-        t.sys_ck,
-        Some(Hz::mhz(398))
-    );
+    assert_eq!(t.sys_ck, Some(Hz::mhz(398)));
     assert_eq!(t.kernel[&Periph::UsbOtgHs], Some(Hz::mhz(48)));
     assert_eq!(
         t.kernel[&Periph::Fdcan].unwrap().to_string(),

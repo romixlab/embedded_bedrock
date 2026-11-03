@@ -14,7 +14,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 - `bedrock_clocks`: exact STM32H72x/73x (RM0468) clock planning on the host. The tree is evaluated as exact
   rationals, checked against RM0468 Rev 3, DS13311 Rev 3, ES0491 Rev 9 and AN5337 Rev 4 with every finding naming
   its config key, value, range and document section, and written as a reviewable `clocks.rs` (register words with
-  their fields, exact frequencies as exact_units constants, FRACN steer ranges) (RCC-1, RCC-3).
+  their fields, exact frequencies as exact_units constants, FRACN steer ranges). Every voltage scale VOS0..VOS3 is
+  supported with its own limits and flash wait states; VOS0 needs `allow.vos0_lifetime`, the CPU boost
+  `allow.cpu_boost_tcm_ecc_off` (RCC-1, RCC-3).
 - `bedrock_clocks_rt`: applies a `clocks.rs` plan at boot on the H72x/73x without a PAC: fixed writes and bounded
   ready-waits in the RM0468 order, the supply configuration written once and read back (a clear error when an
   earlier writer locked another one), `verify` readback naming the first register that differs, and `set_fracn`
