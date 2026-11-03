@@ -1,0 +1,9 @@
+checks = ["USB-1"]
+
+[[finding]]
+check = "USB-1"
+at = "src/main.rs:11"
+
+[[finding]]
+check = "USB-1"
+at = "src/main.rs:13"

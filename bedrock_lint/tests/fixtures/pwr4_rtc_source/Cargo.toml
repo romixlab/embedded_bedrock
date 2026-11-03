@@ -1,0 +1,7 @@
+[package]
+name = "pwr4_rtc_source"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embassy-stm32 = { version = "0.6", features = ["stm32g0b1re"] }

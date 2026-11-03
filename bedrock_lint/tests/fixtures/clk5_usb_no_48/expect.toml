@@ -1,0 +1,5 @@
+checks = ["CLK-5"]
+
+[[finding]]
+check = "CLK-5"
+at = "src/main.rs:7"

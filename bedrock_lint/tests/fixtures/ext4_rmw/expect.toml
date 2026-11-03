@@ -1,0 +1,5 @@
+checks = ["EXT-4"]
+
+[[finding]]
+check = "EXT-4"
+at = "src/main.rs:5"

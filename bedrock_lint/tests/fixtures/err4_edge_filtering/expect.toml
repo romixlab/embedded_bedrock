@@ -1,0 +1,9 @@
+checks = ["ERR-4"]
+
+[[finding]]
+check = "ERR-4"
+at = "src/main.rs:3"
+
+[[finding]]
+check = "ERR-4"
+at = "src/main.rs:5"

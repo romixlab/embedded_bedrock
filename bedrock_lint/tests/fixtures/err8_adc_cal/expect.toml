@@ -1,0 +1,10 @@
+checks = ["ERR-8"]
+
+[[finding]]
+check = "ERR-8"
+at = "src/main.rs:5"
+
+[[finding]]
+check = "ERR-8"
+at = "src/main.rs:10"
+confidence = "candidate"

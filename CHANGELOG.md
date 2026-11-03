@@ -9,6 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- bedrock-lint source checks for boot, supply, flash, clocks, errata, external chips, USB and logging: BOOT-1,
+  BOOT-2, BOOT-10, PWR-1, PWR-3, PWR-4, FLS-1 to FLS-4, CLK-3, CLK-5, ERR-2, ERR-4 to ERR-8, ERR-11, EXT-4, EXT-7,
+  EXT-12, USB-1, USB-3, LOG-1, and the source half of SIZ-5 beside its ELF half (`Debug2Format`, a panic handler
+  that formats, `unwrap` on a sure `Result`), each with a fixture; chip-limited ones run on the families they name
+  (LINT-11).
+
 ## [0.2.40] - 2026-11-03
 
 ### Added

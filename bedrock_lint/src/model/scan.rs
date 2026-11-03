@@ -13,6 +13,9 @@ use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
 use syn::{Expr, Token};
 
+mod words;
+pub use words::*;
+
 /// A function or method with its body
 #[derive(Clone)]
 pub struct FnItem<'a> {

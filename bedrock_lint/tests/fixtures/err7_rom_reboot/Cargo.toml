@@ -1,0 +1,4 @@
+[package]
+name = "err7_rom_reboot"
+version = "0.1.0"
+edition = "2024"

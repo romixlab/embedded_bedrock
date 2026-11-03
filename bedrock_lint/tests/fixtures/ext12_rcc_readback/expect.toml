@@ -1,0 +1,5 @@
+checks = ["EXT-12"]
+
+[[finding]]
+check = "EXT-12"
+at = "src/main.rs:4"

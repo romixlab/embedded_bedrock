@@ -1,0 +1,1 @@
+{ "schema": 1, "template": { "version": "0.9.0" }, "answers": { "chip": "STM32H725IG", "framework": "embassy" } }

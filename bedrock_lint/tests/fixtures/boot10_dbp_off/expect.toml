@@ -1,0 +1,9 @@
+checks = ["BOOT-10"]
+
+[[finding]]
+check = "BOOT-10"
+at = "src/main.rs:7"
+
+[[finding]]
+check = "BOOT-10"
+at = "src/main.rs:6"

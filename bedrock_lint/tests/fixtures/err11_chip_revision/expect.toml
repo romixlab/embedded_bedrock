@@ -1,0 +1,5 @@
+checks = ["ERR-11"]
+
+[[finding]]
+check = "ERR-11"
+at = "src/main.rs:3"

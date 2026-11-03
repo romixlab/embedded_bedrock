@@ -1,0 +1,4 @@
+[package]
+name = "err11_chip_revision"
+version = "0.1.0"
+edition = "2024"

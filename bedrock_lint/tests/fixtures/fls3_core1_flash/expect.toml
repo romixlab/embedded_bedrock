@@ -1,0 +1,9 @@
+checks = ["FLS-3"]
+
+[[finding]]
+check = "FLS-3"
+at = "src/main.rs:19"
+
+[[finding]]
+check = "FLS-3"
+at = "src/main.rs:20"

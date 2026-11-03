@@ -1,0 +1,7 @@
+[package]
+name = "log1_blocking_rtt"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+defmt-rtt = "1.1"

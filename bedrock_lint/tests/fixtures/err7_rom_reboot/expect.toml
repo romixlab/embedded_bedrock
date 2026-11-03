@@ -1,0 +1,13 @@
+checks = ["ERR-7"]
+
+[[finding]]
+check = "ERR-7"
+at = "src/main.rs:5"
+
+[[finding]]
+check = "ERR-7"
+at = "src/main.rs:9"
+
+[[finding]]
+check = "ERR-7"
+at = "src/main.rs:16"

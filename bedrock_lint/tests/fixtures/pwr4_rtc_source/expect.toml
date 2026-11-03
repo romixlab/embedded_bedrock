@@ -1,0 +1,14 @@
+checks = ["PWR-4"]
+
+[[finding]]
+check = "PWR-4"
+at = "src/main.rs:6"
+confidence = "estimate"
+
+[[finding]]
+check = "PWR-4"
+at = "src/main.rs:13"
+
+[[finding]]
+check = "PWR-4"
+at = "src/main.rs:14"

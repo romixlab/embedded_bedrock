@@ -476,6 +476,15 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   check the write). Harmless where VDDLDO, VCAP and VFBSMPS share a net (B135B), wrong elsewhere. Read PWR_CR3 back
   before `embassy_stm32::init`, pass embassy what it holds, log and count the mismatch, as vb135_fdcan_iso_usb_fw's
   `b135_fw/src/clocks.rs` `supply_config()` does. Found on the B135B preset (TPL-59).
+- 🐛 **TPL-79 Chip variant read right after its RCC enable**: `app/src/ww/device.rs.j2`'s STM32 `variant()` sets
+  `RCC_APBENR1.DBGEN` and reads `DBGMCU_IDCODE` on the next line, without reading the enable back first; the first
+  access can reach the DBGMCU before its clock does. Found by bedrock-lint EXT-12 (LINT-11) on a generated G0
+  `--wire-weaver` firmware; `src/init.rs` does it right (`let _ = rcc.apbenr1().read();`).
+- 🐛 **TPL-80 `--bootloader` on ECC flash reads the embassy-boot state raw**: on G0 / H7 (and the other ECC parts of
+  TPL-26) `main` builds the updater on a plain `Flash::new_blocking`; a power cut during `mark_booted()` /
+  `mark_updated()` leaves a word with a double ECC error in the state partition, which is an NMI (G0) or a BusFault
+  (H7) when it is read at the next boot. Wrap the flash in `ww_ecc_flash::EccSafeFlash` (with `on_nmi()` in the G0
+  NMI handler) as `src/settings.rs` does. Found by bedrock-lint FLS-1 (LINT-11) on generated `g0` and `h7app`.
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -791,7 +800,8 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   / literal-loaded prologues, calls from `bl` and tail branches; calls through pointers are counted, not followed,
   so STK-6's depth is an estimate). Thresholds in `[limits]` of `bedrock-lint.toml`. Chip tables: G0 / H7 backup
   registers (MEM-6), H7 DTCM (DMA-1), G0B0 / G0B1 / G0C1 bank 2 (ERR-3), the M0 / M0+ families (PERF-2). STK-5,
-  SIZ-5, PERF-3 and ERR-3 have only their `elf` part so far; their `src` part goes into the same check file.
+  PERF-3 and ERR-3 have only their `elf` part so far; their `src` part goes into the same check file (SIZ-5's
+  is LINT-11's).
   `bedrock-lint frames <ELF>` lists the largest frames and the deepest path. Fixtures are synthetic ELFs written
   by the test from an `elf.toml`; checked by hand on a generated G0B1 embassy firmware (3 Nov 2026).
 - ✅ **LINT-6 Host input, error path, fault handler and pin source checks** (`bedrock_lint/src/checks/`): the `src`
@@ -812,6 +822,29 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   no watchdog anywhere (FLT-7), the template's fault handlers (FLT-2, TPL-78), usb_io_fw's spinning HardFault
   (FLT-1, its PLAT-7) and run-time FUNCSEL switches (PIN-4), one HOST-3 in b135_fw `led::set_mode`, and uncounted
   error branches (CNT-1): LINT-9 works through them (3 Nov 2026). The other `src` checks are LINT-11.
+- ✅ **LINT-11 Boot, supply, flash, clock, errata, external chip, USB and log source checks**: the `src` checks of
+  task P2528#3nov-0512e that LINT-6 doesn't take, one file each in `bedrock_lint/src/checks/` with a fixture under
+  `bedrock_lint/tests/fixtures/`: BOOT-1 (ROM jump back not detected), BOOT-2 (H7 supply written blind, H7),
+  BOOT-10 (DBP / RTCEN turned off behind the caller), PWR-1 (no BOR level or PVD, STM32), PWR-3 (backup domain
+  neither used nor reset, STM32), PWR-4 (RTC source or RCC_BDCR written in a firmware with backup state, embassy
+  STM32), FLS-1 (flash driver without `ww_ecc_flash`, or without its G0 NMI hook, ECC parts), FLS-2 (two flash
+  owners, `FLASH::steal`), FLS-3 (RP flash write from core 1 or with core 1 started outside `spawn_core1`; DMA reading
+  flash not found), FLS-4 (no CRC of the image; the ECC half is the bring-up checklist's), CLK-3 (HSE / LSE without
+  CSS, CSS without an NMI handler, STM32), CLK-5 (USB without an exact 48 MHz source, STM32), ERR-2 (erratum poke
+  without its number, or not quoted), ERR-4 (FDCAN EFBI or dedicated Tx buffers, G0 / H7), ERR-5 (FDCAN DAR without
+  the retransmit, H7), ERR-6 (RP2350-E9 pull-down with the input buffer on), ERR-7 (RP2350-E30 reboot delay 0,
+  RP2350-E19 FRCE_OFF bits), ERR-8 (G0 ADC step right after a disable, efton gotcha 221), ERR-11 (RP2350 revision
+  from CHIP_ID.REVISION), EXT-4 (external register read-modify-written; clear-on-read not found), EXT-7 (`x - 1`
+  field encoding without a range check), EXT-12 (RCC enable not read back, STM32), USB-1 (high-speed bulk max
+  packet, bInterval), USB-3 (single-buffered bulk endpoints, G0), LOG-1 (RTT that can block) and SIZ-5's source
+  half (`Debug2Format`, a formatting panic handler, `unwrap` on a sure `Result`). Errata quoted from ES0548 /
+  ES0491 (`references/errata.md`), the RP2350 datasheet appendix D and efton.sk. Shared helpers in
+  `model/scan/words.rs` (every identifier with its place, identifier words, method calls in order, constants).
+  The `clean` fixture carries the right code for each (`src/lint11_*.rs`). Run on usb_io_fw, typec_dongle,
+  vb135_fdcan_iso_usb_fw, donguru_template and generated g0 / h7app / rp2350 firmware (3 Nov 2026); the findings
+  read by hand are real (TPL-69, TPL-79, TPL-80 in the template; typec_dongle's `ww_ecc_flash` without `on_nmi()`
+  and its UCPD clock not read back; vb135's HSE without CSS), the one false positive (PWR-3 in an embassy-boot
+  bootloader) is fixed with a fixture. Filing them in those repos is LINT-9.
 - ✅ **LINT-7 Detail pages, first half**: `book/checks/` pages for EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT, PWR,
   FLS, LOG, CNT (12 pages, 98 checks), each with what it catches, why it matters, a concrete example (mostly from
   the catalogue's own sourced comments), how it's checked and the fix, cross-linked to the other detail pages and

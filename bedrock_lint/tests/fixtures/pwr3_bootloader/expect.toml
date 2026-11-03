@@ -1,0 +1,3 @@
+# an embassy-boot bootloader: the application owns the backup domain, PWR-3 finds nothing
+checks = ["PWR-3"]
+ran = ["PWR-3"]

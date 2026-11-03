@@ -1,0 +1,5 @@
+checks = ["PWR-3"]
+
+[[finding]]
+check = "PWR-3"
+at = "src/main.rs:3"

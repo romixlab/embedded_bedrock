@@ -1,0 +1,4 @@
+[package]
+name = "siz5_src_fmt"
+version = "0.1.0"
+edition = "2024"

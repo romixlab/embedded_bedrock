@@ -1,0 +1,9 @@
+checks = ["LOG-1"]
+
+[[finding]]
+check = "LOG-1"
+at = "src/main.rs:3"
+
+[[finding]]
+check = "LOG-1"
+at = "src/main.rs:8"

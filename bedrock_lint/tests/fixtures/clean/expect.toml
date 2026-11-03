@@ -8,4 +8,7 @@ ran = [
   "CNT-3", "EXE-10",
   "HOST-1", "CNT-1", "CNT-2", "FLT-1", "FLT-2", "FLT-3", "FLT-5", "FLT-7", "FLT-8",
   "PIN-1", "PIN-2", "PIN-6", "PIN-9", "PIN-16",
+  "BOOT-1", "BOOT-2", "BOOT-10", "PWR-1", "PWR-3", "PWR-4", "FLS-1", "FLS-2", "FLS-3", "FLS-4",
+  "CLK-3", "CLK-5", "ERR-2", "ERR-4", "ERR-5", "ERR-6", "ERR-7", "ERR-8", "ERR-11",
+  "EXT-4", "EXT-7", "EXT-12", "USB-1", "USB-3", "LOG-1",
 ]

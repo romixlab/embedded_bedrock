@@ -1,0 +1,11 @@
+checks = ["EXT-7"]
+
+[[finding]]
+check = "EXT-7"
+at = "src/main.rs:4"
+confidence = "estimate"
+
+[[finding]]
+check = "EXT-7"
+at = "src/main.rs:5"
+confidence = "estimate"

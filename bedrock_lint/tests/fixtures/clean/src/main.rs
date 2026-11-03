@@ -13,8 +13,8 @@ async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     interrupt::TIM7_LPTIM2.set_priority(Priority::P1);
     let high = EXECUTOR_HIGH.start(interrupt::TIM7_LPTIM2);
-    high.spawn(pd_task(p.UCPD1).unwrap());
-    spawner.spawn(usb_task().unwrap());
+    high.spawn(unwrap!(pd_task(p.UCPD1)));
+    spawner.spawn(unwrap!(usb_task()));
 }
 
 #[embassy_executor::task]

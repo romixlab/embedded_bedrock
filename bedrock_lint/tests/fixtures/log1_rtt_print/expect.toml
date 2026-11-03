@@ -1,0 +1,6 @@
+checks = ["LOG-1"]
+
+[[finding]]
+check = "LOG-1"
+at = "src/main.rs:6"
+confidence = "estimate"
