@@ -13,6 +13,7 @@
 //! What could not be read is a [`Note`], not an error: the checks that need it are reported as not run.
 
 pub mod build_script;
+pub mod context;
 pub mod elf;
 pub mod memory_x;
 pub mod scan;
@@ -23,8 +24,8 @@ pub use build_script::{BuildScript, Directive};
 pub use elf::Elf;
 pub use memory_x::Region;
 pub use source::{
-    Binding, Call, Entry, ExecutorStart, Facts, Function, Handler, HandlerKind, Loc, PrioritySet,
-    SourceFile, Spawn, Static, Task,
+    Binding, Call, Entry, ExecutorStart, Facts, Function, Handler, HandlerKind, Loc, PeripheralUse,
+    PrioritySet, SourceFile, Spawn, Static, StaticUse, Task,
 };
 
 use serde::Serialize;

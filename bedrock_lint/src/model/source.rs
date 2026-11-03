@@ -47,7 +47,7 @@ pub struct Loc {
 }
 
 impl Loc {
-    fn of(file: &str, span: proc_macro2::Span) -> Loc {
+    pub(crate) fn of(file: &str, span: proc_macro2::Span) -> Loc {
         let s = span.start();
         Loc {
             file: file.to_string(),
@@ -186,6 +186,16 @@ pub struct Spawn {
 pub struct Call {
     /// A path call as written (`led::led_task`), a method call as `.name`
     pub name: String,
+    /// The arguments as single names where they are one (`spawner`, `self.spawner` → `spawner`), else empty;
+    /// a method call's receiver is not among them
+    pub args: Vec<String>,
+    pub loc: Loc,
+}
+
+/// A static named in a function's body (`STATE.lock(..)`, `&mut BUF`)
+#[derive(Clone, Debug, Serialize)]
+pub struct StaticUse {
+    pub name: String,
     pub loc: Loc,
 }
 
@@ -199,7 +209,22 @@ pub struct Function {
     pub loc: Loc,
     /// The attributes' paths (`embassy_executor::task`, `inline`)
     pub attrs: Vec<String>,
+    /// The parameters' names in order, `self` for a receiver, empty for a pattern
+    pub params: Vec<String>,
     pub calls: Vec<Call>,
+    /// The statics of the source it names
+    pub statics: Vec<StaticUse>,
+    /// Whether the body awaits (an `await` anywhere in its tokens, macro bodies included)
+    pub awaits: bool,
+}
+
+/// A peripheral named as an upper-case field (`p.TIM7`, `r.uart.USART5`) or a path through `peripherals`
+/// (`peripherals::DMA1_CH1`)
+#[derive(Clone, Debug, Serialize)]
+pub struct PeripheralUse {
+    pub name: String,
+    pub in_fn: String,
+    pub loc: Loc,
 }
 
 /// Everything drawn from the source
@@ -214,6 +239,7 @@ pub struct Facts {
     pub priorities: Vec<PrioritySet>,
     pub spawns: Vec<Spawn>,
     pub functions: Vec<Function>,
+    pub peripherals: Vec<PeripheralUse>,
 }
 
 impl Facts {
@@ -230,8 +256,10 @@ impl Facts {
             .filter(|s| s.is_interrupt_executor())
             .map(|s| s.name.clone())
             .collect();
+        let statics: BTreeSet<String> = facts.statics.iter().map(|s| s.name.clone()).collect();
         for f in files {
             let mut v = Walker::new(f, &mut facts, Pass::Rest, executors.clone());
+            v.statics = statics.clone();
             v.visit_file(&f.ast);
         }
         facts
@@ -271,6 +299,8 @@ struct Walker<'a> {
     executors: BTreeSet<String>,
     /// The `let NAME = ` whose initialiser is being visited
     let_name: Option<String>,
+    /// The names of the source's statics
+    statics: BTreeSet<String>,
 }
 
 impl<'a> Walker<'a> {
@@ -295,6 +325,7 @@ impl<'a> Walker<'a> {
             fns: Vec::new(),
             executors,
             let_name: None,
+            statics: BTreeSet::new(),
         }
     }
 
@@ -319,13 +350,21 @@ impl<'a> Walker<'a> {
             .unwrap_or_else(|| self.item_path("<item>"))
     }
 
-    fn call(&mut self, name: String, span: proc_macro2::Span) {
+    fn call<'e>(
+        &mut self,
+        name: String,
+        args: impl Iterator<Item = &'e Expr>,
+        span: proc_macro2::Span,
+    ) {
         if self.pass != Pass::Rest {
             return;
         }
         let loc = self.loc(span);
+        let args = args.map(|a| expr_name(a).unwrap_or_default()).collect();
         if let Some((_, i)) = self.fns.last() {
-            self.facts.functions[*i].calls.push(Call { name, loc });
+            self.facts.functions[*i]
+                .calls
+                .push(Call { name, args, loc });
         }
     }
 
@@ -374,13 +413,24 @@ impl<'a> Walker<'a> {
                 _ => {}
             }
         }
+        let params = sig
+            .inputs
+            .iter()
+            .map(|a| match a {
+                syn::FnArg::Receiver(_) => "self".to_string(),
+                syn::FnArg::Typed(t) => pat_name(&t.pat).unwrap_or_default(),
+            })
+            .collect();
         self.facts.functions.push(Function {
             path: path.clone(),
             name,
             is_async,
             loc,
             attrs: attr_paths,
+            params,
             calls: Vec::new(),
+            statics: Vec::new(),
+            awaits: false,
         });
         let idx = self.facts.functions.len() - 1;
         // locals bound to interrupt executors are the function's own
@@ -472,6 +522,45 @@ impl<'a> Walker<'a> {
         }
     }
 
+    /// Marks the current function as awaiting when its body has an `await` token
+    fn awaits(&mut self, block: &syn::Block) {
+        if self.pass == Pass::Rest
+            && let Some((_, i)) = self.fns.last()
+        {
+            self.facts.functions[*i].awaits = has_await(block.to_token_stream());
+        }
+    }
+
+    /// A path expression naming a static, or `peripherals::X`
+    fn path_use(&mut self, p: &syn::ExprPath) {
+        if self.pass != Pass::Rest {
+            return;
+        }
+        let segs: Vec<String> = p
+            .path
+            .segments
+            .iter()
+            .map(|s| s.ident.to_string())
+            .collect();
+        let Some(last) = segs.last() else { return };
+        let loc = self.loc(p.span());
+        if segs.len() >= 2 && segs[segs.len() - 2] == "peripherals" && is_upper_name(last) {
+            self.facts.peripherals.push(PeripheralUse {
+                name: last.clone(),
+                in_fn: self.in_fn(),
+                loc: loc.clone(),
+            });
+        }
+        if self.statics.contains(last)
+            && let Some((_, i)) = self.fns.last()
+        {
+            self.facts.functions[*i].statics.push(StaticUse {
+                name: last.clone(),
+                loc,
+            });
+        }
+    }
+
     fn method_call(&mut self, m: &syn::ExprMethodCall) {
         if self.pass != Pass::Rest {
             return;
@@ -525,7 +614,7 @@ impl<'a> Walker<'a> {
             }
             _ => {}
         }
-        self.call(format!(".{method}"), span);
+        self.call(format!(".{method}"), m.args.iter(), span);
     }
 }
 
@@ -547,12 +636,14 @@ impl<'ast> Visit<'ast> for Walker<'_> {
 
     fn visit_item_fn(&mut self, f: &'ast syn::ItemFn) {
         self.function(&f.attrs, &f.sig, f.sig.ident.span(), |w| {
+            w.awaits(&f.block);
             visit::visit_item_fn(w, f)
         });
     }
 
     fn visit_impl_item_fn(&mut self, f: &'ast syn::ImplItemFn) {
         self.function(&f.attrs, &f.sig, f.sig.ident.span(), |w| {
+            w.awaits(&f.block);
             visit::visit_impl_item_fn(w, f)
         });
     }
@@ -626,7 +717,7 @@ impl<'ast> Visit<'ast> for Walker<'_> {
                             loc,
                         });
                     }
-                    self.call(name, p.span());
+                    self.call(name, c.args.iter(), p.span());
                 }
                 self.visit_expr(&c.func);
                 let saved = self.let_name.take();
@@ -636,6 +727,26 @@ impl<'ast> Visit<'ast> for Walker<'_> {
                 self.let_name = saved;
             }
             Expr::Macro(m) => self.macro_body(&m.mac),
+            Expr::Path(p) => {
+                self.path_use(p);
+                visit::visit_expr(self, e);
+            }
+            Expr::Field(f) => {
+                if self.pass == Pass::Rest
+                    && let syn::Member::Named(n) = &f.member
+                    && is_upper_name(&n.to_string())
+                {
+                    let loc = self.loc(n.span());
+                    self.facts.peripherals.push(PeripheralUse {
+                        name: n.to_string(),
+                        in_fn: self.in_fn(),
+                        loc,
+                    });
+                }
+                let saved = self.let_name.take();
+                visit::visit_expr(self, e);
+                self.let_name = saved;
+            }
             Expr::Try(t) => self.visit_expr(&t.expr),
             Expr::Unsafe(_) | Expr::Paren(_) => visit::visit_expr(self, e),
             _ => {
@@ -662,6 +773,22 @@ pub(crate) fn tokens(t: &impl ToTokens) -> String {
         .replace(" :: ", "::")
         .replace(":: ", "::")
         .replace(" . ", ".")
+}
+
+/// An `await` anywhere in the tokens, groups (macro bodies) included
+pub(crate) fn has_await(ts: proc_macro2::TokenStream) -> bool {
+    ts.into_iter().any(|t| match t {
+        proc_macro2::TokenTree::Ident(i) => i == "await",
+        proc_macro2::TokenTree::Group(g) => has_await(g.stream()),
+        _ => false,
+    })
+}
+
+/// `TIM7`, `DMA1_CH1`, `PIN_12`: upper case, digits and `_`, starting with a letter
+pub(crate) fn is_upper_name(s: &str) -> bool {
+    s.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+        && s.chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
 }
 
 pub(crate) fn path_text(p: &syn::Path) -> String {
