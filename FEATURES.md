@@ -935,14 +935,18 @@ document section it comes from, and a FRACN steering range is checked at both en
   branch with `init_with_clocks` (embassy can't start on clocks already set).
 - 📋 **RCC-9 Flash and boot time measured** against embassy's RCC init for the same tree. Baseline: embassy's init
   adds 5620 B of `.text` on thumbv7em at opt-level "z", fat LTO (P2528 design note).
-- 🚧 **RCC-10 B135 rev B on hardware** (bare firmware `vb135_fdcan_iso_usb_fw/dev/b135b_clocks_hwtest`, silicon rev Z,
+- ✅ **RCC-10 B135 rev B on hardware** (bare firmware `vb135_fdcan_iso_usb_fw/dev/b135b_clocks_hwtest`, silicon rev Z,
   REV_ID 0x1001): `apply` Ok and `verify` Ok on all 24 boots, all 21 RCC / PWR / FLASH registers equal the plan words.
   Reset paths: debugger and watchdog reset take the already-set supply path (no `SupplyLocked`), a power-on the write
   path (PWR_CR3 0x46 → 0x44), and a start after the ROM bootloader's jump works too. A fresh-boot `apply` takes about
-  208 µs, 69 µs of it the PLL lock. sys_ck at seven FRACN points is within ±72 ppb of the plan against HSE, PLL2
-  within ±205 ppb. `.text` of apply + verify: +1620 B (embassy +5620 B). Still to do: MCO1 (pll1_q ÷ 10 on PA8) on a
-  counter, no instrument on the bench PC. USB HS / FDCAN / SDMMC, and USB after the ROM's leave (USBSEL left on
-  HSI48 with HSI48 off), belong to RCC-8. Results: P2528 design/h7-clock-plan.md "Hardware test".
+  208 µs, 69 µs of it the PLL lock. sys_ck at seven FRACN points is within ±72 ppb of the plan against HSE, PLL2 within
+  ±205 ppb. `.text` of apply + verify: +1620 B (embassy +5620 B). MCO1 (pll1_q ÷ 10 on PA8, set before the oscillators
+  as RM0468 §8.7.6 asks) on a Saleae Logic 8 at 100 MS/s: 9 950 041.4 Hz over a 3 s gate (29 850 123 periods), +4.2 ppm
+  against 9.95 MHz, inside the Logic 8's ±50 ppm timebase (Saleae "Time Measurement Error") and the HSE's own tolerance.
+  FRACN1 steps in one capture against the same timebase: +1 step 12.29 Hz (plan 12.207), +10 122.18 Hz (plan 122.07),
+  +81 988.99 Hz (plan 988.77), with 0.4 Hz drift of the nominal over the 8 s capture as the error bar. USB HS / FDCAN /
+  SDMMC, and USB after the ROM's leave (USBSEL left on HSI48 with HSI48 off), belong to RCC-8. Results: P2528
+  design/h7-clock-plan.md "Hardware test".
 - ✅ **RCC-13 `set_fracn` latch could miss** (found on B135 rev B by RCC-10, fixed by 3e813ba): FRACEN cleared, FRACR
   written and FRACEN set back to back sometimes left the PLL on the old FRACN while FRACR read back the new one (back to
   back: PLL1 35/40 and 29/40, PLL2 27/40 and 29/40 steps latched). `set_fracn` now reads back each write and holds
