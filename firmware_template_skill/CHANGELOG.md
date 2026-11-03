@@ -10,6 +10,8 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Generated `ww.rs` also omits the `BoardInfo` rework guard items (`GUARD`, `set_reworks`, `allow_unknown_reworks`, `clear_unknown_reworks_allowance`, ww_board_info STD-101), as it omits `REWORKS`. **Upgrade notes:** an existing firmware that omits `device.board.REWORKS` adds the four names to its `omit` list before taking wire_weaver with STD-101; a board without reworks needs no guard.
+
 - Board preset `donguru_b153a` (TPL-60): `--board donguru_b153a` generates firmware for the Donguru B153A
   (STM32G0B1CET6, LQFP48, rev A): WireWeaver over the MCU's own USB behind the board's USB2512B hub, settings,
   counters, backup counters, the host crates with the CLI `donguru`, `pins` on every free pin (J101's I/O lines, the

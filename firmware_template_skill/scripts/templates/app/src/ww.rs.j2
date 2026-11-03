@@ -436,10 +436,13 @@ mod server_impl {
         introspect = "with_docs",
 {{ ("the board record and the chip ids are read at run time, the build id" ~ (" and the counter buffers are" if d.counters else " is") ~ " known at link time" ~ (", the defmt encoding at run time" if d.log else "") ~ " (ww/device.rs)" ~ ("; the free pins are a table in flash (src/pins.rs)" if pins else "")) | doc(indent="        ", marker="//", width=120 if pins else 116) }}
         const_model = "{{ feats("BOARD", "IDS", d.counters and "INFO", "BUILD_ID", d.log and "DEFMT", pins and "POINTS") | join("|") }}=fn",
-{{ ("left out: the optional build record, the board's reworks list" ~ (", label notes (no room in the settings)" if d.label else "") ~ (", counters.watch (a host polls `read` over " ~ ("USB" if ww.usb else "RTT") ~ ")" if d.counters else "")) | doc(indent="        ", marker="//") }}
+{{ ("left out: the optional build record, the board's reworks list and its rework guard (a board without reworks needs none, ww_board_info STD-101)" ~ (", label notes (no room in the settings)" if d.label else "") ~ (", counters.watch (a host polls `read` over " ~ ("USB" if ww.usb else "RTT") ~ ")" if d.counters else "")) | doc(indent="        ", marker="//") }}
         omit = [
             "device.firmware.BUILD_RECORD",
             "device.board.REWORKS",
+            "device.board.set_reworks",
+            "device.board.GUARD", "device.board.allow_unknown_reworks",
+            "device.board.clear_unknown_reworks_allowance",
 {% if d.label %}
             "device.label.notes",
 {% endif %}
