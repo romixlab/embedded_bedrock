@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.45] - 2026-11-03
+
 ### Changed
 
 - `just test-all` (the `tpm land` gate's full run) uses `cargo nextest` instead of four separate `cargo test`
