@@ -748,7 +748,10 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   FLS, LOG, CNT (12 pages, 98 checks), each with what it catches, why it matters, a concrete example (mostly from
   the catalogue's own sourced comments), how it's checked and the fix, cross-linked to the other detail pages and
   to `firmware_template_skill/references/` where the generator already documents the mechanism.
-- 📋 **LINT-8 Detail pages, second half**: PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF, TEST.
+- ✅ **LINT-8 Detail pages, second half**: `book/checks/{pin,clk,err,ext,usb,host,cfg,perf,test}.md`, one section per
+  check (what goes wrong, why, our example, the fix, how it's detected, references quoted from the document where
+  one applies — ES0548, ES0491, the RP2350 datasheet errata, efton.sk gotcha 221), linked from `book/checks.md`'s
+  79 lines in these categories with 📖.
 - 📋 **LINT-9 Clean on our firmware**: the lint runs on usb_io_fw, typec_dongle, vb135_fdcan_iso_usb_fw and the
   board templates; real bugs filed in those repos' FEATURES.md, false positives fixed in the checks, the rest in a
   baseline.

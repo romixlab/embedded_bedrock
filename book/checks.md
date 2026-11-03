@@ -31,9 +31,8 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
   with its reason in the firmware's file, on the item or at the end of the line: `// bedrock-lint: allow(EXE-3) the
   ROM leaves this vector at P2` (`#` in TOML).
 - **Detail pages** under [checks/](checks/), one per category, explain each check: what goes wrong, why, an example,
-  the fix, how it is detected, references (errata quoted from the document). EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT,
-  PWR, FLS, LOG and CNT are written (LINT-7); PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF and TEST are still planned
-  (LINT-8).
+  the fix, how it is detected, references (errata quoted from the document). Every category has one now (LINT-7,
+  LINT-8); the PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF and TEST lines also link straight to their section with 📖.
 
 ## Concurrency
 
@@ -156,77 +155,77 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 ## Hardware
 
 ### 📌 PIN - Pins and IO
-- <a id="pin-1"></a>🛑 `PIN-1` Pin driver dropped (`let _ = Output::new(..)`, a temporary, end of `main`'s scope): embassy disconnects the pin on drop · check: src easy · <!-- donguru_template main.rs; notion "destructors" -->
-- <a id="pin-2"></a>🛑 `PIN-2` Board not put in its safe state first thing after the HAL init (output enables, shift-register chains, power switches), before USB or anything slow · check: src mid + review · <!-- usb_io_fw PLAT-9 (595 chain could short VBUS into 3V3) -->
-- <a id="pin-3"></a>🛑 `PIN-3` A level translator or bus switch enabled before the MCU side is ready (pins released, at the right level, peripheral off); on last, off first · check: test + review · <!-- usb_io_fw IF-2 -->
-- <a id="pin-4"></a>🛑 `PIN-4` Peripheral pins moved to GPIO and back under an enabled peripheral (RP2350: the peripheral reads the OR of all pins with its FUNCSEL; the I2C block saw a start without a stop): keep FUNCSEL, use OEOVER / OUTOVER · check: src mid · chip: RP · <!-- usb_io_fw IF-2, i2c_periph BE-1 -->
-- <a id="pin-5"></a>⚠️ `PIN-5` Input relies on an external pull the BOM may not fit (DNP), with the pad pull off · check: review · <!-- usb_io_fw IF-14 -->
-- <a id="pin-6"></a>🛑 `PIN-6` Two owners of a pin (a diagnostic or test API and a driver task): one owner per pin, the other refused · check: src hard · <!-- usb_io_fw IF-16 -->
-- <a id="pin-7"></a>🛑 `PIN-7` Direction pin of a level translator turned while its IO pin drives: stop driving first · check: test · <!-- usb_io_fw IO-1 -->
-- <a id="pin-8"></a>⚠️ `PIN-8` Unused pins left floating inputs: analog (STM32) or a defined pull · check: src mid · <!-- notion -->
-- <a id="pin-9"></a>🛑 `PIN-9` Pin map chosen by a cargo feature for a board variant: a build for one variant flashed onto another drives the wrong lines; read the board record at run time, default to inputs · check: src mid · <!-- P2424 sd_card.md -->
-- <a id="pin-10"></a>⚠️ `PIN-10` Lines driven onto a device that may be unpowered (back-feed), and not released to Hi-Z on every session end (disconnect, USB reset, suspend, cancel) · check: review · <!-- typec_dongle FW-17, API-30 -->
-- <a id="pin-11"></a>⚠️ `PIN-11` Hardware feature used without checking the board record says the rework or variant is there · check: review · <!-- P2424 api_design (rework guard) -->
-- <a id="pin-12"></a>⚠️ `PIN-12` Pin direction set only by an optional protocol command instead of on every path that uses it · check: review · <!-- typec_dongle 0.3.0 (SWCLK stayed input) -->
-- <a id="pin-13"></a>⚠️ `PIN-13` A pin that must hold across an MCU reset driven by a GPIO (goes to reset state): use a backup-domain output (RTC_OUT) or the right pull · check: review · <!-- typec_dongle FW-46, FW-49 -->
-- <a id="pin-14"></a>⚠️ `PIN-14` Input sampled once: filter by sampling several times where noise can fake an edge · check: review · <!-- notion -->
-- <a id="pin-15"></a>⚠️ `PIN-15` IO speed, drive and load against the frequency used (edge rates, EMC) · check: review · <!-- notion -->
-- <a id="pin-16"></a>⚠️ `PIN-16` Pin read that a dead-battery pull-down still holds (G0 UCPD DBCC pins until the SYSCFG strobe; never clear the strobe again) · check: src mid · chip: G0 · <!-- typec_dongle FW-22 -->
+- <a id="pin-1"></a>🛑 `PIN-1` Pin driver dropped (`let _ = Output::new(..)`, a temporary, end of `main`'s scope): embassy disconnects the pin on drop · check: src easy · 📖 [detail](checks/pin.md#pin-1) · <!-- donguru_template main.rs; notion "destructors" -->
+- <a id="pin-2"></a>🛑 `PIN-2` Board not put in its safe state first thing after the HAL init (output enables, shift-register chains, power switches), before USB or anything slow · check: src mid + review · 📖 [detail](checks/pin.md#pin-2) · <!-- usb_io_fw PLAT-9 (595 chain could short VBUS into 3V3) -->
+- <a id="pin-3"></a>🛑 `PIN-3` A level translator or bus switch enabled before the MCU side is ready (pins released, at the right level, peripheral off); on last, off first · check: test + review · 📖 [detail](checks/pin.md#pin-3) · <!-- usb_io_fw IF-2 -->
+- <a id="pin-4"></a>🛑 `PIN-4` Peripheral pins moved to GPIO and back under an enabled peripheral (RP2350: the peripheral reads the OR of all pins with its FUNCSEL; the I2C block saw a start without a stop): keep FUNCSEL, use OEOVER / OUTOVER · check: src mid · chip: RP · 📖 [detail](checks/pin.md#pin-4) · <!-- usb_io_fw IF-2, i2c_periph BE-1 -->
+- <a id="pin-5"></a>⚠️ `PIN-5` Input relies on an external pull the BOM may not fit (DNP), with the pad pull off · check: review · 📖 [detail](checks/pin.md#pin-5) · <!-- usb_io_fw IF-14 -->
+- <a id="pin-6"></a>🛑 `PIN-6` Two owners of a pin (a diagnostic or test API and a driver task): one owner per pin, the other refused · check: src hard · 📖 [detail](checks/pin.md#pin-6) · <!-- usb_io_fw IF-16 -->
+- <a id="pin-7"></a>🛑 `PIN-7` Direction pin of a level translator turned while its IO pin drives: stop driving first · check: test · 📖 [detail](checks/pin.md#pin-7) · <!-- usb_io_fw IO-1 -->
+- <a id="pin-8"></a>⚠️ `PIN-8` Unused pins left floating inputs: analog (STM32) or a defined pull · check: src mid · 📖 [detail](checks/pin.md#pin-8) · <!-- notion -->
+- <a id="pin-9"></a>🛑 `PIN-9` Pin map chosen by a cargo feature for a board variant: a build for one variant flashed onto another drives the wrong lines; read the board record at run time, default to inputs · check: src mid · 📖 [detail](checks/pin.md#pin-9) · <!-- P2424 sd_card.md -->
+- <a id="pin-10"></a>⚠️ `PIN-10` Lines driven onto a device that may be unpowered (back-feed), and not released to Hi-Z on every session end (disconnect, USB reset, suspend, cancel) · check: review · 📖 [detail](checks/pin.md#pin-10) · <!-- typec_dongle FW-17, API-30 -->
+- <a id="pin-11"></a>⚠️ `PIN-11` Hardware feature used without checking the board record says the rework or variant is there · check: review · 📖 [detail](checks/pin.md#pin-11) · <!-- P2424 api_design (rework guard) -->
+- <a id="pin-12"></a>⚠️ `PIN-12` Pin direction set only by an optional protocol command instead of on every path that uses it · check: review · 📖 [detail](checks/pin.md#pin-12) · <!-- typec_dongle 0.3.0 (SWCLK stayed input) -->
+- <a id="pin-13"></a>⚠️ `PIN-13` A pin that must hold across an MCU reset driven by a GPIO (goes to reset state): use a backup-domain output (RTC_OUT) or the right pull · check: review · 📖 [detail](checks/pin.md#pin-13) · <!-- typec_dongle FW-46, FW-49 -->
+- <a id="pin-14"></a>⚠️ `PIN-14` Input sampled once: filter by sampling several times where noise can fake an edge · check: review · 📖 [detail](checks/pin.md#pin-14) · <!-- notion -->
+- <a id="pin-15"></a>⚠️ `PIN-15` IO speed, drive and load against the frequency used (edge rates, EMC) · check: review · 📖 [detail](checks/pin.md#pin-15) · <!-- notion -->
+- <a id="pin-16"></a>⚠️ `PIN-16` Pin read that a dead-battery pull-down still holds (G0 UCPD DBCC pins until the SYSCFG strobe; never clear the strobe again) · check: src mid · chip: G0 · 📖 [detail](checks/pin.md#pin-16) · <!-- typec_dongle FW-22 -->
 
 ### 🕰️ CLK - Clocks and timers
-- <a id="clk-1"></a>⚠️ `CLK-1` Core clock not measured once (DWT cycles against the time driver): prescaler math goes wrong silently (H7 at 270 instead of 540 MHz) · check: bench · <!-- vb135 PLAT-8 -->
-- <a id="clk-2"></a>🛑 `CLK-2` embassy time driver `time-driver-any`, or the named timer also used for PWM or capture · check: cfg easy + src mid · chip: STM32 · <!-- template TPL-39; typec_dongle; b135_template -->
-- <a id="clk-3"></a>⚠️ `CLK-3` No clock security: CSS on HSE (and LSE) with a handler · check: src easy · <!-- notion; embedded_bedrock ROB-5 -->
-- <a id="clk-4"></a>⚠️ `CLK-4` LSE start-up (seconds on H7) blocks boot or a feature · check: review · <!-- notion -->
-- <a id="clk-5"></a>🛑 `CLK-5` USB enabled on a part without HSI48 / CRS and no exact 48 MHz source configured · check: src mid · <!-- embedded_bedrock TPL-13 -->
-- <a id="clk-6"></a>⚠️ `CLK-6` A kernel clock that can't divide the rates needed exactly (FDCAN 135 MHz for 2/4/8 Mbit/s, USART OVER8 drops a bit of USARTDIV): read back the achieved rate and count a mismatch · check: test · <!-- vb135 CAN-1; typec_dongle API-14 -->
-- <a id="clk-7"></a>⚠️ `CLK-7` Clock run at the part's maximum just because it can (lifetime at small nodes, ECC RAM limits: H7 TCM ECC at 520 MHz) · check: review · <!-- notion; vb135 PLAT-8 -->
-- <a id="clk-8"></a>⚠️ `CLK-8` Fractional PLL math not checked: embassy refuses a core above the limit at boot, a FRACN at 0 is integer mode, a truncated prescaler runs the time driver 0.39 % fast · check: test · chip: H7 · <!-- vb135 PLAT-9 -->
+- <a id="clk-1"></a>⚠️ `CLK-1` Core clock not measured once (DWT cycles against the time driver): prescaler math goes wrong silently (H7 at 270 instead of 540 MHz) · check: bench · 📖 [detail](checks/clk.md#clk-1) · <!-- vb135 PLAT-8 -->
+- <a id="clk-2"></a>🛑 `CLK-2` embassy time driver `time-driver-any`, or the named timer also used for PWM or capture · check: cfg easy + src mid · chip: STM32 · 📖 [detail](checks/clk.md#clk-2) · <!-- template TPL-39; typec_dongle; b135_template -->
+- <a id="clk-3"></a>⚠️ `CLK-3` No clock security: CSS on HSE (and LSE) with a handler · check: src easy · 📖 [detail](checks/clk.md#clk-3) · <!-- notion; embedded_bedrock ROB-5 -->
+- <a id="clk-4"></a>⚠️ `CLK-4` LSE start-up (seconds on H7) blocks boot or a feature · check: review · 📖 [detail](checks/clk.md#clk-4) · <!-- notion -->
+- <a id="clk-5"></a>🛑 `CLK-5` USB enabled on a part without HSI48 / CRS and no exact 48 MHz source configured · check: src mid · 📖 [detail](checks/clk.md#clk-5) · <!-- embedded_bedrock TPL-13 -->
+- <a id="clk-6"></a>⚠️ `CLK-6` A kernel clock that can't divide the rates needed exactly (FDCAN 135 MHz for 2/4/8 Mbit/s, USART OVER8 drops a bit of USARTDIV): read back the achieved rate and count a mismatch · check: test · 📖 [detail](checks/clk.md#clk-6) · <!-- vb135 CAN-1; typec_dongle API-14 -->
+- <a id="clk-7"></a>⚠️ `CLK-7` Clock run at the part's maximum just because it can (lifetime at small nodes, ECC RAM limits: H7 TCM ECC at 520 MHz) · check: review · 📖 [detail](checks/clk.md#clk-7) · <!-- notion; vb135 PLAT-8 -->
+- <a id="clk-8"></a>⚠️ `CLK-8` Fractional PLL math not checked: embassy refuses a core above the limit at boot, a FRACN at 0 is integer mode, a truncated prescaler runs the time driver 0.39 % fast · check: test · chip: H7 · 📖 [detail](checks/clk.md#clk-8) · <!-- vb135 PLAT-9 -->
 
 ### 🐞 ERR - Silicon errata
-- <a id="err-1"></a>🛑 `ERR-1` Errata sheet for the silicon revision on the board not read for the peripherals, clocks, flash, DMA, low power and boot path in use; STM32 also efton.sk gotchas · check: review · <!-- tpm firmware pack; embedded_bedrock AGENTS.md -->
-- <a id="err-2"></a>🛑 `ERR-2` Register poke for an erratum without the erratum quoted (number, title, revisions, workaround) next to it · check: src easy · <!-- tpm firmware pack -->
-- <a id="err-3"></a>🛑 `ERR-3` G0B0/G0B1/G0C1 flash prefetch on while code crosses into bank 2 (ES0548 2.2.10, ES0547 2.2.8: HardFault on cross-bank branches) · check: src mid + elf easy · chip: G0 dual bank · <!-- typec_dongle FW-38; template TPL-32 -->
-- <a id="err-4"></a>🛑 `ERR-4` FDCAN edge filtering (`CCCR.EFBI`) on, or dedicated Tx buffers beside the Tx FIFO (ES0548 2.15.1/2.15.2, ES0491 2.22.1/2.22.2) · check: src mid · chip: G0, H7 · <!-- template errata.md; vb135 PLAT-6 -->
-- <a id="err-5"></a>⚠️ `ERR-5` FDCAN DAR (one-shot) without retransmit after a lost arbitration on the first two ID bits (ES0491 2.22.3) · check: src mid · chip: H7 · <!-- vb135 PLAT-6 -->
-- <a id="err-6"></a>⚠️ `ERR-6` RP2350 A2 pad with pull-down and input buffer left on (RP2350-E9: the pin stays high): enable the input only for the read · check: src mid · chip: RP2350 A2 · <!-- report_template; embedded_bedrock TPL-48 -->
-- <a id="err-7"></a>⚠️ `ERR-7` RP2350 ROM reboot with delay 0 or FRCE_OFF bits beyond PROC1 (RP2350-E30, E19) · check: src easy · chip: RP2350 · <!-- template boot.rs -->
-- <a id="err-8"></a>⚠️ `ERR-8` G0 ADC calibration without the wait of 2 ADC kernel clocks after disable (freezes) · check: src mid · chip: G0 · <!-- typec_dongle 0.20.7 (G0 gotcha 221) -->
-- <a id="err-9"></a>⚠️ `ERR-9` I2C timing not checked against the kernel / APB clock ratio errata (ES0548 2.11.1, 2.11.4) · check: review · chip: G0 · <!-- donguru_template main.rs -->
-- <a id="err-10"></a>⚠️ `ERR-10` Cache on without reading the cache errata of the part · check: review · <!-- notion -->
-- <a id="err-11"></a>💡 `ERR-11` Silicon revision read from a register that can't tell all revisions apart (RP2350 `CHIP_ID.REVISION`: A3 and A4 both 3; use the bootrom version) · check: src easy · chip: RP2350 · <!-- embedded_bedrock TPL-55 -->
+- <a id="err-1"></a>🛑 `ERR-1` Errata sheet for the silicon revision on the board not read for the peripherals, clocks, flash, DMA, low power and boot path in use; STM32 also efton.sk gotchas · check: review · 📖 [detail](checks/err.md#err-1) · <!-- tpm firmware pack; embedded_bedrock AGENTS.md -->
+- <a id="err-2"></a>🛑 `ERR-2` Register poke for an erratum without the erratum quoted (number, title, revisions, workaround) next to it · check: src easy · 📖 [detail](checks/err.md#err-2) · <!-- tpm firmware pack -->
+- <a id="err-3"></a>🛑 `ERR-3` G0B0/G0B1/G0C1 flash prefetch on while code crosses into bank 2 (ES0548 2.2.10, ES0547 2.2.8: HardFault on cross-bank branches) · check: src mid + elf easy · chip: G0 dual bank · 📖 [detail](checks/err.md#err-3) · <!-- typec_dongle FW-38; template TPL-32 -->
+- <a id="err-4"></a>🛑 `ERR-4` FDCAN edge filtering (`CCCR.EFBI`) on, or dedicated Tx buffers beside the Tx FIFO (ES0548 2.15.1/2.15.2, ES0491 2.22.1/2.22.2) · check: src mid · chip: G0, H7 · 📖 [detail](checks/err.md#err-4) · <!-- template errata.md; vb135 PLAT-6 -->
+- <a id="err-5"></a>⚠️ `ERR-5` FDCAN DAR (one-shot) without retransmit after a lost arbitration on the first two ID bits (ES0491 2.22.3) · check: src mid · chip: H7 · 📖 [detail](checks/err.md#err-5) · <!-- vb135 PLAT-6 -->
+- <a id="err-6"></a>⚠️ `ERR-6` RP2350 A2 pad with pull-down and input buffer left on (RP2350-E9: the pin stays high): enable the input only for the read · check: src mid · chip: RP2350 A2 · 📖 [detail](checks/err.md#err-6) · <!-- report_template; embedded_bedrock TPL-48 -->
+- <a id="err-7"></a>⚠️ `ERR-7` RP2350 ROM reboot with delay 0 or FRCE_OFF bits beyond PROC1 (RP2350-E30, E19) · check: src easy · chip: RP2350 · 📖 [detail](checks/err.md#err-7) · <!-- template boot.rs -->
+- <a id="err-8"></a>⚠️ `ERR-8` G0 ADC calibration without the wait of 2 ADC kernel clocks after disable (freezes) · check: src mid · chip: G0 · 📖 [detail](checks/err.md#err-8) · <!-- typec_dongle 0.20.7 (G0 gotcha 221) -->
+- <a id="err-9"></a>⚠️ `ERR-9` I2C timing not checked against the kernel / APB clock ratio errata (ES0548 2.11.1, 2.11.4) · check: review · chip: G0 · 📖 [detail](checks/err.md#err-9) · <!-- donguru_template main.rs -->
+- <a id="err-10"></a>⚠️ `ERR-10` Cache on without reading the cache errata of the part · check: review · 📖 [detail](checks/err.md#err-10) · <!-- notion -->
+- <a id="err-11"></a>💡 `ERR-11` Silicon revision read from a register that can't tell all revisions apart (RP2350 `CHIP_ID.REVISION`: A3 and A4 both 3; use the bootrom version) · check: src easy · chip: RP2350 · 📖 [detail](checks/err.md#err-11) · <!-- embedded_bedrock TPL-55 -->
 
 ### 🔌 EXT - External chips and buses
-- <a id="ext-1"></a>⚠️ `EXT-1` An I2C NAK taken as "device lost": chips NAK while busy; use a positive signature (ID reads all-zero twice) and a hold-off after attach · check: review · <!-- typec_dongle FW-41, FW-18 -->
-- <a id="ext-2"></a>⚠️ `EXT-2` External chip on a rail that can sag without an MCU reset, and no watchdog that notices it lost its config (registers back at reset values) and brings it up again · check: review · <!-- typec_dongle FW-18; pd_bench FUSB-14 -->
-- <a id="ext-3"></a>⚠️ `EXT-3` A configurable chip identified by its ID registers before it is configured (no factory default): use a strap · check: review · <!-- typec_dongle FW-22 -->
-- <a id="ext-4"></a>⚠️ `EXT-4` Read-modify-write of an external chip's registers over the bus, clear-on-read registers read more than once: write from shadow copies · check: src mid · <!-- pd_bench AGENTS.md -->
-- <a id="ext-5"></a>⚠️ `EXT-5` A sense line assumed wired (PHY VBUS pin, card detect polarity): read the board and the connector datasheet · check: review · <!-- P2424 ZY12PDN; vb135 SD-3 -->
-- <a id="ext-6"></a>⚠️ `EXT-6` A settle or start-up time skipped on one path (VBUS after a hard reset, reset to first command, power-on to reset) · check: review · <!-- typec_dongle FW-60; notion -->
-- <a id="ext-7"></a>⚠️ `EXT-7` Register field encoded without a range check (`x - 1` underflows, masked to 0) · check: src mid · <!-- mcan T1 -->
-- <a id="ext-8"></a>⚠️ `EXT-8` Config value set but never written to the hardware by the apply path, or not stored and re-applied stale after a mode change · check: test · <!-- mcan F1, T2, S1 -->
-- <a id="ext-9"></a>⚠️ `EXT-9` Shared peripheral memory (H7 FDCAN message RAM) zeroed whole by one instance's init · check: review · <!-- mcan R4 -->
-- <a id="ext-10"></a>⚠️ `EXT-10` Register map or masks of another IP variant (G0 FDCAN with the H7 map, reserved bits in masks) · check: review · <!-- mcan P2 -->
-- <a id="ext-11"></a>💡 `EXT-11` A HAL driver taken without checking it against what the product needs (timing accuracy, NAK index, recovery, panics in `new`) · check: review · <!-- P2424 i2c-master-driver (embassy-rp I2C) -->
-- <a id="ext-12"></a>⚠️ `EXT-12` RCC enable not read back before the first access to the peripheral · check: src mid · chip: STM32 · <!-- donguru_template main.rs -->
+- <a id="ext-1"></a>⚠️ `EXT-1` An I2C NAK taken as "device lost": chips NAK while busy; use a positive signature (ID reads all-zero twice) and a hold-off after attach · check: review · 📖 [detail](checks/ext.md#ext-1) · <!-- typec_dongle FW-41, FW-18 -->
+- <a id="ext-2"></a>⚠️ `EXT-2` External chip on a rail that can sag without an MCU reset, and no watchdog that notices it lost its config (registers back at reset values) and brings it up again · check: review · 📖 [detail](checks/ext.md#ext-2) · <!-- typec_dongle FW-18; pd_bench FUSB-14 -->
+- <a id="ext-3"></a>⚠️ `EXT-3` A configurable chip identified by its ID registers before it is configured (no factory default): use a strap · check: review · 📖 [detail](checks/ext.md#ext-3) · <!-- typec_dongle FW-22 -->
+- <a id="ext-4"></a>⚠️ `EXT-4` Read-modify-write of an external chip's registers over the bus, clear-on-read registers read more than once: write from shadow copies · check: src mid · 📖 [detail](checks/ext.md#ext-4) · <!-- pd_bench AGENTS.md -->
+- <a id="ext-5"></a>⚠️ `EXT-5` A sense line assumed wired (PHY VBUS pin, card detect polarity): read the board and the connector datasheet · check: review · 📖 [detail](checks/ext.md#ext-5) · <!-- P2424 ZY12PDN; vb135 SD-3 -->
+- <a id="ext-6"></a>⚠️ `EXT-6` A settle or start-up time skipped on one path (VBUS after a hard reset, reset to first command, power-on to reset) · check: review · 📖 [detail](checks/ext.md#ext-6) · <!-- typec_dongle FW-60; notion -->
+- <a id="ext-7"></a>⚠️ `EXT-7` Register field encoded without a range check (`x - 1` underflows, masked to 0) · check: src mid · 📖 [detail](checks/ext.md#ext-7) · <!-- mcan T1 -->
+- <a id="ext-8"></a>⚠️ `EXT-8` Config value set but never written to the hardware by the apply path, or not stored and re-applied stale after a mode change · check: test · 📖 [detail](checks/ext.md#ext-8) · <!-- mcan F1, T2, S1 -->
+- <a id="ext-9"></a>⚠️ `EXT-9` Shared peripheral memory (H7 FDCAN message RAM) zeroed whole by one instance's init · check: review · 📖 [detail](checks/ext.md#ext-9) · <!-- mcan R4 -->
+- <a id="ext-10"></a>⚠️ `EXT-10` Register map or masks of another IP variant (G0 FDCAN with the H7 map, reserved bits in masks) · check: review · 📖 [detail](checks/ext.md#ext-10) · <!-- mcan P2 -->
+- <a id="ext-11"></a>💡 `EXT-11` A HAL driver taken without checking it against what the product needs (timing accuracy, NAK index, recovery, panics in `new`) · check: review · 📖 [detail](checks/ext.md#ext-11) · <!-- P2424 i2c-master-driver (embassy-rp I2C) -->
+- <a id="ext-12"></a>⚠️ `EXT-12` RCC enable not read back before the first access to the peripheral · check: src mid · chip: STM32 · 📖 [detail](checks/ext.md#ext-12) · <!-- donguru_template main.rs -->
 
 ### 🔗 USB - USB device side
-- <a id="usb-1"></a>🛑 `USB-1` High-speed bulk endpoint max packet not 512, bInterval out of range for the speed · check: src mid · <!-- vb135 c0d19b8 (Windows) -->
-- <a id="usb-2"></a>⚠️ `USB-2` A transfer that is an exact multiple of the max packet without a ZLP, or framing that waits for a short packet the host may not send · check: review · <!-- typec_dongle FW-19 -->
-- <a id="usb-3"></a>💡 `USB-3` Single-buffered bulk endpoints on a hot path behind a hub TT (G0 usb_v4: 500 vs 947 kB/s) · check: src easy · chip: STM32 usb_v4 · <!-- typec_dongle FW-24 -->
-- <a id="usb-4"></a>⚠️ `USB-4` Sending stuck when the host driver closes or the host dies without a disconnect · check: bench · <!-- vb135 bb820d9; typec_dongle FW-26 -->
+- <a id="usb-1"></a>🛑 `USB-1` High-speed bulk endpoint max packet not 512, bInterval out of range for the speed · check: src mid · 📖 [detail](checks/usb.md#usb-1) · <!-- vb135 c0d19b8 (Windows) -->
+- <a id="usb-2"></a>⚠️ `USB-2` A transfer that is an exact multiple of the max packet without a ZLP, or framing that waits for a short packet the host may not send · check: review · 📖 [detail](checks/usb.md#usb-2) · <!-- typec_dongle FW-19 -->
+- <a id="usb-3"></a>💡 `USB-3` Single-buffered bulk endpoints on a hot path behind a hub TT (G0 usb_v4: 500 vs 947 kB/s) · check: src easy · chip: STM32 usb_v4 · 📖 [detail](checks/usb.md#usb-3) · <!-- typec_dongle FW-24 -->
+- <a id="usb-4"></a>⚠️ `USB-4` Sending stuck when the host driver closes or the host dies without a disconnect · check: bench · 📖 [detail](checks/usb.md#usb-4) · <!-- vb135 bb820d9; typec_dongle FW-26 -->
 
 ## Interfaces and diagnostics
 
 ### 🛡️ HOST - Host input and the device API
-- <a id="host-1"></a>🛑 `HOST-1` Panic reachable from host input: `unwrap`, `expect`, slice indexing, `unreachable!`, arithmetic overflow on values from a request (pin numbers, lengths, rates) · check: src hard · <!-- usb_io_fw AGENTS.md; typec_dongle FW-19 (dap_rs indexed past a truncated request) -->
-- <a id="host-2"></a>🛑 `HOST-2` Host can drive a pin into a level or mode that damages the board: every electrical rule enforced by the firmware, refused with an error · check: review · <!-- usb_io_fw AGENTS.md -->
-- <a id="host-3"></a>⚠️ `HOST-3` Unknown enum value from a newer host mapped to a default (`_ => ..`) instead of refused · check: src mid · <!-- usb_io_fw API-5 -->
-- <a id="host-4"></a>⚠️ `HOST-4` A host that stops reading can stall a release or cleanup path: every wait on the host has a timeout · check: review · <!-- typec_dongle FW-19 -->
-- <a id="host-5"></a>⚠️ `HOST-5` Truncated or oversized request not counted and dropped · check: src mid · <!-- typec_dongle FW-19 -->
-- <a id="host-6"></a>⚠️ `HOST-6` A host-settable range wider than the firmware can serve (bounded by DMA geometry, buffers): limits derived from the same constants on both sides · check: review · <!-- typec_dongle API-12 -->
-- <a id="host-7"></a>⚠️ `HOST-7` One unimplemented field voids a batched update; a deferred answer path (credit, grant) only sent from inside the handler · check: test · <!-- typec_dongle SRV-24; usb_io_fw IF-13 -->
-- <a id="host-8"></a>⚠️ `HOST-8` Loss reported out of order with the data it belongs to · check: test · <!-- typec_dongle 0.20.14 -->
+- <a id="host-1"></a>🛑 `HOST-1` Panic reachable from host input: `unwrap`, `expect`, slice indexing, `unreachable!`, arithmetic overflow on values from a request (pin numbers, lengths, rates) · check: src hard · 📖 [detail](checks/host.md#host-1) · <!-- usb_io_fw AGENTS.md; typec_dongle FW-19 (dap_rs indexed past a truncated request) -->
+- <a id="host-2"></a>🛑 `HOST-2` Host can drive a pin into a level or mode that damages the board: every electrical rule enforced by the firmware, refused with an error · check: review · 📖 [detail](checks/host.md#host-2) · <!-- usb_io_fw AGENTS.md -->
+- <a id="host-3"></a>⚠️ `HOST-3` Unknown enum value from a newer host mapped to a default (`_ => ..`) instead of refused · check: src mid · 📖 [detail](checks/host.md#host-3) · <!-- usb_io_fw API-5 -->
+- <a id="host-4"></a>⚠️ `HOST-4` A host that stops reading can stall a release or cleanup path: every wait on the host has a timeout · check: review · 📖 [detail](checks/host.md#host-4) · <!-- typec_dongle FW-19 -->
+- <a id="host-5"></a>⚠️ `HOST-5` Truncated or oversized request not counted and dropped · check: src mid · 📖 [detail](checks/host.md#host-5) · <!-- typec_dongle FW-19 -->
+- <a id="host-6"></a>⚠️ `HOST-6` A host-settable range wider than the firmware can serve (bounded by DMA geometry, buffers): limits derived from the same constants on both sides · check: review · 📖 [detail](checks/host.md#host-6) · <!-- typec_dongle API-12 -->
+- <a id="host-7"></a>⚠️ `HOST-7` One unimplemented field voids a batched update; a deferred answer path (credit, grant) only sent from inside the handler · check: test · 📖 [detail](checks/host.md#host-7) · <!-- typec_dongle SRV-24; usb_io_fw IF-13 -->
+- <a id="host-8"></a>⚠️ `HOST-8` Loss reported out of order with the data it belongs to · check: test · 📖 [detail](checks/host.md#host-8) · <!-- typec_dongle 0.20.14 -->
 
 ### 📜 LOG - Logging
 - <a id="log-1"></a>🛑 `LOG-1` RTT that can block: probe-rs sets the channel to blocking on attach; force NoBlockSkip, whole frames or skipped and counted · check: src mid · <!-- typec_dongle FW-27; wire_weaver STD-26; embedded_bedrock ROB-8 -->
@@ -241,30 +240,30 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 ## Build and process
 
 ### ⚙️ CFG - Build configuration
-- <a id="cfg-1"></a>🛑 `CFG-1` probe-rs runner or a recipe without `--probe VID:PID`: with two probes on the PC another board gets flashed · check: cfg easy · <!-- nucleo_g0b1re_template; template conventions -->
-- <a id="cfg-2"></a>⚠️ `CFG-2` `probe-rs download` then `reset` on F0/G0/L0: probe-rs writes RCC_APBENR1 back on a running core (USB clock off); use a runner that halts first · check: cfg easy · chip: F0, G0, L0 · <!-- typec_dongle FW-41 -->
-- <a id="cfg-3"></a>⚠️ `CFG-3` Feature sets not all built and linted (default, `--all-features`, `--no-default-features`): gated code rots · check: cfg easy · <!-- typec_dongle FW-23 -->
-- <a id="cfg-4"></a>🛑 `CFG-4` A crate in the tree twice (git and path copies of WireWeaver, embassy): patch it to one source · check: cfg easy · <!-- typec_dongle FW-51 -->
-- <a id="cfg-5"></a>🛑 `CFG-5` Chip feature (package, flash size) of the HAL not the part on the board · check: cfg mid · <!-- usb_io_fw 19203e6 (rp235xb) -->
-- <a id="cfg-6"></a>⚠️ `CFG-6` thumbv6m without `portable-atomic` + `critical-section` where a crate needs CAS (`static_cell`) · check: cfg easy · chip: M0+ · <!-- mcan P2 -->
-- <a id="cfg-7"></a>⚠️ `CFG-7` Dirty build flashed without a mark: build info carries the git SHA and a dirty flag, read back from the device · check: cfg easy · <!-- notion; embedded_bedrock BLD -->
-- <a id="cfg-8"></a>⚠️ `CFG-8` Git consumers not built: a dependency from git (not path) breaks where path builds pass · check: cfg mid · <!-- embedded_bedrock TPL-43, BLD-8 -->
+- <a id="cfg-1"></a>🛑 `CFG-1` probe-rs runner or a recipe without `--probe VID:PID`: with two probes on the PC another board gets flashed · check: cfg easy · 📖 [detail](checks/cfg.md#cfg-1) · <!-- nucleo_g0b1re_template; template conventions -->
+- <a id="cfg-2"></a>⚠️ `CFG-2` `probe-rs download` then `reset` on F0/G0/L0: probe-rs writes RCC_APBENR1 back on a running core (USB clock off); use a runner that halts first · check: cfg easy · chip: F0, G0, L0 · 📖 [detail](checks/cfg.md#cfg-2) · <!-- typec_dongle FW-41 -->
+- <a id="cfg-3"></a>⚠️ `CFG-3` Feature sets not all built and linted (default, `--all-features`, `--no-default-features`): gated code rots · check: cfg easy · 📖 [detail](checks/cfg.md#cfg-3) · <!-- typec_dongle FW-23 -->
+- <a id="cfg-4"></a>🛑 `CFG-4` A crate in the tree twice (git and path copies of WireWeaver, embassy): patch it to one source · check: cfg easy · 📖 [detail](checks/cfg.md#cfg-4) · <!-- typec_dongle FW-51 -->
+- <a id="cfg-5"></a>🛑 `CFG-5` Chip feature (package, flash size) of the HAL not the part on the board · check: cfg mid · 📖 [detail](checks/cfg.md#cfg-5) · <!-- usb_io_fw 19203e6 (rp235xb) -->
+- <a id="cfg-6"></a>⚠️ `CFG-6` thumbv6m without `portable-atomic` + `critical-section` where a crate needs CAS (`static_cell`) · check: cfg easy · chip: M0+ · 📖 [detail](checks/cfg.md#cfg-6) · <!-- mcan P2 -->
+- <a id="cfg-7"></a>⚠️ `CFG-7` Dirty build flashed without a mark: build info carries the git SHA and a dirty flag, read back from the device · check: cfg easy · 📖 [detail](checks/cfg.md#cfg-7) · <!-- notion; embedded_bedrock BLD -->
+- <a id="cfg-8"></a>⚠️ `CFG-8` Git consumers not built: a dependency from git (not path) breaks where path builds pass · check: cfg mid · 📖 [detail](checks/cfg.md#cfg-8) · <!-- embedded_bedrock TPL-43, BLD-8 -->
 
 ### ⚡ PERF - Speed
-- <a id="perf-1"></a>⚠️ `PERF-1` Speed or size claims without numbers at the opt-level that ships, in their own units with the clock (instructions in QEMU, cycles with DWT) · check: review · <!-- tpm firmware pack; wire_weaver AGENTS.md -->
-- <a id="perf-2"></a>💡 `PERF-2` 64-bit or i128 maths, float formatting, or `%` / `/` by a runtime value per element on a hot path of a core without them (`__aeabi_lmul`, `__aeabi_uldivmod`, `__multi3`) · check: elf mid · chip: M0+ · <!-- embedded_bedrock DEV-12/13/14; typec_dongle FW-42; P2534 fw-size -->
-- <a id="perf-3"></a>⚠️ `PERF-3` RAM function (`#[link_section = ".data.*"]`) without `#[inline(never)]`: LTO inlines it back into flash · check: src easy + elf easy · <!-- typec_dongle FW-42 -->
-- <a id="perf-4"></a>💡 `PERF-4` Hot path through a bitwise CRC, a bit-by-bit serializer, or GPIO wrappers per edge (embassy `Flex` ~50 cycles): measure before blaming the bus · check: review · <!-- usb_io_fw IF-12; typec_dongle FW-42, FW-20 -->
-- <a id="perf-5"></a>💡 `PERF-5` Wake cost of an event loop with nothing to do (`select4` with timers and waker registrations per turn on M0+) · check: review · <!-- typec_dongle FW-40 -->
+- <a id="perf-1"></a>⚠️ `PERF-1` Speed or size claims without numbers at the opt-level that ships, in their own units with the clock (instructions in QEMU, cycles with DWT) · check: review · 📖 [detail](checks/perf.md#perf-1) · <!-- tpm firmware pack; wire_weaver AGENTS.md -->
+- <a id="perf-2"></a>💡 `PERF-2` 64-bit or i128 maths, float formatting, or `%` / `/` by a runtime value per element on a hot path of a core without them (`__aeabi_lmul`, `__aeabi_uldivmod`, `__multi3`) · check: elf mid · chip: M0+ · 📖 [detail](checks/perf.md#perf-2) · <!-- embedded_bedrock DEV-12/13/14; typec_dongle FW-42; P2534 fw-size -->
+- <a id="perf-3"></a>⚠️ `PERF-3` RAM function (`#[link_section = ".data.*"]`) without `#[inline(never)]`: LTO inlines it back into flash · check: src easy + elf easy · 📖 [detail](checks/perf.md#perf-3) · <!-- typec_dongle FW-42 -->
+- <a id="perf-4"></a>💡 `PERF-4` Hot path through a bitwise CRC, a bit-by-bit serializer, or GPIO wrappers per edge (embassy `Flex` ~50 cycles): measure before blaming the bus · check: review · 📖 [detail](checks/perf.md#perf-4) · <!-- usb_io_fw IF-12; typec_dongle FW-42, FW-20 -->
+- <a id="perf-5"></a>💡 `PERF-5` Wake cost of an event loop with nothing to do (`select4` with timers and waker registrations per turn on M0+) · check: review · 📖 [detail](checks/perf.md#perf-5) · <!-- typec_dongle FW-40 -->
 
 ### 🧪 TEST - Tests and bring-up process
-- <a id="test-1"></a>⚠️ `TEST-1` Host test that races a free-running tick or sleeps "long enough" · check: review · <!-- usb_io_fw API-51, HOST-6 -->
-- <a id="test-2"></a>⚠️ `TEST-2` A simulator that answers inline hides bugs of the deferred path: test both · check: review · <!-- usb_io_fw IF-13 -->
-- <a id="test-3"></a>⚠️ `TEST-3` Sequencing rules of the board (enable order, safe off) without host tests of the transition model · check: test · <!-- usb_io_fw IF-2 (chain::tests) -->
-- <a id="test-4"></a>⚠️ `TEST-4` A board left running its last test after probe-rs exits: reset before each run · check: review · <!-- mcan Q5a -->
-- <a id="test-5"></a>⚠️ `TEST-5` One probe, one owner: another session's probe-rs or gdb on the same board makes faults that aren't the firmware's · check: review · <!-- typec_dongle FW-44, FW-48 -->
-- <a id="test-6"></a>💡 `TEST-6` A fault that depends on timing or layout bisected before the errata were checked · check: review · <!-- tpm firmware pack; typec_dongle FW-38 -->
-- <a id="test-7"></a>⚠️ `TEST-7` A peripheral or chip blamed before our own side was measured (M1 blamed the sink's FUSB302B for our RXDR overrun) · check: review · <!-- typec_dongle FW-62 -->
+- <a id="test-1"></a>⚠️ `TEST-1` Host test that races a free-running tick or sleeps "long enough" · check: review · 📖 [detail](checks/test.md#test-1) · <!-- usb_io_fw API-51, HOST-6 -->
+- <a id="test-2"></a>⚠️ `TEST-2` A simulator that answers inline hides bugs of the deferred path: test both · check: review · 📖 [detail](checks/test.md#test-2) · <!-- usb_io_fw IF-13 -->
+- <a id="test-3"></a>⚠️ `TEST-3` Sequencing rules of the board (enable order, safe off) without host tests of the transition model · check: test · 📖 [detail](checks/test.md#test-3) · <!-- usb_io_fw IF-2 (chain::tests) -->
+- <a id="test-4"></a>⚠️ `TEST-4` A board left running its last test after probe-rs exits: reset before each run · check: review · 📖 [detail](checks/test.md#test-4) · <!-- mcan Q5a -->
+- <a id="test-5"></a>⚠️ `TEST-5` One probe, one owner: another session's probe-rs or gdb on the same board makes faults that aren't the firmware's · check: review · 📖 [detail](checks/test.md#test-5) · <!-- typec_dongle FW-44, FW-48 -->
+- <a id="test-6"></a>💡 `TEST-6` A fault that depends on timing or layout bisected before the errata were checked · check: review · 📖 [detail](checks/test.md#test-6) · <!-- tpm firmware pack; typec_dongle FW-38 -->
+- <a id="test-7"></a>⚠️ `TEST-7` A peripheral or chip blamed before our own side was measured (M1 blamed the sink's FUSB302B for our RXDR overrun) · check: review · 📖 [detail](checks/test.md#test-7) · <!-- typec_dongle FW-62 -->
 
 ## See also
 

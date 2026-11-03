@@ -9,6 +9,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- Detail pages for the catalogue's PIN, CLK, ERR, EXT, USB, HOST, CFG, PERF and TEST categories
+  (`book/checks/{pin,clk,err,ext,usb,host,cfg,perf,test}.md`): what goes wrong, why, our example, the fix, how
+  it's detected, and the errata quoted from the document where one applies, linked from `book/checks.md` (LINT-8).
+
 ## [0.2.33] - 2026-11-03
 
 ### Added
