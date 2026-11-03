@@ -1,5 +1,5 @@
 [target.thumbv6m-none-eabi]
-runner = "probe-rs run --chip STM32G0B1RE"
+runner = "probe-rs run --chip STM32G0B1RE --probe 0483:3754"
 linker = "flip-link"
 
 [build]

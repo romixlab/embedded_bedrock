@@ -1,0 +1,5 @@
+checks = ["SIZ-3"]
+
+[[finding]]
+check = "SIZ-3"
+at = "Cargo.toml:10"

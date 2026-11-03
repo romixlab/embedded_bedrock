@@ -1,0 +1,6 @@
+checks = ["CFG-7"]
+
+[[finding]]
+check = "CFG-7"
+at = "Cargo.toml"
+confidence = "estimate"

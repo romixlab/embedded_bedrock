@@ -9,6 +9,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_lint` config checks (LINT-4): CFG-1 (probe-rs runner without `--probe VID:PID`), CFG-2 (probe-rs
+  `download` + `reset` chained on F0/G0/L0), CFG-4 (a git dependency not covered by an active `[patch]` on its
+  source), CFG-5 (embassy-stm32's chip feature not the board's chip, STM32 only), CFG-6 (thumbv6m without
+  portable-atomic's critical-section feature where static_cell needs CAS), CFG-7 (no bedrock_build dependency, so
+  a dirty build carries no mark), SIZ-3 (a per-package `opt-level` override under `lto = "fat"`, which does
+  nothing), SIZ-4 (release profile missing `codegen-units = 1`, `lto` or `panic = "abort"`), LOG-2
+  (`DEFMT_LOG`/`DEFMT_RTT_BUFFER_SIZE` not set explicitly when defmt is a dependency), CLK-2 (embassy-stm32's
+  `time-driver-any` feature, the cfg half), MEM-1 (`FLASH`'s length in memory.x reaching into a reserved region),
+  MEM-2 (a NOLOAD RAM section with more than a `*(...)` line in its body), MEM-7 (a flash partition's helper
+  symbols written as an absolute address while a sibling's subtract the flash base, STM32's fixed flash address
+  space tells a partition from a RAM helper symbol), MEM-12 (defmt without a `-Tdefmt.x` build-script directive,
+  the cfg half), CNT-3 (a `*-macros`/`*-derive` crate and its runtime crate not pinned to the exact same version),
+  EXE-10 (embassy-executor's `platform-cortex-m` together with a HAL's own `executor-thread`/`executor-interrupt`).
+  CFG-3, CFG-8, SIZ-2, MEM-8 and MEM-11 are not automated yet: each needs more than `Cargo.toml`, the cargo
+  configuration, `build.rs`, `memory.x` and `bedrock_fw.json` give (the justfile, CI knowledge, or a per-chip flash
+  page-size table), see FEATURES.md LINT-4.
+
 ## [0.2.38] - 2026-11-03
 
 ### Changed

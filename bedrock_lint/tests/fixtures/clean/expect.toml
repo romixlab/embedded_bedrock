@@ -1,2 +1,9 @@
 # Everything right: every check runs and finds nothing
-ran = ["STK-1", "STK-2", "STK-3", "STK-4", "STK-5", "STK-6", "EXE-3", "MEM-3", "MEM-6", "MEM-10", "SIZ-1", "SIZ-5", "SIZ-6", "PERF-2", "PERF-3", "ERR-3", "DMA-1"]
+ran = [
+  "STK-1", "STK-2", "STK-3", "STK-4", "STK-5", "STK-6", "EXE-3",
+  "MEM-3", "MEM-6", "MEM-10", "SIZ-1", "SIZ-5", "SIZ-6", "PERF-2", "PERF-3", "ERR-3", "DMA-1",
+  "CFG-1", "CFG-2", "CFG-4", "CFG-5", "CFG-6", "CFG-7",
+  "SIZ-3", "SIZ-4", "LOG-2", "CLK-2",
+  "MEM-1", "MEM-2", "MEM-7", "MEM-12",
+  "CNT-3", "EXE-10",
+]

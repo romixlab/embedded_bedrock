@@ -1,0 +1,9 @@
+checks = ["LOG-2"]
+
+[[finding]]
+check = "LOG-2"
+at = ".cargo/config.toml"
+
+[[finding]]
+check = "LOG-2"
+at = ".cargo/config.toml"

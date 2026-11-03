@@ -1,0 +1,4 @@
+[package]
+name = "mem1_flash_covers_settings"
+version = "0.1.0"
+edition = "2024"

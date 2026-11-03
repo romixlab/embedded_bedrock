@@ -1,0 +1,2 @@
+[patch."https://example.com/foo"]
+foo_a = { path = "../foo/foo_a" }

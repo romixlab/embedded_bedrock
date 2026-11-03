@@ -1,0 +1,7 @@
+[package]
+name = "log2_missing_env"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+defmt = "1"

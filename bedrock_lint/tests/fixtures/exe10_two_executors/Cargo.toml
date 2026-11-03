@@ -1,0 +1,8 @@
+[package]
+name = "exe10_two_executors"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embassy-executor = { version = "0.10", features = ["platform-cortex-m"] }
+embassy-rp = { version = "0.6", features = ["rp2040", "executor-thread"] }

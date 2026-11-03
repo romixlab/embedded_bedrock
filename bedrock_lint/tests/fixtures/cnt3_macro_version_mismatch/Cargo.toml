@@ -1,0 +1,8 @@
+[package]
+name = "cnt3_macro_version_mismatch"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cnt = "0.5"
+cnt_macros = "0.5"

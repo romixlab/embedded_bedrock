@@ -1,0 +1,5 @@
+checks = ["CFG-2"]
+
+[[finding]]
+check = "CFG-2"
+at = ".cargo/config.toml:2"

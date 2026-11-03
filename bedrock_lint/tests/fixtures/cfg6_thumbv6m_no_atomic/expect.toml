@@ -1,0 +1,5 @@
+checks = ["CFG-6"]
+
+[[finding]]
+check = "CFG-6"
+at = "Cargo.toml"

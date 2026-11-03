@@ -765,8 +765,19 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   checks that need resolved features or per-chip data add them (LINT-3, LINT-4). Clean on usb_io_fw, typec_dongle,
   vb135_fdcan_iso_usb_fw and the nucleo_g0b1re and pico templates (3 Nov 2026).
 - 📋 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
-- 📋 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
-  EXE-10, CNT-3).
+- 🚧 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
+  EXE-10, CNT-3) on the LINT-2 model, no new model fields. Done: CFG-1, CFG-2, CFG-4, CFG-5 (STM32 only), CFG-6,
+  CFG-7, SIZ-3, SIZ-4, LOG-2, CLK-2 (cfg half: `time-driver-any` only, the src half is LINT-3), MEM-1, MEM-2, MEM-7,
+  MEM-12 (cfg half: the `-Tdefmt.x` directive, the `.defmt` section itself is LINT-5), CNT-3, EXE-10; each with a
+  fixture, and sanity-checked against `bedrock_gen.py new` output for STM32G0, RP2040 and an H7 bootloader layout
+  (caught a real CFG-6 false positive — critical-section doesn't need to be a direct dependency — and a MEM-7 bug
+  that only matched `- ORIGIN(FLASH)`, missing the bootloader layout's `- ORIGIN(BOOTLOADER)`; both fixed before
+  landing). Not done, each needs more than the current model: CFG-3 (needs the justfile, not read yet), CFG-8 and
+  SIZ-2 (both really ask "was the git-only / dev-profile path ever built", which needs CI knowledge the model
+  doesn't have), MEM-8 (needs a per-chip flash erase-page-size table; none exists on the Rust side, and duplicating
+  `stm32.toml`'s data is its own effort), MEM-11 ("linker warnings ignored" has no clear automatic form: the one
+  known instance, RP235x `_stext` alignment, was already fixed structurally in the template rather than by
+  promoting a linker warning to an error).
 - ✅ **LINT-5 ELF checks**: the `elf` checks STK-3, STK-5, STK-6, SIZ-1, SIZ-5, SIZ-6, MEM-3, MEM-6, MEM-10, DMA-1,
   PERF-2, PERF-3 and ERR-3 on `--elf` (`checks/`), with the model's ELF (`model/elf.rs`: sections with their load
   address, LOAD segments, demangled symbols; `CallDepths` for the deepest path), the `MEMORY` regions of memory.x

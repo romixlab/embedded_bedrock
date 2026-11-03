@@ -1,0 +1,5 @@
+checks = ["EXE-10"]
+
+[[finding]]
+check = "EXE-10"
+at = "Cargo.toml:8"

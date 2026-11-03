@@ -1,0 +1,5 @@
+checks = ["MEM-2"]
+
+[[finding]]
+check = "MEM-2"
+at = "memory.x:12"

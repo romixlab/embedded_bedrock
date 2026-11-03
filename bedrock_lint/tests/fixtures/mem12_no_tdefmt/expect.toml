@@ -1,0 +1,6 @@
+checks = ["MEM-12"]
+
+[[finding]]
+check = "MEM-12"
+at = "build.rs"
+confidence = "estimate"

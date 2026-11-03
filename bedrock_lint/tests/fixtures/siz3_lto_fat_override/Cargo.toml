@@ -1,0 +1,10 @@
+[package]
+name = "siz3_lto_fat_override"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+lto = "fat"
+
+[profile.release.package.foo]
+opt-level = 3

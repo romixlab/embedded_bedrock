@@ -1,0 +1,4 @@
+[package]
+name = "cfg2_download_reset"
+version = "0.1.0"
+edition = "2024"

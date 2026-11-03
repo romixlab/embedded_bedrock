@@ -6,3 +6,11 @@ edition = "2024"
 [dependencies]
 cortex-m-rt = { version = "0.7", features = ["device"] }
 embassy-executor = { version = "0.9", features = ["arch-cortex-m", "executor-thread", "executor-interrupt"] }
+
+[build-dependencies]
+bedrock_build = "0.1"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+panic = "abort"

@@ -1,0 +1,4 @@
+[package]
+name = "mem2_tail_symbol"
+version = "0.1.0"
+edition = "2024"

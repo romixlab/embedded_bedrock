@@ -1,0 +1,5 @@
+[target.thumbv6m-none-eabi]
+runner = "probe-rs download --chip STM32G0B1RE && probe-rs reset --chip STM32G0B1RE"
+
+[build]
+target = "thumbv6m-none-eabi"

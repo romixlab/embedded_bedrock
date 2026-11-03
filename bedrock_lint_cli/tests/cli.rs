@@ -63,7 +63,7 @@ fn exit_status_follows_findings() {
     let dir = clean.path().to_str().unwrap();
     let o = bin(&["check", dir, "--root", dir]);
     assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
-    assert!(stdout(&o).contains("4 checks ran"), "{}", stdout(&o));
+    assert!(stdout(&o).contains("20 checks ran"), "{}", stdout(&o));
 
     let o = bin(&["check", "/nonexistent/fw"]);
     assert_eq!(o.status.code(), Some(2));
@@ -85,7 +85,7 @@ fn baseline_flow() {
         base.to_str().unwrap(),
     ]);
     assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
-    assert!(stdout(&o).contains("wrote 3 finding(s)"), "{}", stdout(&o));
+    assert!(stdout(&o).contains("wrote 5 finding(s)"), "{}", stdout(&o));
     // named in bedrock-lint.toml: the known findings no longer fail
     std::fs::write(
         d.path().join("bedrock-lint.toml"),
@@ -95,7 +95,7 @@ fn baseline_flow() {
     let o = bin(&["check", dir, "--root", dir]);
     assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
     assert!(
-        stdout(&o).contains("In the baseline (3):"),
+        stdout(&o).contains("In the baseline (5):"),
         "{}",
         stdout(&o)
     );

@@ -1,0 +1,11 @@
+checks = ["MEM-7"]
+
+[[finding]]
+check = "MEM-7"
+at = "memory.x:11"
+confidence = "estimate"
+
+[[finding]]
+check = "MEM-7"
+at = "memory.x:12"
+confidence = "estimate"
