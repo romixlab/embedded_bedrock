@@ -67,15 +67,29 @@ impl Check for Irq1 {
                     }
                 }
                 Expr::Call(c) => {
-                    let Expr::Path(p) = strip(&c.func) else { return };
-                    if !p.path.segments.last().is_some_and(|s| s.ident == "write_volatile") || c.args.len() != 2 {
+                    let Expr::Path(p) = strip(&c.func) else {
+                        return;
+                    };
+                    if !p
+                        .path
+                        .segments
+                        .last()
+                        .is_some_and(|s| s.ident == "write_volatile")
+                        || c.args.len() != 2
+                    {
                         return;
                     }
                     let ptr = &c.args[0];
                     let val = &c.args[1];
                     let Expr::Call(rc) = strip(val) else { return };
-                    let Expr::Path(rp) = strip(&rc.func) else { return };
-                    if !rp.path.segments.last().is_some_and(|s| s.ident == "read_volatile")
+                    let Expr::Path(rp) = strip(&rc.func) else {
+                        return;
+                    };
+                    if !rp
+                        .path
+                        .segments
+                        .last()
+                        .is_some_and(|s| s.ident == "read_volatile")
                         || rc.args.len() != 1
                         || text(ptr) != text(&rc.args[0])
                     {
@@ -129,7 +143,12 @@ fn is_all_ones(e: &Expr) -> bool {
             Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) if i.base10_digits() == "0"
         ),
         Expr::Path(p) => {
-            let segs: Vec<String> = p.path.segments.iter().map(|s| s.ident.to_string()).collect();
+            let segs: Vec<String> = p
+                .path
+                .segments
+                .iter()
+                .map(|s| s.ident.to_string())
+                .collect();
             matches!(segs.as_slice(), [ty, max] if max == "MAX" && matches!(ty.as_str(), "u8" | "u16" | "u32" | "u64"))
         }
         _ => false,

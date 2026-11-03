@@ -50,15 +50,23 @@ impl Check for Irq6 {
                 }
             });
             walk_macros(fb.block, &mut |m| {
-                if m.path.segments.last().map(|s| s.ident.to_string()).as_deref() != Some("asm") {
+                if m.path
+                    .segments
+                    .last()
+                    .map(|s| s.ident.to_string())
+                    .as_deref()
+                    != Some("asm")
+                {
                     return;
                 }
-                let Ok(args) =
-                    m.parse_body_with(syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated)
-                else {
+                let Ok(args) = m.parse_body_with(
+                    syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated,
+                ) else {
                     return;
                 };
-                let Some(Expr::Lit(l)) = args.first() else { return };
+                let Some(Expr::Lit(l)) = args.first() else {
+                    return;
+                };
                 let Lit::Str(s) = &l.lit else { return };
                 let asm = s.value();
                 if disable.is_none() && asm.contains("cpsid") {

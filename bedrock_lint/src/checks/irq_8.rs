@@ -32,7 +32,11 @@ impl Check for Irq8 {
             .iter()
             .find(|h| h.kind == HandlerKind::Exception && h.name == "DefaultHandler");
         let Some(h) = handler else {
-            let Some(dep) = fw.dependencies().into_iter().find(|d| d.package() == "cortex-m-rt") else {
+            let Some(dep) = fw
+                .dependencies()
+                .into_iter()
+                .find(|d| d.package() == "cortex-m-rt")
+            else {
                 return Vec::new();
             };
             let mut path: Vec<&str> = dep.table.iter().map(String::as_str).collect();

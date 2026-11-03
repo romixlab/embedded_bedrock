@@ -67,7 +67,9 @@ impl Check for Irq5 {
                     let is_nvic = p.path.segments.len() >= 2
                         && p.path.segments[p.path.segments.len() - 2].ident == "NVIC";
                     let Some(arg) = c.args.first() else { return };
-                    let Some(vector) = upper_name(arg) else { return };
+                    let Some(vector) = upper_name(arg) else {
+                        return;
+                    };
                     if !is_nvic || has_handler(&vector) {
                         return;
                     }
@@ -93,7 +95,9 @@ impl Check for Irq5 {
                 if m.method != "write_value" || m.args.len() != 1 {
                     return;
                 }
-                let Expr::MethodCall(r) = &*m.receiver else { return };
+                let Expr::MethodCall(r) = &*m.receiver else {
+                    return;
+                };
                 match r.method.to_string().as_str() {
                     "ils" => ils_writes.push((
                         fb.path.clone(),
@@ -135,6 +139,8 @@ fn upper_name(e: &Expr) -> Option<String> {
         _ => return None,
     };
     let is_upper = last.chars().next().is_some_and(|c| c.is_ascii_uppercase())
-        && last.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
+        && last
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
     is_upper.then_some(last)
 }

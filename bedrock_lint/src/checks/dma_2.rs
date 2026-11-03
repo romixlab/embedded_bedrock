@@ -3,8 +3,8 @@
 use super::util::{names_any, walk_exprs};
 use crate::check::{Check, CheckMeta, Need, Registered};
 use crate::finding::{Confidence, Finding};
-use crate::model::context::bodies;
 use crate::model::Firmware;
+use crate::model::context::bodies;
 use syn::Expr;
 use syn::spanned::Spanned;
 
@@ -37,7 +37,9 @@ impl Check for Dma2 {
     /// A Cortex-M7 part (STM32H7 / F7) whose source calls `enable_dcache` and uses a `DMA` peripheral, with no
     /// `clean_dcache` / `invalidate_dcache` call and no MPU setup anywhere in the source seen
     fn run(&self, fw: &Firmware) -> Vec<Finding> {
-        let Some(chip) = fw.chip() else { return Vec::new() };
+        let Some(chip) = fw.chip() else {
+            return Vec::new();
+        };
         if !matches!(chip.family.as_str(), "stm32h7" | "stm32f7") {
             return Vec::new();
         }
@@ -69,7 +71,9 @@ impl Check for Dma2 {
                 }
             });
         }
-        let Some(at) = enable_at else { return Vec::new() };
+        let Some(at) = enable_at else {
+            return Vec::new();
+        };
         if maintained || mpu_used {
             return Vec::new();
         }

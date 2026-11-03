@@ -50,7 +50,11 @@ impl Check for Irq4 {
             }
             out.push(
                 Finding::new("IRQ-4", format!("{}:{}", b.group, b.vector), message)
-                    .span(b.loc.span().label(format!("{} => {}", b.vector, b.handlers)))
+                    .span(
+                        b.loc
+                            .span()
+                            .label(format!("{} => {}", b.vector, b.handlers)),
+                    )
                     .confidence(Confidence::Estimate),
             );
         }
