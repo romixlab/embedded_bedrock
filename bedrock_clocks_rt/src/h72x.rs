@@ -161,6 +161,8 @@ pub enum Step {
     CsiReady,
     Hsi48Ready,
     HseReady,
+    /// HSE off before changing HSEBYP, which only changes while HSE is off (RM0468 §8.7.2).
+    HseOff,
     /// 0, 1, 2 for PLL1..3.
     PllReady(u8),
     FlashLatency,
@@ -261,9 +263,18 @@ pub fn apply(r: &mut impl Regs, p: &Plan) -> Result<(), Error> {
         wait(r, PWR_CSR1, VOS_MASK | ACTVOSRDY, ACTVOSRDY, Step::VosReady)?;
     }
 
-    // 3. Oscillators. HSEBYP only while HSE is off (RM §8.7.2), so before HSEON.
+    // 3. Oscillators. HSEBYP only while HSE is off (RM §8.7.2), so before HSEON. HSEBYP survives a system and a
+    // watchdog reset (RCC-10: RCC_CR 0x00044025 after SYSRESETREQ, RM §8.7.2 says reset 0x00000001), so a
+    // crystal plan after a bypass firmware, or the other way round, turns HSE off and sets HSEBYP to the plan's.
     let osc = p.rcc_cr_osc;
-    modify(r, RCC_CR, 0, osc & cr::HSEBYP);
+    let cur = r.read(RCC_CR);
+    if (cur ^ osc) & cr::HSEBYP != 0 {
+        if cur & cr::HSEON != 0 {
+            modify(r, RCC_CR, cr::HSEON, 0);
+            wait(r, RCC_CR, cr::HSERDY, 0, Step::HseOff)?;
+        }
+        modify(r, RCC_CR, cr::HSEBYP, osc & cr::HSEBYP);
+    }
     modify(r, RCC_CR, 0, osc & !cr::HSEBYP);
     if osc & cr::HSION != 0 {
         wait(

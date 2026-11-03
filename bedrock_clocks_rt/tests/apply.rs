@@ -150,6 +150,33 @@ fn supply_locked_with_another_value_is_an_error_not_a_hang() {
     assert!(s.writes.iter().all(|&(a, _)| a == addr::PWR_CR3));
 }
 
+/// HSEBYP survives a system reset (RCC-10): a plan with HSEBYP clear after a bypass firmware turns HSE off, clears
+/// HSEBYP, then starts HSE again.
+#[test]
+fn hsebyp_left_by_an_earlier_firmware_follows_the_plan() {
+    let mut s = Sim::new();
+    let mut plan = clocks::PLAN;
+    plan.rcc_cr_osc &= !(1 << 18); // the same tree with a crystal
+    s.regs
+        .insert(addr::RCC_CR, 0x0004_4025 | (1 << 16) | (1 << 17)); // HSE on in bypass
+    h72x::apply(&mut s, &plan).unwrap();
+    let off = s.first_write(addr::RCC_CR, |v| v & (1 << 16) == 0 && v & (1 << 18) != 0);
+    let clear = s.first_write(addr::RCC_CR, |v| v & (1 << 18) == 0);
+    let on = s.first_write(addr::RCC_CR, |v| v & (1 << 16) != 0 && v & (1 << 18) == 0);
+    assert!(off < clear && clear <= on, "{off} {clear} {on}");
+    assert_eq!(s.regs[&addr::RCC_CR] & (1 << 18), 0);
+    h72x::verify(&mut s, &plan).unwrap();
+    // the plan's own setting needs no HSE restart
+    let mut s = Sim::new();
+    s.regs.insert(addr::RCC_CR, 0x0004_4025);
+    h72x::apply(&mut s, &clocks::PLAN).unwrap();
+    assert!(
+        !s.writes
+            .iter()
+            .any(|&(a, v)| a == addr::RCC_CR && v & (1 << 18) == 0)
+    );
+}
+
 #[test]
 fn a_dead_hse_times_out_with_its_step() {
     let mut s = Sim::new();

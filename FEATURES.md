@@ -905,7 +905,7 @@ document section it comes from, and a FRACN steering range is checked at both en
   FRACN mid-range) and at every voltage scale (`tests/vos.rs`: a valid tree at each of VOS0..VOS3, a refusal one
   FRACN step over each CPU / AXI / APB / PLL output / FDCAN kernel limit, the flash wait-state band edges, VOS0 and
   the boost behind their allows, every PLL and sys_ck source, integer and fractional, wide and medium VCO). Open: the H723 / H730 /
-  H733 / H735 datasheets (supply per package), MCO1/2, LSE / LSI and the RTC domain, HSI / CSI tolerance.
+  H733 / H735 datasheets (supply per package), MCO1/2 (set right after reset, before the oscillators: RM §8.7.6), LSE / LSI and the RTC domain, HSI / CSI tolerance.
 - 🧪 **RCC-3 Register encoding and clocks.rs**: `h72x::regs` (PWR_CR3, PWR_D3CR VOS, FLASH_ACR computed from Table 16,
   RCC_CR, PLLCKSELR, PLLCFGR, PLLxDIVR, PLLxFRACR, CFGR, D1/D2/D3CFGR, the four kernel mux registers; bit positions
   held to stm32-metapac in a test) and `h72x::emit` (`clocks.rs` with a `@generated` header carrying the source path
@@ -918,7 +918,8 @@ document section it comes from, and a FRACN steering range is checked at both en
   RM0468 order (supply, VOS with VOSRDY and for VOS0 ACTVOS, HSEBYP before HSEON, PLLs in the Figure 48 order,
   FLASH_ACR and prescalers read back before the switch, SWS, kernel muxes last, HSI off when unused), every wait
   bounded and named in `Error::Timeout(Step)`; PWR_CR3 written once and read back, `Error::SupplyLocked` when an
-  earlier writer since power-on left another value; back to HSI first when a PLL already runs. `verify(&Plan)`
+  earlier writer since power-on left another value; back to HSI first when a PLL already runs; HSEBYP set to the
+  plan's (HSE off first) when an earlier firmware left the other one, since it survives a system reset (RCC-10). `verify(&Plan)`
   names the first register that differs; `set_fracn` steps a running PLL within the planned range, reading each
   write back and holding PLLxFRACEN low for 2 ref_ck periods (`FracnRange::latch_hold_reads`, emitted by the
   planner): back to back, B135 missed the latch 6/40 (PLL1) and 11/40 (PLL2) times; no document gives the hold, it
