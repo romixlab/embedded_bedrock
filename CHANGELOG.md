@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.35] - 2026-11-03
+
 ### Added
 
 - `bedrock_led::code` (DEV-18): blink codes, the same on every board, for a firmware that won't start: one long flash, then `Code` short flashes, a pause, repeated for about 10 s (`DURATION_MS`), red (`COLOUR`) on an RGB LED. `blink(code, set_led, delay_ms)` is blocking and HAL-free, so it runs before any init; `steps` and `period_ms` give the pattern. Code 1 `UnknownRework` (wire_weaver STD-101: a rework the image doesn't know and no allowance), code 2 `RecordUnreadable`. The table a person reads is `book/blink_codes.md`.
