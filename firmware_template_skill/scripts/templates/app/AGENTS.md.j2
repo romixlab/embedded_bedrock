@@ -41,6 +41,16 @@ firmware's own code. On template upgrades take only plumbing changes there (depe
 Do not edit `template` by hand except as part of an upgrade (below). Keep `answers` in sync if you change something
 the generator decides (e.g. switch logging, add the bootloader) so later upgrades regenerate the right thing.
 
+## Lessons from other boards
+
+Checklists collected from earlier firmware and bring-ups; read the matching one before the work it covers:
+
+- [Review checklist](https://github.com/romixlab/embedded_bedrock/blob/main/book/review-checklist.md): before landing firmware changes.
+- [Bring-up checklist](https://github.com/romixlab/embedded_bedrock/blob/main/book/bringup-checklist.md): first power-on of a new board.
+- [Checks](https://github.com/romixlab/embedded_bedrock/blob/main/book/checks.md): what the template and CI check for you, and what stays manual.
+
+When a bring-up or review finds a lesson worth keeping, add it to those files in embedded_bedrock, not only here.
+
 ## Updating from the template
 
 The firmware can later pick up template improvements (crate bumps, bug fixes, new features). When the user asks for

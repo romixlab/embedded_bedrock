@@ -28,11 +28,9 @@ target = "{{ t.rust_target }}"
 {% if o.log == "defmt" %}
 DEFMT_LOG = "{{ o.defmt_log }},{{ o.name | replace("-", "_") }}={{ o.defmt_log }}"
   {% if t.family != "esp" and not (o.ww and o.ww_transport == "rtt") %}
-    {% if o.rtt_buffer != 1024 %}
+# Always explicit: defmt-rtt's default (1024) drops log lines in bursts (init, a fault report); a full buffer blocks
+# or loses output depending on the RTT mode. Raise it (4096) when lines go missing.
 DEFMT_RTT_BUFFER_SIZE = "{{ o.rtt_buffer }}"
-    {% else %}
-# DEFMT_RTT_BUFFER_SIZE = "4096" # larger buffer avoids losing output in bursts (init)
-    {% endif %}
   {% endif %}
 {% elif o.log == "esp-println" %}
 ESP_LOG = "{{ o.defmt_log }}"

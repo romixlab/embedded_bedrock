@@ -46,6 +46,13 @@ or options; purely internal refactors only need a line under the next version.
 
   Upgrade notes: the answers `nightly` and `build_core` become `toolchain` (`auto`, or `nightly` where either was true); `check-answers` shows it as MERGED. Take the new `rust-toolchain.toml`, the two `trim-paths` lines per profile, the `[profile.release]` and `[unstable]` blocks of `.cargo/config.toml`, and drop `assign-resources` if the firmware doesn't use it. Then `rustup toolchain install` in the firmware directory, and in CI add `rustup toolchain install` in the firmware directory before the first cargo command (a `dtolnay`/`actions-rust-lang` step for stable does not read the firmware's toolchain file). The firmware must take a `bedrock_crash` with ROB-13 (a `cargo update -p bedrock_crash`) or panics lose their location without the call chain that replaces it. Check: release flash before and after, and `strings <elf> | grep -c /home/` is 0. A firmware that must stay on stable answers `--toolchain stable`.
 
+- Lessons, defmt buffer, named time driver (TPL-73):
+  - The generated `AGENTS.md` has a *Lessons from other boards* section linking embedded_bedrock's review checklist, bring-up checklist and checks (`book/`, on main).
+  - `.cargo/config.toml` always sets `DEFMT_RTT_BUFFER_SIZE` (default 1024, `--rtt-buffer`), with a comment, instead of a commented-out hint.
+  - STM32 embassy firmware without a breathing LED names its time driver (`time-driver-tim4`, else the first general-purpose timer the chip has) instead of `time-driver-any`.
+
+  Upgrade notes: optional. Add the section to `AGENTS.md`; uncomment or add `DEFMT_RTT_BUFFER_SIZE = "1024"` in `.cargo/config.toml`; replace `time-driver-any` in `Cargo.toml` with the named timer only if nothing else uses that timer (check `--can` firmware: the driver's interrupt must not be shared). Hardware test not needed for the first two; the third changes which timer runs embassy-time, so run the firmware once.
+
 - Board preset `donguru_b153a` (TPL-60): `--board donguru_b153a` generates firmware for the Donguru B153A
   (STM32G0B1CET6, LQFP48, rev A): WireWeaver over the MCU's own USB behind the board's USB2512B hub, settings,
   counters, backup counters, the host crates with the CLI `donguru`, `pins` on every free pin (J101's I/O lines, the

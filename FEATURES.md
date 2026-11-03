@@ -168,6 +168,11 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   fix it needs to compile at all) and of this branch alike; WireWeaver grew. With `--embassy main` it is 5.5 KiB, so
   that matrix entry uses the 128 KiB F103CB; since the device suite (TPL-41) the F103C8 release is 26.7 KiB over and the F103CB dev build 27 KiB over (its release fits); a 64 KiB part needs the suite trimmed (log, introspection docs) by an option. Options: a smaller default `MAX_MESSAGE_LEN`, leaving introspection out
   on 64 KiB parts, or the tested part moves to F103CB.
+- 🧪 **TPL-73 lessons-in-template**: generated `AGENTS.md` links the review / bring-up / checks lists (`app/AGENTS.md.j2`);
+  `DEFMT_RTT_BUFFER_SIZE` always explicit (`app/cargo_config.toml.j2`); STM32 embassy names its time driver
+  (`time_driver()` in `bedrock_gen.py`) instead of `time-driver-any`. The linked `book/*.md` files land with the
+  fw-checklist session.
+- 🐛 **TPL-76 `g0donguru` matrix: empty pin table, `board_pins` test fails**: `docs/board/donguru_b153a-pins.md` has a header and no rows, so the generated `board_pins` test panics with "pin table not parsed". Seen on 3 Nov 2026 while running the matrix for TPL-73; unrelated to it (the same output without the TPL-73 files). Not chased.
 - 🐛 **TPL-71 `l073` (STM32L073RZ, `--wire-weaver`) dev build overflows RAM**: `cortex-m-rt`'s `.uninit` section
   overflows RAM by 212 bytes under flip-link; seen in the 29 Oct 2026 matrix run, unrelated to this branch's
   pico/TPL-70 work (matrix.toml and the generated firmware for this chip are untouched here). Not chased further:

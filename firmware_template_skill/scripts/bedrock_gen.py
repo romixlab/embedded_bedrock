@@ -931,6 +931,7 @@ class Opts:
     rp_boot: bool = False   # device.boot and dfu through the RP boot ROM's BOOTSEL (TPL-56)
     led_pwm: Optional[dict] = None  # --led-mode breath: the LED's timer channel and the time driver (led_pwm()),
     # or with several LEDs / RGB every LED's (leds_pwm(), "multi")
+    time_driver: str = ""   # embassy-stm32's named time driver timer, lowercase ("tim4"): the LED's pick or time_driver()
     leds: list = field(default_factory=list)  # the --board preset's [[leds]] (preset_leds()), [] without
     hw: dict = field(default_factory=dict)  # the preset's [[buttons]], [[init]], [bring_up], [usb] (preset_hw())
     led_low: bool = False   # --led-active low: the LED lights while its pin is low (TPL-57)
@@ -1174,6 +1175,14 @@ def stm32_timers(t: Target) -> dict[str, dict]:
     """stm32-data's timer peripherals (TIM_* blocks) by name."""
     return {p["name"]: p for p in t.stm32.get("cores", [{}])[0].get("peripherals", [])
             if p.get("registers", {}).get("kind") == "timer" and p["registers"].get("block", "").startswith("TIM_")}
+
+
+def time_driver(t: Target) -> str:
+    """The embassy-stm32 time driver timer named explicitly (TPL-73), lowercase: `time-driver-any` picks a timer by
+    embassy's own order, which changes with its version and may take one the application wants. First of TIME_DRIVERS
+    the chip has; "" where stm32-data lists none."""
+    timers = stm32_timers(t)
+    return next((d.lower() for d in TIME_DRIVERS if d in timers), "")
 
 
 def timer_channels(timers: dict[str, dict], pin: str) -> list[dict]:
@@ -1773,7 +1782,7 @@ def resolve_can(t: Target, o: Opts, spec: Optional[str]) -> dict:
         for line, irq in enumerate(c["irq"]):
             irqs.setdefault(irq, []).append((name, line))
     # embassy's time driver binds its timer's interrupt; on the G0 TIM16 and TIM17 share theirs with the FDCANs
-    driver = (o.led_pwm or {}).get("driver", "tim4").upper()
+    driver = (o.time_driver or "tim4").upper()
     clash = [irq for irq in irqs if irq.startswith(driver + "_")]
     if clash:
         die(f"--can: embassy's time driver {driver} shares its interrupt with the FDCANs ({clash[0]})")
@@ -3063,6 +3072,8 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
         t.notes.append("[[buttons]]: served as `buttons` with --wire-weaver; without it nothing reads them")
     o.led_pwm = leds_pwm(t, fw, leds, args.led_mode) if leds and not single_led(leds) else \
         led_pwm(t, fw, led, args.led_mode)
+    if t.family == "stm32" and fw == "embassy":
+        o.time_driver = (o.led_pwm or {}).get("driver") or time_driver(t)
     o.led_low = getattr(args, "led_active", "high") == "low"
     if o.led_low and (t.family != "rp" or fw != "embassy"):
         die("--led-active low: generated for embassy on RP so far (STM32 needs the timer channel's polarity)")

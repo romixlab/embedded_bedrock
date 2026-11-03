@@ -16,14 +16,14 @@ Pitfalls with older documentation / examples:
 - `cnt 0.5`: `cnt!(name: u32)` counts unconditionally, `cnt_if!(cond, name: u32)` conditionally (0.2 needed
   `cnt_if!(true, name: u32 += 1)`). Needs Rust 1.88+, host `cnt_cli` 0.5 (format version 2, same as 0.4; rejects 0.2/0.3
   firmware).
-- `embassy-stm32`: prefer `time-driver-any` over `time-driver-timN`. `SMPSSupplyVoltage::V1_8`/`V2_5`.
+- `embassy-stm32`: the template names the time driver (`time-driver-tim4`, first free general-purpose timer), never `time-driver-any`, whose pick changes with embassy versions. `SMPSSupplyVoltage::V1_8`/`V2_5`.
 - `bedrock_build` build-info is optional (`--build-info`); `bedrock_build_info` depends on WireWeaver crates from git
   (`ww_date_time`, `ww_version`), not on crates.io.
 
 ## Per family
 
 ### STM32 (embassy)
-`embassy-stm32` features: `<chip>`, `unstable-pac`, `exti`, `time`, `time-driver-any`, `defmt`, `chrono` with `--rtc`.
+`embassy-stm32` features: `<chip>`, `unstable-pac`, `exti`, `time`, `time-driver-timN`, `defmt`, `chrono` with `--rtc`.
 `cortex-m` `critical-section-single-core`. thumbv6m adds `portable-atomic` with `critical-section`.
 Bootloader: `Flash::new_blocking(p.FLASH).into_blocking_regions().bank1_region`, `BootLoader::prepare::<_,_,_,ERASE>`
 with the largest erase size, `bl.load(BANK1_REGION.base() + active_offset)`.

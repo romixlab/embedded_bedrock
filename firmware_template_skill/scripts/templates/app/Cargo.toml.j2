@@ -60,7 +60,7 @@ cortex-m-rt = "{{ V["cortex-m-rt"] }}"
 {% if o.framework == "embassy" %}
   {% if t.family == "stm32" %}
 {% set pw = s.led.pwm %}
-{{ dep("embassy-stm32", feats(defmt and "defmt", t.chip, "unstable-pac", "exti", "time", "time-driver-" ~ (pw.driver if pw else "any"), o.rtc and "chrono")) }}{{ (" # not \"any\": it may take " ~ pw.timer ~ ", " ~ s.led.name ~ "'s PWM (src/led.rs)") if pw else "" }}
+{{ dep("embassy-stm32", feats(defmt and "defmt", t.chip, "unstable-pac", "exti", "time", "time-driver-" ~ (o.time_driver or "any"), o.rtc and "chrono")) }}{{ (" # not \"any\": it may take " ~ pw.timer ~ ", " ~ s.led.name ~ "'s PWM (src/led.rs)") if pw else (" # named, not \"any\" (which timer it takes changes with embassy); keeps the choice visible" if o.time_driver else "") }}
   {% elif t.family == "rp" %}
 {{ dep("embassy-rp", feats(defmt and "defmt", t.rp_variant, "unstable-pac", "time-driver", "critical-section-impl", "executor-thread", "executor-interrupt", t.rp_variant != "rp2040" and "binary-info")) }}
   {% elif t.family == "nrf" %}
