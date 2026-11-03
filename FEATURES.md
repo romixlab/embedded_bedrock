@@ -779,7 +779,7 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   each with fixtures under `bedrock_lint/tests/fixtures/`. No `cargo metadata` and no chip tables yet: the
   checks that need resolved features or per-chip data add them (LINT-3, LINT-4). Clean on usb_io_fw, typec_dongle,
   vb135_fdcan_iso_usb_fw and the nucleo_g0b1re and pico templates (3 Nov 2026).
-- 🚧 **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
+- ✅ **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
   The model's `context` module (`bedrock_lint/src/model/context.rs`) resolves calls by name (a method call on
   `self` to the caller's type, another only when one method has that name), traces each spawner through function
   parameters to its interrupt executor or to thread mode, and marks what runs in interrupt context and what in
@@ -790,9 +790,9 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
     sd_proto's simulator (EXE-9), and EXE-12 on most WireWeaver handlers (134 in usb_io_fw); no false positive
     left in the rest. EXE-10 is a `cfg` check (LINT-4), EXE-11 an `elf` one (LINT-5).
   - ✅ IRQ-1, IRQ-2, IRQ-4, IRQ-5, IRQ-6, IRQ-8, DMA-2, DMA-4, DMA-6 (`bedrock_lint/src/checks/{irq,dma}_*.rs`),
-    a fixture each. On our firmware (3 Nov 2026): IRQ-4 on usb_io_fw's `DMA_IRQ_0` and typec_dongle's
-    `DMA1_CHANNEL2_3` (two DMA channel handlers sharing a vector); IRQ-6 on typec_dongle's `cpu.rs` idle-time
-    measurement (disable / wfe / enable, not nested — a real, benign finding, waived there with its reason);
+    a fixture each. On our firmware (3 Nov 2026): IRQ-4 candidates on usb_io_fw's `DMA_IRQ_0` and typec_dongle's
+    `DMA1_CHANNEL2_3` (two channels of one DMA driver sharing a vector, by design); IRQ-6 on typec_dongle's `cpu.rs`
+    idle-time measurement (disable / wfe / enable, not nested: benign, to waive in typec_dongle, LINT-9);
     IRQ-8 finds all three firmwares' `DefaultHandler` logging instead of only counting. IRQ-1, IRQ-2 and IRQ-5
     give nothing on the three today (no wholesale flag clear, no ISR `modify()`, every unmasked vector has a
     handler or binding); DMA-2 needs an M7 part (none of the three), DMA-4's ring consumers (typec_dongle's UART

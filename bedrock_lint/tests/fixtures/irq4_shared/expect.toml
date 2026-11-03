@@ -4,3 +4,8 @@ checks = ["IRQ-4"]
 check = "IRQ-4"
 at = "src/main.rs:2"
 confidence = "estimate"
+
+[[finding]]
+check = "IRQ-4"
+at = "src/main.rs:4"
+confidence = "candidate"
