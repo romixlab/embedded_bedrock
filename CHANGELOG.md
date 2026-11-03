@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   names `shrink_wrap` too, so exact_units (pulled in by `ww_si`, used by `bedrock_sync`) uses the sibling
   checkout's shrink_wrap and not a second one from git (E0277 `SeriesCells`/`SeriesColumns`/`SeriesStore` in
   `ww_si`). `just test` and `just lint` pass clean again.
+- `just lint` and `just test` pass `--locked` on every `cargo` call: the `../wire_weaver` path patch makes
+  `Cargo.lock` sensitive to whatever commit that sibling checkout is at, and without `--locked` a moved sibling
+  made these gate recipes silently rewrite `Cargo.lock` instead of erroring.
 
 ## [0.2.36] - 2026-11-03
 
