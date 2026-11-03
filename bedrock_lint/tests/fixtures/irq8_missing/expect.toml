@@ -1,0 +1,6 @@
+checks = ["IRQ-8"]
+
+[[finding]]
+check = "IRQ-8"
+at = "Cargo.toml:7"
+confidence = "estimate"

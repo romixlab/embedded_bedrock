@@ -1,0 +1,9 @@
+checks = ["IRQ-8"]
+
+[[finding]]
+check = "IRQ-8"
+at = "src/main.rs:2"
+
+[[finding]]
+check = "IRQ-8"
+at = "src/main.rs:3"

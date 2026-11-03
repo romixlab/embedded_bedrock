@@ -27,3 +27,8 @@ async fn pd_task(ucpd: Peri<'static, UCPD1>) {
 async fn usb_task() {
     Timer::after_secs(1).await;
 }
+
+#[exception]
+unsafe fn DefaultHandler(irqn: i16) {
+    cnt!(unhandled_exceptions: u32);
+}

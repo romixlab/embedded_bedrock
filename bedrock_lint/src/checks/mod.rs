@@ -62,6 +62,7 @@ mod irq_2;
 mod irq_4;
 mod irq_5;
 mod irq_6;
+mod irq_8;
 mod log_1;
 mod log_2;
 mod mem_10;
