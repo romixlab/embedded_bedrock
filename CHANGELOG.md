@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.31] - 2026-11-03
+
 ### Added
 
 - Firmware check catalogue `book/checks.md`: 177 checks from our boards' bugs and the firmware checklist, by ID,
