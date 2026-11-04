@@ -106,7 +106,7 @@ scriptable CLI and the shared crates.
 
 ## WireWeaver dependency
 
-WireWeaver crates (and exact_units, at the revision WireWeaver itself takes) come from git only: the root
+WireWeaver crates (and exact_units, by git without a rev, pinned by Cargo.lock) come from git only: the root
 `Cargo.toml` names the source, `Cargo.lock` pins the commit. Nothing committed points at a sibling checkout, so a
 `--locked` build gives the same result on every PC, with or without `../wire_weaver` next to this checkout, and at
 whatever commit that sibling is (BLD-10).
@@ -119,8 +119,8 @@ whatever commit that sibling is (BLD-10).
   lock. Never commit `Cargo.lock` while dev-local is on: it names sibling paths, and the `--locked` gate refuses it.
 - **A new WireWeaver crate:** add it to `[workspace.dependencies]` by git and to `.cargo/sibling-patch.toml`.
 - **One source per crate:** `cargo tree -d` must not show wire_weaver, shrink_wrap, a `ww_*` crate or exact_units
-  from two sources (CFG-4). exact_units' `rev` here equals the one in wire_weaver's root `Cargo.toml`; change both
-  together.
+  from two sources (CFG-4). exact_units has no `rev` here: Cargo.lock pins one commit, so after wire_weaver moves
+  its exact_units pin, run `cargo update -p exact_units` and check `cargo tree -d`.
 
 ## Commands
 

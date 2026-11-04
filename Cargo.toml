@@ -48,5 +48,9 @@ ww_indication = { git = "https://github.com/vhrdtech/wire_weaver", default-featu
 ww_si = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_timebase = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_version = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
-# exact_units at the revision wire_weaver takes, so the tree has one exact_units
-exact_units = { version = "0.1.0", git = "https://github.com/romixlab/exact_units", rev = "e89f64edb1fd7522d8a53f4f26f67550c4c8d8f9", default-features = false }
+# exact_units by git, no rev: Cargo.lock pins the commit, the same one wire_weaver resolves, so the tree has one exact_units
+exact_units = { version = "0.1.0", git = "https://github.com/romixlab/exact_units", default-features = false }
+
+# Local development against the sibling checkout: uncomment (see also `just dev-local` and .cargo/sibling-patch.toml)
+# [patch."https://github.com/romixlab/exact_units"]
+# exact_units = { path = "../exact_units" }
