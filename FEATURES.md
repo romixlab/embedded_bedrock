@@ -909,13 +909,14 @@ document section it comes from, and a FRACN steering range is checked at both en
 (STM32H723/733, H725/735, H730), first board: B135 rev B. Design notes live in the tpm project folder (P2528
 `design/h7-clock-plan.md`).
 
-- 🧪 **RCC-1 H72x clock model and checks** (crate `bedrock_clocks`): `ratio` (exact u128 rational, checked, exact
-  decimal printing), `h72x::config` (part number decoding, supply, VOS, HSE / HSI / CSI / HSI48 / LSE, three PLLs
+- 🧪 **RCC-1 H72x clock model and checks** (crate `bedrock_clocks`): every clock, limit and target an exact_units
+  `Exact<Hertz>` (VDD `Exact<Volt>`, targets with a `Tolerance`, steer ends `Ppm<i32>`), the dividers bounded
+  types (`Divm`, `Divn`, `Divpqr`, `Fracn` with the RM field range as their `Range`; HSIDIV, HPRE, PPRE enums whose
+  constructors refuse what the register can't hold, with the RM section), `h72x::config` (part number decoding, supply, VOS, HSE / HSI / CSI / HSI48 / LSE, three PLLs
   with FRACN and a steer range in ppm, bus prescalers, TIMPRE, 15 kernel muxes, peripherals in use, targets, named
   allowances), `h72x::tree` (every clock exactly), `h72x::limits` (each limit with its RM0468 Rev 3 / DS13311 Rev 3 /
   ES0491 Rev 9 / AN5337 Rev 4 location), `h72x::check` (all findings at once with the config key, the exact value,
-  the range and the source: PLL ref / VCO / outputs per VOS, DIVM / DIVN / DIVP/Q/R ranges, PLL1 DIVP even, FRACN 0
-  and medium-VCO FRACN refused, steer ends outside FRACN, buses per VOS, D1CPRE / HPRE without ÷32, timer clocks,
+  the range and the source: PLL ref / VCO / outputs per VOS, PLL1 DIVP even, medium-VCO FRACN refused, steer ends outside FRACN, buses per VOS, timer clocks,
   kernel clocks per Table 56, 50 % duty for SDMMC / ADC, USB exactly 48 MHz and AHB above 30 MHz, the H725 VFQFPN
   without LDO, VOS0 VDD minimum, boost refused unless allowed by name, VOS0 lifetime warning, ES0491 2.16.1 /
   2.18.1 / 2.18.4). Tested on the host with B135's tree (`bedrock_clocks/tests/b135.rs`: VOS1, 398 MHz exact with
@@ -924,8 +925,8 @@ document section it comes from, and a FRACN steering range is checked at both en
   the boost behind their allows, every PLL and sys_ck source, integer and fractional, wide and medium VCO). Open: the H723 / H730 /
   H733 / H735 datasheets (supply per package), MCO1/2 (set right after reset, before the oscillators: RM §8.7.6), LSE / LSI and the RTC domain, HSI / CSI tolerance.
 - 🧪 **RCC-3 Register encoding and clocks.rs**: `h72x::regs` (PWR_CR3, PWR_D3CR VOS, FLASH_ACR computed from Table 16,
-  RCC_CR, PLLCKSELR, PLLCFGR, PLLxDIVR, PLLxFRACR, CFGR, D1/D2/D3CFGR, the four kernel mux registers; bit positions
-  held to stm32-metapac in a test) and `h72x::emit` (`clocks.rs` with a `@generated` header carrying the source path
+  RCC_CR, PLLCKSELR, PLLCFGR, PLLxDIVR, PLLxFRACR, CFGR, D1/D2/D3CFGR, the four kernel mux registers, as
+  stm32-metapac register types set through the PAC's setters, which are not `const`, so on the host) and `h72x::emit` (`clocks.rs` with a `@generated` header carrying the source path
   and its FNV-1a hash, one const per register with its fields in the comment, exact frequencies as exact_units
   `Fixed<Hertz, Rational<1, D>, u64>` plus a named `_HZ_FLOOR`, FRACN ranges with Hz per step, the `PLAN` for
   `bedrock_clocks_rt`). Golden file `bedrock_clocks/tests/golden/b135b_clocks.rs`.

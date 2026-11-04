@@ -2,12 +2,17 @@
 
 use core::fmt;
 
+use exact_units::prefix::{Mega, Milli, Rational};
+use exact_units::units::{Hertz, Ratio};
+use exact_units::{Exact, Rounding};
+
 use super::config::{
-    Config, HseMode, Ker, Line, Package, Periph, PllSource, Supply, SysSource, TempRange, Vos,
+    Config, Fracn, Ker, Line, Package, Periph, Pll, PllSource, SteerPpm, Supply, SysSource,
+    TempRange, Vos,
 };
 use super::limits::{self, PerVos, Range};
+use super::regs::muxes;
 use super::tree::{self, Tree};
-use crate::ratio::{Hz, Ratio};
 use crate::source::Source;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -38,14 +43,6 @@ impl fmt::Display for Finding {
         }
         Ok(())
     }
-}
-
-/// A FRACN steering range turned into register values, both ends included.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct FracnSpan {
-    pub nominal: u16,
-    pub min: u16,
-    pub max: u16,
 }
 
 struct Ctx<'a> {
@@ -81,7 +78,7 @@ impl Ctx<'_> {
         self.push(Severity::Warning, key, message, Some(source));
     }
 
-    fn in_range(&mut self, key: &str, what: &str, f: Hz, r: &Range) {
+    fn in_range(&mut self, key: &str, what: &str, f: Exact<Hertz>, r: &Range) {
         if f < r.min || f > r.max {
             self.error(
                 key,
@@ -91,7 +88,7 @@ impl Ctx<'_> {
         }
     }
 
-    fn at_most(&mut self, key: &str, what: &str, f: Hz, lim: &PerVos, vos: Vos) {
+    fn at_most(&mut self, key: &str, what: &str, f: Exact<Hertz>, lim: &PerVos, vos: Vos) {
         let max = lim.max[vos.idx()];
         if f > max {
             self.error(
@@ -103,31 +100,23 @@ impl Ctx<'_> {
     }
 }
 
-/// Ratios D1CPRE and HPRE can divide by (RM §8.7.7: no ÷32).
-pub const HPRE_RATIOS: [u16; 9] = [1, 2, 4, 8, 16, 64, 128, 256, 512];
-/// Ratios the APB prescalers can divide by (RM §8.7.7-8.7.9).
-pub const PPRE_RATIOS: [u8; 5] = [1, 2, 4, 8, 16];
-
-/// FRACN at the ends of a steer range: the multiplier N + FRACN/8192 scaled by (1 + ppm/10⁶), rounded inwards so
-/// the end stays inside the range. `None` when the PLL has no FRACN or no steer range.
-pub fn fracn_span(
-    n: u16,
-    fracn: Option<u16>,
-    steer: Option<super::config::SteerPpm>,
-) -> Option<(i64, i64, u16)> {
-    let (f, s) = (fracn?, steer?);
-    let total = n as i128 * 8192 + f as i128; // the multiplier in 1/8192 steps
-    // total·(1 + ppm/1e6) - n·8192, in FRACN steps
-    let end = |ppm: i32, up: bool| -> i64 {
-        let num = total * (1_000_000 + ppm as i128);
-        let q = if up {
-            num.div_euclid(1_000_000) // round towards the nominal: down for the top end
-        } else {
-            -((-num).div_euclid(1_000_000)) // ceil for the bottom end
-        };
-        (q - n as i128 * 8192) as i64
+/// FRACN at the ends of a steer range: the multiplier N + FRACN/8192 scaled by (1 + ppm), in FRACN steps, rounded
+/// inwards (up at the bottom end, down at the top) so the end stays inside the range. `None` when the PLL has no
+/// FRACN or no steer range.
+pub fn fracn_span(p: &Pll) -> Option<(i32, i32)> {
+    // integer mode has nothing to steer
+    p.fracn?;
+    let (steer, mult) = (p.steer?, p.multiplier()?);
+    let n = Exact::from_fixed(p.n)?;
+    let end = |ppm, r| {
+        let scale = (Exact::<Ratio>::from_fixed(ppm)? + Exact::int(1))?;
+        ((mult * scale.get())? - n)?.to_rounded::<Rational<1, 8192>, i32>(r)
     };
-    Some((end(s.min, false), end(s.max, true), f))
+    let SteerPpm { min, max } = steer;
+    Some((
+        end(min, Rounding::Ceil)?.get(),
+        end(max, Rounding::Floor)?.get(),
+    ))
 }
 
 /// Runs every check. Errors and warnings in one list, errors first.
@@ -146,13 +135,12 @@ pub fn check(cfg: &Config) -> Vec<Finding> {
     // the same frequency checks at both ends of every steer range
     for (i, p) in cfg.pll.iter().enumerate() {
         let Some(p) = p else { continue };
-        let Some((lo, hi, _)) = fracn_span(p.n, p.fracn, p.steer) else {
+        let (Some((lo, hi)), Some(s)) = (fracn_span(p), p.steer) else {
             continue;
         };
         let key = format!("pll{}.steer", i + 1);
-        let s = p.steer.unwrap();
-        for (ppm, fr) in [(s.min, lo), (s.max, hi)] {
-            if !(1..=limits::FRACN_MAX as i64).contains(&fr) {
+        for (ppm, fr) in [(s.min.get(), lo), (s.max.get(), hi)] {
+            let Some(f) = u16::try_from(fr).ok().and_then(|f| Fracn::try_new(f).ok()) else {
                 cx.at.clear();
                 cx.error(
                     key.as_str(),
@@ -163,10 +151,10 @@ pub fn check(cfg: &Config) -> Vec<Finding> {
                     limits::FRACN_SRC,
                 );
                 continue;
-            }
+            };
             let mut c2 = cfg.clone();
             if let Some(pp) = c2.pll[i].as_mut() {
-                pp.fracn = Some(fr as u16);
+                pp.fracn = Some(f);
             }
             cx.at = format!(
                 " (at the {ppm:+} ppm steer end of PLL{}, FRACN {fr})",
@@ -221,17 +209,17 @@ fn structure(cx: &mut Ctx) {
             Supply::SmpsLdo(_) | Supply::SmpsExternalLdo(_) => "smps-ldo",
             Supply::Bypass | Supply::SmpsExternalBypass(_) => "bypass",
         };
-        let min = limits::VOS0_VDD_MIN_MV
+        let min = limits::VOS0_VDD_MIN
             .iter()
             .find(|(k, _)| *k == kind)
             .map(|(_, v)| *v)
             .unwrap();
-        if cfg.vdd_mv < min {
+        if cfg.vdd < min {
             cx.error(
                 "vdd",
                 format!(
-                    "VOS0 with a {kind} supply needs VDD ≥ {} mV, the board has {} mV",
-                    min, cfg.vdd_mv
+                    "VOS0 with a {kind} supply needs VDD ≥ {min}, the board has {}",
+                    cfg.vdd
                 ),
                 limits::VOS0_TJ_SRC,
             );
@@ -278,13 +266,10 @@ fn structure(cx: &mut Ctx) {
         );
     }
     // ES0491 Rev 9 2.16.1: WWDG not functional below 2.7 V at VOS0/VOS1, no workaround
-    if cfg.vdd_mv < 2700 && cfg.vos <= Vos::Vos1 {
+    if cfg.vdd < Exact::new_in::<Milli>(2700, 1) && cfg.vos <= Vos::Vos1 {
         cx.warn(
             "vdd",
-            format!(
-                "the WWDG doesn't work at {} mV with {:?}",
-                cfg.vdd_mv, cfg.vos
-            ),
+            format!("the WWDG doesn't work at {} with {:?}", cfg.vdd, cfg.vos),
             Source::Es0491 { erratum: "2.16.1" },
         );
     }
@@ -292,16 +277,6 @@ fn structure(cx: &mut Ctx) {
     // oscillators
     if let Some(h) = cfg.hse {
         cx.in_range("hse.freq", "HSE", h.freq, &limits::HSE);
-        let _ = h.mode == HseMode::Bypass;
-    }
-    if let Some(d) = cfg.hsi_div
-        && !matches!(d, 1 | 2 | 4 | 8)
-    {
-        cx.error(
-            "hsi.div",
-            format!("HSIDIV ÷{d} doesn't exist (1, 2, 4, 8)"),
-            limits::HSI_SRC,
-        );
     }
     let src_on = match cfg.pll_source {
         PllSource::Hse => cfg.hse.is_some(),
@@ -323,24 +298,8 @@ fn structure(cx: &mut Ctx) {
     for (i, p) in cfg.pll.iter().enumerate() {
         let Some(p) = p else { continue };
         let k = |f: &str| format!("pll{}.{f}", i + 1);
-        let (lo, hi, src) = limits::DIVM;
-        if !(lo..=hi).contains(&(p.m as u32)) {
-            cx.error(k("m"), format!("DIVM ÷{} outside {lo}..={hi}", p.m), src);
-        }
-        let (lo, hi, src) = limits::DIVN;
-        if !(lo..=hi).contains(&(p.n as u32)) {
-            cx.error(k("n"), format!("DIVN ×{} outside {lo}..={hi}", p.n), src);
-        }
-        for (name, v) in [("p", p.p), ("q", p.q), ("r", p.r)] {
-            let (lo, hi, src) = limits::DIVPQR;
-            if let Some(v) = v
-                && !(lo..=hi).contains(&(v as u32))
-            {
-                cx.error(k(name), format!("÷{v} outside {lo}..={hi}"), src);
-            }
-        }
         if i == 0
-            && let Some(pd) = p.p
+            && let Some(pd) = p.p.map(|d| d.get())
             && pd != 1
             && pd % 2 == 1
         {
@@ -357,19 +316,6 @@ fn structure(cx: &mut Ctx) {
                 limits::FRACN_SRC,
             );
         }
-        match p.fracn {
-            Some(0) => cx.error(
-                k("fracn"),
-                "FRACN 0 is integer mode in hardware (SH_REG = 0): leave fracn out instead".into(),
-                limits::FRACN_SRC,
-            ),
-            Some(f) if f as u32 > limits::FRACN_MAX => cx.error(
-                k("fracn"),
-                format!("FRACN {f} above {}", limits::FRACN_MAX),
-                limits::FRACN_SRC,
-            ),
-            _ => {}
-        }
         if let Some(s) = p.steer {
             if p.fracn.is_none() {
                 cx.error(
@@ -381,38 +327,14 @@ fn structure(cx: &mut Ctx) {
             if s.min > s.max {
                 cx.error(
                     k("steer"),
-                    format!("steer range {}..{} ppm is empty", s.min, s.max),
+                    format!("steer range {}..{} is empty", s.min, s.max),
                     limits::FRACN_SRC,
                 );
             }
         }
     }
 
-    // bus prescalers
     let s = &cfg.sys;
-    for (key, v) in [("sys.d1cpre", s.d1cpre), ("sys.hpre", s.hpre)] {
-        if !HPRE_RATIOS.contains(&v) {
-            cx.error(
-                key,
-                format!("÷{v} doesn't exist (1, 2, 4, 8, 16, 64, 128, 256, 512; no ÷32)"),
-                limits::HPRE_SRC,
-            );
-        }
-    }
-    for (key, v) in [
-        ("sys.d1ppre", s.d1ppre),
-        ("sys.d2ppre1", s.d2ppre1),
-        ("sys.d2ppre2", s.d2ppre2),
-        ("sys.d3ppre", s.d3ppre),
-    ] {
-        if !PPRE_RATIOS.contains(&v) {
-            cx.error(
-                key,
-                format!("÷{v} doesn't exist (1, 2, 4, 8, 16)"),
-                limits::HPRE_SRC,
-            );
-        }
-    }
     if s.source == SysSource::Pll1P && cfg.pll[0].and_then(|p| p.p).is_none() {
         cx.error(
             "sys.source",
@@ -422,50 +344,12 @@ fn structure(cx: &mut Ctx) {
     }
 
     // kernel mux choices (RM §8.7.18-8.7.21)
-    use Ker::*;
-    let k = &cfg.kernel;
-    let allowed: [(&str, Ker, &[Ker]); 15] = [
-        ("kernel.per_ck", k.per_ck, &[HsiKer, CsiKer, Hse, Disabled]),
-        ("kernel.sdmmc", k.sdmmc, &[Pll1Q, Pll2R]),
-        ("kernel.octospi", k.octospi, &[Bus, Pll1Q, Pll2R, PerCk]),
-        ("kernel.fmc", k.fmc, &[Bus, Pll1Q, Pll2R, PerCk]),
-        ("kernel.fdcan", k.fdcan, &[Hse, Pll1Q, Pll2Q, Disabled]),
-        (
-            "kernel.spi45",
-            k.spi45,
-            &[Bus, Pll2Q, Pll3Q, HsiKer, CsiKer, Hse],
-        ),
-        ("kernel.spi123", k.spi123, &[Pll1Q, Pll2P, Pll3P, PerCk]),
-        ("kernel.usb", k.usb, &[Disabled, Pll1Q, Pll3Q, Hsi48]),
-        ("kernel.i2c1235", k.i2c1235, &[Bus, Pll3R, HsiKer, CsiKer]),
-        (
-            "kernel.usart16910",
-            k.usart16910,
-            &[Bus, Pll2Q, Pll3Q, HsiKer, CsiKer, Lse],
-        ),
-        (
-            "kernel.usart234578",
-            k.usart234578,
-            &[Bus, Pll2Q, Pll3Q, HsiKer, CsiKer, Lse],
-        ),
-        (
-            "kernel.spi6",
-            k.spi6,
-            &[Bus, Pll2Q, Pll3Q, HsiKer, CsiKer, Hse],
-        ),
-        ("kernel.adc", k.adc, &[Pll2P, Pll3R, PerCk]),
-        ("kernel.i2c4", k.i2c4, &[Bus, Pll3R, HsiKer, CsiKer]),
-        (
-            "kernel.lpuart1",
-            k.lpuart1,
-            &[Bus, Pll2Q, Pll3Q, HsiKer, CsiKer, Lse],
-        ),
-    ];
-    for (key, v, ok) in allowed {
-        if !ok.contains(&v) {
+    for (key, v, ok) in muxes(&cfg.kernel) {
+        if !ok.iter().any(|(c, _)| *c == v) {
+            let can: Vec<Ker> = ok.iter().map(|(c, _)| *c).collect();
             cx.error(
                 key,
-                format!("this mux can't select {v:?} (it can: {ok:?})"),
+                format!("this mux can't select {v:?} (it can: {can:?})"),
                 limits::MUX_SRC,
             );
         }
@@ -484,6 +368,7 @@ fn pll_ratio_of(cfg: &Config, k: Ker) -> Option<u8> {
         Ker::Pll3R => p(2)?.r,
         _ => None,
     }
+    .map(|d| d.get())
 }
 
 fn mux_of(cfg: &Config, p: Periph) -> Ker {
@@ -651,7 +536,7 @@ fn frequencies(cx: &mut Ctx, t: &Tree) {
         }
         match p {
             Periph::UsbOtgHs => {
-                if f != Hz::mhz(48) {
+                if f != Exact::new_in::<Mega>(48, 1) {
                     cx.error(
                         key,
                         format!("USB needs exactly 48 MHz, got {f}"),
@@ -681,7 +566,7 @@ fn frequencies(cx: &mut Ctx, t: &Tree) {
             }
             Periph::I2c1235 | Periph::I2c4 => {
                 // ES0491 Rev 9 2.18.1: kernel clock ≥ 4 MHz even for Standard mode
-                if f < Hz::mhz(4) {
+                if f < Exact::new_in::<Mega>(4, 1) {
                     cx.warn(
                         key,
                         format!("I2C kernel clock {f} below 4 MHz"),
@@ -691,8 +576,8 @@ fn frequencies(cx: &mut Ctx, t: &Tree) {
                 // ES0491 Rev 9 2.18.4: APB / kernel ratio between 1.5 and 3 can stall after the first byte
                 let apb = if p == Periph::I2c4 { t.pclk4 } else { t.pclk1 };
                 if let Some(apb) = apb {
-                    let r = apb.0.checked_div(f.0).unwrap_or(Ratio::ZERO);
-                    if r > Ratio::new(3, 2) && r < Ratio::int(3) {
+                    let r = (apb / f).map_or(Exact::ZERO, |r| r.as_ratio());
+                    if r > Exact::new(3, 2) && r < Exact::int(3) {
                         cx.warn(
                             key,
                             format!("APB {apb} to I2C kernel {f} is a ratio between 1.5 and 3"),
@@ -714,43 +599,14 @@ fn frequencies(cx: &mut Ctx, t: &Tree) {
         let Some(f) = t.kernel.get(&e.periph).copied().flatten() else {
             continue; // reported above when in use
         };
-        if e.tolerance_ppm == 0 {
-            if f != e.freq {
-                cx.push(
-                    Severity::Error,
-                    key,
-                    format!("{f}, not exactly {}", e.freq),
-                    None,
-                );
-            }
-        } else {
-            // |f - target| ≤ target·tol/1e6
-            let diff =
-                f.0.checked_sub(e.freq.0)
-                    .ok()
-                    .flatten()
-                    .or_else(|| e.freq.0.checked_sub(f.0).ok().flatten());
-            let allowed = e
-                .freq
-                .0
-                .mul_int(e.tolerance_ppm as u128)
-                .and_then(|a| a.div_int(1_000_000));
-            if let (Some(d), Ok(a)) = (diff, allowed)
-                && d > a
-            {
-                cx.push(
-                    Severity::Error,
-                    key,
-                    format!("{f} is off {} by more than {} ppm", e.freq, e.tolerance_ppm),
-                    None,
-                );
-            }
+        if let Err(off) = f.within(e.freq, e.tolerance) {
+            cx.push(Severity::Error, key, off.to_string(), None);
         }
     }
 }
 
 /// The FLASH_ACR wait states for an AXI clock at a VOS (RM Table 16); `None` above the table.
-pub fn flash_wait_states(hclk: Hz, vos: Vos) -> Option<u8> {
+pub fn flash_wait_states(hclk: Exact<Hertz>, vos: Vos) -> Option<u8> {
     limits::FLASH_WS[vos.idx()]
         .iter()
         .position(|top| top.is_some_and(|t| hclk <= t))

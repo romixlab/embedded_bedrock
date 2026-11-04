@@ -6,7 +6,6 @@ description = "Exact STM32 clock planning on the host: the clock tree as exact r
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-
-[dev-dependencies]
-# Field positions of the encoded register words are held to the PAC's register types in a test
+exact_units = { workspace = true, features = ["time", "dimensionless", "electrical"] }
+# Register types and setters for the encoding (host only: the setters aren't const, clocks.rs carries the words)
 stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32h725ig"] }

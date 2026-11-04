@@ -4,7 +4,14 @@
 
 use bedrock_clocks::h72x::emit::{Origin, emit};
 use bedrock_clocks::h72x::*;
-use bedrock_clocks::{Hz, source_hash};
+use bedrock_clocks::source_hash;
+use exact_units::prefix::{Mega, Milli};
+use exact_units::units::Hertz;
+use exact_units::{Exact, Tolerance};
+
+fn mhz(n: i128) -> Exact<Hertz> {
+    Exact::new_in::<Mega>(n, 1)
+}
 
 fn pll(
     m: u8,
@@ -14,26 +21,18 @@ fn pll(
     q: Option<u8>,
     r: Option<u8>,
 ) -> Option<Pll> {
-    Some(Pll {
-        m,
-        n,
-        fracn,
-        p,
-        q,
-        r,
-        steer: None,
-    })
+    Some(Pll::from_ratios(m, n, fracn, p, q, r).unwrap())
 }
 
 fn base() -> Config {
     Config {
         part: Part::parse("STM32H725IGK6").unwrap(),
-        vdd_mv: 3300,
+        vdd: Exact::new_in::<Milli>(3300, 1),
         supply: Supply::DirectSmps,
         vos: Vos::Vos1,
         cpu_boost: false,
         hse: Some(Hse {
-            freq: Hz::mhz(24),
+            freq: mhz(24),
             mode: HseMode::Bypass,
         }),
         hsi_div: None,
@@ -44,12 +43,12 @@ fn base() -> Config {
         pll: [None; 3],
         sys: Sys {
             source: SysSource::Pll1P,
-            d1cpre: 1,
-            hpre: 2,
-            d1ppre: 2,
-            d2ppre1: 2,
-            d2ppre2: 2,
-            d3ppre: 2,
+            d1cpre: Hpre::Div1,
+            hpre: Hpre::Div2,
+            d1ppre: Ppre::Div2,
+            d2ppre1: Ppre::Div2,
+            d2ppre2: Ppre::Div2,
+            d3ppre: Ppre::Div2,
             timpre: false,
         },
         kernel: Kernel {
@@ -63,13 +62,13 @@ fn base() -> Config {
         expect: vec![
             Expect {
                 periph: Periph::UsbOtgHs,
-                freq: Hz::mhz(48),
-                tolerance_ppm: 0,
+                freq: mhz(48),
+                tolerance: Tolerance::EXACT,
             },
             Expect {
                 periph: Periph::Fdcan,
-                freq: Hz::mhz(80),
-                tolerance_ppm: 1,
+                freq: mhz(80),
+                tolerance: Tolerance::ppm(1),
             },
         ],
         allow: Allow::default(),
@@ -85,10 +84,7 @@ fn today() -> Config {
         pll(8, 133, Some(2730), None, Some(5), Some(2)),
         pll(2, 16, None, Some(2), Some(4), Some(4)),
     ];
-    c.pll[0].as_mut().unwrap().steer = Some(SteerPpm {
-        min: -100,
-        max: 100,
-    });
+    c.pll[0].as_mut().unwrap().steer = Some(SteerPpm::symmetric(100));
     c
 }
 
@@ -102,10 +98,7 @@ pub fn planned() -> Config {
         pll(3, 96, None, Some(8), Some(16), Some(16)),
     ];
     for i in 0..2 {
-        c.pll[i].as_mut().unwrap().steer = Some(SteerPpm {
-            min: -100,
-            max: 100,
-        });
+        c.pll[i].as_mut().unwrap().steer = Some(SteerPpm::symmetric(100));
     }
     c
 }
@@ -136,21 +129,21 @@ fn planned_tree_is_clean_and_exact() {
     let p = plan(&c).unwrap_or_else(|f| panic!("{f:#?}"));
     assert!(p.warnings.is_empty(), "{:#?}", p.warnings);
     let t = &p.tree;
-    assert_eq!(t.sys_ck, Some(Hz::mhz(398)));
-    assert_eq!(t.kernel[&Periph::UsbOtgHs], Some(Hz::mhz(48)));
+    assert_eq!(t.sys_ck, Some(mhz(398)));
+    assert_eq!(t.kernel[&Periph::UsbOtgHs], Some(mhz(48)));
     assert_eq!(
         t.kernel[&Periph::Fdcan].unwrap().to_string(),
         "79.99998046875 MHz"
     );
     // flash: AXI 199 MHz at VOS1 is 2 wait states (RM0468 Table 16)
-    assert_eq!(p.regs.flash_acr, 0x22);
+    assert_eq!(p.regs.flash_acr.0, 0x22);
     // PLL1 DIVR: DIVN 98, DIVP 1 (÷2), DIVQ 7 (÷8), DIVR 0 (off)
-    assert_eq!(p.regs.plldivr[0], 98 | (1 << 9) | (7 << 16));
-    assert_eq!(p.regs.pllfracr[0], 4096 << 3);
+    assert_eq!(p.regs.plldivr[0].0, 98 | (1 << 9) | (7 << 16));
+    assert_eq!(p.regs.pllfracr[0].0, 4096 << 3);
     // VOS1 is 0b11 in PWR_D3CR
-    assert_eq!(p.regs.pwr_d3cr_vos, 0b11 << 14);
+    assert_eq!(p.regs.pwr_d3cr_vos.0, 0b11 << 14);
     // direct SMPS: SDEN only, bit 6 at its reset value
-    assert_eq!(p.regs.pwr_cr3, 0x44);
+    assert_eq!(p.regs.pwr_cr3.0, 0x44);
 }
 
 #[test]
@@ -188,12 +181,24 @@ fn golden_clocks_rs() {
 #[test]
 fn findings_name_key_value_and_source() {
     let mut c = planned();
-    c.pll[0].as_mut().unwrap().n = 110; // VCO 8 MHz × 110.5 = 884 MHz
+    c.pll[0].as_mut().unwrap().n = divn(110).unwrap(); // VCO 8 MHz × 110.5 = 884 MHz
     let f = check(&c);
     let vco = f.iter().find(|f| f.key == "pll1.n").expect("a VCO finding");
     assert_eq!(
         vco.to_string(),
         "error: pll1.n: PLL1 VCO (wide) 884 MHz outside 192 MHz..=836 MHz [RM0468 Rev 3 §8.7.11 p.381]"
+    );
+    // a target outside its tolerance names both values, the exact error and the tolerance
+    let mut c = planned();
+    c.expect[1].tolerance = Tolerance::ppb(100);
+    let off = check(&c);
+    let off = off
+        .iter()
+        .find(|f| f.key == "expect.fdcan")
+        .expect("an FDCAN finding");
+    assert_eq!(
+        off.to_string(),
+        "error: expect.fdcan: 79.99998046875 MHz is -0.244140625 ppm off 80 MHz, outside ±0.1 ppm"
     );
     let mut c = planned();
     c.cpu_boost = true;
@@ -203,7 +208,7 @@ fn findings_name_key_value_and_source() {
             .any(|f| f.key == "cpu_boost" && f.severity == Severity::Error)
     );
     let mut c = planned();
-    c.pll[0].as_mut().unwrap().p = Some(3);
+    c.pll[0].as_mut().unwrap().p = Some(divpqr("p", 3).unwrap());
     assert!(
         check(&c)
             .iter()
@@ -218,7 +223,7 @@ fn findings_name_key_value_and_source() {
 #[test]
 fn steer_end_outside_fracn_is_refused() {
     let mut c = planned();
-    c.pll[0].as_mut().unwrap().fracn = Some(50); // -100 ppm is ~82 steps below
+    c.pll[0].as_mut().unwrap().fracn = Some(fracn(50).unwrap()); // -100 ppm is ~82 steps below
     let f = check(&c);
     assert!(
         f.iter()
@@ -240,7 +245,7 @@ fn field_positions_match_the_pac() {
 
     let mut cr3 = pr::Cr3(0x40);
     cr3.set_sden(true);
-    assert_eq!(cr3.0, r.pwr_cr3);
+    assert_eq!(cr3.0, r.pwr_cr3.0);
     let mut cr3 = pr::Cr3(0x40);
     cr3.set_sden(true);
     cr3.set_ldoen(true);
@@ -248,11 +253,11 @@ fn field_positions_match_the_pac() {
     cr3.set_sdlevel(pv::Sdlevel::from_bits(0b10));
     assert_eq!(
         cr3.0,
-        bedrock_clocks::h72x::regs::pwr_cr3(Supply::SmpsExternalLdo(SmpsLevel::V2_5))
+        bedrock_clocks::h72x::regs::pwr_cr3(Supply::SmpsExternalLdo(SmpsLevel::V2_5)).0
     );
     let mut cr3 = pr::Cr3(0x40);
     cr3.set_bypass(true);
-    assert_eq!(cr3.0, bedrock_clocks::h72x::regs::pwr_cr3(Supply::Bypass));
+    assert_eq!(cr3.0, bedrock_clocks::h72x::regs::pwr_cr3(Supply::Bypass).0);
 
     for (v, bits) in [
         (Vos::Vos0, 0),
@@ -262,30 +267,30 @@ fn field_positions_match_the_pac() {
     ] {
         let mut d3 = pr::D3cr(0);
         d3.set_vos(pv::Vos::from_bits(bits));
-        assert_eq!(d3.0, bedrock_clocks::h72x::regs::vos_bits(v));
+        assert_eq!(d3.0, bedrock_clocks::h72x::regs::vos_bits(v).0);
     }
 
     let mut acr = fr::Acr(0);
     acr.set_latency(2);
     acr.set_wrhighfreq(2);
-    assert_eq!(acr.0, r.flash_acr);
+    assert_eq!(acr.0, r.flash_acr.0);
 
     let mut cr = rr::Cr(0);
     cr.set_hseon(true);
     cr.set_hsebyp(true);
-    assert_eq!(cr.0, r.rcc_cr_osc);
+    assert_eq!(cr.0, r.rcc_cr_osc.0);
     let mut cr = rr::Cr(0);
     for i in 0..3 {
         cr.set_pllon(i, true);
     }
-    assert_eq!(cr.0, r.rcc_cr_pll_on);
+    assert_eq!(cr.0, r.rcc_cr_pll_on.0);
     let mut cr = rr::Cr(0);
     cr.set_hsion(true);
     cr.set_hsidiv(rv::Hsidiv::from_bits(2));
     cr.set_csion(true);
     cr.set_hsi48on(true);
     let mut c2 = planned();
-    c2.hsi_div = Some(4);
+    c2.hsi_div = Some(HsiDiv::Div4);
     c2.csi = true;
     c2.hsi48 = true;
     c2.hse = None;
@@ -293,21 +298,22 @@ fn field_positions_match_the_pac() {
     // HSI 16 MHz ÷ 8 = 2 MHz refs; the targets and steering are about HSE, so drop them here
     c2.expect.clear();
     for p in c2.pll.iter_mut().flatten() {
-        p.m = 8;
+        p.m = divm(8).unwrap();
         p.steer = None;
     }
     let p3 = c2.pll[2].as_mut().unwrap();
-    p3.n = 96; // 192 MHz VCO
-    (p3.p, p3.q, p3.r) = (Some(2), Some(4), Some(4));
+    p3.n = divn(96).unwrap(); // 192 MHz VCO
+    let d = |v| Some(divpqr("p", v).unwrap());
+    (p3.p, p3.q, p3.r) = (d(2), d(4), d(4));
     let p2 = plan(&c2).unwrap_or_else(|f| panic!("{f:#?}"));
-    assert_eq!(cr.0, p2.regs.rcc_cr_osc);
+    assert_eq!(cr.0, p2.regs.rcc_cr_osc.0);
 
     let mut ck = rr::Pllckselr(0);
     ck.set_pllsrc(rv::Pllsrc::from_bits(2));
     ck.set_divm(0, rv::Pllm::from_bits(3));
     ck.set_divm(1, rv::Pllm::from_bits(5));
     ck.set_divm(2, rv::Pllm::from_bits(3));
-    assert_eq!(ck.0, r.pllckselr);
+    assert_eq!(ck.0, r.pllckselr.0);
 
     let mut cfg = rr::Pllcfgr(0);
     for (i, frac, rge, pen, qen, ren) in [
@@ -322,49 +328,49 @@ fn field_positions_match_the_pac() {
         cfg.set_divqen(i, qen);
         cfg.set_divren(i, ren);
     }
-    assert_eq!(cfg.0, r.pllcfgr);
+    assert_eq!(cfg.0, r.pllcfgr.0);
 
     let mut d = rr::Plldivr(0);
     d.set_plln(rv::Plln::from_bits(98));
     d.set_pllp(rv::Plldiv::from_bits(1));
     d.set_pllq(rv::Plldiv::from_bits(7));
-    assert_eq!(d.0, r.plldivr[0]);
+    assert_eq!(d.0, r.plldivr[0].0);
     let mut f = rr::Pllfracr(0);
     f.set_fracn(4096);
-    assert_eq!(f.0, r.pllfracr[0]);
+    assert_eq!(f.0, r.pllfracr[0].0);
 
     let mut cfgr = rr::Cfgr(0);
     cfgr.set_sw(rv::Sw::from_bits(3));
-    assert_eq!(cfgr.0, r.cfgr);
+    assert_eq!(cfgr.0, r.cfgr.0);
     let mut d1 = rr::D1cfgr(0);
     d1.set_d1cpre(rv::Hpre::from_bits(0));
     d1.set_hpre(rv::Hpre::from_bits(8));
     d1.set_d1ppre(rv::Ppre::from_bits(4));
-    assert_eq!(d1.0, r.d1cfgr);
+    assert_eq!(d1.0, r.d1cfgr.0);
     let mut d2 = rr::D2cfgr(0);
     d2.set_d2ppre1(rv::Ppre::from_bits(4));
     d2.set_d2ppre2(rv::Ppre::from_bits(4));
-    assert_eq!(d2.0, r.d2cfgr);
+    assert_eq!(d2.0, r.d2cfgr.0);
     let mut d3 = rr::D3cfgr(0);
     d3.set_d3ppre(rv::Ppre::from_bits(4));
-    assert_eq!(d3.0, r.d3cfgr);
+    assert_eq!(d3.0, r.d3cfgr.0);
 
     let mut k1 = rr::D1ccipr(0);
     k1.set_sdmmcsel(rv::Sdmmcsel::from_bits(1));
-    assert_eq!(k1.0, r.d1ccipr);
+    assert_eq!(k1.0, r.d1ccipr.0);
     let mut k2 = rr::D2ccip1r(0);
     k2.set_fdcansel(rv::Fdcansel::from_bits(2));
-    assert_eq!(k2.0, r.d2ccip1r);
+    assert_eq!(k2.0, r.d2ccip1r.0);
     let mut k3 = rr::D2ccip2r(0);
     k3.set_usbsel(rv::Usbsel::from_bits(2));
-    assert_eq!(k3.0, r.d2ccip2r);
+    assert_eq!(k3.0, r.d2ccip2r.0);
     let mut k4 = rr::D3ccipr(0);
     k4.set_adcsel(rv::Adcsel::from_bits(1));
-    assert_eq!(k4.0, r.d3ccipr);
+    assert_eq!(k4.0, r.d3ccipr.0);
 
     // every other mux field once, at a non-zero value
     let mut c3 = planned();
-    c3.hsi_div = Some(1);
+    c3.hsi_div = Some(HsiDiv::Div1);
     c3.csi = true;
     c3.kernel = Kernel {
         per_ck: Ker::Hse,
@@ -386,22 +392,62 @@ fn field_positions_match_the_pac() {
     k1.set_octospisel(rv::Fmcsel::from_bits(1));
     k1.set_fmcsel(rv::Fmcsel::from_bits(3));
     k1.set_sdmmcsel(rv::Sdmmcsel::from_bits(1));
-    assert_eq!(k1.0, p3.regs.d1ccipr);
+    assert_eq!(k1.0, p3.regs.d1ccipr.0);
     let mut k2 = rr::D2ccip1r(0);
     k2.set_spi45sel(rv::Spi45sel::from_bits(5));
     k2.set_spi123sel(rv::Saisel::from_bits(4));
     k2.set_fdcansel(rv::Fdcansel::from_bits(2));
-    assert_eq!(k2.0, p3.regs.d2ccip1r);
+    assert_eq!(k2.0, p3.regs.d2ccip1r.0);
     let mut k3 = rr::D2ccip2r(0);
     k3.set_i2c1235sel(rv::I2c1235sel::from_bits(3));
     k3.set_usart16910sel(rv::Usart16910sel::from_bits(2));
     k3.set_usart234578sel(rv::Usart234578sel::from_bits(4));
     k3.set_usbsel(rv::Usbsel::from_bits(2));
-    assert_eq!(k3.0, p3.regs.d2ccip2r);
+    assert_eq!(k3.0, p3.regs.d2ccip2r.0);
     let mut k4 = rr::D3ccipr(0);
     k4.set_spi6sel(rv::Spi6sel::from_bits(3));
     k4.set_i2c4sel(rv::I2c4sel::from_bits(1));
     k4.set_lpuart1sel(rv::Lpuartsel::from_bits(1));
     k4.set_adcsel(rv::Adcsel::from_bits(1));
-    assert_eq!(k4.0, p3.regs.d3ccipr);
+    assert_eq!(k4.0, p3.regs.d3ccipr.0);
+}
+
+/// The ranges and sets of RM0468's divider fields are in the knob types: a value the register can't hold doesn't
+/// construct, and the refusal says what is allowed and where that is written.
+#[test]
+fn knobs_refuse_what_their_register_cant_hold() {
+    let text = |e: KnobError| e.to_string();
+    assert_eq!(
+        text(divm(0).unwrap_err()),
+        "m: DIVM ÷0 outside 1..=63 [RM0468 Rev 3 §8.7.10 p.377]"
+    );
+    assert!(divm(63).is_ok() && divm(64).is_err());
+    assert_eq!(
+        text(divn(3).unwrap_err()),
+        "n: DIVN ×3 outside 4..=512 [RM0468 Rev 3 §8.7.12 p.383]"
+    );
+    assert!(divn(512).is_ok() && divn(513).is_err());
+    assert_eq!(
+        text(divpqr("q", 129).unwrap_err()),
+        "q: ÷129 outside 1..=128 [RM0468 Rev 3 §8.7.12 p.382]"
+    );
+    assert!(divpqr("q", 0).is_err() && divpqr("q", 128).is_ok());
+    assert!(text(fracn(0).unwrap_err()).contains("FRACN 0 is integer mode"));
+    assert_eq!(
+        text(fracn(8192).unwrap_err()),
+        "fracn: FRACN 8192 above 8191 [RM0468 Rev 3 §8.5.5 p.328]"
+    );
+    assert!(fracn(8191).is_ok());
+    assert!(text(HsiDiv::from_ratio(3).unwrap_err()).contains("HSIDIV ÷3 doesn't exist"));
+    assert_eq!(HsiDiv::from_ratio(8).unwrap().ratio(), 8);
+    assert!(text(Hpre::from_ratio("hpre", 32).unwrap_err()).contains("no ÷32"));
+    assert_eq!(Hpre::from_ratio("hpre", 512).unwrap(), Hpre::Div512);
+    assert!(text(Ppre::from_ratio("d2ppre1", 32).unwrap_err()).contains("(1, 2, 4, 8, 16)"));
+    // a PLL from plain ratios names the field that is wrong
+    assert_eq!(
+        Pll::from_ratios(3, 99, Some(4096), Some(2), Some(200), None)
+            .unwrap_err()
+            .field,
+        "q"
+    );
 }

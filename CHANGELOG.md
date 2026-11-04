@@ -9,6 +9,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- `bedrock_clocks` works in exact_units types: every frequency, limit and target is an `Exact<Hertz>`, VDD an `Exact<Volt>`, a target's tolerance a `Tolerance`, a steer range `Ppm<i32>` ends; the crate's own `ratio` module (`Ratio`, `Hz`) is gone (RCC-1). **Breaking** for code that builds a `Config`.
+- `bedrock_clocks` knobs are bounded types: `Divm`, `Divn`, `Divpqr` and `Fracn` are exact_units `Fixed` with the RM0468 field range as their `Range` (FRACN in steps of 1/8192, 0 excluded), HSIDIV, D1CPRE / HPRE and the APB prescalers are enums. A value its register can't hold doesn't construct: `divm`, `divn`, `divpqr`, `fracn`, `HsiDiv::from_ratio`, `Hpre::from_ratio`, `Ppre::from_ratio` and `Pll::from_ratios` refuse it with a `KnobError` naming the field, the allowed values and the RM section, the checks the checker ran on plain integers before (RCC-1).
+- `bedrock_clocks::h72x::Regs` holds stm32-metapac register types, built with the PAC's setters (the setters aren't `const`, so `clocks.rs` still carries the words); one mux table serves the checker and the encoder (RCC-3).
+- A target outside its tolerance reads as exact_units' `OffTarget`: `79.99998046875 MHz is -0.244140625 ppm off 80 MHz, outside ±0.1 ppm` (RCC-1).
+
 ## [0.2.49] - 2026-11-04
 
 ### Changed

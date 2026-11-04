@@ -5,19 +5,28 @@
 //! "Just over" is one FRACN step (8 MHz / 8192 = 976.5625 Hz of VCO) above the limit wherever the limit is a whole
 //! number of steps, and 1 MHz on the medium VCO, which has no fractional mode.
 
-use bedrock_clocks::Hz;
 use bedrock_clocks::h72x::check::flash_wait_states;
 use bedrock_clocks::h72x::limits::{self, PerVos};
 use bedrock_clocks::h72x::*;
+use exact_units::Exact;
+use exact_units::prefix::{Mega, Milli, One};
+use exact_units::units::Hertz;
 
 const ALL: [Vos; 4] = [Vos::Vos0, Vos::Vos1, Vos::Vos2, Vos::Vos3];
 
 /// The ref_ck of every PLL here: HSE 24 MHz ÷ 3.
 const REF_HZ: u128 = 8_000_000;
 
-fn hz(h: Hz) -> u128 {
-    assert_eq!(h.0.den(), 1, "{h}");
-    h.0.num()
+fn mhz(n: i128) -> Exact<Hertz> {
+    Exact::new_in::<Mega>(n, 1)
+}
+
+fn hz(h: Exact<Hertz>) -> u128 {
+    h.to::<One, u64>().expect("whole Hz").get().into()
+}
+
+fn int(hz: u128) -> Exact<Hertz> {
+    Exact::int(hz.try_into().unwrap())
 }
 
 fn max(lim: &PerVos, vos: Vos) -> u128 {
@@ -41,27 +50,19 @@ fn n_frac(vco_hz: u128, extra: u128) -> (u16, Option<u16>) {
 /// A PLL from the 8 MHz ref whose VCO is `vco_hz` (+ `extra` steps).
 fn pll_at(vco_hz: u128, extra: u128, p: Option<u8>, q: Option<u8>, r: Option<u8>) -> Option<Pll> {
     let (n, fracn) = n_frac(vco_hz, extra);
-    Some(Pll {
-        m: 3,
-        n,
-        fracn,
-        p,
-        q,
-        r,
-        steer: None,
-    })
+    Some(Pll::from_ratios(3, n, fracn, p, q, r).unwrap())
 }
 
 /// HSE 24 MHz, no PLL, sys_ck = HSE, nothing in use: every limit far away. Tests put one clock at a limit.
 fn base(vos: Vos) -> Config {
     Config {
         part: Part::parse("STM32H725IGK6").unwrap(),
-        vdd_mv: 3300,
+        vdd: Exact::new_in::<Milli>(3300, 1),
         supply: Supply::DirectSmps,
         vos,
         cpu_boost: false,
         hse: Some(Hse {
-            freq: Hz::mhz(24),
+            freq: mhz(24),
             mode: HseMode::Bypass,
         }),
         hsi_div: None,
@@ -92,10 +93,11 @@ fn with_sys(mut c: Config, sys_hz: u128, extra: u128, hpre: u16, ppre: u8) -> Co
         p = if p == 1 { 2 } else { p + 2 };
     }
     c.pll[0] = pll_at(sys_hz * p as u128, extra, Some(p), None, None);
+    let ppre = Ppre::from_ratio("d1ppre", ppre).unwrap();
     c.sys = Sys {
         source: SysSource::Pll1P,
-        d1cpre: 1,
-        hpre,
+        d1cpre: Hpre::Div1,
+        hpre: Hpre::from_ratio("hpre", hpre).unwrap(),
         d1ppre: ppre,
         d2ppre1: ppre,
         d2ppre2: ppre,
@@ -143,9 +145,9 @@ fn a_valid_tree_at_each_vos() {
         let cpu = max(&limits::CPU, vos);
         let c = with_sys(base(vos), cpu, 0, 2, 2);
         let p = clean(&c);
-        assert_eq!(p.tree.cpu, Some(Hz::from_int(cpu)), "{vos:?}");
-        assert_eq!(p.tree.hclk, Some(Hz::from_int(cpu / 2)), "{vos:?}");
-        assert_eq!(p.regs.flash_acr & 0xf, ws, "{vos:?}");
+        assert_eq!(p.tree.cpu, Some(int(cpu)), "{vos:?}");
+        assert_eq!(p.tree.hclk, Some(int(cpu / 2)), "{vos:?}");
+        assert_eq!(p.regs.flash_acr.latency(), ws, "{vos:?}");
         assert_eq!(p.regs.pwr_d3cr_vos, regs::vos_bits(vos));
     }
 }
@@ -208,17 +210,7 @@ fn medium_pll_output_just_over_each_vos_maximum_is_refused() {
         let out = max(&limits::PLL_OUT_MEDIUM, vos);
         let mut c = base(vos);
         // ref 1 MHz (HSE ÷24): medium VCO, integer mode only; VCO = N MHz, P ÷2
-        let pll = |n: u16| {
-            Some(Pll {
-                m: 24,
-                n,
-                fracn: None,
-                p: Some(2),
-                q: None,
-                r: None,
-                steer: None,
-            })
-        };
+        let pll = |n: u16| Some(Pll::from_ratios(24, n, None, Some(2), None, None).unwrap());
         let n = (2 * out / 1_000_000) as u16;
         c.pll[1] = pll(n + 2);
         refused(&c, "pll2.p", &format!("the {vos:?} maximum"));
@@ -226,7 +218,7 @@ fn medium_pll_output_just_over_each_vos_maximum_is_refused() {
         let p = clean(&c);
         let o = p.tree.pll[1].unwrap();
         assert!(!o.wide, "{vos:?}");
-        assert_eq!(o.p, Some(Hz::from_int(out)));
+        assert_eq!(o.p, Some(int(out)));
     }
 }
 
@@ -249,17 +241,17 @@ fn fdcan_kernel_just_over_each_vos_maximum_is_refused() {
 /// there is no setting (the AXI check refuses that clock).
 #[test]
 fn flash_wait_state_bands_at_each_vos() {
-    let step = Hz(bedrock_clocks::Ratio::new(15625, 16));
+    let step = Exact::<Hertz>::new(15625, 16);
     for vos in ALL {
-        let bands: Vec<Hz> = limits::FLASH_WS[vos.idx()]
+        let bands: Vec<Exact<Hertz>> = limits::FLASH_WS[vos.idx()]
             .iter()
             .flatten()
             .copied()
             .collect();
-        assert_eq!(flash_wait_states(Hz::mhz(1), vos), Some(0));
+        assert_eq!(flash_wait_states(mhz(1), vos), Some(0));
         for (ws, &top) in bands.iter().enumerate() {
             assert_eq!(flash_wait_states(top, vos), Some(ws as u8), "{vos:?} {top}");
-            let above = Hz(top.0.checked_add(step.0).unwrap());
+            let above = (top + step).unwrap();
             let next = (ws + 1 < bands.len()).then_some(ws as u8 + 1);
             assert_eq!(flash_wait_states(above, vos), next, "{vos:?} {above}");
         }
@@ -294,7 +286,7 @@ fn vos0_warns_with_the_an5337_numbers_unless_allowed() {
     );
     // VOS0 with a direct SMPS needs VDD ≥ 2.2 V (DS13311 Table 14)
     c.part = Part::parse("STM32H725IGK6").unwrap();
-    c.vdd_mv = 2100;
+    c.vdd = Exact::new_in::<Milli>(2100, 1);
     assert!(!errors_at(&c, "vdd").is_empty());
 }
 
@@ -307,8 +299,8 @@ fn cpu_boost_is_vos0_only_and_behind_its_allow() {
     refused(&c, "cpu_boost", "allow.cpu_boost_tcm_ecc_off");
     c.allow.cpu_boost_tcm_ecc_off = true;
     let p = clean(&c);
-    assert_eq!(p.tree.cpu, Some(Hz::mhz(550)));
-    assert_eq!(p.regs.flash_acr & 0xf, 3);
+    assert_eq!(p.tree.cpu, Some(mhz(550)));
+    assert_eq!(p.regs.flash_acr.latency(), 3);
     // one step over 550 MHz is refused even with the boost
     let over = with_sys(c.clone(), 550_000_000, 1, 2, 4);
     refused(&over, "sys.d1cpre", "with boost");
@@ -330,8 +322,8 @@ fn vos0_is_a_config_edit() {
     c.allow.vos0_lifetime = true;
     let c0 = with_sys(c, 520_000_000, 0, 2, 2);
     let p = clean(&c0);
-    assert_eq!(p.regs.pwr_d3cr_vos, 0);
-    assert_eq!(p.regs.flash_acr & 0xf, 3);
+    assert_eq!(p.regs.pwr_d3cr_vos.0, 0);
+    assert_eq!(p.regs.flash_acr.latency(), 3);
 }
 
 #[test]
@@ -343,22 +335,14 @@ fn every_pll_source() {
         (PllSource::Csi, 1, 100, 1),
     ] {
         let mut c = base(Vos::Vos1);
-        c.hsi_div = Some(1);
+        c.hsi_div = Some(HsiDiv::Div1);
         c.csi = true;
         c.pll_source = src;
         c = with_sys(c, 400_000_000, 0, 2, 2);
-        c.pll[0] = Some(Pll {
-            m,
-            n,
-            fracn: None,
-            p: Some(1),
-            q: None,
-            r: None,
-            steer: None,
-        });
+        c.pll[0] = Some(Pll::from_ratios(m, n, None, Some(1), None, None).unwrap());
         let p = clean(&c);
-        assert_eq!(p.tree.cpu, Some(Hz::mhz(400)), "{src:?}");
-        assert_eq!(p.regs.pllckselr & 0b11, sel, "{src:?}");
+        assert_eq!(p.tree.cpu, Some(mhz(400)), "{src:?}");
+        assert_eq!(p.regs.pllckselr.0 & 0b11, sel, "{src:?}");
     }
     // the source must be on
     let mut c = with_sys(base(Vos::Vos1), 400_000_000, 0, 2, 2);
@@ -369,10 +353,10 @@ fn every_pll_source() {
 #[test]
 fn every_sys_ck_source_without_a_pll() {
     for (src, hsi_div, csi, want) in [
-        (SysSource::Hse, None, false, Hz::mhz(24)),
-        (SysSource::Hsi, Some(1), false, Hz::mhz(64)),
-        (SysSource::Hsi, Some(8), false, Hz::mhz(8)),
-        (SysSource::Csi, None, true, Hz::mhz(4)),
+        (SysSource::Hse, None, false, mhz(24)),
+        (SysSource::Hsi, Some(HsiDiv::Div1), false, mhz(64)),
+        (SysSource::Hsi, Some(HsiDiv::Div8), false, mhz(8)),
+        (SysSource::Csi, None, true, mhz(4)),
     ] {
         for vos in ALL {
             let mut c = base(vos);
@@ -381,16 +365,16 @@ fn every_sys_ck_source_without_a_pll() {
             // APB ÷2: HSI 64 MHz is over VOS3's 42.5 MHz APB maximum at ÷1
             c.sys = Sys {
                 source: src,
-                d1ppre: 2,
-                d2ppre1: 2,
-                d2ppre2: 2,
-                d3ppre: 2,
+                d1ppre: Ppre::Div2,
+                d2ppre1: Ppre::Div2,
+                d2ppre2: Ppre::Div2,
+                d3ppre: Ppre::Div2,
                 ..Sys::default()
             };
             let p = clean(&c);
             assert_eq!(p.tree.sys_ck, Some(want), "{src:?} {vos:?}");
-            let ws = flash_wait_states(want, vos).unwrap() as u32;
-            assert_eq!(p.regs.flash_acr & 0xf, ws, "{src:?} {vos:?}");
+            let ws = flash_wait_states(want, vos).unwrap();
+            assert_eq!(p.regs.flash_acr.latency(), ws, "{src:?} {vos:?}");
         }
     }
 }
@@ -402,30 +386,22 @@ fn integer_and_fractional_modes_wide_and_medium_vco() {
     assert_eq!(c.pll[0].unwrap().fracn, None);
     let p = clean(&c);
     assert!(p.tree.pll[0].unwrap().wide);
-    assert_eq!(p.regs.pllcfgr & 0b11, 0, "FRACEN 0, VCOSEL wide");
+    assert_eq!(p.regs.pllcfgr.0 & 0b11, 0, "FRACEN 0, VCOSEL wide");
     // fractional, wide: 398 MHz = 8 MHz × (99 + 4096/8192) ÷ 2
     let mut c = with_sys(base(Vos::Vos1), 398_000_000, 0, 2, 2);
     c.pll[0] = pll_at(796_000_000, 0, Some(2), None, None);
-    assert_eq!(c.pll[0].unwrap().fracn, Some(4096));
+    assert_eq!(c.pll[0].unwrap().fracn.map(|f| f.get()), Some(4096));
     let p = clean(&c);
-    assert_eq!(p.tree.cpu, Some(Hz::mhz(398)));
-    assert_eq!(p.regs.pllcfgr & 0b11, 0b01, "FRACEN 1, VCOSEL wide");
+    assert_eq!(p.tree.cpu, Some(mhz(398)));
+    assert_eq!(p.regs.pllcfgr.0 & 0b11, 0b01, "FRACEN 1, VCOSEL wide");
     // integer, medium: ref 2 MHz is still wide, 1.5 MHz is medium (RM §8.5.5)
     let mut c = with_sys(base(Vos::Vos1), 200_000_000, 0, 2, 2);
-    c.pll[0] = Some(Pll {
-        m: 16,
-        n: 200,
-        fracn: None,
-        p: Some(1),
-        q: None,
-        r: None,
-        steer: None,
-    });
-    c.pll[0].as_mut().unwrap().p = Some(2); // 1.5 MHz × 200 = 300 MHz VCO, P 150 MHz
+    c.pll[0] = Some(Pll::from_ratios(16, 200, None, Some(1), None, None).unwrap());
+    c.pll[0].as_mut().unwrap().p = Some(divpqr("p", 2).unwrap()); // 1.5 MHz × 200 = 300 MHz VCO, P 150 MHz
     let p = clean(&c);
     assert!(!p.tree.pll[0].unwrap().wide);
-    assert_eq!(p.regs.pllcfgr & 0b11, 0b10, "FRACEN 0, VCOSEL medium");
+    assert_eq!(p.regs.pllcfgr.0 & 0b11, 0b10, "FRACEN 0, VCOSEL medium");
     // fractional on the medium VCO is refused (DS13311 Tables 44, 46)
-    c.pll[0].as_mut().unwrap().fracn = Some(100);
+    c.pll[0].as_mut().unwrap().fracn = Some(fracn(100).unwrap());
     refused(&c, "pll1.fracn", "medium VCO");
 }

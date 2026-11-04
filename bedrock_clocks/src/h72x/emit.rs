@@ -3,11 +3,14 @@
 
 use std::fmt::Write as _;
 
+use exact_units::prefix::One;
+use exact_units::units::Hertz;
+use exact_units::{Exact, Rounding};
+
 use super::check::fracn_span;
 use super::config::{Config, HseMode, Ker, Periph, PllSource, Supply, SysSource, Vos};
 use super::regs::Regs;
 use super::tree::Tree;
-use crate::ratio::{Hz, Ratio};
 
 /// Where the config came from, for the generated header.
 pub struct Origin<'a> {
@@ -21,25 +24,25 @@ fn hex(v: u32) -> String {
     format!("0x{:04X}_{:04X}", v >> 16, v & 0xFFFF)
 }
 
-fn ratio_of(h: Hz) -> Ratio {
-    h.0
-}
-
-/// `Fixed<Hertz, Rational<1, D>, u64>` const for an exact frequency.
-fn fixed(name: &str, h: Hz, doc: &str, out: &mut String) {
-    let r = ratio_of(h);
+/// `Fixed<Hertz, Rational<1, D>, u64>` const for an exact frequency: D is its denominator in lowest terms, so the
+/// `Fixed` holds it exactly.
+fn fixed(name: &str, h: Exact<Hertz>, doc: &str, out: &mut String) {
+    let r = h.get();
+    let floor = h
+        .to_rounded::<One, u32>(Rounding::Floor)
+        .expect("a clock fits u32 Hz");
     let _ = writeln!(out, "/// {doc}: {h}");
     let _ = writeln!(
         out,
         "pub const {name}: Fixed<Hertz, Rational<1, {}>, u64> = Fixed::new({});",
-        r.den(),
-        r.num()
+        r.denom(),
+        r.numer()
     );
     let _ = writeln!(
         out,
         "/// {doc}, rounded down to whole Hz (lossy, for drivers that take integer Hz)"
     );
-    let _ = writeln!(out, "pub const {name}_HZ_FLOOR: u32 = {};", r.floor());
+    let _ = writeln!(out, "pub const {name}_HZ_FLOOR: u32 = {};", floor.get());
 }
 
 fn supply_text(s: Supply) -> &'static str {
@@ -121,7 +124,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         o,
         "// sys_ck {sys} from {from}, {}, flash {} wait states.",
         format!("{:?}", cfg.vos).to_uppercase(),
-        r.flash_acr & 0xF
+        r.flash_acr.latency()
     );
     o.push('\n');
     o.push_str("#![allow(dead_code)]\n\n");
@@ -135,7 +138,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         "/// PWR_CR3 low byte: {} (RM0468 Table 30), written once after POR",
         supply_text(cfg.supply)
     );
-    let _ = writeln!(o, "pub const PWR_CR3: u32 = {};", hex(r.pwr_cr3));
+    let _ = writeln!(o, "pub const PWR_CR3: u32 = {};", hex(r.pwr_cr3.0));
     let vos_field = match cfg.vos {
         Vos::Vos0 => 0,
         Vos::Vos1 => 3,
@@ -147,11 +150,15 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         "/// PWR_D3CR VOS={vos_field} ({})",
         format!("{:?}", cfg.vos).to_uppercase()
     );
-    let _ = writeln!(o, "pub const PWR_D3CR_VOS: u32 = {};", hex(r.pwr_d3cr_vos));
+    let _ = writeln!(
+        o,
+        "pub const PWR_D3CR_VOS: u32 = {};",
+        hex(r.pwr_d3cr_vos.0)
+    );
 
     let mut osc = Vec::new();
     if let Some(d) = cfg.hsi_div {
-        osc.push(format!("HSION HSIDIV=÷{d}"));
+        osc.push(format!("HSION HSIDIV=÷{}", d.ratio()));
     }
     if cfg.csi {
         osc.push("CSION".into());
@@ -171,7 +178,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         ));
     }
     let _ = writeln!(o, "/// RCC_CR oscillators: {}", osc.join(" "));
-    let _ = writeln!(o, "pub const RCC_CR_OSC: u32 = {};", hex(r.rcc_cr_osc));
+    let _ = writeln!(o, "pub const RCC_CR_OSC: u32 = {};", hex(r.rcc_cr_osc.0));
     let src = match cfg.pll_source {
         PllSource::Hsi => "HSI",
         PllSource::Csi => "CSI",
@@ -181,10 +188,10 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         .pll
         .iter()
         .enumerate()
-        .map(|(i, p)| format!("DIVM{}={}", i + 1, p.map(|p| p.m).unwrap_or(0)))
+        .map(|(i, p)| format!("DIVM{}={}", i + 1, p.map_or(0, |p| p.m.get())))
         .collect();
     let _ = writeln!(o, "/// RCC_PLLCKSELR: PLLSRC={src} {}", ms.join(" "));
-    let _ = writeln!(o, "pub const RCC_PLLCKSELR: u32 = {};", hex(r.pllckselr));
+    let _ = writeln!(o, "pub const RCC_PLLCKSELR: u32 = {};", hex(r.pllckselr.0));
 
     let mut cfgr_fields = Vec::new();
     for (i, p) in cfg.pll.iter().enumerate() {
@@ -203,12 +210,12 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             "PLL{n} FRACEN={} VCOSEL={} RGE={} DIV{}EN",
             p.fracn.is_some() as u8,
             if po.wide { "wide" } else { "medium" },
-            po.rge,
+            po.rge.to_bits(),
             en.join("/")
         ));
     }
     let _ = writeln!(o, "/// RCC_PLLCFGR: {}", cfgr_fields.join(", "));
-    let _ = writeln!(o, "pub const RCC_PLLCFGR: u32 = {};", hex(r.pllcfgr));
+    let _ = writeln!(o, "pub const RCC_PLLCFGR: u32 = {};", hex(r.pllcfgr.0));
 
     for (i, p) in cfg.pll.iter().enumerate() {
         let n = i + 1;
@@ -217,44 +224,44 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         let input = t.pll_in.expect("checked");
         let frac = p
             .fracn
-            .map(|f| format!(" + FRACN {f}/8192"))
+            .map(|f| format!(" + FRACN {}/8192", f.get()))
             .unwrap_or_default();
         let _ = writeln!(o);
         let _ = writeln!(
             o,
             "/// PLL{n}: {src} {input} ÷ M {} = ref {} (RGE {}), {} VCO × (N {}{frac}) = VCO {}",
-            p.m,
+            p.m.get(),
             po.ref_ck,
-            po.rge,
+            po.rge.to_bits(),
             if po.wide { "wide" } else { "medium" },
-            p.n,
+            p.n.get(),
             po.vco
         );
         let outs: Vec<String> = [("P", p.p, po.p), ("Q", p.q, po.q), ("R", p.r, po.r)]
             .iter()
-            .filter_map(|(name, d, f)| Some(format!("{name} ÷{} = {}", (*d)?, (*f)?)))
+            .filter_map(|(name, d, f)| Some(format!("{name} ÷{} = {}", (*d)?.get(), (*f)?)))
             .collect();
         let _ = writeln!(o, "/// {}", outs.join(", "));
         let fields: Vec<String> = [("DIVR", p.r), ("DIVQ", p.q), ("DIVP", p.p)]
             .iter()
             .map(|(name, d)| match d {
-                Some(d) => format!("{name}{n}={} (÷{d})", d - 1),
+                Some(d) => format!("{name}{n}={} (÷{})", d.get() - 1, d.get()),
                 None => format!("{name}{n}=0 (off)"),
             })
             .collect();
         let _ = writeln!(
             o,
             "pub const RCC_PLL{n}DIVR: u32 = {}; // {} DIVN{n}={} (×{})",
-            hex(r.plldivr[i]),
+            hex(r.plldivr[i].0),
             fields.join(" "),
-            p.n - 1,
-            p.n
+            p.n.get() - 1,
+            p.n.get()
         );
         let _ = writeln!(
             o,
             "pub const RCC_PLL{n}FRACR: u32 = {}; // FRACN{n}={}",
-            hex(r.pllfracr[i]),
-            p.fracn.unwrap_or(0)
+            hex(r.pllfracr[i].0),
+            p.fracn.map_or(0, |f| f.get())
         );
     }
     o.push('\n');
@@ -263,26 +270,29 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
     let _ = writeln!(
         o,
         "/// FLASH_ACR: LATENCY={} WRHIGHFREQ={} for AXI {} at {} (RM0468 Table 16)",
-        r.flash_acr & 0xF,
-        (r.flash_acr >> 4) & 3,
+        r.flash_acr.latency(),
+        r.flash_acr.wrhighfreq(),
         t.hclk.expect("checked"),
         format!("{:?}", cfg.vos).to_uppercase()
     );
-    let _ = writeln!(o, "pub const FLASH_ACR: u32 = {};", hex(r.flash_acr));
+    let _ = writeln!(o, "pub const FLASH_ACR: u32 = {};", hex(r.flash_acr.0));
     let _ = writeln!(
         o,
         "/// RCC_D1CFGR: D1CPRE ÷{} HPRE ÷{} D1PPRE ÷{}",
-        s.d1cpre, s.hpre, s.d1ppre
+        s.d1cpre.ratio(),
+        s.hpre.ratio(),
+        s.d1ppre.ratio()
     );
-    let _ = writeln!(o, "pub const RCC_D1CFGR: u32 = {};", hex(r.d1cfgr));
+    let _ = writeln!(o, "pub const RCC_D1CFGR: u32 = {};", hex(r.d1cfgr.0));
     let _ = writeln!(
         o,
         "/// RCC_D2CFGR: D2PPRE1 ÷{} D2PPRE2 ÷{}",
-        s.d2ppre1, s.d2ppre2
+        s.d2ppre1.ratio(),
+        s.d2ppre2.ratio()
     );
-    let _ = writeln!(o, "pub const RCC_D2CFGR: u32 = {};", hex(r.d2cfgr));
-    let _ = writeln!(o, "/// RCC_D3CFGR: D3PPRE ÷{}", s.d3ppre);
-    let _ = writeln!(o, "pub const RCC_D3CFGR: u32 = {};", hex(r.d3cfgr));
+    let _ = writeln!(o, "pub const RCC_D2CFGR: u32 = {};", hex(r.d2cfgr.0));
+    let _ = writeln!(o, "/// RCC_D3CFGR: D3PPRE ÷{}", s.d3ppre.ratio());
+    let _ = writeln!(o, "pub const RCC_D3CFGR: u32 = {};", hex(r.d3cfgr.0));
     let sw = match s.source {
         SysSource::Hsi => "HSI",
         SysSource::Csi => "CSI",
@@ -290,7 +300,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         SysSource::Pll1P => "PLL1 P",
     };
     let _ = writeln!(o, "/// RCC_CFGR: SW={sw} TIMPRE={}", s.timpre as u8);
-    let _ = writeln!(o, "pub const RCC_CFGR: u32 = {};", hex(r.cfgr));
+    let _ = writeln!(o, "pub const RCC_CFGR: u32 = {};", hex(r.cfgr.0));
 
     let k = &cfg.kernel;
     let _ = writeln!(
@@ -301,7 +311,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         ker(k.octospi),
         ker(k.fmc)
     );
-    let _ = writeln!(o, "pub const RCC_D1CCIPR: u32 = {};", hex(r.d1ccipr));
+    let _ = writeln!(o, "pub const RCC_D1CCIPR: u32 = {};", hex(r.d1ccipr.0));
     let _ = writeln!(
         o,
         "/// RCC_D2CCIP1R: FDCANSEL={} SPI45SEL={} SPI123SEL={}",
@@ -309,7 +319,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         ker(k.spi45),
         ker(k.spi123)
     );
-    let _ = writeln!(o, "pub const RCC_D2CCIP1R: u32 = {};", hex(r.d2ccip1r));
+    let _ = writeln!(o, "pub const RCC_D2CCIP1R: u32 = {};", hex(r.d2ccip1r.0));
     let _ = writeln!(
         o,
         "/// RCC_D2CCIP2R: USBSEL={} I2C1235SEL={} USART16910SEL={} USART234578SEL={}",
@@ -318,7 +328,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         ker(k.usart16910),
         ker(k.usart234578)
     );
-    let _ = writeln!(o, "pub const RCC_D2CCIP2R: u32 = {};", hex(r.d2ccip2r));
+    let _ = writeln!(o, "pub const RCC_D2CCIP2R: u32 = {};", hex(r.d2ccip2r.0));
     let _ = writeln!(
         o,
         "/// RCC_D3CCIPR: SPI6SEL={} ADCSEL={} I2C4SEL={} LPUART1SEL={}",
@@ -327,8 +337,8 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         ker(k.i2c4),
         ker(k.lpuart1)
     );
-    let _ = writeln!(o, "pub const RCC_D3CCIPR: u32 = {};", hex(r.d3ccipr));
-    let off = if r.rcc_cr_off & 1 != 0 {
+    let _ = writeln!(o, "pub const RCC_D3CCIPR: u32 = {};", hex(r.d3ccipr.0));
+    let off = if r.rcc_cr_off.hsion() {
         "HSION"
     } else {
         "none"
@@ -337,13 +347,13 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         o,
         "/// RCC_CR bits cleared at the end (oscillators not used): {off}"
     );
-    let _ = writeln!(o, "pub const RCC_CR_OFF: u32 = {};", hex(r.rcc_cr_off));
+    let _ = writeln!(o, "pub const RCC_CR_OFF: u32 = {};", hex(r.rcc_cr_off.0));
     o.push('\n');
 
     o.push_str("/// What `bedrock_clocks_rt::h72x::apply` writes.\n");
     o.push_str("pub const PLAN: Plan = Plan {\n");
     let pll_on: Vec<String> = (0..3)
-        .filter(|i| r.rcc_cr_pll_on & (1 << (24 + 2 * i)) != 0)
+        .filter(|&i| r.rcc_cr_pll_on.pllon(i))
         .map(|i| format!("PLL{}ON", i + 1))
         .collect();
     for (field, value) in [
@@ -353,7 +363,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
         ("rcc_cr_osc", "RCC_CR_OSC".into()),
         (
             "rcc_cr_pll_on",
-            format!("{}, // {}", hex(r.rcc_cr_pll_on), pll_on.join(" ")),
+            format!("{}, // {}", hex(r.rcc_cr_pll_on.0), pll_on.join(" ")),
         ),
         ("rcc_cr_off", "RCC_CR_OFF".into()),
         ("pllckselr", "RCC_PLLCKSELR".into()),
@@ -377,8 +387,12 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             .collect::<Vec<_>>()
             .join(", ")
     };
-    let _ = writeln!(o, "    plldivr: [{}],", regs3("DIVR", &|i| r.plldivr[i]));
-    let _ = writeln!(o, "    pllfracr: [{}],", regs3("FRACR", &|i| r.pllfracr[i]));
+    let _ = writeln!(o, "    plldivr: [{}],", regs3("DIVR", &|i| r.plldivr[i].0));
+    let _ = writeln!(
+        o,
+        "    pllfracr: [{}],",
+        regs3("FRACR", &|i| r.pllfracr[i].0)
+    );
     for (field, value) in [
         ("cfgr", "RCC_CFGR"),
         ("d1cfgr", "RCC_D1CFGR"),
@@ -436,7 +450,7 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             let target = cfg.expect.iter().find(|e| e.periph == p);
             let mut doc = format!("{p:?} kernel clock");
             if let Some(e) = target {
-                let err = ppm_error(*f, e.freq);
+                let err = error_text(*f, e.freq);
                 let _ = write!(doc, " (target {}, {err})", e.freq);
             }
             fixed(periph_const(p), *f, &doc, &mut o);
@@ -455,26 +469,27 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             );
             any = true;
         }
-        let (min, max) = match fracn_span(p.n, p.fracn, p.steer) {
-            Some((lo, hi, _)) => (lo as u16, hi as u16),
+        let f = f.get();
+        let (min, max) = match fracn_span(p) {
+            // the checker held both ends to 1..=8191
+            Some((lo, hi)) => (lo as u16, hi as u16),
             None => (f, f),
         };
-        let step = po.ref_ck.0.div_int(8192).expect("small");
+        let step = (po.ref_ck / 8192).expect("small");
         // FRACEN low for 2 ref_ck periods, counted in PLLCFGR reads of at least one hclk cycle each (RCC-10)
-        let hclk = t.hclk.expect("checked").0;
-        let hold = hclk
-            .mul_int(2)
-            .and_then(|h| h.checked_div(po.ref_ck.0))
+        let hclk = t.hclk.expect("checked");
+        let hold = ((hclk * 2).expect("small") / po.ref_ck)
+            .and_then(|r| r.as_ratio().to_rounded::<One, u32>(Rounding::Ceil))
             .expect("small")
-            .ceil()
+            .get()
             + 1;
         let _ = writeln!(
             o,
             "/// PLL{}: {} of VCO per FRACN step; steer range {}",
             i + 1,
-            Hz(step),
+            step,
             match p.steer {
-                Some(s) => format!("{:+}..={:+} ppm", s.min, s.max),
+                Some(s) => format!("{:+}..={:+} ppm", s.min.get(), s.max.get()),
                 None => "none (fixed FRACN)".into(),
             }
         );
@@ -483,37 +498,19 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             "pub const PLL{}_FRACN: FracnRange = FracnRange {{\n    pll: {},\n    n: {},\n    nominal: {f},\n    min: {min},\n    max: {max},\n    vco_step_hz_num: {},\n    vco_step_hz_den: {},\n    latch_hold_reads: {hold},\n}};",
             i + 1,
             i + 1,
-            p.n,
-            step.num(),
-            step.den()
+            p.n.get(),
+            step.get().numer(),
+            step.get().denom()
         );
     }
     o
 }
 
-/// Signed error of `f` against `target` in ppm, exact where the decimal terminates: `-0.6103515625 ppm`.
-pub fn ppm_error(f: Hz, target: Hz) -> String {
-    let (sign, d) = match f.0.checked_sub(target.0).ok().flatten() {
-        Some(d) => ("+", d),
-        None => (
-            "-",
-            target
-                .0
-                .checked_sub(f.0)
-                .ok()
-                .flatten()
-                .unwrap_or(Ratio::ZERO),
-        ),
-    };
-    if d.is_zero() {
-        return "exact".into();
-    }
-    let ppm = d.mul_int(1_000_000).and_then(|x| x.checked_div(target.0));
-    match ppm {
-        Ok(p) => match p.exact_decimal() {
-            Some(s) => format!("{sign}{s} ppm"),
-            None => format!("{sign}{:.6} ppm", p.approx_f64()),
-        },
-        Err(_) => "error too large to show".into(),
+/// Signed error of `f` against `target`, exactly: `-0.244140625 ppm`, or `exact`.
+pub fn error_text(f: Exact<Hertz>, target: Exact<Hertz>) -> String {
+    match f.rel_error(target) {
+        Some(e) if e.is_zero() => "exact".into(),
+        Some(e) => e.to_string(),
+        None => "error too large to show".into(),
     }
 }
