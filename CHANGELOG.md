@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.48] - 2026-11-04
+
 ### Changed
 
 - `exact_units` is a git dependency without `rev` (Cargo.lock pins the commit); a commented-out `[patch]` block in the workspace `Cargo.toml` switches to `../exact_units` for local work. The next build needs `cargo update -p exact_units`, and `cargo tree -d` must show one exact_units
