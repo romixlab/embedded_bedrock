@@ -34,9 +34,8 @@ reset` over J-Link, a USB hub downstream reset itself every 0.6 s and the firmwa
 `cnt run` (which halts the core first) came up clean every time. RCC_APBENR1 came back `0x18410504` instead of
 the expected `0x18416504` — USB and SPI2's clock bits missing — with every USB register reading zero and no D+
 pull-up. It hit about one boot in three after a plain `probe-rs reset`; a cold power-up without a debugger
-attached never saw it. The upstream report is at
-`~/git/tpm/prj/P2534-donguru/design/upstream-probe-rs-g0-dbgen.md` (probe-rs's `debug_device_unlock`, affects
-ARMv6-M STM32 parts generally, not fixed upstream yet as of this writing).
+attached never saw it. The upstream report is in our internal design notes (probe-rs's `debug_device_unlock`,
+affects ARMv6-M STM32 parts generally, not fixed upstream yet as of this writing).
 
 **Fix:** use a runner that halts the core before the unlock sequence runs (`cnt run`, or any `probe-rs` flow that
 resets-and-halts instead of reset-while-running) on F0/G0/L0 targets; don't chain a bare `probe-rs reset` after
@@ -177,7 +176,7 @@ lint or test passes on one PC and fails on the next, depending only on which com
 
 **Example:** on 3 Nov 2026 embedded_bedrock's land gate built with the sibling wire_weaver at `c440491e` while the
 lock was made against `a39ddd9`, and another PC's older sibling took exact_units at git HEAD instead of the pinned
-revision, so `--locked` failed there too (BLD-10, P2528#3nov-1235); vb135_fdcan_iso_usb_fw 0.2.8 hit the same.
+revision, so `--locked` failed there too (BLD-10); vb135_fdcan_iso_usb_fw 0.2.8 hit the same.
 
 **Fix:** committed manifests take such crates by git only and `Cargo.lock` pins the commit; bump with
 `cargo update -p CRATE` and commit the lock. Keep co-development explicit and uncommitted: a gitignored

@@ -176,13 +176,13 @@ fn uid(words: [u32; 3]) -> [u8; 12] {
 
 #[test]
 fn rom_serial_on_boards() {
-    // B153A (G0B1) on omarchy-m1, 21 Oct 2026: firmware serial (the UID as 24 hex) 530016000A50315448313520, ROM
+    // B153A (G0B1) on one of our PCs, 21 Oct 2026: firmware serial (the UID as 24 hex) 530016000A50315448313520, ROM
     // DFU serial 204B319B5431
     assert_eq!(
         &rom_serial(&uid([0x0016_0053, 0x5431_500A, 0x2035_3148])),
         b"204B319B5431"
     );
-    // B135 rev B (H725) on omarchy-m1, 21 Oct 2026: `ww dfu stm32 read 0x1FF1E800 12` and `ww dfu stm32 list`
+    // B135 rev B (H725) on one of our PCs, 21 Oct 2026: `ww dfu stm32 read 0x1FF1E800 12` and `ww dfu stm32 list`
     assert_eq!(
         &rom_serial(&uid([0x000F_0009, 0x3431_5102, 0x3436_3338])),
         b"344533413431"

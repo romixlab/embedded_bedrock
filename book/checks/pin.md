@@ -179,7 +179,7 @@ variant's wiring; flash the wrong variant's build onto a board and every pin the
 gets driven as if it were the other board — a feature that's merely absent on one variant can become a feature
 actively driving current into whatever *is* there on that variant instead.
 
-**Example:** rePort's SD-card design (P2424 `sd_card.md`, board record in flash, PLAT-15) chose the opposite of
+**Example:** rePort's SD-card design (internal `sd_card.md` notes, board record in flash, PLAT-15) chose the opposite of
 a build-time feature: the pin map (whether SD lines exist and what they're wired to, `SdPinout`) is read from a
 board record in flash/OTP at run time, so a single binary is safe to flash onto every board — a board with no
 SD rework and a blank record defaults to `SdPinout::B200A` (as built) and keeps its SD-capable lines as plain
@@ -222,7 +222,7 @@ some boards and not others) must not be used just because the firmware *build* s
 has to check, at run time, that *this particular board* actually has the rework, or it ends up asserting a
 feature the board can't physically deliver.
 
-**Example:** rePort's board-record design (P2424 `api_design.md`) gates exactly this: "1.8 V" is refused unless
+**Example:** rePort's board-record design (internal `api_design.md` notes) gates exactly this: "1.8 V" is refused unless
 `HwFeatures::ldo_1v8` in the OTP board record says that board's LDO rework is fitted (on rev A as built, that
 level is actually 3.2 V, not 1.8 V, until rework 3), and the analog rail answers `Unavailable`/`NoPower` unless
 the record says rework 1 (the `+5V0_FLT` supply) is present — the API refuses the request with a typed reason

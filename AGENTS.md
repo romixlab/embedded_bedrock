@@ -49,7 +49,7 @@ IDs per area (`TPL-4`, `DEV-2`, ...). It replaces the README checklists.
 Questions like "what's new" or "what changed since X" are answered from these changelogs, newest sections first
 (the user's version or date as the cutoff), with FEATURES.md for current status.
 
-Pure refactors and typo fixes don't need an entry. The tpm repo's `/sync-repos` reads both files to log progress,
+Pure refactors and typo fixes don't need an entry. Our internal tooling reads both files to log progress,
 so a missing entry means work nobody sees.
 
 ## Layout
@@ -153,7 +153,7 @@ repos.
 - Crate versions live in `scripts/data/versions.toml`; check crates.io before bumping.
 - Firmware conventions the template encodes and every firmware keeps: flip-link, defmt with an explicit buffer
   size and level, `cnt` counters for unexpected events, fault handlers, BOOT pin reachable for the ROM bootloader.
-- Check the errata, always (tpm CLAUDE.md "Firmware: check the errata, always"): template or firmware work on a
+- Check the errata, always (our internal firmware rule, "check the errata, always"): template or firmware work on a
   chip's peripherals, clocks, flash, DMA, low-power modes or boot path reads the chip's errata sheet for the silicon
   revision in use, and for STM32 also http://www.efton.sk/STM32/gotcha/; errata are quoted from the document, not
   from memory. Where to find them per vendor and the errata the template already handles (ES0548 flash prefetch on
@@ -162,8 +162,8 @@ repos.
   review, a lint or a bring-up step could have caught becomes a new entry (next free number of its category,
   severity, `check:` tier, the source repo and FEATURES id in the comment), and the review or bring-up checklist
   gets its ID when it belongs there. Template changes that act on a check name its ID.
-- The build-info format is read by firmware and host tools (RockFace). It changes freely until
-  `~/git/tpm/area/ops/in-use.md` lists it; then follow that line.
+- The build-info format is read by firmware and host tools (RockFace). It changes freely until something else
+  depends on a specific shape of it; then treat it as a stable interface and follow normal compatibility rules.
 
 ## Tests
 
@@ -177,19 +177,19 @@ Conventional Commits with a scope: `feat(template): ...`, `fix(template): ...`, 
 `feat(bedrock): ...`, `docs: ...`, `build: ...`. Short imperative summary, blank line, body with what and why;
 reference feature IDs (`feat(template): fw_info trait in generated firmware (DEV-2)`).
 
-Commit on your own initiative (tpm CLAUDE.md "Commits are free, prod is gated"): work happens on a session branch
-(`tpm work new SLUG`), each finished step is one commit with FEATURES.md and the right CHANGELOG updated in it. When
-the work is done and the user agrees, `tpm land` puts it on main; pushing is the housekeeping timer's job. Anything
+Commit on your own initiative (committing is free, only a release to clients is gated): work happens on its own
+branch, each finished step is one commit with FEATURES.md and the right CHANGELOG updated in it. When
+the work is done and the user agrees, it lands on main; pushing follows automatically. Anything
 that reaches clients (prod deploy, firmware/OTA release, registry publish) still waits for the user's OK.
 
 ## Versions
 
-Landing bumps the version, not each work commit (tpm CLAUDE.md "Landing bumps the version"), so any build from main
+Landing bumps the version, not each work commit, so any build from main
 traces back to a release commit:
-- Session commits add CHANGELOG entries under `[Unreleased]` without bumping. `tpm land` turns them into the next
+- Session commits add CHANGELOG entries under `[Unreleased]` without bumping. Landing turns them into the next
   version's section with the manifest bump in one `release: x.y.z` commit: minor for Added/Changed/Removed/Deprecated,
-  else patch; major only when the owner says so (`tpm land --version`).
-- In a workspace, bump the changed crates by hand on the branch, then `tpm land --no-bump`. Docs-only, CI-only and
+  else patch; major only when the owner says so.
+- In a workspace, bump the changed crates by hand on the branch before landing without a bump. Docs-only, CI-only and
   no-behaviour-change refactors land without a bump.
 - CLIs print version, git SHA and build time in `--version`, e.g. `tool 0.4.2 (a1b2c3d-dirty, built 3 Oct 2026
   18:20)`: a small `build.rs` without extra crates (`git rev-parse --short HEAD`, `-dirty` when

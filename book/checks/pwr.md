@@ -102,7 +102,7 @@ the firmware to react; without measuring it, a fuzz test that assumes "plenty of
 match what the hardware actually provides, and the firmware's power-loss handling is tuned against the wrong
 number.
 
-**Example.** A B129 G0 board measured 60-70 ms of run-on after a supply cut (tpm log, Oct 2026) — long enough to
+**Example.** A B129 G0 board measured 60-70 ms of run-on after a supply cut (internal measurement log, Oct 2026) — long enough to
 matter for in-flight writes, and not a number that could have been guessed from the schematic alone.
 
 **How to check.** Not automated (`bench`): cut the supply under a scope or logic analyser at the moments that

@@ -390,7 +390,7 @@ fn a_point_with_a_large_error_never_locks() {
     assert_eq!(c.state(3_000_001), State::Holdover);
 }
 
-/// The first lock after a long holdover (P2528#21oct-1838): Donguru took 25 s to slew out 250 ms at 1 %; at the
+/// The first lock after a long holdover: Donguru took 25 s to slew out 250 ms at 1 %; at the
 /// acquiring 5 % it is in within 5 s, and shared time never jumps or goes back.
 #[test]
 fn a_large_offset_is_slewed_fast_while_acquiring() {

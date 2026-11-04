@@ -37,7 +37,7 @@ level instead of setting both explicitly.
 firmware tends to emit during init) can overrun it before the host even attaches; a real measurement found 773 of
 1000 init-time log lines lost to exactly this.
 
-**Example.** The template's own conventions call this out, and a tpm log entry (Oct 2026) has the 773/1000
+**Example.** The template's own conventions call this out, and an internal log entry (Oct 2026) has the 773/1000
 measurement that motivated making both settings explicit rather than left at their defaults.
 
 **How to check.** `cfg easy`: both `DEFMT_RTT_BUFFER_SIZE` and `DEFMT_LOG` must be set as explicit env vars in

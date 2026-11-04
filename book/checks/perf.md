@@ -8,8 +8,8 @@ Detail for the `PERF` checks of the [check catalogue](../checks.md).
 a review finding by itself — but it means the next person (including the one who wrote it) has no way to tell
 whether a later change made things worse, or whether the claim was ever true outside a debug build.
 
-**Example:** both sources this check comes from say the same thing in different words. `~/git/tpm/roles/firmware.md`
-(the tpm firmware pack) asks for numbers, not impressions, before a speed or size claim goes into a report.
+**Example:** both sources this check comes from say the same thing in different words. Our internal firmware
+playbook asks for numbers, not impressions, before a speed or size claim goes into a report.
 wire_weaver's own `AGENTS.md` is explicit about the two instruments to use and never mix up: "Measure, don't
 guess. Instruction counts with `examples_mcu/qemu_icount` (bounded `--max-insns`, `--timeout`, trace from QEMU's
 stderr), cycles with DWT `CYCCNT` on real silicon ... Instructions are not cycles: report both as what they are,
@@ -35,8 +35,8 @@ on the M0+)", and `bedrock_sync`'s hot path (`shared`, run every LED tick) has "
 opt-level `z` and `3`" for the common case — 64-bit adds and 32-bit products of chunks up to 32 ms — only
 falling onto a cold path with two `__aeabi_lmul` for a gap longer than that, and a 64-bit divide once a second
 at the steer point, not per tick. The negative case: typec_dongle's `ww_si` unit types cost "~4 / 3.4 KiB" (z/O3)
-for `i128` math alone (`ops::scale_i128`, `i128::checked_pow`, `ops::compare`) — measured in
-`~/git/tpm/prj/P2534-donguru/design/fw-size-2026-10-19.md`, which calls i128 on a Cortex-M0+ "also slow", not
+for `i128` math alone (`ops::scale_i128`, `i128::checked_pow`, `ops::compare`) — measured in our internal
+flash-size investigation notes, which call i128 on a Cortex-M0+ "also slow", not
 just big.
 
 **Fix:** keep the hot path in u32 (or fixed-point chunks sized to stay there, as `bedrock_sync` does); reserve

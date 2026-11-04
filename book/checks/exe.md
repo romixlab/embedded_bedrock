@@ -258,7 +258,7 @@ request-handler dispatch tables where most handlers are simple and synchronous b
 costs flash for its state and poll logic; on a flash-constrained part that adds up across a large handler table even
 though none of these functions ever actually suspend.
 
-**Example.** A fw-size measurement (P2534) found 115 of 127 generated handlers never awaited, and making them plain
+**Example.** A fw-size measurement found 115 of 127 generated handlers never awaited, and making them plain
 synchronous functions (called from the one `async fn` that does the dispatch) saved 17.4 KiB at `opt-level = "s"`.
 
 **How to check.** `src easy`: syntactically walk each `async fn` body for the presence of any `.await` expression;

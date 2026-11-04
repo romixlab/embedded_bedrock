@@ -3,7 +3,7 @@
 This file is the single source of truth for what embedded_bedrock does, what is broken and what is planned, for
 humans and AI agents alike. The changelogs ([template](firmware_template_skill/CHANGELOG.md), [crates](CHANGELOG.md))
 record what changed and when; this file records the current state. It replaces the README checklists and holds the
-device contract from the tpm project notes (P2528, from the vault page Baremetal/Base).
+device contract from our internal project notes.
 
 Last full review: 3 Oct 2026 (commit `0f45039`; template 0.5.0, crates 0.1.0). Template statuses come from its
 changelog, SKILL.md and the tested matrix in `references/frameworks.md`; crate statuses from the code.
@@ -189,7 +189,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   prints its plan, naming every installer script it fetches and runs. Root steps are printed, `--root` runs them,
   `--check` reports what is missing, `--no-probe` leaves the probe out (CI), `--skip TOOL` one step. A root `justfile` with `setup` is now generated for every target
   (RP's `flash-bootsel` moves into it, `cd firmware` with `--wire-weaver`). Built first in nucleo_g0b1re_template
-  (its TPL-10), run there in an Ubuntu 24.04 container; `ww` from git needs wire_weaver P2401#23oct-1313. No git
+  (its TPL-10), run there in an Ubuntu 24.04 container; `ww` from git needs a recent wire_weaver. No git
   hooks step: it comes with the hooks (TPL-37) and chains to the hooks a repository already has.
 - 🧪 **TPL-37 Template suite: the host side next to the firmware** (`--host`, needs `--wire-weaver`; what
   nucleo_g0b1re_template proved): `suite_files()` / `suite_context()` and `scripts/templates/suite/`: a root `justfile`
@@ -395,10 +395,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   c0de:cafe (wire_weaver's default), the analog PA7 button / slide switch documented (no digital button), ROM boot,
   the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0donguru` (passes, with
   `g0cannify` and `g0board` unchanged); `donguru_template` generated from it (session folder for now, no remote yet):
-  `just test`, `just lint`, the firmware build and `just board` pass. Probe: nothing attached on build-1 (29 Oct
+  `just test`, `just lint`, the firmware build and `just board` pass. Probe: nothing attached on one of our PCs (29 Oct
   2026: no USB devices, no probe-rs), so the J-Link or second Donguru on the SBU is still to be found. Hardware (🧪,
   never through the Donguru J-Link): flash, the README's device steps, the hub kept through `boot reboot --updater`
-  into the ROM's DFU, the pin test of a bare board (`--save`); tracked as P2528#29oct-1424.
+  into the ROM's DFU, the pin test of a bare board (`--save`).
 - 🧪 **TPL-63 Board preset `pico2`**: Raspberry Pi Pico 2 (RP2350A, 4 MB W25Q32RV flash) in
   `scripts/data/boards/pico2/`: answers (WireWeaver over its own micro-USB, settings, counters, CLI `pico2`,
   `--pins board`, probe `2e8a:000c` for a Raspberry Pi Debug Probe on J2, the family default), `[pins]` taking GP23
@@ -406,7 +406,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (generic since TPL-48, no preset code needed), BOOTSEL / PICOBOOT boot through TPL-56 (no `--bootloader`: that is
   embassy-boot's A/B scheme, a different thing). Raspberry Pi publishes no Pico 2 PCB/Allegro/KiCad file (board
   layout is officially the same as the original Pico/Pico H, raspberrypi.com Pico-series documentation): the board
-  map geometry is Raspberry Pi's own public Pico (R3) Allegro file (P2624, imported with kicad-cli on omarchy-m1,
+  map geometry is Raspberry Pi's own public Pico (R3) Allegro file (imported with kicad-cli on one of our PCs,
   GPIOn/GPIOn_ADCn nets renamed to GPn), J0's single 40-pad footprint split into J0L/J0R so the connector background
   (`draw_connector`) does not cover the whole board; electrical facts (pin functions, VBUS/SMPS/ADC wiring) come
   from the Pico 2 Datasheet RP-008299-DS-3 instead, cross-checked against it. Matrix entry `rp2350pico2`; generated
@@ -418,7 +418,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   split `NAME: CAPS` (STM32), not RP's `` | `G `` rows or `NAME = PIN_n: CAPS`; `suite/py/src/lib.rs.j2`'s `blink()`
   wrapper was always the multi-line form, which only happens to be what rustfmt wants for a long enough board
   accessor name (`pico2` is short enough that rustfmt collapses it to one line) — now a length check picks the
-  right form. Open hardware notes (parked for Roman, `tpm work park`, never the Donguru J-Link): flashing over
+  right form. Open hardware notes (parked for Roman's review, never the Donguru J-Link): flashing over
   BOOTSEL and the Debug Probe, the README's device steps, the pin test of a bare board (`--save`), the SWD / debug
   connector's physical style (Pico 2's datasheet says it may differ from the R3 board the geometry is taken from).
 - 🧪 **TPL-59 Board preset `b135b`**: B135B FDCAN ISO USB (STM32H725IGK6 TFBGA176+25, 1 MiB single bank, rev B) in
@@ -513,7 +513,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   mode, brightness and identify answered (21 Oct 2026, with the interim 64-bit ease, same curve); the RGB path not
   run on a board yet (B135 next). The template does not generate LED code with it yet.
 - 🧪 **DEV-13 Shared clock crate** (`bedrock_sync`): the local clock disciplined onto UTC (wire_weaver STD-49 host
-  sync, design P2528 `clock-sync.md`). `SharedClock` (HAL-free, host-tested) follows its best source (a locked line
+  sync, design notes `clock-sync.md`). `SharedClock` (HAL-free, host-tested) follows its best source (a locked line
   beats the host), slews to each new steer point at 1 % instead of stepping (steps only from free or beyond 1 s, with
   a `generation` that changes), coasts in holdover after 3 s without points and counts as free after an hour, with an
   error estimate that grows in holdover; an explicit source list (`Sources`, best first, `set_sources`: a source left
@@ -523,7 +523,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   products of chunks up to 32 ms; a gap longer than that takes a cold path with two `__aeabi_lmul`, a steer point
   (once a second) a 64-bit divide. `Oscillator` backend: a chip with a fractional PLL takes the rate in hardware
   (1/64 of each point's rate, unquantised target, clamp without wind-up; tested against a host whose rate lags by its
-  30 s window: a PLL 50 ppm slow converges without overshoot); first user B135B PLL1 FRACN (tpm P2404#21oct-1657),
+  30 s window: a PLL 50 ppm slow converges without overshoot); first user B135B PLL1 FRACN,
   not Donguru's HSI trim (too coarse) nor the RP2350 (no fractional PLL). Feature `embassy`: `Sync` in a `static` on
   `Instant` (`shared_now`, `steer`, `wait_until_shared`); feature `ww-timebase`: `ClockServer`, the `Clock` server
   bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`, `set_sources` /
@@ -536,12 +536,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   and the last noted steerer (`SyncStatus::steerer` / `noted`, names cut to 24 B). Cost on Donguru (release,
   opt-level 3): flash +1552 B (text +1240, rodata +304, data +8), RAM +144 B; frames at opt-level 3 on thumbv6m:
   `ClockServer::steer` 88 -> 120 B, `SharedClock::steer_with` 104 -> 112 B, `sync_status` 104 -> 176 B. Hardware
-  (omarchy-m1, 22 Oct 2026): `ww sync` locks the three boards as before (1.2-1.6 s); wire_weaver's
+  (one of our PCs, 22 Oct 2026): `ww sync` locks the three boards as before (1.2-1.6 s); wire_weaver's
   `two_steerers` example on Donguru and B135: A followed, B noted (answered `Host`, `sync_status` names both) and
   still noted 10 s later, B followed and locked once A stopped (seen by B's host 6.5 s after, its checks come every
   5 s once locked; on the device 3 s quiet plus B's next point).
   Closed-loop test against wire_weaver's `Estimator` (`tests/closed_loop.rs`, simulated USB): a board 250 ms off is
-  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware (omarchy-m1, 21 Oct 2026, `ww sync` with Donguru B153A, rePort B200 and B135B): all three locked within 2 ms after 1.2 s from a fresh start and 2.4 s after 45 s in holdover; LED phase as ww sync estimates it 30 µs to 1.0 ms apart (±1.5-2.5 ms, rePort's and Donguru's ~1.4-1.8 ms round trips); over 5 min Donguru left once on a -2.0 ms residual (±1.2 ms) and was back in 37 s. No logic analyser on this PC: the phase is not measured on the pins.
+  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware (one of our PCs, 21 Oct 2026, `ww sync` with Donguru B153A, rePort B200 and B135B): all three locked within 2 ms after 1.2 s from a fresh start and 2.4 s after 45 s in holdover; LED phase as ww sync estimates it 30 µs to 1.0 ms apart (±1.5-2.5 ms, rePort's and Donguru's ~1.4-1.8 ms round trips); over 5 min Donguru left once on a -2.0 ms residual (±1.2 ms) and was back in 37 s. No logic analyser on this PC: the phase is not measured on the pins.
 - 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath
   or blink at `t mod period` of shared time (UTC), WSPR-style, so boards showing the same mode are in phase with
   nothing passed around (wire_weaver STD-50); `Leds::align` for all LEDs, `Indication::run_with(modes, shared, show)`
@@ -551,7 +551,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   libcall, checked in the disassembly at opt-level `z` and `3`); the cycle start is found with one 64-bit remainder
   only after a mode change or a step of the clock (`generation`). `align` 180 B, `anchor_at` 52 B at `z`. Host
   tests: aligned breath and blink, two devices set at different times agree tick by tick, hand-over to free running,
-  a new generation. Hardware check open: Donguru and rePort breathing in phase on omarchy-m1 (P2528 piece 6).
+  a new generation. Hardware check open: Donguru and rePort breathing in phase on one of our PCs.
 - 🧪 **DEV-15 Common look** (`bedrock_led::look`): what a status LED shows for what it means, named by meaning and
   the same on every board (`OK`, `BUSY`, `WARN`, `FAULT`, `ALERT`, `HEARTBEAT`, `IDENTIFY`, `OFF`; palette
   `colour::{OK, WARN, FAULT, STORAGE}`; `Look::under` for the `ww_indication` mode); every period divides the 3 s
@@ -578,7 +578,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (`Profile::InPlace`, always `Confirmed`, last result `Recovery` after a rescue). Raw RM addresses, no HAL
   dependency (checked against stm32-metapac 21). Decisions host-tested; builds and links for thumbv6m (G0B1) and
   thumbv7em (H725) (`just lint`, a scratch firmware calling every function). Not run on a board through this crate
-  yet: Donguru and B135 run the code it came from; first user nucleo_g0b1re_template's device suite (P2528#23oct-1258g).
+  yet: Donguru and B135 run the code it came from; first user nucleo_g0b1re_template's device suite.
   Not yet: H7A3/7B3 (other RCC offsets, ROM at 0x1FF0_A000), dual-core H745/H755, other families; B135's A/B
   bootloader path (feature `ab`) and its LED codes stay in B135 (`early_with` takes a closure for the code).
 - 🚧 **DEV-17 FDCAN channel crate** (`bedrock_can`): an FDCAN (Bosch M_CAN) channel as `ww_can_bus::Can` without a
@@ -623,7 +623,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   WireWeaver in the build). Tested matrix entries `g0bi` and `g0bigit`.
 - ✅ **BLD-10 WireWeaver pinned by git, no committed sibling patch**: the workspace takes WireWeaver and exact_units
   from git only and Cargo.lock pins the commit, so `--locked` lint and test pass the same on every PC, with no
-  `../wire_weaver` next to the checkout or one at any other commit (P2528#3nov-1235: the committed path patch made
+  `../wire_weaver` next to the checkout or one at any other commit (the committed path patch made
   the lock follow each PC's sibling). Co-development is explicit: `just dev-local` copies
   `.cargo/sibling-patch.toml` to the gitignored `.cargo/dev-local.toml` (included by `.cargo/config.toml`), `just
   dev-git` removes it; bumping is
@@ -747,7 +747,7 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
 - 📋 **MAP-8 Highlight a peripheral**: colour the pins of one function (an SPI, the USB pair) on request, for a
   wiring picture in a docs page.
 - ✅ **MAP-9 `boardmap --version` names the git SHA**: version, SHA (`-dirty`) and build time from a small
-  `build.rs` (AGENTS.md *Versions*), so `tpm install` takes it: `bedrock_board_cli/build.rs`.
+  `build.rs` (AGENTS.md *Versions*), so an installed build can be identified exactly: `bedrock_board_cli/build.rs`.
 - ✅ **MAP-13 `extract --rename` for a vendor's own pin naming**: a whole-string regex rename (`$1` groups,
   repeatable, first match wins) applied to every pad's net and pin right after extraction, before anything else
   sees them. Raspberry Pi's own Pico schematic names its GPIOs `GPIO0`, `GPIO26_ADC0`, ...; the Pico preset's
@@ -783,8 +783,8 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
 `review`, `bench`); the items here track the code and the docs around it.
 
 - 🚧 **LINT-1 Check catalogue and checklists**: [book/checks.md](book/checks.md) (177 checks in 22 categories, each
-  with its source: the repo and FEATURES id of the bug, or the Notion firmware checklist imported into tpm
-  `roles/checklists/firmware.md`), the [review checklist](book/review-checklist.md) and the
+  with its source: the repo and FEATURES id of the bug, or the Notion firmware checklist imported into our
+  internal firmware checklist), the [review checklist](book/review-checklist.md) and the
   [bring-up checklist](book/bringup-checklist.md) condensed from it. Detail pages per category are LINT-7 and LINT-8.
 - ✅ **LINT-2 Check engine** (crate `bedrock_lint`, CLI `bedrock-lint` in `bedrock_lint_cli`): reads a firmware
   crate into a model (`model/`: its `Cargo.toml` and the workspace root's, the `.cargo/config.toml` files cargo
@@ -862,8 +862,8 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   no watchdog anywhere (FLT-7), the template's fault handlers (FLT-2, TPL-78), usb_io_fw's spinning HardFault
   (FLT-1, its PLAT-7) and run-time FUNCSEL switches (PIN-4), one HOST-3 in b135_fw `led::set_mode`, and uncounted
   error branches (CNT-1): LINT-9 works through them (3 Nov 2026). The other `src` checks are LINT-11.
-- ✅ **LINT-11 Boot, supply, flash, clock, errata, external chip, USB and log source checks**: the `src` checks of
-  task P2528#3nov-0512e that LINT-6 doesn't take, one file each in `bedrock_lint/src/checks/` with a fixture under
+- ✅ **LINT-11 Boot, supply, flash, clock, errata, external chip, USB and log source checks**: the `src` checks
+  that LINT-6 doesn't take, one file each in `bedrock_lint/src/checks/` with a fixture under
   `bedrock_lint/tests/fixtures/`: BOOT-1 (ROM jump back not detected), BOOT-2 (H7 supply written blind, H7),
   BOOT-10 (DBP / RTCEN turned off behind the caller), PWR-1 (no BOR level or PVD, STM32), PWR-3 (backup domain
   neither used nor reset, STM32), PWR-4 (RTC source or RCC_BDCR written in a firmware with backup state, embassy
@@ -906,8 +906,8 @@ The clock tree worked out exactly on the host, checked against the reference man
 committed as `clocks.rs` next to a board's `clocks.toml`; at boot the firmware only writes the precomputed register
 words. Every frequency is an exact rational (a PLL with FRACN is ref·(N + FRACN/8192)/(M·P)), every limit names the
 document section it comes from, and a FRACN steering range is checked at both ends. First family: RM0468
-(STM32H723/733, H725/735, H730), first board: B135 rev B. Design notes live in the tpm project folder (P2528
-`design/h7-clock-plan.md`).
+(STM32H723/733, H725/735, H730), first board: B135 rev B. Design notes live in our internal project folder
+(`design/h7-clock-plan.md`).
 
 - 🧪 **RCC-1 H72x clock model and checks** (crate `bedrock_clocks`): every clock, limit and target an exact_units
   `Exact<Hertz>` (VDD `Exact<Volt>`, targets with a `Tolerance`, steer ends `Ppm<i32>`), the dividers bounded
@@ -952,7 +952,7 @@ document section it comes from, and a FRACN steering range is checked at both en
 - 📋 **RCC-8 Embassy path**: an emitted embassy `rcc::Config` checked by `verify` after `embassy_stm32::init`; a fork
   branch with `init_with_clocks` (embassy can't start on clocks already set).
 - 📋 **RCC-9 Flash and boot time measured** against embassy's RCC init for the same tree. Baseline: embassy's init
-  adds 5620 B of `.text` on thumbv7em at opt-level "z", fat LTO (P2528 design note).
+  adds 5620 B of `.text` on thumbv7em at opt-level "z", fat LTO (internal design note).
 - ✅ **RCC-10 B135 rev B on hardware** (bare firmware `vb135_fdcan_iso_usb_fw/dev/b135b_clocks_hwtest`, silicon rev Z,
   REV_ID 0x1001): `apply` Ok and `verify` Ok on all 24 boots, all 21 RCC / PWR / FLASH registers equal the plan words.
   Reset paths: debugger and watchdog reset take the already-set supply path (no `SupplyLocked`), a power-on the write
@@ -963,8 +963,8 @@ document section it comes from, and a FRACN steering range is checked at both en
   against 9.95 MHz, inside the Logic 8's ±50 ppm timebase (Saleae "Time Measurement Error") and the HSE's own tolerance.
   FRACN1 steps in one capture against the same timebase: +1 step 12.29 Hz (plan 12.207), +10 122.18 Hz (plan 122.07),
   +81 988.99 Hz (plan 988.77), with 0.4 Hz drift of the nominal over the 8 s capture as the error bar. USB HS / FDCAN /
-  SDMMC, and USB after the ROM's leave (USBSEL left on HSI48 with HSI48 off), belong to RCC-8. Results: P2528
-  design/h7-clock-plan.md "Hardware test".
+  SDMMC, and USB after the ROM's leave (USBSEL left on HSI48 with HSI48 off), belong to RCC-8. Results: our
+  internal design/h7-clock-plan.md "Hardware test".
 - ✅ **RCC-13 `set_fracn` latch could miss** (found on B135 rev B by RCC-10, fixed by 990395d): FRACEN cleared, FRACR
   written and FRACEN set back to back sometimes left the PLL on the old FRACN while FRACR read back the new one (back to
   back: PLL1 35/40 and 29/40, PLL2 27/40 and 29/40 steps latched). `set_fracn` now reads back each write and holds

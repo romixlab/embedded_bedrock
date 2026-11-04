@@ -115,7 +115,7 @@ refusing to program zeros over zeros, H7 flash words that can only be programmed
 "what does a torn write look like"; that model is different per flash family, and a power-fail test written
 against one family's behaviour can pass cleanly while hiding a real bug on another.
 
-**Example.** chunky_mcu_updater's fuzz harness, and a tpm log entry (Oct 2026) specifically about these per-family
+**Example.** chunky_mcu_updater's fuzz harness, and an internal log entry (Oct 2026) specifically about these per-family
 differences being easy to miss when porting a settings store between chip families.
 
 **How to check.** `test`: a power-cut fuzz harness parameterised per flash family's documented erase/program

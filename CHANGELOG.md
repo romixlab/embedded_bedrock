@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- docs: internal references removed
+
 ## [0.2.50] - 2026-11-05
 
 ### Changed
@@ -54,7 +58,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ### Changed
 
-- `just test-all` (the `tpm land` gate's full run) uses `cargo nextest` instead of four separate `cargo test`
+- `just test-all` (the release gate's full run) uses `cargo nextest` instead of four separate `cargo test`
   invocations, cuts test-binary debug info to `line-tables-only` with `split-debuginfo = "unpacked"`
   (`[profile.test]`), and folds the `bedrock_led` / `bedrock_sync` / `bedrock_rom_boot` extra-feature passes into
   one nextest run (`-p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features pkg/feature,...`) instead of
@@ -63,11 +67,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
   still exercises `bedrock_led` / `bedrock_sync` / `bedrock_rom_boot`'s HAL-free, feature-off build. Doctests still
   run through plain `cargo test --doc` (nextest doesn't run them) for both feature sets.
   Same 234 nextest-run tests and 3 passed doctests (237 total) before and after, verified by `cargo nextest list`
-  and the doctest pass/ignore counts, name for name. Measured on build-1 (14 cores; its global cargo config
+  and the doctest pass/ignore counts, name for name. Measured on one of our PCs (14 cores; its global cargo config
   already set `debug = "line-tables-only"` for `profile.test`, so that part of the win doesn't show here, only
   `split-debuginfo` and the folded feature passes do): clean target dir, 14 jobs, 111.4s/4.07 GB/5.5G →
   113.1s/3.58 GB/4.8G; clean, 8 jobs, 119.9s/2.65 GB/5.5G → 101.5s/2.52 GB/4.8G; warm target dir is ~2-3s and
-  under 0.25 GB either way, before and after. The gate's own learned peak was 19.5 GB at 24 jobs on gpd-omarchy for
+  under 0.25 GB either way, before and after. The gate's own learned peak was 19.5 GB at 24 jobs on another of our PCs for
   only 237 tests that each run in under 0.1s, all in compiling and linking (2026-11-03).
 
 ## [0.2.44] - 2026-11-03
@@ -342,7 +346,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ### Added
 
-- `boardmap --version` names the git SHA and build time, so `tpm install` takes it (MAP-9).
+- `boardmap --version` names the git SHA and build time, so an installed build can be identified exactly (MAP-9).
 
 ### Changed
 
@@ -399,7 +403,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ### Added
 
-- `just test --changed` runs only the workspace crates changed against main and their dependents (`tpm test changed`, nextest's `rdeps()`); plain `just test` runs everything, as `just test-all` does (tpm ops#22oct-2049).
+- `just test --changed` runs only the workspace crates changed against main and their dependents (nextest's `rdeps()`); plain `just test` runs everything, as `just test-all` does.
 
 ## [0.2.11] - 2026-10-22
 

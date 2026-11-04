@@ -93,10 +93,10 @@ path) must reach a `cnt!` call.
 a Cortex-M0+ core that has no hardware divider.
 
 **Why it matters.** Every `%` on M0+ compiles to a software division routine (`__aeabi_uidivmod`-class call); done
-once per byte at any real data rate it dominates the CPU budget — the P2534 measurement below found 100 % CPU at
+once per byte at any real data rate it dominates the CPU budget — the measurement below found 100 % CPU at
 only 580 kB/s on a G0.
 
-**Example.** P2534's `upstream-embassy-dma-ringbuffer-copy` finding is exactly this: embassy's ring-buffer copy
+**Example.** The `upstream-embassy-dma-ringbuffer-copy` finding is exactly this: embassy's ring-buffer copy
 loop, unmodified upstream, doing a per-byte modulo on M0+.
 
 **How to check.** `elf mid`: look for calls into the software divide/modulo runtime (`__aeabi_uidivmod` and

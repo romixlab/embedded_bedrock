@@ -1,4 +1,4 @@
-// tpm firmware pack: errata pokes say which erratum they work around
+// internal firmware playbook: errata pokes say which erratum they work around
 fn init() {
     // errata workaround: the prefetch has to be off on this part
     pac::FLASH.acr().modify(|w| w.set_prften(false));

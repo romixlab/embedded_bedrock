@@ -539,7 +539,7 @@ mod tests {
         let mut clock = SharedClock::default();
         let hub = Steerer {
             id: 11,
-            host: "omarchy-m1",
+            host: "build-host",
             program: "ww hub",
             pid: 4242,
         };

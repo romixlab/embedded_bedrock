@@ -99,7 +99,8 @@ attach:
     probe-rs attach --chip {{ L }}chip{{ R }} --probe {{ L }}probe{{ R }} {{ L }}fw_dir{{ R }}/debug/{{ fw }}
 {% if s.has_cli %}
 
-# Build the `{{ s.cli }}` command line and install it on this PC (with tpm on PATH through tpm install, else cargo install)
+# Build the `{{ s.cli }}` command line and install it on this PC (with an optional internal release-management
+# tool on PATH, install through it; otherwise cargo install)
 [unix]
 install:
     cargo build --profile deploy --locked -p {{ s.cli_crate }}

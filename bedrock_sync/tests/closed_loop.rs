@@ -207,7 +207,7 @@ fn a_board_250_ms_off_slews_in_within_seconds() {
         r.worst_after_us,
         r.max_tick_us
     );
-    // 1 % took 25 s (P2528#21oct-1838); 5 % takes 5 s, plus the fit's first second
+    // 1 % took 25 s; 5 % takes 5 s, plus the fit's first second
     assert!(r.converged_after_us < 8_000_000, "{}", r.converged_after_us);
     assert!(r.max_tick_us <= 10_600, "{}", r.max_tick_us);
 }

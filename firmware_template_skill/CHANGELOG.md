@@ -10,6 +10,8 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- docs: internal references removed (board preset `url` values no longer point at a private hardware repo, comments generalized)
+
 - wire_weaver STD-102 and SRV-56 (ww_si on the exact_units integer kernel, `LinkConfig::new` takes the image facts): `src/ww.rs` passes `server_impl::image_facts()` to `LinkConfig::new` (after the API hash), and the CAN suite client (`client/src/can.rs`) reads a frame time with `to_in::<i128>(Micro, Truncate, Checked)` instead of `to_i128_in`.
 
   Upgrade notes: in `src/ww.rs` `link_config()` add `server_impl::image_facts(),` between `server_impl::api_hash()` and `ww_client_server::COMPACT_VERSION`; firmware code calling `Quantity::to_u32_in`, `to_i32_in`, `to_i128_in`, `to_u32_wrapping_in` or `with_prefix` follows the table in wire_weaver's `ww_si` CHANGELOG (STD-102: `to_in::<T>(prefix, Rounding, Overflow)`, `rescaled_exact`). Needs a wire_weaver with STD-102 and SRV-56 (`cargo update -p wire_weaver -p exact_units`). No answers/options involved, no hardware test needed.

@@ -2,7 +2,7 @@
 
 What to try on hardware when firmware first runs on a board, after a board revision, and before a release. Condensed
 from the [check catalogue](checks.md) (the `bench` and `test` entries); each bracketed ID links to its entry. The
-board side (rails, crystals, DNP parts) is the board bring-up checklist in tpm (`roles/checklists/bringup.md`).
+board side (rails, crystals, DNP parts) is our internal board bring-up checklist.
 
 1. *Silicon:* read the silicon revision fitted and the errata sheet for it [[ERR-1]](checks.md#err-1),
    [[ERR-11]](checks.md#err-11). Check the HAL's chip feature is the part on the board [[CFG-5]](checks.md#cfg-5).

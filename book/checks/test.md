@@ -122,7 +122,7 @@ in point: the fault only appeared once prefetch was turned on (FW-24) and only u
 conditions, which is exactly the signature a naive bisect would chase as "some unrelated commit changed the
 binary's layout" — instead of recognizing the erratum's own description ("the code prefetch may fail upon
 branching and function calls across flash memory banks, when the device operates in dual-bank mode", status N
-on every revision of that part) as the direct explanation. `~/git/tpm/roles/firmware.md` states the general
+on every revision of that part) as the direct explanation. Our internal firmware playbook states the general
 rule this example backs: check the errata sheet for the chip and revision in use before spending bisection time
 on a timing- or layout-sensitive fault.
 
@@ -142,7 +142,7 @@ was innocent the whole time gets worked around or replaced.
 
 **Example:** typec_dongle's FW-62 is this check's source and a worked example of taking the blame back. USB-PD
 GoodCRC retries against a sink were initially suspicious of the sink's FUSB302B, but the actual investigation
-(`~/git/tpm/prj/P2424-report/design/pd-controller-plan.md`) ruled it out methodically: (1) the sink's own log
+(our internal PD-controller design notes) ruled it out methodically: (1) the sink's own log
 showed every retried message's `MessageID` received twice, meaning the sink had the first attempt whole — it
 wasn't losing anything; (2) Donguru's PD task shared the thread-mode executor with its USB server, and embassy
 arms UCPD's RX DMA only inside `receive()`, so a USB server turn across the end of a transmission let the

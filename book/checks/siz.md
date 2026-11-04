@@ -98,7 +98,7 @@ formatting machinery (4-5 KiB) even when nothing else in the firmware needs it.
 actually runs; on a size-constrained build this fixed cost for an error path nobody wants to see output from in
 production is often not worth paying.
 
-**Example.** P2534's `fw-size-2026-10-19` measurement found exactly this pulling in formatting code on a build
+**Example.** An internal `fw-size-2026-10-19` measurement found exactly this pulling in formatting code on a build
 that otherwise avoided it everywhere else.
 
 **How to check.** `src easy` (the syntactic pattern: `unwrap`/`expect`/`Debug2Format` call sites) plus `elf easy`
@@ -159,7 +159,7 @@ along with it.
 configurations to test, `CFG-3`) for no actual benefit; worse, it can hide the real cost, which stays in the
 dispatch/ser-des layer regardless of the flag.
 
-**Example.** P2534's `fw-size` measurement of the `debug-api` feature found this directly: gating handler bodies
+**Example.** An internal `fw-size` measurement of the `debug-api` feature found this directly: gating handler bodies
 without gating the dispatch table saved almost nothing.
 
 **How to check.** `elf mid`: build with and without the feature and diff section sizes; a feature whose on/off
@@ -181,7 +181,7 @@ byte-identical.
 differs only by a baked-in constant, the linker can't fold them even though the *logic* is the same, and the
 duplication scales with how many distinct `N` the firmware instantiates.
 
-**Example.** P2534's `fw-size` investigation traced a chunk of duplicated code directly to this pattern on
+**Example.** An internal `fw-size` investigation traced a chunk of duplicated code directly to this pattern on
 `ObserveTable<N>`.
 
 **How to check.** `elf hard`: needs to recognise near-duplicate functions in the linked ELF that differ only by an

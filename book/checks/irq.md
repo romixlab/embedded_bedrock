@@ -37,7 +37,7 @@ W1C register every other bit that's 1 in that read-back value gets written back 
 flag that set between the read and the write is wiped along with the one the code meant to clear.
 
 **Example.** embassy-stm32 0.6 on G0: the ADC interrupt handler used `modify()` on the ISR register and wiped CCRDY
-(calibration-ready) whenever it set in that same window (tpm log, Oct 2026).
+(calibration-ready) whenever it set in that same window (internal log, Oct 2026).
 
 **How to check.** Needs the register's access type from the chip's SVD/data (`rc_w1`) to tell a legitimate
 read-modify-write register apart from one that must only ever be written, never read-modified.

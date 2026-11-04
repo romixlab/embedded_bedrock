@@ -1,4 +1,4 @@
-// P2534 fw-size 2026-10-19: Result::unwrap, Debug2Format and a formatting panic handler pull core::fmt in
+// internal fw-size measurement 2026-10-19: Result::unwrap, Debug2Format and a formatting panic handler pull core::fmt in
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());

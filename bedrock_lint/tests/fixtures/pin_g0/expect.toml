@@ -1,4 +1,4 @@
-# donguru_template, usb_io_fw PLAT-9 and IF-16, P2424 sd_card.md, typec_dongle FW-22
+# donguru_template, usb_io_fw PLAT-9 and IF-16, internal sd_card.md notes, typec_dongle FW-22
 checks = ["PIN"]
 
 # USB built before the first output

@@ -144,7 +144,7 @@ flashed via probe-rs.
 catch a break in the upgrade path from what's actually in the field is to run that exact transition, old binary to
 new, over the real update mechanism.
 
-**Example.** The release checklist in tpm's `roles/firmware.md` makes this an explicit gate before a release ships.
+**Example.** Our internal release checklist makes this an explicit gate before a release ships.
 
 **How to check.** Not automated (`bench`): flash the previous released version, then update to the new one over
 the field path, and confirm it succeeds.

@@ -2,7 +2,7 @@
 #![no_main]
 
 // Pins done wrong: donguru_template (a driver dropped at once), usb_io_fw PLAT-9 (USB before the safe state),
-// usb_io_fw IF-16 (two owners), P2424 (pin map by feature), typec_dongle FW-22 (a strap read under the dead-battery
+// usb_io_fw IF-16 (two owners), a pin map chosen by cargo feature, typec_dongle FW-22 (a strap read under the dead-battery
 // pull-down)
 
 #[embassy_executor::main]

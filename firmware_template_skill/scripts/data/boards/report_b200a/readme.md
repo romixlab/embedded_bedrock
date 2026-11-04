@@ -9,7 +9,7 @@ registers (32 outputs, EX0-EX31) switches the translators, the IO level `+VREF` 
 level on J103 pin 7) and the pull-ups and pull-downs. [docs/board/](docs/board/) has the bottom view, the power tree
 and [the pin table](docs/board/report_b200a-pins.md) with a note per pin; `just board` re-draws them from
 `docs/board/report_b200a.toml` with [boardmap](https://github.com/romixlab/embedded_bedrock) (bedrock_board).
-The board's hardware reference is `doc/hw_b200a.md` in its [hardware repository](https://github.com/vhrdtech/hw/tree/main/b200_re_port).
+The board's hardware reference is `doc/hw_b200a.md` in its internal hardware repository.
 
 **The 595 chain first:** on rev A `EXP.~OE` (GP27) has no pull-up, so from power-on the chain's outputs drive
 whatever its registers hold, which can turn on two `+VREF` sources at once and short VBUS into the 3.3 V rail.

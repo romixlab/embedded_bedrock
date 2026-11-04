@@ -1,6 +1,6 @@
-# The tests. `just test`: all of them (test-all), the run of the `tpm land` gate. `just test --changed`: only the
-# workspace crates changed against main and the crates that depend on them (tpm test changed), what a session runs
-# before tpm work ready.
+# The tests. `just test`: all of them (test-all), the run of the release gate. `just test --changed`: only the
+# workspace crates changed against main and the crates that depend on them, a quick check before work is
+# marked ready.
 test *flags:
     if [ "{{flags}}" = "--changed" ]; then tpm test changed -- cargo nextest run --workspace; else {{just_executable()}} test-all {{flags}}; fi
 
@@ -41,7 +41,8 @@ lint:
 # Build bedrock-lint (the firmware lint) and install it on this PC
 install:
     cargo build --profile deploy --locked -p bedrock_lint_cli
-    # With tpm on PATH: tpm install (kept-releases stack, one copy on PATH); otherwise: cargo install
+    # With an optional internal release-management tool (tpm) on PATH: install through it (kept-releases stack,
+    # one copy on PATH); otherwise: cargo install
     if command -v tpm >/dev/null; then tpm install target/deploy/bedrock-lint; else cargo install --locked --path bedrock_lint_cli; fi
 
 # Build against the sibling WireWeaver checkout ../wire_weaver (co-development): .cargo/sibling-patch.toml becomes

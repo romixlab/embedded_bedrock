@@ -2,7 +2,7 @@
 
 Detail for the `ERR` checks of the [check catalogue](../checks.md). This is the one category where "why" is
 almost always "because the document says so" — every section with a real erratum quotes it, per [[ERR-2]] and
-the `tpm` firmware rules (`roles/firmware.md`, "check the errata, always"): never a paraphrase from memory.
+our internal firmware rule ("check the errata, always"): never a paraphrase from memory.
 
 ## <a id="err-1"></a>`ERR-1` — Read the errata sheet for the silicon on the board, every time
 
@@ -19,8 +19,8 @@ template knows), and for STM32 also check Jan Waclawek's [efton.sk/STM32/gotcha]
 list of reference-manual traps the formal errata sheets don't cover.
 
 **Detection:** check: review — whether the errata sheet was actually read for this change is not something
-visible in the diff; it has to be part of the review itself, and `tpm`'s firmware rules make it a standing rule,
-not a per-task reminder.
+visible in the diff; it has to be part of the review itself, and our internal firmware rules make it a standing
+rule, not a per-task reminder.
 
 ## <a id="err-2"></a>`ERR-2` — Quote the erratum next to the workaround
 
