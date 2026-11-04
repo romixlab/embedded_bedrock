@@ -110,7 +110,7 @@ pub fn fracn_span(p: &Pll) -> Option<(i32, i32)> {
     let n = Exact::from_fixed(p.n)?;
     let end = |ppm, r| {
         let scale = (Exact::<Ratio>::from_fixed(ppm)? + Exact::int(1))?;
-        ((mult * scale.get())? - n)?.to_rounded::<Rational<1, 8192>, i32>(r)
+        (mult.scaled(scale)? - n)?.to_rounded::<Rational<1, 8192>, i32>(r)
     };
     let SteerPpm { min, max } = steer;
     Some((

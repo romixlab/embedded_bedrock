@@ -109,7 +109,7 @@ pub fn evaluate(cfg: &Config) -> Result<Tree, Overflow> {
         };
         // ref_ck = input / M, VCO = ref_ck · (N + FRACN/8192), each output VCO / its divider
         let ref_ck = fit(input / i128::from(p.m.get()))?;
-        let vco = fit(ref_ck * fit(p.multiplier())?.get())?;
+        let vco = fit(ref_ck.scaled(fit(p.multiplier())?))?;
         let out = |d: Option<Divpqr>| d.map(|d| fit(vco / i128::from(d.get()))).transpose();
         pll[i] = Some(PllOut {
             ref_ck,
