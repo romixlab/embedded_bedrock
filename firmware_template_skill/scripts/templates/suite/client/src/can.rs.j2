@@ -137,7 +137,7 @@ impl CanRx {
                 StreamEvent::Item { t, value, .. } => {
                     return Ok(RxEvent::Frame(Received {
                         t_us: t
-                            .and_then(|t| t.to_i128_in(ww_si::Prefix::Micro))
+                            .and_then(|t| t.to_in::<i128>(ww_si::Prefix::Micro, ww_si::Rounding::Truncate, ww_si::Overflow::Checked))
                             .and_then(|us| u64::try_from(us).ok()),
                         frame: value.frame,
                         filter: value.filter.map(|f| f.0),

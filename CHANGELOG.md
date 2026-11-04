@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- Quantity conversions follow wire_weaver STD-102 (`ww_si` on the `exact_units` integer kernel): `bedrock_sync` steer points read the local time with `to_in::<u32>(Micro, Truncate, Wrap)`, `bedrock_can` reads bit rate, clock and bus-off recovery time with `to_in::<u32>(.., Truncate, Checked)`. Needs `cargo update -p wire_weaver -p exact_units`; the results on integers are the same.
+
 ## [0.2.48] - 2026-11-04
 
 ### Changed

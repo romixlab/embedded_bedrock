@@ -17,8 +17,8 @@ use ww_can_bus::{
     ProtocolError, RxOverflow, Second, Status, Tdc, TimestampInfo, TimestampPoint, Timing,
     TimingLimits, TransceiverModes, TxOrder,
 };
-use ww_si::Prefix;
 use ww_si::ww_numeric::NumericValue;
+use ww_si::{Overflow, Prefix, Rounding};
 
 /// Nominal bit timing as M_CAN `NBTP` holds it (RM0468 FDCAN_NBTP, `mcan::NominalBitTiming`).
 pub const NOMINAL: TimingLimits = TimingLimits {
@@ -261,7 +261,7 @@ pub fn segments(
         }
         Timing::Rate { rate, sample_point } => {
             let rate = rate
-                .to_u32_in(Prefix::Unit)
+                .to_in::<u32>(Prefix::Unit, Rounding::Truncate, Overflow::Checked)
                 .ok_or(invalid(0, "bit rate out of range"))?;
             rate_segments(clock_hz, rate, *sample_point, limits).ok_or(invalid(
                 0,
@@ -371,7 +371,7 @@ pub fn resolve(config: &CanConfig, controller: &Controller) -> Result<HwConfig, 
     };
     let recovery = match &config.bus_off_recovery {
         None => Recovery::Manual,
-        Some(t) => match t.to_u32_in(Prefix::Milli) {
+        Some(t) => match t.to_in::<u32>(Prefix::Milli, Rounding::Truncate, Overflow::Checked) {
             Some(0) => Recovery::Immediate,
             Some(ms) => Recovery::AfterMs(ms),
             None => return Err(invalid(0, "bus-off recovery time out of range")),
@@ -1287,7 +1287,11 @@ mod tests {
     #[test]
     fn capabilities_match_limits() {
         let c = capabilities(&H7, 256, 32, &[]);
-        assert_eq!(c.clock.to_u32_in(Prefix::Unit), Some(CLOCK_HZ));
+        assert_eq!(
+            c.clock
+                .to_in::<u32>(Prefix::Unit, Rounding::Truncate, Overflow::Checked),
+            Some(CLOCK_HZ)
+        );
         assert_eq!(c.termination.len(), 0);
         assert_eq!(c.standard_filters, 64);
         assert_eq!(c.extended_filters, 32);

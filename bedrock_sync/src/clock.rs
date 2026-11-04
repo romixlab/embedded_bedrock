@@ -14,7 +14,7 @@
 //! the `ww_timebase` one the board answers `sources()` with.
 
 use wire_weaver::prelude::*;
-use ww_si::Prefix;
+use ww_si::{Overflow, Prefix, Rounding};
 use ww_timebase::{
     ClockError, Second, SteerPoint, Steerer, SyncConfig, SyncFormat, SyncSource, SyncState,
     SyncStatus, TimeMapPoint,
@@ -180,7 +180,7 @@ impl ClockServer {
         }
         let low = point
             .local
-            .to_u32_wrapping_in(Prefix::Micro)
+            .to_in::<u32>(Prefix::Micro, Rounding::Truncate, Overflow::Wrap)
             .ok_or_else(|| invalid("local not an integer"))?;
         let steer = Steer {
             local_us: unwrap_near(low, now_us),
