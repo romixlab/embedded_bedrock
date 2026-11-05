@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.50] - 2026-11-05
+
 ### Changed
 
 - `bedrock_clocks` works in exact_units types: every frequency, limit and target is an `Exact<Hertz>`, VDD an `Exact<Volt>`, a target's tolerance a `Tolerance`, a steer range `Ppm<i32>` ends; the crate's own `ratio` module (`Ratio`, `Hz`) is gone (RCC-1). **Breaking** for code that builds a `Config`.
