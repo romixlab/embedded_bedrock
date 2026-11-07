@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.51] - 2026-11-07
+
 ### Changed
 
 - docs: internal references removed
