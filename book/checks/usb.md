@@ -77,3 +77,28 @@ noticing no progress, a host-liveness signal) rather than relying on the disconn
 
 **Detection:** bench — this needs an actual host that kills its USB driver mid-transfer (unplugging is not the
 same event), so it stays a bring-up/bench check rather than something source analysis can provoke.
+
+## <a id="usb-5"></a>`USB-5` — an OUT packet read before the USB SRAM write is done
+
+On some STM32 USB device peripherals the CTR interrupt of an OUT transaction fires before the peripheral has
+finished writing the packet and its byte count to USB SRAM. Firmware that reads the buffer straight away can get
+the previous packet's tail or a stale count.
+
+**Erratum:** ES0548 Rev 4 (STM32G0B1xB/xC/xE) §2.16.1 "Buffer description table update completes after CTR
+interrupt triggers", every silicon revision (A, Z/3, Y/4): "During OUT transfers, the correct transfer interrupt
+(CTR) is triggered a little before the last USB SRAM accesses have completed. If the software responds quickly to
+the interrupt, the full buffer contents may not be correct." Workaround: "Software should ensure that a small
+delay is included before accessing the SRAM contents. This delay should be 800 ns in Full Speed mode and 6.4 μs in
+Low Speed mode." STM32H523/533 (ES0621 Rev 3 §2.19.1) and STM32U3 (ES0626 §2.18.1) have the same erratum.
+
+**Example:** embassy-stm32's `usb` driver waits 1 µs before reading an OUT packet only under
+`#[cfg(any(stm32h5, stm32u3))]` (`wait_for_out_packet_memory()`, embassy main 97c4d7e8a, 22 Oct 2026), not on the
+G0B1. Waking a task on the interrupt usually takes longer than 800 ns at 64 MHz (52 cycles), but a task that is
+polled for another reason (a `select` with a timer) can see the endpoint's STATRX at NAK right after the transfer
+and read too early. Found planning bedrock_usb (embedded_bedrock USBD-3), not yet seen on a board.
+
+**Fix:** wait at least 800 ns (full speed) between seeing the packet (STATRX NAK, or DTOG and SW_BUF differing on
+a double-buffered endpoint) and reading its count or data, on every part whose errata sheet lists this erratum.
+
+**Detection:** review — the read path and the part's errata sheet; a source lint can't tell how long the path
+from the interrupt to the read is.

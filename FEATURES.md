@@ -490,6 +490,10 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `mark_updated()` leaves a word with a double ECC error in the state partition, which is an NMI (G0) or a BusFault
   (H7) when it is read at the next boot. Wrap the flash in `ww_ecc_flash::EccSafeFlash` (with `on_nmi()` in the G0
   NMI handler) as `src/settings.rs` does. Found by bedrock-lint FLS-1 (LINT-11) on generated `g0` and `h7app`.
+- 📋 **TPL-82 `--usb-stack bedrock`**: with `--wire-weaver` on a USB v4 part with 32-bit USB SRAM (G0B1 / G0C1 first),
+  generate `src/ww.rs` on bedrock_usb (USBD) instead of embassy-usb and embassy-stm32's driver: a `const` device,
+  the `ww` function, `bedrock_usb::InterruptHandler` in `bind_interrupts!` (shared with UCPD on the G0's
+  `USB_UCPD1_2`). Default stays `embassy`; matrix entries for both. After USBD-7 and typec_dongle FW-66.
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -972,6 +976,49 @@ document section it comes from, and a FRACN steering range is checked at both en
   CLK-10; vb135 PLAT-10 has the same pattern.
 - 💡 **RCC-11 Solver**: targets in, dividers out, written back into clocks.toml.
 - 📋 **RCC-12 Template**: H7 board presets carry clocks.toml and the generated clocks.rs.
+
+## USB device stack (`USBD`)
+
+bedrock_usb: a USB full-speed device stack for STM32 with the device fixed at compile time, replacing embassy-usb
+plus embassy-stm32's `usb` driver where a firmware wants it. Descriptors are `const fn` output in flash, endpoints
+and their buffering are types, classes dispatch statically; the boundary with embassy is stm32-metapac registers
+plus the `Peri<USB>`, interrupt binding and RCC enable it hands out. First IP: usb_v4 with 32-bit USB SRAM (G0B1),
+first firmware: Donguru (typec_dongle FW-66), baseline ~11.0 KiB of USB code at opt-level z there. Design and the
+hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our internal project folder
+(`design/bedrock-usb.md`).
+
+- 📋 **USBD-1 Crate and const descriptors**: `bedrock_usb` (no_std) with the shared types (endpoint address, kind,
+  `Single` / `Double` buffering, setup packet), the `desc` module (device, configuration, IAD, interface, endpoint,
+  class blobs, string 0, BOS with MS OS 2.0 and WebUSB platform capabilities, MS OS 2.0 descriptor set with function
+  subsets) as `const fn` into `[u8; N]`, the endpoint and USB SRAM layout with const asserts (8 registers, 2048 B,
+  a double-buffered endpoint takes a whole register, OUT buffer = max packet), `descriptors!`. Host tests, and a
+  golden test of Donguru's descriptor set against embassy-usb's `Builder` output.
+- 📋 **USBD-2 EP0 control machine**: pure state machine (SETUP, IN done, OUT data in; send, ZLP, stall, status, set
+  address out), standard requests from the const tables, class requests to a static handler tuple, runtime strings
+  through a `Strings` trait, MS OS 2.0 vendor request, a hook for WebUSB GET_URL. Host tests over a table of
+  chapter 9 cases (wLength around multiples of 64, SET_ADDRESS after the status stage, halt and toggle reset).
+- 📋 **USBD-3 usb_v4 register layer and endpoints**: CHEPnR writes with invariant and toggle values, USB SRAM word
+  copies, ISR (bus reset handled in the ISR, CTR, suspend / wakeup), async `BulkOut` / `BulkIn` / `InterruptIn`
+  for `Single` and `Double`, halt and enable with DATA0, the ES0548 2.16.1 delay (check USB-5); embassy-stm32 glue
+  (`InterruptHandler` as a typelevel `Handler`, so it shares `USB_UCPD1_2` with UCPD) and `on_interrupt()` for bare
+  firmware. Host tests on a simulated CHEPnR.
+- 📋 **USBD-4 Device run loop and G0 example**: `Usb::run()` joining USBD-2 and USBD-3, bus state for the firmware
+  (configured, suspended, reset after configured), an example firmware for the G0B1 (vendor bulk loopback with
+  WinUSB) built for thumbv6m by `just lint`, flash measured.
+- 📋 **USBD-5 WireWeaver class** (feature `ww`): the function fragment byte for byte as wire_weaver_usb_embassy's
+  (constants from WireWeaver's embassy-free crate), `ww_device::PacketSink` / `PacketSource` on the bulk endpoints
+  with a write timeout; descriptor parity test.
+- 📋 **USBD-6 `bedrock-usb-ch9` host tool**: nusb-based chapter 9 checks against any of our USB devices (descriptors,
+  wLength edges, halt and toggle on each bulk endpoint, SET_CONFIGURATION / SET_INTERFACE loops, bus resets);
+  run against today's embassy Donguru first as the baseline.
+- 📋 **USBD-7 G0 hardware test**: USBD-4's example on B153A or a Nucleo-G0B1RE: enumeration on Linux and Windows,
+  `bedrock-usb-ch9`, loopback rates, the double-buffer STAT behaviour at a conflict read from CHEPnR (RM0444 §37.5.3
+  against embassy's driver comment), the CTR-to-read delay measured.
+- 💡 **USBD-8 OTG backend**: OTG FS / HS (B135's H725 over ULPI) reusing `desc` and the control machine; decided
+  after usb-0.1.
+- 💡 **USBD-9 usb_v3 and usb_v1 / v2 ports**: L4, G4, WB (16-bit USB SRAM) and F0, F1, F3, L0, L1; same endpoint
+  register, another SRAM access and buffer descriptor layout.
+- 💡 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
 
 ## Dropped and superseded
 
