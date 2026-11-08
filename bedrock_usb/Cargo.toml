@@ -2,7 +2,7 @@
 name = "bedrock_usb"
 version = "0.1.0"
 edition = "2024"
-description = "USB device stack for STM32, fixed at compile time, full and high speed: shared types, descriptors as const fn output, the endpoint and USB SRAM or FIFO layout with const asserts, the EP0 control machine, the usb_v4 driver with its usb_v3 port, the Synopsys OTG driver"
+description = "USB device stack for STM32, fixed at compile time, full and high speed: shared types, descriptors as const fn output, the endpoint and USB SRAM or FIFO layout with const asserts, the EP0 control machine, the usb_v4 driver with its usb_v3 and usb_v1 / v2 ports, the Synopsys OTG driver"
 license = "MIT OR Apache-2.0"
 
 [features]
@@ -26,6 +26,9 @@ metapac-check = ["dep:stm32-metapac", "stm32-metapac/stm32g0b1re"]
 # Test only: tests/v3_metapac.rs, the same for usb_v3 against the STM32G474's metapac. Not together with
 # metapac-check (one chip per build): `just test` runs each in its own pass.
 metapac-check-v3 = ["dep:stm32-metapac", "stm32-metapac/stm32g474re"]
+# Test only: tests/v1_metapac.rs (usb_v1, STM32F103C8) and tests/v2_metapac.rs (usb_v2, STM32F303RE), likewise
+metapac-check-v1 = ["dep:stm32-metapac", "stm32-metapac/stm32f103c8"]
+metapac-check-v2 = ["dep:stm32-metapac", "stm32-metapac/stm32f303re"]
 
 [dependencies]
 critical-section = "1.2"
@@ -53,3 +56,11 @@ required-features = ["metapac-check"]
 [[test]]
 name = "v3_metapac"
 required-features = ["metapac-check-v3"]
+
+[[test]]
+name = "v1_metapac"
+required-features = ["metapac-check-v1"]
+
+[[test]]
+name = "v2_metapac"
+required-features = ["metapac-check-v2"]
