@@ -490,10 +490,11 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `mark_updated()` leaves a word with a double ECC error in the state partition, which is an NMI (G0) or a BusFault
   (H7) when it is read at the next boot. Wrap the flash in `ww_ecc_flash::EccSafeFlash` (with `on_nmi()` in the G0
   NMI handler) as `src/settings.rs` does. Found by bedrock-lint FLS-1 (LINT-11) on generated `g0` and `h7app`.
-- 📋 **TPL-82 `--usb-stack bedrock`**: with `--wire-weaver` on a USB v4 part with 32-bit USB SRAM (G0B1 / G0C1 first),
+- 🧪 **TPL-82 `--usb-stack bedrock`**: with `--wire-weaver` on a USB v4 part with 32-bit USB SRAM (G0B1 / G0C1 first),
   generate `src/ww.rs` on bedrock_usb (USBD) instead of embassy-usb and embassy-stm32's driver: a `const` device,
   the `ww` function, `bedrock_usb::InterruptHandler` in `bind_interrupts!` (shared with UCPD on the G0's
-  `USB_UCPD1_2`). Default stays `embassy`; matrix entries for both. After USBD-5.
+  `USB_UCPD1_2`). Default stays `embassy`; matrix entries for both (`g0usbm`, `g0usbb`). Generator: `bedrock_gen.py` (`--usb-stack`),
+  `templates/app/src/ww.rs.j2`; builds, not yet run on hardware (USBD-7, typec_dongle FW-66).
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's

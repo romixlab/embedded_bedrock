@@ -76,7 +76,7 @@ use bedrock_usb::desc::{Device, Str};
 use bedrock_usb::v4::embassy::InterruptHandler;
 use bedrock_usb::v4::{BulkIn, BulkOut, Driver, Mmio};
 use bedrock_usb::ww::{Receiver, Sender};
-use bedrock_usb::{Usb, ww_function};
+use bedrock_usb::{Buffering, Usb, ww_function};
 use embassy_stm32::{Peri, bind_interrupts, peripherals};
   {% elif t.family == "stm32" %}
 use embassy_stm32::{Peri, bind_interrupts, peripherals, usb};
@@ -511,7 +511,7 @@ const DEVICE: Device = Device {
     serial: Str::Runtime,
     ms_os_20: Some(bedrock_usb::ww::MS_OS_20),
     functions: &[ww_function! {
-        out: 1, in: 2, max_packet: 64, buffering: Double,
+        out: 1, in: 2, max_packet: 64, buffering: Buffering::Double,
         user_crate: {{ ww.krate }}::{{ ww.gid }}.crate_id,
         user_version: (
             {{ ww.krate }}::{{ ww.gid }}.version.major.0,
@@ -527,7 +527,7 @@ const DEVICE: Device = Device {
     ..Device::new(0xc0de, 0xcafe)
   {% endif %}
 };
-bedrock_usb::descriptors!(Desc = DEVICE);
+bedrock_usb::descriptors!(pub Desc = DEVICE);
 bedrock_usb::state!(static USB_STATE: Desc);
 
 bind_interrupts!(struct Irqs {
@@ -550,8 +550,12 @@ impl bedrock_usb::control::Handler for Strings {
 type UsbDevice = Usb<Desc, Mmio, Strings>;
 type UsbSender = Sender<BulkIn<Mmio, 2, Double>, embassy_time::Duration>;
 type UsbReceiver = Receiver<BulkOut<Mmio, 1, Double>>;
-pub type UsbServer =
-    ww_device::Server<'static, FramedTx<'static, UsbSender>, FramedRx<'static, UsbReceiver>, EmbassyClock>;
+pub type UsbServer = ww_device::Server<
+    'static,
+    FramedTx<'static, UsbSender>,
+    FramedRx<'static, UsbReceiver>,
+    EmbassyClock,
+>;
 
 /// The server's buffers (as wire_weaver_usb_embassy's `ServerBuffers`): packets in and out, the message being
 /// assembled, replies and events.
@@ -597,7 +601,10 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
             Sender::new(inp, embassy_time::Duration::from_millis(250)),
             &mut buffers.tx,
         ),
-        FramedRx::new(Receiver::new(out), buffers.rx.assembly_buf(MAX_USB_PACKET_LEN)),
+        FramedRx::new(
+            Receiver::new(out),
+            buffers.rx.assembly_buf(MAX_USB_PACKET_LEN),
+        ),
         EmbassyClock,
         &mut buffers.scratch,
         &mut buffers.event_scratch,

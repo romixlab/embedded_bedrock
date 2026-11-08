@@ -28,7 +28,7 @@
 
 # {{ takers | and_join }} {{ "take" if takers | length > 1 else "takes" }} WireWeaver from git: the local checkout (--ww-src) instead
 [patch."{{ WW_GIT }}"]
-{% set pairs = [("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_version", "ww_stdlib/ww_version")] + ([("ww_dfu", "ww_stdlib/ww_dfu")] if dfu else []) %}
+{% set pairs = [("shrink_wrap", "shrink_wrap/shrink_wrap"), ("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_device", "ww_device"), ("ww_link", "ww_link"), ("ww_version", "ww_stdlib/ww_version")] + ([("ww_dfu", "ww_stdlib/ww_dfu")] if dfu else []) %}
 {% for _, name, subdir in extra %}{% set _ = pairs.append((name, subdir)) %}{% endfor %}
 {% for name, subdir in pairs %}
 {{ name }} = { path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}" }{{ "\n" if not loop.last }}

@@ -873,7 +873,7 @@ def embassy_crates(o: "Opts", bootloader_crate: bool = False) -> list[str]:
     if not bootloader_crate:
         crates += ["embassy-time-queue-utils", "embassy-executor", "embassy-executor-macros",
                    "embassy-executor-timer-queue"]
-        if o.ww and o.ww_transport == "usb":
+        if o.ww and o.ww_transport == "usb" and o.usb_stack != "bedrock":
             crates += ["embassy-usb", "embassy-net-driver-channel"]
     if o.bootloader:
         crates += ["embassy-boot", "embassy-boot-stm32"]
@@ -1115,7 +1115,7 @@ def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
         ctx["usb_args"] = [f"p.{x}" for x in args]
         if o.usb_stack == "bedrock":
             # bedrock_usb counts its short waits (tSTARTUP, ES0548 2.16.1) in core clocks
-            ctx["usb_args"].append("embassy_stm32::rcc::clocks(&p.RCC).hclk1.to_hertz().unwrap().0")
+            ctx["usb_args"].append("embassy_stm32::rcc::clocks(&p.RCC)\n            .hclk1\n            .to_hertz()\n            .unwrap()\n            .0")
         # rustfmt puts the arguments one per line past fn_call_width (60)
         ctx["usb_args_wrap"] = len(", ".join(ctx["usb_args"])) > 60
     return ctx
