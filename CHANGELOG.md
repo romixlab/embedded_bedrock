@@ -9,15 +9,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.56] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb::Usb`, the device: `run()` serves bus events and EP0 in one future, as embassy-usb's `UsbDevice::run()`, joining the control machine to the usb_v4 driver (whole control transfers packet by packet, the address after SET_ADDRESS's status stage, endpoints enabled with DATA0 on SET_CONFIGURATION and SET_INTERFACE, halts, suspend and resume to the handlers). The bus status for the rest of the firmware (`State::status()`, `status_changed()`): configured, suspended, configured once, bus resets and bus resets while configured, which tell a hub bouncing the port from a host that deconfigures (USBD-4).
 - `bedrock_usb/examples/g0b1_loopback`: example firmware for the STM32G0B1 (embassy, USB from HSI48 with CRS), a vendor bulk loopback on double-buffered endpoints with WinUSB through MS OS 2.0 and the serial from the UID. `just lint` builds it at opt-level z and 3; `just usb-size` lists its code per crate and per bedrock_usb file (USBD-4).
 - `bedrock-lint code-size <ELF>`: code bytes per source file or `--by-crate` from the DWARF line table, so code LTO inlined across crates counts where it was written (LINT-12).
+- `bedrock_usb::v4`, the driver for the usb_v4 peripheral with 32-bit USB SRAM (G0B1 first): CHEPnR writes with invariant and toggle values, USB SRAM word copies, start-up, an interrupt handler that handles the bus reset itself, `Ep0` for the control state machine, typed `BulkOut` / `BulkIn` (single- or double-buffered) and `InterruptIn` checked against the descriptors at compile time, enable and halt with DATA0, the ES0548 2.16.1 wait before every OUT read. `state!` declares the shared state sized by the layout. Feature `embassy-stm32`: the interrupt handler for `bind_interrupts!` (shares the G0's `USB_UCPD1_2` with UCPD) and `embassy::new` on `Peri<USB>`; `v4::on_interrupt()` for bare firmware. Feature `sim`: the simulated peripheral the host tests run on (USBD-3).
 
 ### Fixed
 
 - `bedrock_usb::v4::Mmio`'s short waits (tSTARTUP, the ES0548 2.16.1 wait before every OUT read) count cycles without a 64-bit division: on the Cortex-M0+ it took about 1.2 KiB of flash (`__aeabi_uldivmod`) and ran on every OUT packet (USBD-3).
+- `descriptors!` no longer trips clippy's `out_of_bounds_indexing` on a device without BOS or MS OS 2.0 descriptors (USBD-1).
 
 ## [0.2.55] - 2026-11-08
 
