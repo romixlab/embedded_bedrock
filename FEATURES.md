@@ -493,7 +493,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - 📋 **TPL-82 `--usb-stack bedrock`**: with `--wire-weaver` on a USB v4 part with 32-bit USB SRAM (G0B1 / G0C1 first),
   generate `src/ww.rs` on bedrock_usb (USBD) instead of embassy-usb and embassy-stm32's driver: a `const` device,
   the `ww` function, `bedrock_usb::InterruptHandler` in `bind_interrupts!` (shared with UCPD on the G0's
-  `USB_UCPD1_2`). Default stays `embassy`; matrix entries for both. After USBD-7 and typec_dongle FW-66.
+  `USB_UCPD1_2`). Default stays `embassy`; matrix entries for both. After USBD-5.
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -1021,14 +1021,17 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
 - 📋 **USBD-6 `bedrock-usb-ch9` host tool**: nusb-based chapter 9 checks against any of our USB devices (descriptors,
   wLength edges, halt and toggle on each bulk endpoint, SET_CONFIGURATION / SET_INTERFACE loops, bus resets);
   run against today's embassy Donguru first as the baseline.
-- 📋 **USBD-7 G0 hardware test**: USBD-4's example on B153A or a Nucleo-G0B1RE: enumeration on Linux and Windows,
+- 📋 **USBD-7 G0 hardware test** (nothing waits on it): USBD-4's example on B153A or a Nucleo-G0B1RE: enumeration on Linux and Windows,
   `bedrock-usb-ch9`, loopback rates, the double-buffer STAT behaviour at a conflict read from CHEPnR (RM0444 §37.5.3
   against embassy's driver comment), the CTR-to-read delay measured.
-- 💡 **USBD-8 OTG backend**: OTG FS / HS (B135's H725 over ULPI) reusing `desc` and the control machine; decided
-  after usb-0.1.
-- 💡 **USBD-9 usb_v3 and usb_v1 / v2 ports**: L4, G4, WB (16-bit USB SRAM) and F0, F1, F3, L0, L1; same endpoint
-  register, another SRAM access and buffer descriptor layout.
-- 💡 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
+- 📋 **USBD-8 OTG backend**: OTG FS / HS (B135's H725 over the USB3315 ULPI PHY) under the same `desc`, control
+  machine and run loop: FIFO allocation from the const layout, DMA off at first, high-speed descriptors (512-byte
+  bulk, device qualifier, other-speed configuration).
+- 📋 **USBD-9 usb_v3 port**: L4, G4, WB (16-bit USB SRAM, `usbram_16x2`); same endpoint register as usb_v4, another
+  SRAM access and buffer descriptor layout behind USBD-3's SRAM trait.
+- 📋 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
+- 📋 **USBD-11 usb_v1 / v2 port**: F0, F1, F3, L0, L1 (16-bit USB SRAM, on F1 spaced one half-word per word,
+  `usbram_16x1`); after USBD-9.
 
 ## Dropped and superseded
 
