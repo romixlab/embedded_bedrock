@@ -987,12 +987,22 @@ first firmware: Donguru (typec_dongle FW-66), baseline ~11.0 KiB of USB code at 
 hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our internal project folder
 (`design/bedrock-usb.md`).
 
-- 📋 **USBD-1 Crate and const descriptors**: `bedrock_usb` (no_std) with the shared types (endpoint address, kind,
-  `Single` / `Double` buffering, setup packet), the `desc` module (device, configuration, IAD, interface, endpoint,
-  class blobs, string 0, BOS with MS OS 2.0 and WebUSB platform capabilities, MS OS 2.0 descriptor set with function
-  subsets) as `const fn` into `[u8; N]`, the endpoint and USB SRAM layout with const asserts (8 registers, 2048 B,
-  a double-buffered endpoint takes a whole register, OUT buffer = max packet), `descriptors!`. Host tests, and a
-  golden test of Donguru's descriptor set against embassy-usb's `Builder` output.
+- ✅ **USBD-1 Crate and const descriptors**: `bedrock_usb` (no_std, no runtime dependencies). Shared types in
+  `lib.rs`: `EndpointAddress` / `Direction`, `EndpointKind` (bulk, interrupt; no iso), `Buffering` and the
+  zero-sized `buffer::Single` / `buffer::Double`, `Setup`, request and descriptor codes, the `Descriptors` trait.
+  `desc.rs`: `Device` / `Function` / `Interface` / `Item` / `Endpoint` as a `const` value and a `len` + `[u8; N]`
+  `const fn` pair per descriptor (device, configuration with IADs, alternate settings, endpoints, class blobs,
+  strings, string 0, BOS with the USB 2.0 extension, WebUSB and MS OS 2.0 platform capabilities, MS OS 2.0 set with
+  function subsets); `Str::Runtime` reserves an index for a string the firmware serves; `Device::check` panics in
+  const evaluation on what the descriptors can't express. `layout.rs`: usb_v4 endpoint registers and USB SRAM
+  (register n for endpoint n, buffer table, word-aligned packet buffers, both initial descriptor words), checked
+  against RM0444 Rev 6 (8 registers, 2048 B, a double-buffered endpoint alone in its register, one UTYPE per
+  register, OUT buffer = max packet and encodable in BLSIZE / NUM_BLOCK). `descriptors!` names the arrays and the
+  layout, `has(dir, ep, buffering)` works in `const { assert!() }`, a bad device fails the build (compile-fail
+  doctests). Host tests per descriptor kind against hand-checked bytes; golden test `tests/donguru.rs`: Donguru's
+  set (IAD composite, WireWeaver with 0x40-0x42, CMSIS-DAP v2, MS OS 2.0 at device and function level) equals
+  embassy-usb 0.6's `Builder` output, read back through a dummy driver's control pipe; the differences (runtime
+  strings, no device qualifier, double buffering in the descriptor) listed there.
 - 📋 **USBD-2 EP0 control machine**: pure state machine (SETUP, IN done, OUT data in; send, ZLP, stall, status, set
   address out), standard requests from the const tables, class requests to a static handler tuple, runtime strings
   through a `Strings` trait, MS OS 2.0 vendor request, a hook for WebUSB GET_URL. Host tests over a table of

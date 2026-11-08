@@ -71,6 +71,11 @@ so a missing entry means work nobody sees.
 - `bedrock_can/` — an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL (bit timing, configuration and
   filter checks against a `Controller` layout, frames to send, error state), from B135; the template's `--can`
   firmware and its host client use it. Firmware takes it by path, like `bedrock_led`.
+- `bedrock_usb/` — a USB full-speed device stack for STM32 fixed at compile time (FEATURES.md area `USBD`): shared
+  types in `lib.rs`, the device as a `const` and its descriptors as `const fn` output (`desc.rs`), the usb_v4
+  endpoint registers and USB SRAM layout with its RM0444 checks (`layout.rs`), `descriptors!` (`macros.rs`). Golden
+  test `tests/donguru.rs` against embassy-usb's `Builder` on a dummy driver. Firmware takes it by path, like
+  `bedrock_led`.
 - `bedrock_clocks/` — exact clock planning on the host (FEATURES.md area `RCC`): a board's clock tree as exact
   rationals, checked against RM0468 / DS13311 / ES0491 / AN5337 (each limit in `h72x/limits.rs` names its section),
   encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its

@@ -20,7 +20,7 @@ test-all:
     cargo test --doc --workspace --locked
     cargo test --doc --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
 
-# Format check, clippy on the host, and bedrock_led / bedrock_sync / bedrock_can as no_std firmware code for the
+# Format check, clippy on the host, and bedrock_led / bedrock_sync / bedrock_can / bedrock_usb as no_std firmware code for the
 # Cortex-M0+, bedrock_rom_boot for the G0 (Cortex-M0+) and the H7 (Cortex-M7), bedrock_clocks_rt for the H7
 # --locked: a gate recipe must only check, never rewrite Cargo.lock (WireWeaver comes from git at the commit the lock
 # names; a lock left in the `just dev-local` state names sibling paths and fails here instead of building against
@@ -33,6 +33,7 @@ lint:
     cargo clippy -p bedrock_sync --all-targets --all-features --locked -- -D warnings
     cargo clippy -p bedrock_sync --target thumbv6m-none-eabi --features embassy,ww-timebase,defmt --locked -- -D warnings
     cargo clippy -p bedrock_can --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
+    cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt --locked -- -D warnings

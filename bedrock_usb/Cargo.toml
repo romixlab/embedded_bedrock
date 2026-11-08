@@ -1,0 +1,17 @@
+[package]
+name = "bedrock_usb"
+version = "0.1.0"
+edition = "2024"
+description = "USB full-speed device stack for STM32, fixed at compile time: shared types, descriptors as const fn output, the endpoint and USB SRAM layout with const asserts"
+license = "MIT OR Apache-2.0"
+
+[features]
+defmt = ["dep:defmt"]
+
+[dependencies]
+defmt = { version = "1.0", optional = true }
+
+[dev-dependencies]
+# the golden test: Donguru's descriptor set as embassy-usb's Builder writes it, read back through a dummy driver
+embassy-usb = { version = "0.6.0", default-features = false }
+embassy-futures = "0.1.2"
