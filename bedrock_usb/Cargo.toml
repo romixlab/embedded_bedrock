@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [features]
 defmt = ["dep:defmt"]
-# The simulated usb_v4 peripheral (`v4::sim`, std) for host tests of code built on the driver
+# The simulated usb_v4 peripheral (`v4::sim`) and OTG core (`otg::sim`), std, for host tests of code built on the drivers
 sim = []
 # embassy-stm32 glue: the typelevel interrupt handler for `bind_interrupts!`, `Peri<USB>`, the RCC enable. The
 # firmware's embassy-stm32 names the chip; `unstable-pac` gives the peripheral's addresses.

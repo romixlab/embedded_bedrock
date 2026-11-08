@@ -44,8 +44,9 @@ pub const TRDT: u32 = 0x9;
 pub const FORCE_MODE_US: u32 = 25_000;
 
 /// Register reads a wait for the core gives up after: the core soft reset, a FIFO flush, an endpoint's NAK and
-/// disable. Each takes a few PHY clocks or at most a (micro)frame (embassy-usb-synopsys-otg measured 1.2 ms for
-/// the global OUT NAK, which this driver does not use). A wait that runs out leaves the core as it is.
+/// disable, the global OUT NAK. Each takes a few PHY clocks or at most a packet or (micro)frame
+/// (embassy-usb-synopsys-otg measured 1.2 ms for the global OUT NAK where its interrupt handler popped the pattern;
+/// [stop_out] pops it in place). A wait that runs out leaves the core as it is.
 pub const SPIN_LIMIT: u32 = 200_000;
 
 /// An endpoint can't move data.
@@ -123,6 +124,47 @@ pub(crate) fn stop_in<R: Regs>(r: &R, n: usize, stall: bool) {
         r.write(i, epint::INEPNE | epint::EPDISD);
     }
     flush_tx(r, n as u32);
+}
+
+/// Disables the OUT endpoints in `mask` (bit n for endpoint n) that are enabled, per §62.15.6 "Disabling an OUT
+/// endpoint": "1. Before disabling any OUT endpoint, the application must enable Global OUT NAK mode in the core.
+/// – SGONAK = 1 in OTG_DCTL 2. Wait for the GONAKEFF interrupt (OTG_GINTSTS) 3. Disable the required OUT endpoint
+/// by programming the following fields: – EPDIS = 1 in OTG_DOEPCTLx – SNAK = 1 in OTG_DOEPCTLx 4. Wait for the
+/// EPDISD interrupt ... 5. The application must clear the Global OUT NAK bit". GONAKEFF only comes "When the
+/// application pops the Global OUT NAK pattern word from the receive FIFO" ("Setting the global OUT NAK"), so
+/// the wait empties the receive FIFO itself ([receive]) instead of counting on the interrupt handler, which the
+/// caller's critical section holds off. Packets popped meanwhile go where the handler would put them.
+pub(crate) fn stop_out<R: Regs>(r: &R, layout: &Layout, st: StateRef, mask: u32) {
+    let mut enabled = 0u32;
+    for n in 0..layout.count as usize {
+        if mask & 1 << n != 0 && r.read(offset::doepctl(n)) & ctl::EPENA != 0 {
+            enabled |= 1 << n;
+        }
+    }
+    if enabled == 0 {
+        return;
+    }
+    let d = r.read(offset::DCTL);
+    r.write(offset::DCTL, d | dctl::SGONAK);
+    for _ in 0..SPIN_LIMIT {
+        if r.read(offset::GINTSTS) & gint::GONAKEFF != 0 {
+            break;
+        }
+        receive(r, layout, st);
+    }
+    for n in 0..layout.count as usize {
+        if enabled & 1 << n != 0 {
+            set_ctl(r, offset::doepctl(n), |v| v, ctl::EPDIS | ctl::SNAK);
+        }
+    }
+    for n in 0..layout.count as usize {
+        if enabled & 1 << n != 0 {
+            spin(r, offset::doepint(n), |v| v & epint::EPDISD != 0);
+            r.write(offset::doepint(n), epint::EPDISD);
+        }
+    }
+    let d = r.read(offset::DCTL);
+    r.write(offset::DCTL, d | dctl::CGONAK);
 }
 
 /// Arms OUT endpoint `n` (not 0) for one packet of its max packet size at the current speed into the buffer its
@@ -360,11 +402,8 @@ impl<D: OtgDescriptors, R: Regs + Copy> Driver<D, R> {
     ///
     /// Disabling is §62.15.6 "Endpoint deactivation": "clear the USB active endpoint bit ... Once the endpoint is
     /// deactivated, the core ignores tokens addressed to that endpoint". An IN transfer under way is stopped and
-    /// its FIFO flushed first ([stop_in]). An OUT endpoint is not taken through "Disabling an OUT endpoint" (the
-    /// global OUT NAK): that needs the interrupt handler to pop the Global OUT NAK entry before GONAKEFF can come,
-    /// which a wait in the run task can't count on. Its NAK is set and its queue disabled instead, so a packet the
-    /// core had already taken is dropped by the interrupt handler; a stale EPENA is overwritten when the endpoint
-    /// is enabled and armed again. Endpoints `D` lacks are ignored.
+    /// its FIFO flushed first ([stop_in]); an armed OUT endpoint is disabled under the global OUT NAK ([stop_out])
+    /// and its queue dropped, so it can be armed again with a fresh EPENA. Endpoints `D` lacks are ignored.
     pub fn set_enabled(&self, address: EndpointAddress, enabled: bool) {
         let n = address.number() as usize;
         let layout = Self::layout();
@@ -420,6 +459,7 @@ impl<D: OtgDescriptors, R: Regs + Copy> Driver<D, R> {
                     });
                 } else {
                     critical_section::with(|cs| {
+                        stop_out(r, layout, st, 1 << n);
                         set_ctl(r, c, |v| v & !(ctl::USBAEP | ctl::STALL), ctl::SNAK);
                         st.eps[n].set_out(cs, OutQueue::DISABLED);
                     });
@@ -431,8 +471,8 @@ impl<D: OtgDescriptors, R: Regs + Copy> Driver<D, R> {
 
     /// SET_FEATURE / CLEAR_FEATURE(ENDPOINT_HALT) on a class endpoint; clearing always resets the data toggle to
     /// DATA0 (R12). IN: §62.15.6 "Stalling non-isochronous IN endpoints", a transfer under way stopped with STALL
-    /// set and the FIFO flushed. OUT: STALL set ("The STALL bit always takes precedence over the NAK bit"),
-    /// without the global OUT NAK (see [Driver::set_enabled]). Both before the status stage, as §62.15.6 asks: "the
+    /// set and the FIFO flushed. OUT: STALL set ("The STALL bit always takes precedence over the NAK bit"); the
+    /// endpoint stays armed and takes the next packet once the halt is cleared. Both before the status stage, as §62.15.6 asks: "the
     /// STALL bit must be set or cleared before the application sets up the status stage transfer on the control
     /// endpoint" ([crate::Usb] applies the effect before arming EP0). A disabled endpoint stays disabled.
     pub fn set_stalled(&self, address: EndpointAddress, stalled: bool) {
@@ -532,11 +572,13 @@ impl<D: OtgDescriptors, R: Regs + Copy> crate::Backend for Driver<D, R> {
 /// What a bus reset leaves, §62.15.6 "Endpoint initialization on USB reset": "1. Set the NAK bit for all OUT
 /// endpoints ... 2. Unmask the following interrupt bits – INEP0 = 1 in OTG_DAINTMSK ... – OUTEP0 = 1 ... 3. Set up
 /// the data FIFO RAM for each of the FIFOs ... 4. Program the following fields in the endpoint-specific registers
-/// for control OUT endpoint 0 to receive a SETUP packet – STUPCNT = 3 in OTG_DOEPTSIZ0". Before that, every IN
-/// transfer is stopped and the FIFOs flushed ("Transfer Stop Programming"): a packet from before the reset is no
-/// one's any more. The address goes back to 0 and the speed to full until enumeration is done.
+/// for control OUT endpoint 0 to receive a SETUP packet – STUPCNT = 3 in OTG_DOEPTSIZ0". Before that, every
+/// transfer is stopped ("Transfer Stop Programming": the armed OUT endpoints disabled under the global OUT NAK,
+/// [stop_out]; the IN endpoints by [stop_in]) and the FIFOs flushed: a packet from before the reset is no one's
+/// any more. The address goes back to 0 and the speed to full until enumeration is done.
 pub(crate) fn bus_reset<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
     critical_section::with(|cs| {
+        stop_out(r, layout, st, !0);
         for n in 0..layout.count as usize {
             stop_in(r, n, false);
             set_ctl(r, offset::doepctl(n), |v| v & !ctl::STALL, ctl::SNAK);

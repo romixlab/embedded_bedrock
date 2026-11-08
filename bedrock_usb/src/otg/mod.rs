@@ -23,9 +23,14 @@ pub mod layout;
 pub mod regs;
 pub mod state;
 
-use core::cell::Cell;
+#[cfg(any(test, feature = "sim"))]
+pub mod sim;
 
-use critical_section::Mutex;
+#[cfg(test)]
+mod tests;
+
+use core::cell::UnsafeCell;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 pub use driver::{
     DIEPMSK, DOEPMSK, Driver, EndpointError, FORCE_MODE_US, INTERRUPTS, SPIN_LIMIT, TRDT, interrupt,
@@ -63,16 +68,42 @@ pub(crate) struct Active {
     pub(crate) state: StateRef,
 }
 
-static ACTIVE: Mutex<Cell<Option<Active>>> = Mutex::new(Cell::new(None));
+/// The registration, written once before the interrupt is unmasked and only read after: what `v4` does, so the
+/// handler doesn't copy it out of a `Mutex<Cell<_>>` on every interrupt.
+struct Registration {
+    active: UnsafeCell<Option<Active>>,
+    set: AtomicBool,
+}
 
+// Safety: `active` is written once, in a critical section, before `set` is stored with Release; readers load
+// `set` with Acquire first and never write.
+unsafe impl Sync for Registration {}
+
+static ACTIVE: Registration = Registration {
+    active: UnsafeCell::new(None),
+    set: AtomicBool::new(false),
+};
+
+/// Panics on a second registration: one OTG core, one driver.
 pub(crate) fn register(active: Active) {
-    critical_section::with(|cs| ACTIVE.borrow(cs).set(Some(active)));
+    critical_section::with(|_| {
+        assert!(
+            !ACTIVE.set.load(Ordering::Relaxed),
+            "bedrock_usb: an OTG driver is registered already"
+        );
+        // Safety: not set yet, so no reader looks at it (see Registration)
+        unsafe { *ACTIVE.active.get() = Some(active) };
+        ACTIVE.set.store(true, Ordering::Release);
+    })
 }
 
 /// The interrupt handler of the [Driver::register]ed driver, for the OTG vector. Does nothing before one is
 /// registered.
 pub fn on_interrupt() {
-    if let Some(a) = critical_section::with(|cs| ACTIVE.borrow(cs).get()) {
-        interrupt(&a.regs, a.layout, a.state);
+    if ACTIVE.set.load(Ordering::Acquire) {
+        // Safety: set, so written for good (see Registration)
+        if let Some(a) = unsafe { &*ACTIVE.active.get() } {
+            interrupt(&a.regs, a.layout, a.state);
+        }
     }
 }
