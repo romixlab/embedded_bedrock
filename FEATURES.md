@@ -1003,10 +1003,20 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   set (IAD composite, WireWeaver with 0x40-0x42, CMSIS-DAP v2, MS OS 2.0 at device and function level) equals
   embassy-usb 0.6's `Builder` output, read back through a dummy driver's control pipe; the differences (runtime
   strings, no device qualifier, double buffering in the descriptor) listed there.
-- 📋 **USBD-2 EP0 control machine**: pure state machine (SETUP, IN done, OUT data in; send, ZLP, stall, status, set
-  address out), standard requests from the const tables, class requests to a static handler tuple, runtime strings
-  through a `Strings` trait, MS OS 2.0 vendor request, a hook for WebUSB GET_URL. Host tests over a table of
-  chapter 9 cases (wLength around multiples of 64, SET_ADDRESS after the status stage, halt and toggle reset).
+- ✅ **USBD-2 EP0 control machine**: `control.rs`, `Control<D, N>` without registers. Events in (`setup`,
+  `in_complete`, `out_data`, `reset`), an `Action` out: what to arm on EP0 (`Ep0`: send, receive status, receive,
+  send status, stall, idle) and what to change first (`Effect`: set address after the status stage, configure,
+  set interface, halt with DATA0). Standard requests from the `Descriptors` tables (descriptors with wLength and
+  ZLP by USB 2.0 §5.5.3, address, configuration, alternate settings, GET_STATUS, remote wakeup, ENDPOINT_HALT;
+  device qualifier stalled), the MS OS 2.0 set by its vendor code and wIndex 7, WebUSB GET_URL through
+  `Handler::webusb_url`; class, vendor and unserved interface requests to a `Handler` tuple (static dispatch,
+  `Static` / buffer `Data` / `Reject` / `Unhandled`), runtime strings through `Handler::string`. Descriptors are
+  written packet by packet from flash (`packet`), strings encoded on the fly. Host tests `tests/chapter9.rs`: a
+  simulated host runs whole transfers and checks each `last` against its own end-of-stage rule (wLength around
+  multiples of 64 and of an 8-byte EP0, SET_ADDRESS after the status stage, SET_CONFIGURATION 0 / 1 / 2,
+  SET_INTERFACE, GET_STATUS, halt and toggle reset, SETUP during a data stage, MS OS 2.0, strings, class requests,
+  bus reset, a Linux-like enumeration). Flash about 2.9 KiB at opt-level z, fat LTO, thumbv6m, for a Donguru-like
+  device; RAM 104 B with the default 64-byte class buffer.
 - 📋 **USBD-3 usb_v4 register layer and endpoints**: CHEPnR writes with invariant and toggle values, USB SRAM word
   copies, ISR (bus reset handled in the ISR, CTR, suspend / wakeup), async `BulkOut` / `BulkIn` / `InterruptIn`
   for `Single` and `Double`, halt and enable with DATA0, the ES0548 2.16.1 delay (check USB-5); embassy-stm32 glue

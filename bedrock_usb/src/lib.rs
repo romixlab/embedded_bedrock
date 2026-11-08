@@ -5,6 +5,9 @@
 //! ([layout]); [descriptors!] names both and makes the build fail on a device the hardware can't serve. Nothing is
 //! allocated, parsed or built at run time.
 //!
+//! [control] answers the host's requests on endpoint 0 from those tables, as a state machine the driver feeds with
+//! what happened on EP0.
+//!
 //! This module holds the vocabulary the other parts share: endpoint addresses and kinds, single or double
 //! buffering, the setup packet and the standard request and descriptor codes.
 
@@ -13,6 +16,7 @@
 #[cfg(test)]
 extern crate std;
 
+pub mod control;
 pub mod desc;
 pub mod layout;
 mod macros;

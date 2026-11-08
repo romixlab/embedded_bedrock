@@ -2,7 +2,7 @@
 name = "bedrock_usb"
 version = "0.1.0"
 edition = "2024"
-description = "USB full-speed device stack for STM32, fixed at compile time: shared types, descriptors as const fn output, the endpoint and USB SRAM layout with const asserts"
+description = "USB full-speed device stack for STM32, fixed at compile time: shared types, descriptors as const fn output, the endpoint and USB SRAM layout with const asserts, the EP0 control machine"
 license = "MIT OR Apache-2.0"
 
 [features]

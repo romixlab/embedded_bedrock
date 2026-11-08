@@ -73,7 +73,8 @@ so a missing entry means work nobody sees.
   firmware and its host client use it. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_usb/` — a USB full-speed device stack for STM32 fixed at compile time (FEATURES.md area `USBD`): shared
   types in `lib.rs`, the device as a `const` and its descriptors as `const fn` output (`desc.rs`), the usb_v4
-  endpoint registers and USB SRAM layout with its RM0444 checks (`layout.rs`), `descriptors!` (`macros.rs`). Golden
+  endpoint registers and USB SRAM layout with its RM0444 checks (`layout.rs`), `descriptors!` (`macros.rs`), the
+  EP0 state machine without registers (`control.rs`, chapter 9 host tests in `tests/chapter9.rs`). Golden
   test `tests/donguru.rs` against embassy-usb's `Builder` on a dummy driver. Firmware takes it by path, like
   `bedrock_led`.
 - `bedrock_clocks/` — exact clock planning on the host (FEATURES.md area `RCC`): a board's clock tree as exact

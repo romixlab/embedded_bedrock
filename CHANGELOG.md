@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_usb::control`, the EP0 state machine with no registers: SETUP, IN done, OUT data and bus reset in; what to arm on EP0 (send a packet, receive, status, stall) and what to change elsewhere (address, configuration, alternate setting, halt with the toggle reset) out. It answers the chapter 9 standard requests from the `descriptors!` tables, the MS OS 2.0 descriptor set and WebUSB's GET_URL, writes descriptors packet by packet straight from flash (strings encoded on the fly, runtime strings from the handler), ends IN data stages by USB 2.0 §5.5.3 (a ZLP only when the data is shorter than wLength and a multiple of the packet size), takes the address after SET_ADDRESS's status stage, and hands everything else to the class handlers, a tuple dispatched without `dyn`. Host tests drive it as a host would over a table of chapter 9 cases. About 2.9 KiB of code at opt-level z on thumbv6m for a Donguru-like device (USBD-2).
+
 ## [0.2.52] - 2026-11-08
 
 ### Added
