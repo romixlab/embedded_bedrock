@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.59] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb::v3`, the usb_v4 driver on the usb_v3 peripheral with 16-bit USB SRAM (STM32L4, G4, WB): `v3::Mmio` makes each SRAM word two half-word accesses (RM0440: "Word (32-bit) accesses are not allowed") and writes only the low 16 bits of each register; the buffer table is usb_v4's byte for byte, `USB_BTABLE` is set to 0. The driver, endpoints, `Usb` and the layout are shared. `Driver::new` fails the build when a device's buffers don't fit the peripheral's USB SRAM (1024 bytes on usb_v3, `Regs::SRAM_SIZE`). Feature `embassy-stm32`: `v3::embassy::new` validates VDDUSB on the L4 and WB (PWR_CR2 USV) and puts DP / DM on their alternate function where the chip has one; bind `USB_LP` (G4, WB) or `USB` (L4); `v3::on_interrupt()` for bare firmware. SOF timestamps (`State::with_sof`, `v3::Sof`) work as on usb_v4. The 800 ns wait before an OUT read stays: ES0387 2.22.4 lists the G0B1's erratum on the L45x too (USBD-9).
