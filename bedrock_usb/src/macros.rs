@@ -75,6 +75,29 @@ pub const fn __byte(s: &[u8], i: usize) -> Option<u8> {
 #[macro_export]
 macro_rules! descriptors {
     ($vis:vis $name:ident = $device:path) => {
+        $crate::descriptors!(@common $vis $name = $device, $crate::layout::Layout::new(&$device));
+
+        // evaluated whether or not the firmware uses them yet, so a bad device fails the build right here
+        const _: () = assert!($name::LAYOUT.count >= 1);
+    };
+    // on a Synopsys OTG core: the FIFO layout on `$core` is checked instead of the usb_v4 layout, which the device
+    // need not fit (endpoint 8, a double-buffered endpoint beside another on its number); a trait impl's consts
+    // are evaluated whether used or not, so LAYOUT is the empty one
+    ($vis:vis $name:ident = $device:path, otg = $core:expr) => {
+        $crate::descriptors!(@common $vis $name = $device, $crate::layout::Layout::NONE);
+
+        #[allow(dead_code)]
+        impl $name {
+            pub const OTG: $crate::otg::Layout = $crate::otg::Layout::new(&$device, &$core);
+        }
+
+        impl $crate::otg::OtgDescriptors for $name {
+            const OTG: $crate::otg::Layout = $name::OTG;
+        }
+
+        const _: () = assert!($name::OTG.count >= 1);
+    };
+    (@common $vis:vis $name:ident = $device:path, $layout:expr) => {
         $vis struct $name;
 
         #[allow(dead_code)]
@@ -86,7 +109,9 @@ macro_rules! descriptors {
             pub const DEVICE_QUALIFIER: [u8; $device.device_qualifier_len()] = $device.device_qualifier();
             pub const BOS: [u8; $device.bos_len()] = $device.bos_descriptor();
             pub const MS_OS_20_SET: [u8; $device.ms_os_20_len()] = $device.ms_os_20_set();
-            pub const LAYOUT: $crate::layout::Layout = $crate::layout::Layout::new(&$device);
+            /// The usb_v4 layout; [Layout::NONE](crate::layout::Layout::NONE) for a device declared for the OTG
+            /// driver, which the usb_v4 driver refuses.
+            pub const LAYOUT: $crate::layout::Layout = $layout;
 
             /// Whether the device has endpoint `number` in `direction` with `buffering`.
             pub const fn has(
@@ -115,7 +140,6 @@ macro_rules! descriptors {
             assert!($name::CONFIG_DESC[1] == $crate::descriptor_type::CONFIGURATION);
             assert!(matches!($crate::__byte(&$name::BOS, 1), None | Some($crate::descriptor_type::BOS)));
             assert!(matches!($crate::__byte(&$name::MS_OS_20_SET, 0), None | Some(10)));
-            assert!($name::LAYOUT.count >= 1);
         };
     };
 }
@@ -167,5 +191,34 @@ macro_rules! state {
     ($vis:vis static $name:ident : $desc:ty, sof = $clock:expr) => {
         $vis static $name: $crate::v4::State<{ <$desc as $crate::Descriptors>::LAYOUT.count as usize }> =
             $crate::v4::State::with_sof($clock);
+    };
+}
+
+/// Declares the `static` [State](crate::otg::State) of a device on the OTG driver, sized by its OTG layout: one
+/// entry per endpoint number in use, and the RAM its OUT packet buffers take.
+///
+/// ```
+/// # use bedrock_usb::desc::{Device, Endpoint, Function, Interface, Item};
+/// # use bedrock_usb::Buffering;
+/// # const DEVICE: Device = Device {
+/// #     high_speed: true,
+/// #     functions: &[Function {
+/// #         interfaces: &[Interface { items: &[Item::Endpoint(Endpoint::bulk_out(8, 64, Buffering::Double))], ..Interface::vendor() }],
+/// #         ..Function::vendor()
+/// #     }],
+/// #     ..Device::new(0xc0de, 0xcafe)
+/// # };
+/// bedrock_usb::descriptors!(Desc = DEVICE, otg = bedrock_usb::otg::Core::H7_OTG_HS);
+/// bedrock_usb::otg_state!(static USB_STATE: Desc);
+/// assert_eq!(Desc::OTG.count, 9);
+/// assert_eq!(Desc::OTG.out_words, 16 + 2 * 128);
+/// ```
+#[macro_export]
+macro_rules! otg_state {
+    ($vis:vis static $name:ident : $desc:ty) => {
+        $vis static $name: $crate::otg::State<
+            { <$desc as $crate::otg::OtgDescriptors>::OTG.count as usize },
+            { <$desc as $crate::otg::OtgDescriptors>::OTG.out_words as usize },
+        > = $crate::otg::State::new();
     };
 }

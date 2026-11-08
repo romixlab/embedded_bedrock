@@ -22,6 +22,7 @@ pub mod desc;
 pub mod device;
 pub mod layout;
 mod macros;
+pub mod otg;
 #[doc(hidden)]
 pub use macros::__byte;
 pub mod v4;

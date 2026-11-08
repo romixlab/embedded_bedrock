@@ -108,6 +108,15 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// No registers: the layout of a device declared for another driver (`descriptors!(.., otg = ..)`). The usb_v4
+    /// driver refuses it at compile time.
+    pub const NONE: Layout = Layout {
+        regs: [Reg::UNUSED; REGISTERS],
+        count: 0,
+        table_len: 0,
+        end: 0,
+    };
+
     /// The layout of `device`; panics (fails the build in `const`) where the peripheral can't serve it.
     pub const fn new(device: &Device) -> Layout {
         device.check();

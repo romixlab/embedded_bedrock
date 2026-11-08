@@ -62,6 +62,10 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
     pub fn new<const N: usize>(regs: R, state: &'static State<N>) -> Self {
         const {
             assert!(
+                D::LAYOUT.count >= 1,
+                "a device declared for the OTG driver (descriptors!(.., otg = ..)) on the usb_v4 driver"
+            );
+            assert!(
                 N == D::LAYOUT.count as usize,
                 "State<N>: N is D::LAYOUT.count, use bedrock_usb::state!"
             )
