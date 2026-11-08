@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.58] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb::otg`, the driver for the Synopsys OTG core in device mode (STM32H72x / H73x USB1 OTG_HS first, over ULPI with a high-speed PHY or on the embedded full-speed PHY), slave mode without DMA: registers held to embassy-usb-synopsys-otg's `otg_v1`, the FIFO RAM and OUT buffers laid out from the device at compile time and checked against the core, start-up, an interrupt handler that handles the bus reset and empties the receive FIFO, `Ep0`, typed `BulkOut` / `BulkIn` (single- or double-buffered) and `InterruptIn`, enable and halt with DATA0, OUT endpoints disabled under the global OUT NAK. `descriptors!(Desc = DEVICE, otg = Core::H7_OTG_HS)` and `otg_state!` declare a device on it. Feature `sim`: the simulated core its host tests run on, at full and high speed. Feature `embassy-stm32-otg`: `otg::embassy::new_ulpi` / `new_fs` on `Peri<USB_OTG_HS>` with the pins, the USB supply and the ULPI clock (USBD-8).
