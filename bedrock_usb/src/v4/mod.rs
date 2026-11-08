@@ -30,15 +30,16 @@ pub mod embassy;
 #[cfg(test)]
 mod tests;
 
-use core::cell::Cell;
+use core::cell::UnsafeCell;
+use core::sync::atomic::{AtomicBool, Ordering};
 
-use critical_section::Mutex;
-
-pub use driver::{Driver, EndpointError, INTERRUPTS, OUT_PACKET_DELAY_NS, T_STARTUP_NS, interrupt};
+pub use driver::{
+    Driver, EndpointError, INTERRUPTS, OUT_PACKET_DELAY_NS, SOF_INTERRUPTS, T_STARTUP_NS, interrupt,
+};
 pub use endpoint::{BulkIn, BulkOut, InterruptIn};
 pub use ep0::{Ep0, Ep0Error};
 pub use regs::{Mmio, Regs};
-pub use state::{State, Status, event};
+pub use state::{Sof, State, Status, event};
 
 use crate::layout::Layout;
 use state::StateRef;
@@ -51,16 +52,43 @@ pub(crate) struct Active {
     pub(crate) state: StateRef,
 }
 
-static ACTIVE: Mutex<Cell<Option<Active>>> = Mutex::new(Cell::new(None));
+/// The registration, written once before the interrupt is unmasked and only read after. Not a
+/// `Mutex<Cell<Option<Active>>>`: reading that copies the 28 bytes twice through `memcpy` on every interrupt
+/// (226 cycles at opt-level z on the Cortex-M0+), before the handler has looked at a flag or timestamped a SOF.
+struct Registration {
+    active: UnsafeCell<Option<Active>>,
+    set: AtomicBool,
+}
 
+// Safety: `active` is written once, in a critical section, before `set` is stored with Release; readers load
+// `set` with Acquire first and never write.
+unsafe impl Sync for Registration {}
+
+static ACTIVE: Registration = Registration {
+    active: UnsafeCell::new(None),
+    set: AtomicBool::new(false),
+};
+
+/// Panics on a second registration: one usb_v4 peripheral, one driver.
 pub(crate) fn register(active: Active) {
-    critical_section::with(|cs| ACTIVE.borrow(cs).set(Some(active)));
+    critical_section::with(|_| {
+        assert!(
+            !ACTIVE.set.load(Ordering::Relaxed),
+            "bedrock_usb: a usb_v4 driver is registered already"
+        );
+        // Safety: not set yet, so no reader looks at it (see Registration)
+        unsafe { *ACTIVE.active.get() = Some(active) };
+        ACTIVE.set.store(true, Ordering::Release);
+    })
 }
 
 /// The interrupt handler of the [Driver::register]ed driver, for the USB vector. Does nothing before one is
 /// registered, and returns at once when no USB flag is pending.
 pub fn on_interrupt() {
-    if let Some(a) = critical_section::with(|cs| ACTIVE.borrow(cs).get()) {
-        interrupt(&a.regs, a.layout, a.state);
+    if ACTIVE.set.load(Ordering::Acquire) {
+        // Safety: set, so written for good (see Registration)
+        if let Some(a) = unsafe { &*ACTIVE.active.get() } {
+            interrupt(&a.regs, a.layout, a.state);
+        }
     }
 }

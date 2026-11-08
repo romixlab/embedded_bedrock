@@ -44,8 +44,12 @@ const IN4: EndpointAddress = EndpointAddress::new(4, Direction::In);
 
 /// A started driver on a fresh chip, after a bus reset, with the class endpoints enabled.
 fn device() -> (&'static Sim, Drv) {
+    device_on(State::new())
+}
+
+fn device_on(state: State<{ Desc::LAYOUT.count as usize }>) -> (&'static Sim, Drv) {
     let sim: &'static Sim = Box::leak(Box::new(Sim::new()));
-    let state: &'static State<{ Desc::LAYOUT.count as usize }> = Box::leak(Box::new(State::new()));
+    let state: &'static State<{ Desc::LAYOUT.count as usize }> = Box::leak(Box::new(state));
     let d = Driver::new(sim, state);
     d.init();
     sim.bus_reset();
@@ -703,4 +707,123 @@ fn layout_matches_the_device() {
     assert_eq!(Desc::LAYOUT.count, 5);
     assert!(Desc::has(Direction::Out, 1, Buffering::Double));
     let _ = <Desc as Descriptors>::LAYOUT;
+}
+
+/// The local clock of the SOF tests: what [Clock::set] put there, one test at a time per thread.
+struct Clock;
+
+std::thread_local! {
+    static NOW_US: core::cell::Cell<u64> = const { core::cell::Cell::new(0) };
+}
+
+impl Clock {
+    fn set(us: u64) {
+        NOW_US.with(|c| c.set(us))
+    }
+
+    fn now() -> u64 {
+        NOW_US.with(|c| c.get())
+    }
+}
+
+#[test]
+fn sof_masked_without_a_clock() {
+    let (sim, d) = device();
+    assert_eq!(sim.with(|i| i.cntr) & super::SOF_INTERRUPTS, 0);
+    // the flag comes up anyway (ISTR flags are set whatever the mask): cleared, nothing recorded
+    sim.sof(5);
+    d.on_interrupt();
+    assert_eq!(sim.with(|i| i.istr) & super::regs::istr::SOF, 0);
+    assert_eq!(d.sof(), None);
+}
+
+#[test]
+fn sof_timestamped_first() {
+    let (sim, d) = device_on(State::with_sof(Clock::now));
+    assert_eq!(
+        sim.with(|i| i.cntr) & super::SOF_INTERRUPTS,
+        super::SOF_INTERRUPTS
+    );
+    assert_eq!(d.sof(), None);
+    Clock::set(1_000);
+    sim.sof(2046);
+    assert!(sim.irq());
+    d.on_interrupt();
+    assert!(!sim.irq());
+    let s = d.sof().unwrap();
+    assert_eq!(
+        (s.frame, s.local_us, s.count, s.locked),
+        (2046, 1_000, 1, false)
+    );
+    Clock::set(2_003);
+    sim.sof(2047);
+    d.on_interrupt();
+    assert!(d.sof().unwrap().locked); // LCK from the second SOF
+    // a SOF with a transfer: the timestamp comes before the transfer is handled (its CHEPnR write)
+    Clock::set(3_001);
+    sim.sof(0);
+    assert_eq!(sim.host_out(3, &[1, 2, 3]), Handshake::Ack);
+    sim.take_log();
+    d.on_interrupt();
+    let log = sim.take_log();
+    let sof_clear = log
+        .iter()
+        .position(|o| matches!(o, Op::Istr(v) if v & super::regs::istr::SOF == 0))
+        .unwrap();
+    let chep = log
+        .iter()
+        .position(|o| matches!(o, Op::Chep { .. }))
+        .unwrap();
+    assert!(sof_clear < chep, "{log:?}");
+    let s = d.sof().unwrap();
+    assert_eq!((s.frame, s.local_us, s.count, s.missed), (0, 3_001, 3, 0));
+}
+
+#[test]
+fn esof_counts_only_while_locked() {
+    let (sim, d) = device_on(State::with_sof(Clock::now));
+    // before the frame timer locks: not counted
+    sim.esof();
+    d.on_interrupt();
+    sim.sof(10);
+    d.on_interrupt();
+    sim.sof(11);
+    d.on_interrupt();
+    sim.esof();
+    d.on_interrupt();
+    sim.esof();
+    d.on_interrupt();
+    assert_eq!(d.sof().unwrap().missed, 2);
+    assert_eq!(d.take_events(event::ESOF), event::ESOF);
+    sim.sof(14);
+    d.on_interrupt();
+    assert_eq!(sim.with(|i| i.fnr) & super::regs::fnr::LSOF, 0);
+    // suspended: ESOF masked, and LCK gone, so a stray one isn't counted either
+    sim.suspend();
+    d.on_interrupt();
+    assert_eq!(sim.with(|i| i.cntr) & cntr::ESOFM, 0);
+    assert_ne!(sim.with(|i| i.cntr) & cntr::SOFM, 0);
+    sim.esof();
+    assert!(!sim.irq());
+    d.on_interrupt();
+    assert_eq!(d.sof().unwrap().missed, 2);
+    sim.wakeup();
+    d.on_interrupt();
+    assert_ne!(sim.with(|i| i.cntr) & cntr::ESOFM, 0);
+    // suspended again, then a bus reset ends it: ESOF back on
+    sim.suspend();
+    d.on_interrupt();
+    sim.bus_reset();
+    d.on_interrupt();
+    assert_ne!(sim.with(|i| i.cntr) & cntr::ESOFM, 0);
+}
+
+#[test]
+fn suspend_without_sof_keeps_esof_off() {
+    let (sim, d) = device();
+    sim.suspend();
+    d.on_interrupt();
+    sim.wakeup();
+    d.on_interrupt();
+    assert_eq!(sim.with(|i| i.cntr) & super::SOF_INTERRUPTS, 0);
 }

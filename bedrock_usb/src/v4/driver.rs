@@ -15,9 +15,14 @@ use crate::buffer::Mode;
 use crate::layout::{Layout, RegMode, RegType};
 use crate::{Descriptors, Direction, EndpointAddress};
 
-/// Interrupts the driver unmasks: transfers, bus reset, suspend and wake-up. SOF and ESOF stay masked (ESOF would
-/// fire every millisecond while suspended); a firmware that wants them sets them in CNTR itself.
+/// Interrupts the driver unmasks: transfers, bus reset, suspend and wake-up. SOF and ESOF only for a state made
+/// with [State::with_sof] ([SOF_INTERRUPTS]).
 pub const INTERRUPTS: u32 = cntr::CTRM | cntr::RST_DCONM | cntr::SUSPM | cntr::WKUPM;
+
+/// The interrupts SOF timestamps add: SOF, and ESOF to count missed SOFs. ESOF is masked again while the bus is
+/// suspended, where it would come every millisecond (RM0444 Rev 6 §37.5.7: the L2RES interval "can be timed
+/// using ESOF interrupts, occurring with a 1 ms period when the system clock is running at nominal frequency").
+pub const SOF_INTERRUPTS: u32 = cntr::SOFM | cntr::ESOFM;
 
 /// tSTARTUP, "USB transceiver startup time", 1 µs max (DS13560 Rev 6) (R9).
 pub const T_STARTUP_NS: u32 = 1_000;
@@ -92,7 +97,7 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
         let r = &self.regs;
         r.set_cntr(cntr::USBRST); // PDWN cleared: transceiver on, peripheral still in reset
         r.delay_ns(T_STARTUP_NS);
-        r.set_cntr(INTERRUPTS); // USBRST cleared
+        r.set_cntr(interrupts(self.state)); // USBRST cleared
         r.set_istr(0);
         bus_reset(r, Self::layout(), self.state);
         // a reset event before the host has reset the bus is no news to the firmware
@@ -112,6 +117,11 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
     /// The interrupt handler, for the vector (or for a test driving a simulated chip).
     pub fn on_interrupt(&self) {
         interrupt(&self.regs, Self::layout(), self.state)
+    }
+
+    /// The last SOF timestamped ([State::with_sof]).
+    pub fn sof(&self) -> Option<super::Sof> {
+        self.state.bus.sof()
     }
 
     /// Bus events raised since they were last taken, cleared ([event] bits in `mask`).
@@ -511,8 +521,20 @@ fn bus_reset<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
     st.bus.waker.wake();
 }
 
+/// The interrupts unmasked for state `st`.
+fn interrupts(st: StateRef) -> u32 {
+    if st.bus.sof_enabled() {
+        INTERRUPTS | SOF_INTERRUPTS
+    } else {
+        INTERRUPTS
+    }
+}
+
 /// The interrupt handler of a device with `layout` on `r`.
 ///
+/// - SOF, first: with [State::with_sof], the firmware's clock read and FNR's frame number stored ([super::Sof]),
+///   before any other work, so the timestamp is the SOF plus the interrupt latency and nothing else of this
+///   handler. ESOF: counted as a missed SOF while FNR's LCK is set.
 /// - RST_DCON: the bus reset here, so the 10 ms of R8 hold whatever the executor does.
 /// - CTR, for each register with a transfer done: VTRX / VTTX cleared with an invariant write (R1) and the
 ///   waiting task woken; a SETUP on EP0 raises [event::SETUP]. Double-buffered registers hand their next buffer
@@ -524,12 +546,25 @@ fn bus_reset<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
 /// the USB is pending, so a vector shared with UCPD costs a few cycles.
 pub fn interrupt<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
     let flags = r.istr();
-    if flags & (istr::RST_DCON | istr::CTR | istr::SUSP | istr::WKUP | istr::ESOF) == 0 {
+    if flags & (istr::RST_DCON | istr::CTR | istr::SUSP | istr::WKUP | istr::ESOF | istr::SOF) == 0
+    {
         return;
+    }
+    if flags & istr::SOF != 0 {
+        // the flag is set whether or not SOFM is: cleared either way, so a shared vector doesn't come back here
+        if let Some(now) = st.bus.sof_clock {
+            let t = now();
+            st.bus.sof_seen(t, r.fnr());
+        }
+        r.set_istr(!istr::SOF);
     }
     if flags & istr::RST_DCON != 0 {
         r.set_istr(!istr::RST_DCON);
         bus_reset(r, layout, st);
+        if st.bus.sof_enabled() {
+            // a reset out of suspend: ESOF back on
+            r.set_cntr(r.cntr() | SOF_INTERRUPTS);
+        }
     }
     loop {
         let flags = r.istr();
@@ -547,16 +582,19 @@ pub fn interrupt<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
     }
     let mut events = 0;
     if flags & istr::SUSP != 0 {
-        r.set_cntr(r.cntr() | cntr::SUSPEN);
+        let off = if st.bus.sof_enabled() { cntr::ESOFM } else { 0 };
+        r.set_cntr((r.cntr() | cntr::SUSPEN) & !off);
         r.set_istr(!istr::SUSP);
         events |= event::SUSPEND;
     }
     if flags & istr::WKUP != 0 {
-        r.set_cntr(r.cntr() & !(cntr::SUSPEN | cntr::SUSPRDY));
+        r.set_cntr((r.cntr() & !(cntr::SUSPEN | cntr::SUSPRDY)) | (interrupts(st) & cntr::ESOFM));
         r.set_istr(!istr::WKUP);
         events |= event::RESUME;
     }
     if flags & istr::ESOF != 0 {
+        // LSOF and LCK are written at the ESOF, so FNR read now is this ESOF's
+        st.bus.esof_seen(r.fnr());
         r.set_istr(!istr::ESOF);
         events |= event::ESOF;
     }

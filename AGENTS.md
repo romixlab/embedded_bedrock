@@ -66,7 +66,8 @@ so a missing entry means work nobody sees.
 - `bedrock_led/` — status LED animation and driver (breath / blink, gamma, peak, identify; mono and RGB over
   embedded-hal PWM; `embassy` and `ww-indication` features); firmware takes it by path from the checkout next to it.
 - `bedrock_sync/` — the shared clock (local clock disciplined onto UTC by host steer points or a sync line, holdover,
-  slewing, scheduled actions, an optional oscillator backend; `embassy` and `ww-timebase` features); host side is
+  slewing, scheduled actions, an optional oscillator backend, the local clock against USB frames in `sof.rs`;
+  `embassy`, `ww-timebase` and `sof` features); host side is
   wire_weaver's `ww_clock_sync`. Firmware takes it by path, like `bedrock_led`, which aligns its animations to it.
 - `bedrock_can/` — an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL (bit timing, configuration and
   filter checks against a `Controller` layout, frames to send, error state), from B135; the template's `--can`

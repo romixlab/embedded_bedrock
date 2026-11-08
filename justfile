@@ -16,10 +16,10 @@ test *flags:
 # linking cost.
 test-all:
     cargo nextest run --workspace --locked
-    cargo nextest run --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
+    cargo nextest run --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/sof,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
     cargo nextest run --locked -p bedrock_usb --features metapac-check --test v4_metapac
     cargo test --doc --workspace --locked
-    cargo test --doc --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
+    cargo test --doc --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/sof,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
 
 # Format check, clippy on the host, and bedrock_led / bedrock_sync / bedrock_can / bedrock_usb as no_std firmware code for the
 # Cortex-M0+, bedrock_rom_boot for the G0 (Cortex-M0+) and the H7 (Cortex-M7), bedrock_clocks_rt for the H7
@@ -32,7 +32,7 @@ lint:
     cargo clippy -p bedrock_led --all-targets --all-features --locked -- -D warnings
     cargo clippy -p bedrock_led --target thumbv6m-none-eabi --features embassy,ww-indication,defmt --locked -- -D warnings
     cargo clippy -p bedrock_sync --all-targets --all-features --locked -- -D warnings
-    cargo clippy -p bedrock_sync --target thumbv6m-none-eabi --features embassy,ww-timebase,defmt --locked -- -D warnings
+    cargo clippy -p bedrock_sync --target thumbv6m-none-eabi --features embassy,ww-timebase,sof,defmt --locked -- -D warnings
     cargo clippy -p bedrock_can --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
     cargo clippy -p bedrock_usb --all-targets --features sim,defmt,metapac-check --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
@@ -41,21 +41,25 @@ lint:
     cargo clippy --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked -- -D warnings
     cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked
     CARGO_PROFILE_RELEASE_OPT_LEVEL=3 cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked --target-dir {{usb_example}}/target/o3
+    cargo clippy --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --features sof --locked --target-dir {{usb_example}}/target/sof -- -D warnings
+    cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --features sof --locked --target-dir {{usb_example}}/target/sof
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_clocks_rt --target thumbv7em-none-eabihf --features defmt --locked -- -D warnings
 
 # bedrock_usb's example firmware (STM32G0B1, vendor bulk loopback): a standalone crate with its own Cargo.lock, built
-# by `lint` at opt-level z (its release profile) and 3
+# by `lint` at opt-level z (its release profile) and 3, and with SOF timestamps (feature `sof`) at z
 usb_example := "bedrock_usb/examples/g0b1_loopback"
 
-# Code bytes of the example per crate and per bedrock_usb file (DWARF line table), at opt-level z and 3, after `lint`
+# Code bytes of the example per crate and per bedrock_usb file (DWARF line table), at opt-level z and 3 and with
+# `sof` at z, after `lint`
 usb-size:
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/thumbv6m-none-eabi/release/g0b1_loopback -m bedrock_usb/src
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/o3/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/o3/thumbv6m-none-eabi/release/g0b1_loopback -m bedrock_usb/src
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/sof/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
 
 # Build bedrock-lint (the firmware lint) and install it on this PC
 install:

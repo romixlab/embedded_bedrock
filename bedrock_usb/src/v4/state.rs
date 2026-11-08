@@ -225,6 +225,33 @@ pub mod event {
     pub const SETUP: u8 = 1 << 4;
 }
 
+/// The last start of frame the interrupt handler saw, for a firmware that timestamps SOFs ([State::with_sof]):
+/// the frame number and the firmware's local time when the handler took it, so a shared clock (bedrock_sync's
+/// `sof` module) can measure its local clock against the host controller's 1 ms frames.
+///
+/// RM0444 Rev 6 §37.6.2, SOF: "This bit signals the beginning of a new USB frame and it is set when a SOF packet
+/// arrives through the USB bus. The interrupt service routine can monitor the SOF events to have a 1 ms
+/// synchronization event to the USB host and to safely read the USB_FNR register which is updated at the SOF
+/// packet reception".
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Sof {
+    /// FN\[10:0\] of the SOF (§37.6.3): the frame number the host sent, wrapping at 2048.
+    pub frame: u16,
+    /// The firmware's local time in µs, taken in the interrupt handler before any other work: the SOF plus the
+    /// interrupt latency, which is never negative (a critical section or a higher-priority interrupt only delays
+    /// it).
+    pub local_us: u64,
+    /// SOFs seen since start (wrapping): a reader that sees the same count again has no new SOF.
+    pub count: u32,
+    /// SOFs missed (wrapping): ESOFs while the frame timer was locked (FNR LCK), so neither the ESOFs of a
+    /// suspended bus nor those before the device first locked count.
+    pub missed: u32,
+    /// FNR LCK at this SOF: "at least two consecutive SOF packets have been received after the end of an USB reset
+    /// condition or after the end of an USB resume sequence".
+    pub locked: bool,
+}
+
 /// Device-wide share: bus events and the waker of the task that handles them and EP0, and the bus status
 /// `Usb::run()` keeps for the rest of the firmware.
 pub struct BusState {
@@ -233,16 +260,67 @@ pub struct BusState {
     pub(crate) resets: Mutex<Cell<u8>>,
     pub(crate) status: Mutex<Cell<Status>>,
     pub(crate) status_waker: WakerCell,
+    /// The firmware's local clock in µs for SOF timestamps; `None`: SOF and ESOF stay masked.
+    pub(crate) sof_clock: Option<fn() -> u64>,
+    pub(crate) sof: Mutex<Cell<Sof>>,
 }
 
 impl BusState {
     pub const fn new() -> Self {
+        Self::with_sof_clock(None)
+    }
+
+    const fn with_sof_clock(sof_clock: Option<fn() -> u64>) -> Self {
         BusState {
             waker: WakerCell::new(),
             events: Mutex::new(Cell::new(0)),
             resets: Mutex::new(Cell::new(0)),
             status: Mutex::new(Cell::new(Status::new())),
             status_waker: WakerCell::new(),
+            sof_clock,
+            sof: Mutex::new(Cell::new(Sof {
+                frame: 0,
+                local_us: 0,
+                count: 0,
+                missed: 0,
+                locked: false,
+            })),
+        }
+    }
+
+    /// Whether SOFs are timestamped ([State::with_sof]).
+    pub const fn sof_enabled(&self) -> bool {
+        self.sof_clock.is_some()
+    }
+
+    /// The last SOF the interrupt handler timestamped; `None` before the first, or when SOFs are not timestamped.
+    pub fn sof(&self) -> Option<Sof> {
+        let s = critical_section::with(|cs| self.sof.borrow(cs).get());
+        (s.count != 0).then_some(s)
+    }
+
+    /// A SOF at `local_us` with `USB_FNR` value `fnr`, from the interrupt handler.
+    pub(crate) fn sof_seen(&self, local_us: u64, fnr: u32) {
+        critical_section::with(|cs| {
+            let c = self.sof.borrow(cs);
+            let mut s = c.get();
+            s.frame = (fnr & super::regs::fnr::FN) as u16;
+            s.local_us = local_us;
+            s.count = s.count.wrapping_add(1);
+            s.locked = fnr & super::regs::fnr::LCK != 0;
+            c.set(s);
+        })
+    }
+
+    /// An ESOF with `USB_FNR` value `fnr`: a missed SOF when the frame timer was locked.
+    pub(crate) fn esof_seen(&self, fnr: u32) {
+        if fnr & super::regs::fnr::LCK != 0 {
+            critical_section::with(|cs| {
+                let c = self.sof.borrow(cs);
+                let mut s = c.get();
+                s.missed = s.missed.wrapping_add(1);
+                c.set(s);
+            })
         }
     }
 
@@ -357,11 +435,28 @@ pub struct State<const N: usize> {
 }
 
 impl<const N: usize> State<N> {
+    /// SOFs not timestamped: SOF and ESOF stay masked.
     pub const fn new() -> Self {
         State {
             bus: BusState::new(),
             eps: [const { EpState::new() }; N],
         }
+    }
+
+    /// SOFs timestamped with `local_us`, the firmware's local clock in µs (the one its shared clock runs on): the
+    /// driver unmasks SOF and ESOF, and the interrupt handler calls `local_us` first thing on every SOF (1000 a
+    /// second while the bus is up), so it must be short and callable from the interrupt (embassy-time's
+    /// `Instant::now().as_micros()` is). [State::sof] gives the last one.
+    pub const fn with_sof(local_us: fn() -> u64) -> Self {
+        State {
+            bus: BusState::with_sof_clock(Some(local_us)),
+            eps: [const { EpState::new() }; N],
+        }
+    }
+
+    /// The last SOF timestamped, see [Sof].
+    pub fn sof(&self) -> Option<Sof> {
+        self.bus.sof()
     }
 
     /// The bus status `Usb::run()` keeps, for any task.

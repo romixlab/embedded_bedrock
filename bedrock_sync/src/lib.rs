@@ -12,6 +12,8 @@
 //! - `Sync` (feature `embassy`) is a [SharedClock] in a `static` on embassy-time's `Instant`, with
 //!   `wait_until_shared` for scheduled actions.
 //! - `clock` (feature `ww-timebase`) is the bookkeeping behind a `ww_timebase::Clock` server.
+//! - `sof` (feature `sof`) measures the local clock against USB start-of-frame packets and turns host points
+//!   referenced to a frame into [Steer]s.
 //!
 //! Local and shared time are µs as `u64`. The hot path ([SharedClock::shared], every LED tick) adds and compares
 //! 64-bit values but multiplies only in 32 bits, so the Cortex-M0+ (no 64-bit multiply, no divide) calls no
@@ -22,6 +24,8 @@ pub mod clock;
 #[cfg(feature = "embassy")]
 mod driver;
 mod osc;
+#[cfg(feature = "sof")]
+pub mod sof;
 
 #[cfg(feature = "embassy")]
 pub use driver::{NotSynced, SharedNow, Sync};

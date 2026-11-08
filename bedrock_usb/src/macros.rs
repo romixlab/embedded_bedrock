@@ -132,10 +132,36 @@ macro_rules! descriptors {
 /// bedrock_usb::descriptors!(Desc = DEVICE);
 /// bedrock_usb::state!(static USB_STATE: Desc);
 /// ```
+///
+/// With `sof = <fn() -> u64>`, the interrupt handler timestamps every SOF with that local clock in µs
+/// ([State::with_sof](crate::v4::State::with_sof)); the firmware reads the last one with `USB_STATE.sof()`:
+///
+/// ```
+/// # use bedrock_usb::desc::{Device, Endpoint, Function, Interface, Item};
+/// # use bedrock_usb::Buffering;
+/// # const DEVICE: Device = Device {
+/// #     functions: &[Function {
+/// #         interfaces: &[Interface { items: &[Item::Endpoint(Endpoint::bulk_in(2, 64, Buffering::Single))], ..Interface::vendor() }],
+/// #         ..Function::vendor()
+/// #     }],
+/// #     ..Device::new(0xc0de, 0xcafe)
+/// # };
+/// # bedrock_usb::descriptors!(Desc = DEVICE);
+/// fn now_us() -> u64 {
+///     // embassy_time::Instant::now().as_micros() in a firmware
+///     0
+/// }
+/// bedrock_usb::state!(static USB_STATE: Desc, sof = now_us);
+/// assert!(USB_STATE.sof().is_none());
+/// ```
 #[macro_export]
 macro_rules! state {
     ($vis:vis static $name:ident : $desc:ty) => {
         $vis static $name: $crate::v4::State<{ <$desc as $crate::Descriptors>::LAYOUT.count as usize }> =
             $crate::v4::State::new();
+    };
+    ($vis:vis static $name:ident : $desc:ty, sof = $clock:expr) => {
+        $vis static $name: $crate::v4::State<{ <$desc as $crate::Descriptors>::LAYOUT.count as usize }> =
+            $crate::v4::State::with_sof($clock);
     };
 }

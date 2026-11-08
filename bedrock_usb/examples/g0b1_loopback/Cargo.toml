@@ -9,7 +9,14 @@ publish = false
 # standalone firmware crate for thumbv6m-none-eabi: keeps the embedded_bedrock workspace from claiming it
 [workspace]
 
+[features]
+# SOF timestamps (USBD-10): the interrupt handler stamps every SOF with embassy-time, a task fits the local clock
+# against the frames with bedrock_sync's SofTrack and logs its rate
+sof = ["dep:bedrock_sync", "dep:embassy-time", "embassy-stm32/time-driver-any"]
+
 [dependencies]
+bedrock_sync = { path = "../../../bedrock_sync", features = ["sof", "defmt"], optional = true }
+embassy-time = { version = "0.5.1", optional = true }
 bedrock_usb = { path = "../..", features = ["embassy-stm32", "defmt"] }
 embassy-stm32 = { version = "0.6.0", features = ["defmt", "stm32g0b1re", "unstable-pac"] }
 embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "defmt"] }

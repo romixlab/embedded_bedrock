@@ -77,6 +77,21 @@ pub mod istr {
     pub const CTR: u32 = 1 << 15;
 }
 
+/// `USB_FNR` bits (§37.6.3), all read only.
+pub mod fnr {
+    /// FN\[10:0\]: "the 11-bits frame number contained in the last received SOF packet ... updated on the
+    /// generation of an SOF interrupt".
+    pub const FN: u32 = 0x7ff;
+    /// LSOF\[1:0\]: "written by the hardware when an ESOF interrupt is generated, counting the number of
+    /// consecutive SOF packets lost. At the reception of an SOF packet, these bits are cleared."
+    pub const LSOF_SHIFT: u32 = 11;
+    pub const LSOF: u32 = 0b11 << LSOF_SHIFT;
+    /// LCK: "set by the hardware when at least two consecutive SOF packets have been received after the end of an
+    /// USB reset condition or after the end of an USB resume sequence. Once locked, the frame timer remains in this
+    /// state until an USB reset or USB suspend event occurs."
+    pub const LCK: u32 = 1 << 13;
+}
+
 /// `USB_DADDR` bits (§37.6.4).
 pub mod daddr {
     pub const ADD: u32 = 0x7f;
@@ -108,6 +123,7 @@ pub trait Regs {
     fn set_cntr(&self, value: u32);
     fn istr(&self) -> u32;
     fn set_istr(&self, value: u32);
+    fn fnr(&self) -> u32;
     fn daddr(&self) -> u32;
     fn set_daddr(&self, value: u32);
     fn bcdr(&self) -> u32;
@@ -183,6 +199,10 @@ impl Regs for Mmio {
     #[inline(always)]
     fn set_istr(&self, value: u32) {
         unsafe { self.reg(offset::ISTR).write_volatile(value) }
+    }
+    #[inline(always)]
+    fn fnr(&self) -> u32 {
+        unsafe { self.reg(offset::FNR).read_volatile() }
     }
     #[inline(always)]
     fn daddr(&self) -> u32 {

@@ -14,6 +14,8 @@ embassy = ["dep:embassy-time", "dep:embassy-sync"]
 # The ww_timebase::Clock bookkeeping shared by boards (steer, sync_status, time_map, shared_now)
 ww-timebase = ["dep:ww_timebase", "dep:wire_weaver", "dep:ww_si"]
 defmt = ["dep:defmt", "ww_timebase?/defmt"]
+# The local clock against USB start-of-frame packets (bedrock_usb's SOF timestamps), frame-referenced steer points
+sof = []
 
 [dependencies]
 defmt = { version = "1.0", optional = true }

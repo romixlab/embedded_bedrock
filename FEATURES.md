@@ -1084,7 +1084,26 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   bulk, device qualifier, other-speed configuration).
 - 📋 **USBD-9 usb_v3 port**: L4, G4, WB (16-bit USB SRAM, `usbram_16x2`); same endpoint register as usb_v4, another
   SRAM access and buffer descriptor layout behind USBD-3's SRAM trait.
-- 📋 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
+- 🧪 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
+  `bedrock_usb`: `State::with_sof(now_us)` / `state!(..., sof = now_us)` is the switch (off by default, 1000
+  interrupts a second); `v4/driver.rs` `interrupt()` reads the clock on SOF before any other work and keeps
+  `v4::Sof` (FNR frame number, local µs, count, missed = ESOFs while FNR LCK, LCK) in `BusState`; ESOF masked while
+  suspended. RM0444 Rev 6 §37.6.2 / §37.6.3 quoted at `regs::fnr` and `state::Sof`; ES0548 Rev 4 lists no
+  device-mode SOF erratum (2.16.3 and 2.16.5 are host mode). Tests in `v4/tests.rs` on the simulated FNR.
+  `bedrock_sync::sof` (feature `sof`): `SofTrack` unwraps the frame number by local time, keeps the earliest sample
+  per 128-frame window, fits the rate over up to 65 s, restarts on gap / jump / late run, `local_at`, `map`,
+  `steer` (a frame-referenced host point as a `Steer`); module docs carry the host-side meaning. Host tests: an
+  HSI 2000 ppm off with one-sided latency fitted within 1 ppm and frame times within 10 µs through 30 wraps, gaps,
+  another host, and a `SharedClock` steered from frames within 10 µs of the host's frame times. Example
+  `g0b1_loopback --features sof` (embassy-time stamps, a `SofTrack` task). At opt-level z, cycles counted from
+  the disassembly (Cortex-M0+ timings, zero wait states): the time is read 94 cycles after the interrupt request
+  (15 entry + 79), the SOF branch costs 79, a SOF-only interrupt 210 plus entry and exit; bedrock_usb code +152 B,
+  the example +3.9 KiB with embassy-time, `SofTrack` (1.0 KiB) and the 64-bit division. On the way: the
+  registration read without two `memcpy` copies (226 cycles before the first flag on every interrupt). Donguru's
+  CRS (HSI48 trimmed from SOF) only locks the USB kernel clock's rate to the frames: it gives no timestamp and no
+  frame number, so it doesn't replace this. Open: the wire_weaver side (a `FrameMap` in `ww_timebase::Clock`,
+  `ww_clock_sync` fitting frames per host controller), the stamp latency and its spread measured on hardware
+  (USBD-7).
 - 📋 **USBD-11 usb_v1 / v2 port**: F0, F1, F3, L0, L1 (16-bit USB SRAM, on F1 spaced one half-word per word,
   `usbram_16x1`); after USBD-9.
 

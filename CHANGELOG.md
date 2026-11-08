@@ -9,6 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_usb` SOF timestamps: a state made with `State::with_sof(now_us)` (`state!(static USB_STATE: Desc, sof = now_us)`) unmasks SOF and ESOF, and the interrupt handler reads the firmware's local clock first thing on every SOF and keeps it with FNR's frame number, a SOF count, the missed SOFs (ESOFs while FNR's LCK is set) and LCK itself (`State::sof()`, `Driver::sof()`, `v4::Sof`). ESOF is masked while the bus is suspended. Off by default: 1000 interrupts a second (USBD-10).
+- `bedrock_sync::sof` (feature `sof`): `SofTrack` measures the local clock against USB frames from those timestamps: the 11-bit frame number unwrapped by the local time, the earliest sample of each 128-frame window as a point, the rate fitted over up to 65 s, starting over after a gap, a jump to another host or a run of late samples. `local_at(frame)` gives the local time of a recent frame, `map()` what a device tells its host, `steer()` turns a host point referenced to a frame into a `Steer`. The module docs say what frames mean for the host side (wire_weaver's `ww_clock_sync`) (USBD-10).
+- `bedrock_usb/examples/g0b1_loopback` feature `sof`: SOFs stamped with embassy-time and fitted by a `SofTrack` task; `just lint` builds it, `just usb-size` measures it (USBD-10).
+
+### Changed
+
+- `bedrock_usb::v4::on_interrupt()` reads the registered driver in place instead of copying it out of a `Mutex<Cell>` twice through `memcpy`: an interrupt on the shared G0 vector with no USB flag pending takes 56 cycles instead of 282 at opt-level z, and the handler's frame is 104 B instead of 144 B. A second `Driver::register()` panics (USBD-10).
+
 ## [0.2.56] - 2026-11-08
 
 ### Added

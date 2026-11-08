@@ -4,8 +4,11 @@
 //!
 //! Clocks: SYSCLK 64 MHz from HSI16 through the PLL; USB from HSI48, trimmed to the host's SOF by the CRS.
 //!
-//! Run on a board: `cargo run --release` in this directory (probe-rs, flip-link). Built for size by `just lint`
-//! at opt-level z and 3.
+//! With feature `sof`, the interrupt handler timestamps every SOF with embassy-time and a task fits the local
+//! clock (HSI16 through the PLL) against the host's frames with bedrock_sync's `SofTrack`, logging its rate.
+//!
+//! Run on a board: `cargo run --release` in this directory (probe-rs, flip-link), `--features sof` for the SOF
+//! track. Built for size by `just lint` at opt-level z and 3, and with `sof` at z.
 
 #![no_std]
 #![no_main]
@@ -71,7 +74,43 @@ const DEVICE: Device = Device {
     ..Device::new(0xc0de, 0xcafe)
 };
 bedrock_usb::descriptors!(Desc = DEVICE);
+#[cfg(not(feature = "sof"))]
 bedrock_usb::state!(static USB_STATE: Desc);
+#[cfg(feature = "sof")]
+bedrock_usb::state!(static USB_STATE: Desc, sof = now_us);
+
+/// The local clock the SOFs are stamped with, from the interrupt handler.
+#[cfg(feature = "sof")]
+fn now_us() -> u64 {
+    embassy_time::Instant::now().as_micros()
+}
+
+/// Hands the last SOF to the track ten times a second and logs the local clock against the frames.
+#[cfg(feature = "sof")]
+#[embassy_executor::task]
+async fn sof_task() -> ! {
+    use bedrock_sync::sof::{Push, SofTrack};
+    let mut track = SofTrack::new();
+    let mut ticks = 0u32;
+    loop {
+        embassy_time::Timer::after_millis(100).await;
+        if let Some(s) = USB_STATE.sof() {
+            if let Push::Restarted(why) = track.push(s.frame, s.local_us) {
+                info!("sof track restarted: {}", why);
+            }
+            ticks += 1;
+            if ticks.is_multiple_of(100) {
+                info!(
+                    "sof {} frame {} rate {} ppb, {} missed",
+                    track.state(),
+                    s.frame,
+                    track.rate_ppb(),
+                    s.missed
+                );
+            }
+        }
+    }
+}
 
 bind_interrupts!(struct Irqs {
     USB_UCPD1_2 => InterruptHandler<peripherals::USB>;
@@ -176,4 +215,6 @@ async fn main(spawner: Spawner) {
     spawner.spawn(usb_task(usb).unwrap());
     spawner.spawn(status_task().unwrap());
     spawner.spawn(loopback(out, inp).unwrap());
+    #[cfg(feature = "sof")]
+    spawner.spawn(sof_task().unwrap());
 }

@@ -7,10 +7,12 @@
 //!   only. [Sim::race] runs a hardware event between the driver's read and its next write.
 //! - `USB_ISTR`: CTR, IDN and DIR computed from the endpoint registers (the lowest register with VTRX or VTTX
 //!   set), every other flag `rc_w0`.
+//! - `USB_FNR`: FN of the last SOF, LSOF counting the ESOFs since it, LCK from the second SOF after a bus reset
+//!   or a wake-up until the next bus reset or suspend (§37.6.3).
 //! - USB SRAM as 512 words.
 //!
 //! The hardware side ([Sim::host_setup], [Sim::host_out], [Sim::host_in], [Sim::bus_reset], [Sim::suspend],
-//! [Sim::wakeup]) follows RM0444 Rev 6 §37.5: a SETUP sets both STAT to NAK and is dropped while VTRX is pending
+//! [Sim::wakeup], [Sim::sof], [Sim::esof]) follows RM0444 Rev 6 §37.5: a SETUP sets both STAT to NAK and is dropped while VTRX is pending
 //! (R5), a single-buffered transfer sets STAT to NAK, a double-buffered one toggles DTOG and NAKs on a buffer
 //! conflict with STAT left VALID (R4), a packet longer than its receive buffer is answered with STALL and no
 //! interrupt (R7), a control endpoint with STATUS_OUT stalls an OUT with data (R5).
@@ -25,7 +27,7 @@ use std::boxed::Box;
 use std::vec::Vec;
 
 use super::chep::{Stat, stat_rx, stat_tx};
-use super::regs::{Regs, bd, chep::*, istr};
+use super::regs::{Regs, bd, chep::*, fnr, istr};
 
 /// One access the driver made, in order.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -67,6 +69,9 @@ pub struct Inner {
     pub cntr: u32,
     /// ISTR's `rc_w0` flags; CTR, IDN and DIR are computed.
     pub istr: u32,
+    pub fnr: u32,
+    /// SOFs since the last bus reset or wake-up, up to 2 (LCK).
+    pub sofs: u8,
     pub daddr: u32,
     pub bcdr: u32,
     pub sram: [u32; 512],
@@ -101,6 +106,8 @@ impl Sim {
                 chep: [0; 8],
                 cntr: 0b11,
                 istr: 0,
+                fnr: 0,
+                sofs: 0,
                 daddr: 0,
                 bcdr: 0,
                 sram: [0; 512],
@@ -142,6 +149,8 @@ impl Sim {
             || (flags & istr::RST_DCON != 0 && m & super::regs::cntr::RST_DCONM != 0)
             || (flags & istr::SUSP != 0 && m & super::regs::cntr::SUSPM != 0)
             || (flags & istr::WKUP != 0 && m & super::regs::cntr::WKUPM != 0)
+            || (flags & istr::SOF != 0 && m & super::regs::cntr::SOFM != 0)
+            || (flags & istr::ESOF != 0 && m & super::regs::cntr::ESOFM != 0)
     }
 
     /// A bus reset (RST_DCON): every endpoint register cleared but VTRX and VTTX (§37.6.7), the address 0 and the
@@ -153,14 +162,44 @@ impl Sim {
         }
         i.daddr = 0;
         i.istr |= istr::RST_DCON;
+        i.sofs = 0;
+        i.fnr &= !fnr::LCK;
     }
 
     pub fn suspend(&self) {
-        self.inner.borrow_mut().istr |= istr::SUSP;
+        let mut i = self.inner.borrow_mut();
+        i.istr |= istr::SUSP;
+        i.fnr &= !fnr::LCK;
     }
 
     pub fn wakeup(&self) {
-        self.inner.borrow_mut().istr |= istr::WKUP;
+        let mut i = self.inner.borrow_mut();
+        i.istr |= istr::WKUP;
+        i.sofs = 0;
+    }
+
+    /// A SOF packet with frame number `frame` (11 bits): FN updated, LSOF cleared, LCK set from the second SOF
+    /// after a bus reset or wake-up, the SOF flag set.
+    pub fn sof(&self, frame: u16) {
+        let mut i = self.inner.borrow_mut();
+        i.sofs = (i.sofs + 1).min(2);
+        let lck = if i.sofs >= 2 {
+            fnr::LCK
+        } else {
+            i.fnr & fnr::LCK
+        };
+        i.fnr = lck | (frame as u32 & fnr::FN);
+        i.istr |= istr::SOF;
+    }
+
+    /// A SOF expected and not received: LSOF counts it (saturating at 3), the ESOF flag set.
+    pub fn esof(&self) {
+        let mut i = self.inner.borrow_mut();
+        let lsof = ((i.fnr & fnr::LSOF) >> fnr::LSOF_SHIFT)
+            .saturating_add(1)
+            .min(3);
+        i.fnr = (i.fnr & !fnr::LSOF) | (lsof << fnr::LSOF_SHIFT);
+        i.istr |= istr::ESOF;
     }
 
     fn is_double(c: u32) -> bool {
@@ -372,6 +411,10 @@ impl Regs for &Sim {
         let mut i = self.inner.borrow_mut();
         i.istr &= value;
         i.log.push(Op::Istr(value));
+    }
+
+    fn fnr(&self) -> u32 {
+        self.inner.borrow().fnr
     }
 
     fn daddr(&self) -> u32 {
