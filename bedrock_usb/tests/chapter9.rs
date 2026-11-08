@@ -517,6 +517,103 @@ fn device_qualifier_and_other_speed_stall() {
     );
 }
 
+/// DEV64 high-speed capable, with an interrupt endpoint polled every 10 ms.
+const DEV_HS: Device = Device {
+    high_speed: true,
+    functions: &[Function {
+        interfaces: &[Interface {
+            items: &[
+                Item::Endpoint(Endpoint::bulk_out(1, 64, Single)),
+                Item::Endpoint(Endpoint::bulk_in(1, 64, Single)),
+                Item::Endpoint(Endpoint::interrupt_in(2, 16, 10)),
+            ],
+            ..Interface::vendor()
+        }],
+        ..Function::vendor()
+    }],
+    ..DEV64
+};
+bedrock_usb::descriptors!(DevHs = DEV_HS);
+
+/// The endpoint descriptors of a configuration of DEV_HS: 9 + 9 bytes in.
+fn endpoints(config: &[u8]) -> &[u8] {
+    &config[18..]
+}
+
+#[test]
+fn high_speed_descriptors() {
+    // USB 2.0 Table 9-9: bLength, DEVICE_QUALIFIER, bcdUSB 2.00, class 0/0/0 (per interface), EP0 64, one
+    // configuration, reserved
+    assert_eq!(
+        DevHs::DEVICE_QUALIFIER,
+        [10, 6, 0x00, 0x02, 0, 0, 0, 64, 1, 0]
+    );
+    assert!(Dev64::DEVICE_QUALIFIER.is_empty() && Dev64::CONFIG_DESC_HS.is_empty());
+    // full speed: bulk 64, interrupt every 10 frames
+    assert_eq!(
+        endpoints(&DevHs::CONFIG_DESC),
+        [
+            7, 5, 0x01, 2, 64, 0, 0, //
+            7, 5, 0x81, 2, 64, 0, 0, //
+            7, 5, 0x82, 3, 16, 0, 10,
+        ]
+    );
+    // high speed: bulk 512 (§5.8.3), interrupt 2^(7-1) = 64 microframes = 8 ms, not longer than the 10 ms asked
+    assert_eq!(
+        endpoints(&DevHs::CONFIG_DESC_HS),
+        [
+            7, 5, 0x01, 2, 0x00, 0x02, 0, //
+            7, 5, 0x81, 2, 0x00, 0x02, 0, //
+            7, 5, 0x82, 3, 16, 0, 7,
+        ]
+    );
+    assert_eq!(DevHs::CONFIG_DESC_HS[..18], DevHs::CONFIG_DESC[..18]);
+}
+
+#[test]
+fn high_speed_interval() {
+    let at = |ms| Endpoint::interrupt_in(1, 8, ms).interval_at(bedrock_usb::Speed::High);
+    // 1 ms = 8 microframes = 2^3: bInterval 4, §9.6.6's own example
+    assert_eq!(
+        [at(1), at(2), at(3), at(4), at(8), at(10)],
+        [4, 5, 5, 6, 7, 7]
+    );
+    // 255 ms = 2040 microframes: 1024 = 2^10 is the longest not over it
+    assert_eq!(at(255), 11);
+    let bulk = Endpoint::bulk_in(1, 64, Single);
+    assert_eq!(bulk.interval_at(bedrock_usb::Speed::High), 0);
+    assert_eq!(bulk.max_packet_at(bedrock_usb::Speed::High), 512);
+    assert_eq!(bulk.max_packet_at(bedrock_usb::Speed::Full), 64);
+}
+
+#[test]
+fn high_speed_capable_device_at_both_speeds() {
+    use bedrock_usb::Speed;
+    let mut c = Control::<DevHs>::new();
+    let mut h = Rec::new();
+    let qualifier = get_descriptor(descriptor_type::DEVICE_QUALIFIER, 0, 10);
+    let config = get_descriptor(descriptor_type::CONFIGURATION, 0, 0xff);
+    let other = get_descriptor(descriptor_type::OTHER_SPEED_CONFIGURATION, 0, 0xff);
+    let as_other = |c: &[u8]| {
+        let mut v = c.to_vec();
+        v[1] = descriptor_type::OTHER_SPEED_CONFIGURATION;
+        v
+    };
+    for speed in [Speed::Full, Speed::High] {
+        c.set_speed(speed);
+        let (this, that) = match speed {
+            Speed::Full => (&DevHs::CONFIG_DESC[..], &DevHs::CONFIG_DESC_HS[..]),
+            Speed::High => (&DevHs::CONFIG_DESC_HS[..], &DevHs::CONFIG_DESC[..]),
+        };
+        assert_eq!(ok_in(&mut c, &mut h, qualifier), DevHs::DEVICE_QUALIFIER);
+        assert_eq!(ok_in(&mut c, &mut h, config), this);
+        assert_eq!(ok_in(&mut c, &mut h, other), as_other(that));
+        // the type byte is patched in the first packet only, also when the host reads 1 or 2 bytes
+        let short = get_descriptor(descriptor_type::OTHER_SPEED_CONFIGURATION, 0, 2);
+        assert_eq!(ok_in(&mut c, &mut h, short), [9, 7]);
+    }
+}
+
 // --- strings ---
 
 #[test]

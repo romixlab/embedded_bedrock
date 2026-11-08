@@ -2,9 +2,9 @@
 ///
 /// `descriptors!(pub Desc = DEVICE)` makes a unit struct `Desc` with
 /// - `Desc::DEVICE`, the device itself;
-/// - `Desc::DEVICE_DESC: [u8; 18]`, `Desc::CONFIG_DESC`, `Desc::BOS`, `Desc::MS_OS_20_SET`, each `[u8; N]` with
-///   its exact length (the last two empty when the device has none), and [STRING0](crate::desc::STRING0) is the
-///   same for every device;
+/// - `Desc::DEVICE_DESC: [u8; 18]`, `Desc::CONFIG_DESC`, `Desc::CONFIG_DESC_HS`, `Desc::DEVICE_QUALIFIER`,
+///   `Desc::BOS`, `Desc::MS_OS_20_SET`, each `[u8; N]` with its exact length (empty when the device has none: the
+///   high-speed two on a full-speed-only device), and [STRING0](crate::desc::STRING0) is the same for every device;
 /// - `Desc::LAYOUT`, the endpoint registers and USB SRAM ([Layout](crate::layout::Layout));
 /// - `const fn Desc::has(direction, number, buffering)`, for a typed endpoint's `const { assert!(..) }`;
 /// - and implements [Descriptors](crate::Descriptors) for code that takes the device as a type.
@@ -82,6 +82,8 @@ macro_rules! descriptors {
             pub const DEVICE: $crate::desc::Device = $device;
             pub const DEVICE_DESC: [u8; 18] = $device.device_descriptor();
             pub const CONFIG_DESC: [u8; $device.config_len()] = $device.config_descriptor();
+            pub const CONFIG_DESC_HS: [u8; $device.config_len_hs()] = $device.config_descriptor_hs();
+            pub const DEVICE_QUALIFIER: [u8; $device.device_qualifier_len()] = $device.device_qualifier();
             pub const BOS: [u8; $device.bos_len()] = $device.bos_descriptor();
             pub const MS_OS_20_SET: [u8; $device.ms_os_20_len()] = $device.ms_os_20_set();
             pub const LAYOUT: $crate::layout::Layout = $crate::layout::Layout::new(&$device);
@@ -100,6 +102,8 @@ macro_rules! descriptors {
             const DEVICE: $crate::desc::Device = $device;
             const DEVICE_DESC: [u8; 18] = $name::DEVICE_DESC;
             const CONFIG_DESC: &'static [u8] = &$name::CONFIG_DESC;
+            const CONFIG_DESC_HS: &'static [u8] = &$name::CONFIG_DESC_HS;
+            const DEVICE_QUALIFIER: &'static [u8] = &$name::DEVICE_QUALIFIER;
             const BOS: &'static [u8] = &$name::BOS;
             const MS_OS_20_SET: &'static [u8] = &$name::MS_OS_20_SET;
             const LAYOUT: $crate::layout::Layout = $name::LAYOUT;

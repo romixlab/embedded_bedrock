@@ -37,7 +37,7 @@
 //! and order follow embassy-usb's `Builder` where both have a choice, so a firmware that moves from embassy-usb
 //! keeps its descriptors (the golden test in `tests/donguru.rs`).
 
-use crate::{Buffering, Direction, EndpointAddress, EndpointKind, descriptor_type};
+use crate::{Buffering, Direction, EndpointAddress, EndpointKind, Speed, descriptor_type};
 
 /// String index of [Device::manufacturer], fixed whether or not the device has one (as in embassy-usb).
 pub const STRING_MANUFACTURER: u8 = 1;
@@ -106,7 +106,9 @@ impl DeviceClass {
 /// The whole device: what the device, configuration, BOS and MS OS 2.0 descriptors say.
 ///
 /// Start from [Device::new] and change fields with `..Device::new(vid, pid)`. A device has one configuration
-/// ([crate::CONFIGURATION_VALUE]), runs at full speed only (no device qualifier) and has no isochronous endpoints.
+/// ([crate::CONFIGURATION_VALUE]) and no isochronous endpoints. It runs at full speed only, unless [Device::high_speed]
+/// says it can run at high speed too (the Synopsys OTG core behind a high-speed PHY): then it has a second
+/// configuration descriptor for high speed and a device qualifier (USB 2.0 §9.6.2, §9.6.4).
 #[derive(Copy, Clone, Debug)]
 pub struct Device {
     pub vid: u16,
@@ -129,6 +131,11 @@ pub struct Device {
     pub ms_os_20: Option<MsOs20>,
     /// WebUSB platform capability in the BOS.
     pub webusb: Option<WebUsb>,
+    /// High-speed capable: [Device::config_descriptor_hs] and [Device::device_qualifier] exist, each endpoint's
+    /// high-speed values are [Endpoint::max_packet_at] and [Endpoint::interval_at]. EP0 is then 64 bytes, the only
+    /// size high speed has (USB 2.0 §5.5.3: "only 64-byte maximum data payload size for high-speed control
+    /// endpoints").
+    pub high_speed: bool,
     pub functions: &'static [Function],
 }
 
@@ -151,6 +158,7 @@ impl Device {
             max_power_ma: 100,
             ms_os_20: None,
             webusb: None,
+            high_speed: false,
             functions: &[],
         }
     }
@@ -238,7 +246,8 @@ pub enum Item {
 pub struct Endpoint {
     pub address: EndpointAddress,
     pub kind: EndpointKind,
-    /// `wMaxPacketSize`: 8, 16, 32 or 64 for bulk, 1 to 64 for interrupt (full speed, USB 2.0 §5.7.3, §5.8.3).
+    /// `wMaxPacketSize` at full speed: 8, 16, 32 or 64 for bulk, 1 to 64 for interrupt (USB 2.0 §5.7.3, §5.8.3).
+    /// The high-speed value follows from it, [Endpoint::max_packet_at].
     pub max_packet: u16,
     pub buffering: Buffering,
 }
@@ -286,6 +295,36 @@ impl Endpoint {
             kind: EndpointKind::Interrupt { interval },
             max_packet,
             buffering: Buffering::Single,
+        }
+    }
+
+    /// `wMaxPacketSize` at `speed`. High speed: 512 for bulk, the only size it has (USB 2.0 §5.8.3: "The USB
+    /// defines the allowable maximum bulk data payload sizes to be only 8, 16, 32, or 64 bytes for full-speed
+    /// endpoints and 512 bytes for high-speed endpoints"); an interrupt endpoint keeps its full-speed size, which
+    /// high speed allows ("up to 1024 bytes", §5.7.3).
+    pub const fn max_packet_at(&self, speed: Speed) -> u16 {
+        match (speed, self.kind) {
+            (Speed::High, EndpointKind::Bulk) => 512,
+            _ => self.max_packet,
+        }
+    }
+
+    /// `bInterval` at `speed`. Bulk: 0 (high speed: bulk OUT "never NAKs" as a NAK rate, §9.6.6). Interrupt at
+    /// full speed: the period in ms. At high speed "the bInterval value is used as the exponent for a 2^(bInterval-1)
+    /// value ... This value must be from 1 to 16" in 125 µs microframes (§9.6.6): the largest power of two of
+    /// microframes not longer than the period asked for, so the host polls at least as often as at full speed.
+    pub const fn interval_at(&self, speed: Speed) -> u8 {
+        match (speed, self.kind) {
+            (Speed::High, EndpointKind::Interrupt { interval }) => {
+                let microframes = 8 * interval as u32;
+                let exponent = 31 - microframes.leading_zeros();
+                if exponent >= 15 {
+                    16
+                } else {
+                    exponent as u8 + 1
+                }
+            }
+            _ => self.kind.interval(),
         }
     }
 
@@ -627,7 +666,7 @@ impl Device {
     pub const fn config_len(&self) -> usize {
         self.check();
         let mut w = Writer::<0>::new();
-        self.write_config(&mut w);
+        self.write_config(&mut w, Speed::Full);
         w.pos()
     }
 
@@ -635,11 +674,62 @@ impl Device {
     pub const fn config_descriptor<const N: usize>(&self) -> [u8; N] {
         self.check();
         let mut w = Writer::<N>::new();
-        self.write_config(&mut w);
+        self.write_config(&mut w, Speed::Full);
         w.finish()
     }
 
-    const fn write_config<const N: usize>(&self, w: &mut Writer<N>) {
+    /// Length of the high-speed configuration descriptor, 0 when the device is full speed only.
+    pub const fn config_len_hs(&self) -> usize {
+        self.check();
+        if !self.high_speed {
+            return 0;
+        }
+        let mut w = Writer::<0>::new();
+        self.write_config(&mut w, Speed::High);
+        w.pos()
+    }
+
+    /// The configuration descriptor at high speed: the same as [Device::config_descriptor] but for each endpoint's
+    /// [Endpoint::max_packet_at] and [Endpoint::interval_at]. Empty when the device is full speed only. Served as
+    /// the configuration at high speed and, with `bDescriptorType` 7, as the other-speed configuration at full
+    /// speed (USB 2.0 §9.6.4: "The structure of the other_speed_configuration is identical to a configuration
+    /// descriptor"); the full-speed one the other way round.
+    pub const fn config_descriptor_hs<const N: usize>(&self) -> [u8; N] {
+        self.check();
+        let mut w = Writer::<N>::new();
+        if self.high_speed {
+            self.write_config(&mut w, Speed::High);
+        }
+        w.finish()
+    }
+
+    /// Length of the device qualifier: 10, or 0 when the device is full speed only.
+    pub const fn device_qualifier_len(&self) -> usize {
+        if self.high_speed { 10 } else { 0 }
+    }
+
+    /// The device qualifier (USB 2.0 §9.6.2, Table 9-9): how the device would run at the other speed. bedrock_usb
+    /// devices have the same class, EP0 size and configuration count at both, so it is the device descriptor's
+    /// fields that §9.6.2 names. Empty when the device is full speed only: "If a full-speed only device ...
+    /// receives a GetDescriptor() request for a device_qualifier, it must respond with a request error".
+    pub const fn device_qualifier<const N: usize>(&self) -> [u8; N] {
+        let mut w = Writer::<N>::new();
+        if self.high_speed {
+            let (class, subclass, protocol) = self.class.triple();
+            w.u8(10);
+            w.u8(descriptor_type::DEVICE_QUALIFIER);
+            w.u16(self.usb_version);
+            w.u8(class);
+            w.u8(subclass);
+            w.u8(protocol);
+            w.u8(self.max_packet_size_0);
+            w.u8(1); // bNumConfigurations
+            w.u8(0); // bReserved
+        }
+        w.finish()
+    }
+
+    const fn write_config<const N: usize>(&self, w: &mut Writer<N>, speed: Speed) {
         w.u8(9);
         w.u8(descriptor_type::CONFIGURATION);
         w.u16(0); // wTotalLength, patched below
@@ -695,8 +785,8 @@ impl Device {
                             w.u8(descriptor_type::ENDPOINT);
                             w.u8(ep.address.raw());
                             w.u8(ep.kind.attributes());
-                            w.u16(ep.max_packet);
-                            w.u8(ep.kind.interval());
+                            w.u16(ep.max_packet_at(speed));
+                            w.u8(ep.interval_at(speed));
                         }
                         Item::Class { kind, data } => {
                             w.u8((data.len() + 2) as u8);
@@ -847,6 +937,10 @@ impl Device {
             matches!(self.max_packet_size_0, 8 | 16 | 32 | 64),
             "bMaxPacketSize0 must be 8, 16, 32 or 64"
         );
+        assert!(
+            !self.high_speed || self.max_packet_size_0 == 64,
+            "a high-speed device has a 64-byte EP0 (USB 2.0 §5.5.3)"
+        );
         assert!(self.max_power_ma <= 500, "max_power_ma is at most 500 mA");
         assert!(self.usb_version >= 0x0200, "usb_version is 0x0200 or later");
         assert!(
@@ -951,7 +1045,7 @@ impl Device {
         }
 
         let mut w = Writer::<0>::new();
-        self.write_config(&mut w);
+        self.write_config(&mut w, Speed::Full);
         assert!(
             w.pos() <= u16::MAX as usize,
             "configuration descriptor over 65535 bytes"

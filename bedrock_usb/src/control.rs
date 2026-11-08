@@ -26,6 +26,8 @@
 //!   endpoints they touch, CLEAR_FEATURE(ENDPOINT_HALT) always resets the data toggle ([Effect::Halt] with
 //!   `halted: false` even on an endpoint that wasn't halted).
 //! - §9.6.2: a full-speed-only device has no device qualifier, GET_DESCRIPTOR(DEVICE_QUALIFIER) is a request error.
+//!   A high-speed capable one ([crate::desc::Device::high_speed]) has it and the other-speed configuration
+//!   (§9.6.4); GET_DESCRIPTOR(CONFIGURATION) gives the configuration of the speed [Control::set_speed] says.
 //!
 //! How the driver arms EP0 for each [Ep0] (RM0444 §37.5.2 for usb_v4) is the driver's part.
 
@@ -255,6 +257,8 @@ tuple_handler!(A 0, B 1, C 2, D 3, E 4, F 5);
 #[derive(Copy, Clone, Debug)]
 enum Source {
     Static(&'static [u8]),
+    /// A configuration descriptor served as the other speed's: `bDescriptorType` 7 in place of 2 (USB 2.0 §9.6.4).
+    OtherSpeed(&'static [u8]),
     /// A string descriptor of a string known at build time, encoded packet by packet.
     Str(&'static str),
     /// A string descriptor of [Handler::string] `index`.
@@ -554,6 +558,12 @@ impl<D: Descriptors, const N: usize> Control<D, N> {
         let out = &mut out[..len];
         match source {
             Source::Static(b) => out.copy_from_slice(&b[offset..offset + len]),
+            Source::OtherSpeed(b) => {
+                out.copy_from_slice(&b[offset..offset + len]);
+                if offset <= 1 && offset + len > 1 {
+                    out[1 - offset] = descriptor_type::OTHER_SPEED_CONFIGURATION;
+                }
+            }
             Source::Buffer => out.copy_from_slice(&self.buf[offset..offset + len]),
             Source::Inline(b) => out.copy_from_slice(&b[offset..offset + len]),
             Source::Str(s) => string_bytes(s, offset, out),
@@ -733,7 +743,21 @@ impl<D: Descriptors, const N: usize> Control<D, N> {
                 Reply::In(Source::Static(d), d.len())
             }
             (descriptor_type::CONFIGURATION, 0) => {
-                Reply::In(Source::Static(D::CONFIG_DESC), D::CONFIG_DESC.len())
+                let c = self.config(self.speed);
+                Reply::In(Source::Static(c), c.len())
+            }
+            // a high-speed capable device: how it would run at the other speed (USB 2.0 §9.6.2, §9.6.4)
+            (descriptor_type::DEVICE_QUALIFIER, 0) if !D::DEVICE_QUALIFIER.is_empty() => Reply::In(
+                Source::Static(D::DEVICE_QUALIFIER),
+                D::DEVICE_QUALIFIER.len(),
+            ),
+            (descriptor_type::OTHER_SPEED_CONFIGURATION, 0) if !D::DEVICE_QUALIFIER.is_empty() => {
+                let other = match self.speed {
+                    Speed::Full => Speed::High,
+                    Speed::High => Speed::Full,
+                };
+                let c = self.config(other);
+                Reply::In(Source::OtherSpeed(c), c.len())
             }
             (descriptor_type::BOS, 0) if !D::BOS.is_empty() => {
                 Reply::In(Source::Static(D::BOS), D::BOS.len())
@@ -752,6 +776,14 @@ impl<D: Descriptors, const N: usize> Control<D, N> {
             },
             // DEVICE_QUALIFIER and OTHER_SPEED_CONFIGURATION: a full-speed-only device has none (USB 2.0 §9.6.2)
             _ => Reply::Stall,
+        }
+    }
+
+    /// The configuration descriptor at `speed`.
+    fn config(&self, speed: Speed) -> &'static [u8] {
+        match speed {
+            Speed::High if !D::CONFIG_DESC_HS.is_empty() => D::CONFIG_DESC_HS,
+            _ => D::CONFIG_DESC,
         }
     }
 

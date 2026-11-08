@@ -305,6 +305,10 @@ pub trait Descriptors: 'static {
     const DEVICE: desc::Device;
     const DEVICE_DESC: [u8; 18];
     const CONFIG_DESC: &'static [u8];
+    /// The configuration at high speed; empty on a full-speed-only device.
+    const CONFIG_DESC_HS: &'static [u8];
+    /// Empty on a full-speed-only device.
+    const DEVICE_QUALIFIER: &'static [u8];
     /// Empty on a USB 2.0 device.
     const BOS: &'static [u8];
     /// Empty without MS OS 2.0 descriptors.
