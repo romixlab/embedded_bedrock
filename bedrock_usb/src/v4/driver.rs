@@ -73,6 +73,11 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
         self.regs
     }
 
+    /// The bus share of the state: events, the run task's waker, the status.
+    pub(crate) fn bus(&self) -> &'static super::state::BusState {
+        self.state.bus
+    }
+
     /// The layout, as a `'static` reference.
     pub const fn layout() -> &'static Layout {
         const { &D::LAYOUT }

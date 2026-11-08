@@ -6,7 +6,8 @@
 //! allocated, parsed or built at run time. [v4] drives the peripheral from that layout.
 //!
 //! [control] answers the host's requests on endpoint 0 from those tables, as a state machine the driver feeds with
-//! what happened on EP0.
+//! what happened on EP0. [Usb] joins the two: [Usb::run] serves the bus and EP0 and keeps the bus status
+//! ([v4::Status]) for the firmware.
 //!
 //! This module holds the vocabulary the other parts share: endpoint addresses and kinds, single or double
 //! buffering, the setup packet and the standard request and descriptor codes.
@@ -18,11 +19,14 @@ extern crate std;
 
 pub mod control;
 pub mod desc;
+pub mod device;
 pub mod layout;
 mod macros;
 #[doc(hidden)]
 pub use macros::__byte;
 pub mod v4;
+
+pub use device::Usb;
 
 /// Transfer direction, seen from the host as USB names it: OUT is host to device, IN device to host.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

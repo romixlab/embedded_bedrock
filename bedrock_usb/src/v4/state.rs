@@ -225,11 +225,14 @@ pub mod event {
     pub const SETUP: u8 = 1 << 4;
 }
 
-/// Device-wide share: bus events and the waker of the task that handles them and EP0.
+/// Device-wide share: bus events and the waker of the task that handles them and EP0, and the bus status
+/// `Usb::run()` keeps for the rest of the firmware.
 pub struct BusState {
     pub(crate) waker: WakerCell,
     pub(crate) events: Mutex<Cell<u8>>,
     pub(crate) resets: Mutex<Cell<u8>>,
+    pub(crate) status: Mutex<Cell<Status>>,
+    pub(crate) status_waker: WakerCell,
 }
 
 impl BusState {
@@ -238,7 +241,41 @@ impl BusState {
             waker: WakerCell::new(),
             events: Mutex::new(Cell::new(0)),
             resets: Mutex::new(Cell::new(0)),
+            status: Mutex::new(Cell::new(Status::new())),
+            status_waker: WakerCell::new(),
         }
+    }
+
+    pub fn status(&self) -> Status {
+        critical_section::with(|cs| self.status.borrow(cs).get())
+    }
+
+    /// Changes the status and wakes the task waiting for a change.
+    pub(crate) fn update_status(&self, f: impl FnOnce(&mut Status)) {
+        let changed = critical_section::with(|cs| {
+            let c = self.status.borrow(cs);
+            let mut s = c.get();
+            f(&mut s);
+            let changed = s != c.get();
+            c.set(s);
+            changed
+        });
+        if changed {
+            self.status_waker.wake();
+        }
+    }
+
+    /// Waits until the status differs from `seen` and gives it. One task at a time: a second waiter takes the
+    /// first one's place.
+    pub async fn status_changed(&self, seen: Status) -> Status {
+        core::future::poll_fn(|cx| {
+            self.status_waker.register(cx.waker());
+            match self.status() {
+                s if s != seen => core::task::Poll::Ready(s),
+                _ => core::task::Poll::Pending,
+            }
+        })
+        .await
     }
 
     /// A bus reset: [event::RESET] raised, a SETUP from before dropped, the reset count moved on.
@@ -281,6 +318,37 @@ impl Default for BusState {
     }
 }
 
+/// The device as the bus sees it, kept by `Usb::run()`: what a firmware watches to know the host is there (a boot
+/// marked healthy once configured), to save power while suspended, or to notice a hub that bounced its port (a
+/// bus reset after the device was configured, which a host never sends to a working device on its own).
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Status {
+    /// SET_CONFIGURATION 1 is in effect: the class endpoints are enabled.
+    pub configured: bool,
+    /// The bus is suspended (three missed SOFs) and not resumed yet.
+    pub suspended: bool,
+    /// The host configured the device at least once since power-up.
+    pub was_configured: bool,
+    /// Bus resets seen (wrapping).
+    pub resets: u16,
+    /// Bus resets that came while the device was configured (wrapping): the configuration was lost without the
+    /// host deconfiguring it. A firmware compares it with the value it saw last.
+    pub resets_after_configured: u16,
+}
+
+impl Status {
+    pub const fn new() -> Self {
+        Status {
+            configured: false,
+            suspended: false,
+            was_configured: false,
+            resets: 0,
+            resets_after_configured: 0,
+        }
+    }
+}
+
 /// The shared state of a device with `N` endpoint registers in use (`Layout::count`). Declare it as a `static`
 /// with [crate::state!], which takes `N` from the descriptors.
 pub struct State<const N: usize> {
@@ -294,6 +362,16 @@ impl<const N: usize> State<N> {
             bus: BusState::new(),
             eps: [const { EpState::new() }; N],
         }
+    }
+
+    /// The bus status `Usb::run()` keeps, for any task.
+    pub fn status(&self) -> Status {
+        self.bus.status()
+    }
+
+    /// Waits until the bus status differs from `seen` (one waiting task at a time).
+    pub async fn status_changed(&self, seen: Status) -> Status {
+        self.bus.status_changed(seen).await
     }
 
     pub(crate) fn as_ref(&'static self) -> StateRef {

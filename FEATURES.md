@@ -1035,9 +1035,16 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   also in `chep.rs`'s own tests.
   Builds for thumbv6m with and without `embassy-stm32`. Not run on hardware yet (USBD-7); flash, stack and cycles
   measured with USBD-4's example.
-- 📋 **USBD-4 Device run loop and G0 example**: `Usb::run()` joining USBD-2 and USBD-3, bus state for the firmware
-  (configured, suspended, reset after configured), an example firmware for the G0B1 (vendor bulk loopback with
-  WinUSB) built for thumbv6m by `just lint`, flash measured.
+- 🚧 **USBD-4 Device run loop and G0 example**: `device.rs`, `Usb<D, R, H, N>` over the v4 `Driver` and the
+  `Control` machine. `run()` (a loop of `step()`): bus reset (control machine and handlers back to default),
+  suspend / resume (`Handler::suspended`, SUSPEN decides when both came), then a whole control transfer per SETUP
+  with the `Effect` applied before EP0 is armed (address, endpoints by `Control::is_active` with DATA0, halts); a
+  SETUP or a bus reset ends a transfer. Bus status in the shared `State` (`v4::Status`: configured, suspended,
+  was configured, resets, resets while configured; `State::status`, `status_changed`). Host tests
+  `device/tests.rs` on the simulated chip: enumeration, runtime serial, reset after configured,
+  deconfigure, SET_INTERFACE, halt, unknown request, class OUT data stage, a SETUP instead of the status stage,
+  suspend, loopback through double-buffered bulk endpoints (R4, R6 clean). Next: the G0B1 example firmware built by
+  `just lint`, flash measured.
 - 📋 **USBD-5 WireWeaver class** (feature `ww`): the function fragment byte for byte as wire_weaver_usb_embassy's
   (constants from WireWeaver's embassy-free crate), `ww_device::PacketSink` / `PacketSource` on the bulk endpoints
   with a write timeout; descriptor parity test.

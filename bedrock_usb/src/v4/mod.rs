@@ -38,7 +38,7 @@ pub use driver::{Driver, EndpointError, INTERRUPTS, OUT_PACKET_DELAY_NS, T_START
 pub use endpoint::{BulkIn, BulkOut, InterruptIn};
 pub use ep0::{Ep0, Ep0Error};
 pub use regs::{Mmio, Regs};
-pub use state::{State, event};
+pub use state::{State, Status, event};
 
 use crate::layout::Layout;
 use state::StateRef;
