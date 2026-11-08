@@ -34,7 +34,7 @@ use core::marker::PhantomData;
 use crate::desc::{self, Endpoints, Interfaces, Str};
 use crate::{
     CONFIGURATION_VALUE, Descriptors, Direction, EndpointAddress, Recipient, RequestKind, Setup,
-    descriptor_type, request,
+    Speed, descriptor_type, request,
 };
 
 /// Interfaces a device may have for [Control]'s alternate setting table (interface numbers, alternate settings
@@ -307,6 +307,8 @@ pub struct Control<D: Descriptors, const N: usize = 64> {
     halted: u32,
     setup: Setup,
     stage: Stage,
+    /// The speed GET_DESCRIPTOR answers for: which configuration is "this" one and which the other speed's.
+    speed: Speed,
     buf: [u8; N],
     _device: PhantomData<D>,
 }
@@ -341,9 +343,19 @@ impl<D: Descriptors, const N: usize> Control<D, N> {
                 length: 0,
             },
             stage: Stage::Idle,
+            speed: Speed::Full,
             buf: [0; N],
             _device: PhantomData,
         }
+    }
+
+    /// The speed the device runs at now; the driver tells it after each enumeration (before the SETUP it serves).
+    pub fn set_speed(&mut self, speed: Speed) {
+        self.speed = speed;
+    }
+
+    pub fn speed(&self) -> Speed {
+        self.speed
     }
 
     pub fn state(&self) -> DeviceState {

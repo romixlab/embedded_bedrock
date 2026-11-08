@@ -20,7 +20,7 @@ use bedrock_usb::desc::{
     WINDOWS_8_1,
 };
 use bedrock_usb::v4::embassy::InterruptHandler;
-use bedrock_usb::v4::{BulkIn, BulkOut, Mmio, Status};
+use bedrock_usb::v4::{BulkIn, BulkOut, Driver, Mmio, Status};
 use bedrock_usb::{Buffering, Usb};
 use defmt::{info, warn};
 use embassy_executor::Spawner;
@@ -139,7 +139,7 @@ impl Handler for Serial {
     }
 }
 
-type Device_ = Usb<Desc, Mmio, Serial>;
+type Device_ = Usb<Desc, Driver<Desc, Mmio>, Serial>;
 
 #[embassy_executor::task]
 async fn usb_task(usb: &'static mut Device_) -> ! {

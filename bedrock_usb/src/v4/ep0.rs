@@ -18,17 +18,7 @@ use super::state::{BusState, EpState, event};
 use crate::Setup;
 use crate::layout::RegType;
 
-/// Why an EP0 transfer ended early.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum Ep0Error {
-    /// A new SETUP arrived: the transfer is over, [Ep0::setup] gives the new one.
-    Setup,
-    /// A bus reset.
-    Reset,
-    /// An OUT data packet longer than the buffer given.
-    BufferOverflow,
-}
+pub use crate::device::Ep0Error;
 
 /// Endpoint 0.
 pub struct Ep0<R: Regs + Copy> {
@@ -212,5 +202,29 @@ impl<R: Regs + Copy> Ep0<R> {
     /// Between transfers: OUT VALID for the next SETUP, IN NAK.
     pub fn idle(&mut self) {
         self.arm(Stat::Valid, Stat::Nak, false);
+    }
+}
+
+impl<R: Regs + Copy> crate::ControlEndpoint for Ep0<R> {
+    async fn setup(&mut self) -> Setup {
+        Ep0::setup(self).await
+    }
+    async fn data_in(&mut self, data: &[u8], last: bool) -> Result<(), Ep0Error> {
+        Ep0::data_in(self, data, last).await
+    }
+    async fn status_out(&mut self) -> Result<(), Ep0Error> {
+        Ep0::status_out(self).await
+    }
+    async fn data_out(&mut self, buf: &mut [u8], last: bool) -> Result<usize, Ep0Error> {
+        Ep0::data_out(self, buf, last).await
+    }
+    async fn status_in(&mut self) -> Result<(), Ep0Error> {
+        Ep0::status_in(self).await
+    }
+    fn stall(&mut self) {
+        Ep0::stall(self)
+    }
+    fn idle(&mut self) {
+        Ep0::idle(self)
     }
 }

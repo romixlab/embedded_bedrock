@@ -1,5 +1,6 @@
-//! The device: [Usb] joins the EP0 state machine ([crate::control]) to the usb_v4 driver ([crate::v4]) and keeps
-//! the bus status for the rest of the firmware.
+//! The device: [Usb] joins the EP0 state machine ([crate::control]) to a driver and keeps the bus status for the
+//! rest of the firmware. A driver is a [Backend]: the usb_v4 driver ([crate::v4]) or the Synopsys OTG driver
+//! ([crate::otg]); both hand [Usb] the same bus events and an EP0 with the same steps ([ControlEndpoint]).
 //!
 //! [Usb::run] is one future for the bus events and EP0, as embassy-usb's `UsbDevice::run()`: the firmware spawns
 //! it in a task of its own. The class endpoints are taken from the [Driver] before it goes into [Usb::new], and
@@ -20,29 +21,87 @@
 //!   back to the default state, [Handler::reset], the status not configured, a reset after configured counted;
 //! - suspend and resume: [Handler::suspended] and the status;
 //! - a SETUP: the whole control transfer, packet by packet, with the [Effect]s applied before EP0 is armed again
-//!   (the address after SET_ADDRESS's status stage, R14; endpoints enabled with DATA0 on SET_CONFIGURATION and
-//!   SET_INTERFACE, R12; halts). A SETUP or a bus reset during a transfer ends it.
+//!   (the address after SET_ADDRESS's status stage, R14, or before it where the peripheral wants it so,
+//!   [Backend::ADDRESS_BEFORE_STATUS]; endpoints enabled with DATA0 on SET_CONFIGURATION and SET_INTERFACE, R12;
+//!   halts). A SETUP or a bus reset during a transfer ends it.
+
+#![allow(async_fn_in_trait)]
 
 use crate::control::{Control, Effect, Ep0 as Next, Handler};
-use crate::layout::RegMode;
-use crate::v4::{Driver, Ep0, Ep0Error, Regs, Status, event};
-use crate::{Descriptors, Direction, EndpointAddress};
+use crate::desc::Endpoints;
+use crate::v4::state::BusState;
+use crate::v4::{Status, event};
+use crate::{Descriptors, EndpointAddress, Recipient, RequestKind, Setup, Speed, request};
 
-/// A device `D` on the usb_v4 driver with class handlers `H` (a tuple, or `()`); `N` is the control machine's
-/// class request buffer.
-pub struct Usb<D: Descriptors, R: Regs + Copy, H: Handler, const N: usize = 64> {
-    driver: Driver<D, R>,
-    control: Control<D, N>,
-    handler: H,
-    ep0: Ep0<R>,
+/// Why an EP0 transfer ended early.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Ep0Error {
+    /// A new SETUP arrived: the transfer is over, [ControlEndpoint::setup] gives the new one.
+    Setup,
+    /// A bus reset.
+    Reset,
+    /// An OUT data packet longer than the buffer given.
+    BufferOverflow,
 }
 
-/// One EP0 packet: full speed's largest `bMaxPacketSize0`.
+/// Endpoint 0 as [Usb] drives it: the steps of a control transfer, each armed as the control machine's [Next]
+/// says and awaited until the host has done its part. A SETUP or a bus reset ends a wait with an [Ep0Error].
+pub trait ControlEndpoint {
+    /// Waits for the next SETUP packet.
+    async fn setup(&mut self) -> Setup;
+    /// Sends one packet of an IN data stage and waits until the host has it; `last`: the data stage ends with it.
+    async fn data_in(&mut self, data: &[u8], last: bool) -> Result<(), Ep0Error>;
+    /// The zero-length OUT status stage after an IN data stage.
+    async fn status_out(&mut self) -> Result<(), Ep0Error>;
+    /// Receives one packet of an OUT data stage into `buf`, its length returned.
+    async fn data_out(&mut self, buf: &mut [u8], last: bool) -> Result<usize, Ep0Error>;
+    /// The zero-length IN status stage of a request without data or after an OUT data stage.
+    async fn status_in(&mut self) -> Result<(), Ep0Error>;
+    /// Request error: both directions STALL until the next SETUP.
+    fn stall(&mut self);
+    /// Between transfers: ready for the next SETUP, nothing to send.
+    fn idle(&mut self);
+}
+
+/// A driver [Usb] runs on: its bus events and status, EP0, the device address and the class endpoints'
+/// enable and halt.
+pub trait Backend {
+    type Ep0: ControlEndpoint;
+    /// The peripheral wants the address of SET_ADDRESS before the status stage, not after it (R14). Synopsys OTG,
+    /// RM0468 Rev 3 §62.15.6 "Endpoint initialization on SetAddress command": "1. Program the OTG_DCFG register
+    /// with the device address received in the SetAddress command 2. Program the core to send out a status IN
+    /// packet"; the core itself keeps answering on address 0 until that status stage is over.
+    const ADDRESS_BEFORE_STATUS: bool;
+    fn ep0(&self) -> Self::Ep0;
+    /// The share the interrupt handler raises bus events in.
+    fn bus(&self) -> &'static BusState;
+    fn set_address(&self, address: u8);
+    /// Enables or disables a class endpoint, with DATA0 (R12); endpoints the device lacks are ignored.
+    fn set_enabled(&self, endpoint: EndpointAddress, enabled: bool);
+    /// Stalls a class endpoint or clears its halt, the latter with DATA0 (R12).
+    fn set_stalled(&self, endpoint: EndpointAddress, stalled: bool);
+    /// Whether the bus is suspended now (after a SUSPEND and a RESUME raised together the order is lost).
+    fn is_suspended(&self) -> bool;
+    /// The speed of the last enumeration: full speed until a high-speed host has finished the chirp.
+    fn speed(&self) -> Speed;
+}
+
+/// A device `D` on driver `B` with class handlers `H` (a tuple, or `()`); `N` is the control machine's class
+/// request buffer.
+pub struct Usb<D: Descriptors, B: Backend, H: Handler, const N: usize = 64> {
+    driver: B,
+    control: Control<D, N>,
+    handler: H,
+    ep0: B::Ep0,
+}
+
+/// One EP0 packet: `bMaxPacketSize0` is at most 64, and exactly 64 at high speed (USB 2.0 §5.5.3).
 const EP0_MAX: usize = 64;
 
-impl<D: Descriptors, R: Regs + Copy, H: Handler, const N: usize> Usb<D, R, H, N> {
-    /// The device on a started `driver` ([Driver::init]); the class endpoints are taken from it first.
-    pub fn new(driver: Driver<D, R>, handler: H) -> Self {
+impl<D: Descriptors, B: Backend, H: Handler, const N: usize> Usb<D, B, H, N> {
+    /// The device on a started `driver`; the class endpoints are taken from it first.
+    pub fn new(driver: B, handler: H) -> Self {
         const {
             assert!(
                 D::DEVICE.max_packet_size_0 as usize <= EP0_MAX,
@@ -58,7 +117,7 @@ impl<D: Descriptors, R: Regs + Copy, H: Handler, const N: usize> Usb<D, R, H, N>
         }
     }
 
-    pub fn driver(&self) -> &Driver<D, R> {
+    pub fn driver(&self) -> &B {
         &self.driver
     }
 
@@ -109,7 +168,7 @@ impl<D: Descriptors, R: Regs + Copy, H: Handler, const N: usize> Usb<D, R, H, N>
         }
         if events & (event::SUSPEND | event::RESUME) != 0 {
             // both since the last look: the order is lost, SUSPEN tells where the bus is now
-            let now = self.driver.regs().cntr() & crate::v4::regs::cntr::SUSPEN != 0;
+            let now = self.driver.is_suspended();
             if events & event::SUSPEND != 0 && events & event::RESUME != 0 && !now {
                 self.handler.suspended(true);
             }
@@ -124,7 +183,17 @@ impl<D: Descriptors, R: Regs + Copy, H: Handler, const N: usize> Usb<D, R, H, N>
     /// One control transfer from its SETUP to its status stage.
     async fn transfer(&mut self) {
         let setup = self.ep0.setup().await;
+        self.control.set_speed(self.driver.speed());
         let mut action = self.control.setup(setup, &mut self.handler);
+        if B::ADDRESS_BEFORE_STATUS
+            && setup.request == request::SET_ADDRESS
+            && setup.kind() == RequestKind::Standard
+            && setup.recipient() == Recipient::Device
+            && action.ep0 == Next::SendStatus
+        {
+            // the control machine accepted it; the Effect after the status stage writes the same address again
+            self.driver.set_address(setup.value as u8 & 0x7f);
+        }
         let mut buf = [0u8; EP0_MAX];
         loop {
             self.apply(action.effect);
@@ -182,27 +251,14 @@ impl<D: Descriptors, R: Regs + Copy, H: Handler, const N: usize> Usb<D, R, H, N>
     }
 
     /// Every class endpoint `filter` picks enabled when the control machine has it active, disabled otherwise,
-    /// each with DATA0 (R12).
+    /// each with DATA0 (R12). An endpoint in several alternate settings is visited once per setting; the driver
+    /// takes the same answer each time.
     fn enable_where(&self, filter: impl Fn(EndpointAddress) -> bool) {
-        for n in 1..D::LAYOUT.count {
-            let dirs: &[Direction] = match D::LAYOUT.regs[n as usize].mode {
-                RegMode::Unused => &[],
-                RegMode::Double { direction, .. } => match direction {
-                    Direction::Out => &[Direction::Out],
-                    Direction::In => &[Direction::In],
-                },
-                RegMode::Single { out_size, in_size } => match (out_size > 0, in_size > 0) {
-                    (true, true) => &[Direction::Out, Direction::In],
-                    (true, false) => &[Direction::Out],
-                    (false, true) => &[Direction::In],
-                    (false, false) => &[],
-                },
-            };
-            for &d in dirs {
-                let a = EndpointAddress::new(n, d);
-                if filter(a) {
-                    self.driver.set_enabled(a, self.control.is_active(a));
-                }
+        let mut it = Endpoints::new(&D::DEVICE);
+        while let Some((_, ep)) = it.next() {
+            if filter(ep.address) {
+                self.driver
+                    .set_enabled(ep.address, self.control.is_active(ep.address));
             }
         }
     }

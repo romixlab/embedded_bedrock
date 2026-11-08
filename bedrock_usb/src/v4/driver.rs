@@ -78,11 +78,6 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
         self.regs
     }
 
-    /// The bus share of the state: events, the run task's waker, the status.
-    pub(crate) fn bus(&self) -> &'static super::state::BusState {
-        self.state.bus
-    }
-
     /// The layout, as a `'static` reference.
     pub const fn layout() -> &'static Layout {
         const { &D::LAYOUT }
@@ -325,6 +320,34 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
             (RegMode::Double { direction, .. }, d) => direction == d,
         };
         has.then_some((n, mode))
+    }
+}
+
+impl<D: Descriptors, R: Regs + Copy> crate::Backend for Driver<D, R> {
+    type Ep0 = Ep0<R>;
+    /// R14: usb_v4 answers on the old address until DADDR changes, so the address goes in after the status stage.
+    const ADDRESS_BEFORE_STATUS: bool = false;
+    fn ep0(&self) -> Ep0<R> {
+        Driver::ep0(self)
+    }
+    fn bus(&self) -> &'static super::state::BusState {
+        self.state.bus
+    }
+    fn set_address(&self, address: u8) {
+        Driver::set_address(self, address)
+    }
+    fn set_enabled(&self, endpoint: EndpointAddress, enabled: bool) {
+        Driver::set_enabled(self, endpoint, enabled)
+    }
+    fn set_stalled(&self, endpoint: EndpointAddress, stalled: bool) {
+        Driver::set_stalled(self, endpoint, stalled)
+    }
+    /// SUSPEN, which the interrupt handler sets on SUSP and clears on WKUP.
+    fn is_suspended(&self) -> bool {
+        self.regs.cntr() & cntr::SUSPEN != 0
+    }
+    fn speed(&self) -> crate::Speed {
+        crate::Speed::Full
     }
 }
 

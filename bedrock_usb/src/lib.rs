@@ -26,7 +26,7 @@ mod macros;
 pub use macros::__byte;
 pub mod v4;
 
-pub use device::Usb;
+pub use device::{Backend, ControlEndpoint, Ep0Error, Usb};
 
 /// Transfer direction, seen from the host as USB names it: OUT is host to device, IN device to host.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -75,6 +75,15 @@ impl EndpointAddress {
     pub const fn is_in(self) -> bool {
         self.0 & 0x80 != 0
     }
+}
+
+/// The bus speed the host enumerated the device at. usb_v4 is full speed only; the Synopsys OTG core runs at high
+/// speed behind a high-speed PHY when the host's chirp says it can.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Speed {
+    Full,
+    High,
 }
 
 /// Transfer type of a class endpoint. Control is endpoint 0's alone; isochronous is not in bedrock_usb 0.1.

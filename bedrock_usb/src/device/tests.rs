@@ -97,7 +97,7 @@ impl Handler for Log {
 }
 
 type St = State<{ Desc::LAYOUT.count as usize }>;
-type Dev = Usb<Desc, &'static Sim, Log>;
+type Dev = Usb<Desc, Driver<Desc, &'static Sim>, Log>;
 
 /// The device under test: the simulated chip, its state, the run future, the handler's log.
 struct Bench {
