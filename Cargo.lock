@@ -317,6 +317,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bedrock_usb_ch9"
+version = "0.1.0"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "anyhow",
+ "clap",
+ "clap_complete",
+ "nusb 0.2.8",
+]
+
+[[package]]
 name = "bincode"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
