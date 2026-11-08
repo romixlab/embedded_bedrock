@@ -7,8 +7,10 @@ license = "MIT"
 
 [dependencies]
 anstyle = "1"
+# the DWARF line table for `code_size`
+gimli = { version = "0.32", default-features = false, features = ["read", "std"] }
 inventory = "0.3"
-object = { version = "0.38", default-features = false, features = ["read_core", "elf"] }
+object = { version = "0.38", default-features = false, features = ["read_core", "elf", "std"] }
 proc-macro2 = { version = "1", default-features = false, features = ["span-locations"] }
 quote = { version = "1", default-features = false }
 rustc-demangle = "0.1"

@@ -78,7 +78,9 @@ so a missing entry means work nobody sees.
   `tests/chapter9.rs`), the usb_v4 driver (`v4/`: registers behind a `Regs` trait, ISR, EP0, typed endpoints, the
   simulated peripheral `sim.rs` its host tests run on, `embassy.rs` glue). Golden test `tests/donguru.rs` against
   embassy-usb's `Builder` on a dummy driver; `tests/v4_metapac.rs` holds the driver's registers to stm32-metapac.
-  Firmware takes it by path, like `bedrock_led`.
+  `device.rs` is `Usb::run()`, the device on both (tests in `device/tests.rs`, on the simulated peripheral).
+  `examples/g0b1_loopback` is a standalone firmware crate with its own Cargo.lock, built by `just lint` at
+  opt-level z and 3 and measured by `just usb-size`. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_clocks/` — exact clock planning on the host (FEATURES.md area `RCC`): a board's clock tree as exact
   rationals, checked against RM0468 / DS13311 / ES0491 / AN5337 (each limit in `h72x/limits.rs` names its section),
   encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its
@@ -141,6 +143,8 @@ cargo build --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
 cargo test --workspace
+just usb-size        # bedrock_usb's example: code per crate and per file, opt-level z and 3 (after just lint)
+cargo run -p bedrock_lint_cli -- code-size <ELF> --by-crate   # code bytes per source file / crate (DWARF lines)
 
 S=firmware_template_skill/scripts/bedrock_gen.py
 uv run $S list-chips

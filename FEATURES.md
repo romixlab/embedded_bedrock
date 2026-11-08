@@ -900,6 +900,11 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
 - 📋 **LINT-9 Clean on our firmware**: the lint runs on usb_io_fw, typec_dongle, vb135_fdcan_iso_usb_fw and the
   board templates; real bugs filed in those repos' FEATURES.md, false positives fixed in the checks, the rest in a
   baseline.
+- ✅ **LINT-12 Code size per source file**: `bedrock-lint code-size <ELF>` (`model/code_size.rs`): code bytes
+  per source file from the DWARF line table, so code that LTO inlined across crates still counts where it was
+  written; `--by-crate` (registry `name-x.y.z`, git checkouts, `core` / `compiler-builtins`, path crates by their
+  directory), `--match` to pick files, `--top`. Only executable sections count. bedrock_usb's `just usb-size`
+  uses it; the per-file numbers of the USB baselines (bedrock-usb design, FW-66) are measured this way.
 - 📋 **LINT-10 bedrock-lint CLI polish**: record each invocation per subcommand locally (the CLI usage rule), bash
   completion through wire_weaver `ww`'s adapter (`wire_weaver_cli/src/complete.rs`) instead of clap's own, and
   `check` on a virtual workspace runs every firmware member instead of naming them.
@@ -1033,9 +1038,10 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   typelevel `Handler` (shares `USB_UCPD1_2` with UCPD) and `embassy::new`; `on_interrupt()` for bare firmware.
   Host tests per rule on the simulated peripheral `sim.rs` (feature `sim` for crates built on it): R1-R9 and R12, R2
   also in `chep.rs`'s own tests.
-  Builds for thumbv6m with and without `embassy-stm32`. Not run on hardware yet (USBD-7); flash, stack and cycles
-  measured with USBD-4's example.
-- 🚧 **USBD-4 Device run loop and G0 example**: `device.rs`, `Usb<D, R, H, N>` over the v4 `Driver` and the
+  Builds for thumbv6m with and without `embassy-stm32`. Not run on hardware yet (USBD-7); flash and stack
+  measured with USBD-4's example, where the waits lost their 64-bit division (`regs::cycles`, 1.2 KiB less on the
+  M0+).
+- 🧪 **USBD-4 Device run loop and G0 example**: `device.rs`, `Usb<D, R, H, N>` over the v4 `Driver` and the
   `Control` machine. `run()` (a loop of `step()`): bus reset (control machine and handlers back to default),
   suspend / resume (`Handler::suspended`, SUSPEN decides when both came), then a whole control transfer per SETUP
   with the `Effect` applied before EP0 is armed (address, endpoints by `Control::is_active` with DATA0, halts); a
@@ -1043,8 +1049,16 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   was configured, resets, resets while configured; `State::status`, `status_changed`). Host tests
   `device/tests.rs` on the simulated chip: enumeration, runtime serial, reset after configured,
   deconfigure, SET_INTERFACE, halt, unknown request, class OUT data stage, a SETUP instead of the status stage,
-  suspend, loopback through double-buffered bulk endpoints (R4, R6 clean). Next: the G0B1 example firmware built by
-  `just lint`, flash measured.
+  suspend, loopback through double-buffered bulk endpoints (R4, R6 clean). Example firmware
+  `bedrock_usb/examples/g0b1_loopback` (standalone crate, own Cargo.lock; embassy, STM32G0B1RE, SYSCLK 64 MHz,
+  USB from HSI48 with CRS): vendor bulk loopback on EP1 OUT / EP2 IN, both double-buffered, WinUSB through MS OS
+  2.0, serial from the UID, a task watching the bus status. `just lint` builds it at opt-level z and 3,
+  `just usb-size` measures it (`bedrock-lint code-size`, LINT-12). 8 Nov 2026, thumbv6m, fat LTO: `.text` 20.8 KiB
+  at z / 26.3 KiB at 3 for the whole image; bedrock_usb's own code 7.6 KiB at z (control 1996 B, v4 driver 1564,
+  ep0 1172, endpoint 806, device 798, desc 428, state 426, chep 318) and 8.0 KiB at 3. Against the 8 Nov baseline
+  (Donguru's stack 11.0 KiB at z, 12.5 at 3, with a second interface and the WireWeaver class) the comparable
+  number comes from FW-66. Stack at z: the USB task's poll 184 B frame (504 B deepest), the interrupt handler 136 B
+  (408 B). Not run on hardware yet (USBD-7).
 - 📋 **USBD-5 WireWeaver class** (feature `ww`): the function fragment byte for byte as wire_weaver_usb_embassy's
   (constants from WireWeaver's embassy-free crate), `ww_device::PacketSink` / `PacketSource` on the bulk endpoints
   with a write timeout; descriptor parity test.

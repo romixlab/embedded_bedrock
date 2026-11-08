@@ -13,6 +13,7 @@
 //! What could not be read is a [`Note`], not an error: the checks that need it are reported as not run.
 
 pub mod build_script;
+pub mod code_size;
 pub mod context;
 pub mod elf;
 pub mod memory_x;

@@ -273,6 +273,7 @@ name = "bedrock_lint"
 version = "0.1.0"
 dependencies = [
  "anstyle",
+ "gimli",
  "inventory",
  "object 0.38.1",
  "proc-macro2",

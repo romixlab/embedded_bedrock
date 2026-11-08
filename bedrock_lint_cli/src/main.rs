@@ -139,6 +139,24 @@ bedrock-lint.toml in the crate sets severities, skips checks with a reason and n
         #[arg(long)]
         from: Option<String>,
     },
+    /// Code bytes per source file (or crate) of a linked ELF, from its DWARF line table
+    #[command(
+        after_help = "Each line table row counts for the file of the innermost inlined function, so code inlined \
+        across crates by LTO is still split by where it was written. Needs debug info (debug = 2, not stripped)."
+    )]
+    CodeSize {
+        /// The linked ELF (target/<triple>/release/<name>)
+        elf: PathBuf,
+        /// Sum by crate instead of by file
+        #[arg(long)]
+        by_crate: bool,
+        /// Only files (or crates) whose path contains this; repeat for several
+        #[arg(long = "match", short)]
+        matches: Vec<String>,
+        /// How many rows to list (0: all)
+        #[arg(long, default_value_t = 0)]
+        top: usize,
+    },
     /// Print the firmware model as JSON: files read, chip, source facts (tasks, executors, spawns, ...)
     Model {
         #[arg(default_value = ".")]
@@ -228,6 +246,12 @@ fn main() -> ExitCode {
         } => list(all, category.as_deref(), json),
         Cmd::Model { dir, elf, root } => model(&dir, elf, root),
         Cmd::Frames { elf, top, from } => frames(&elf, top, from.as_deref()),
+        Cmd::CodeSize {
+            elf,
+            by_crate,
+            matches,
+            top,
+        } => code_size(&elf, by_crate, &matches, top),
     };
     match result {
         Ok(code) => code,
@@ -482,6 +506,62 @@ fn frames(path: &Path, top: usize, from: Option<&str>) -> Result<ExitCode, Strin
     println!(
         "{dim}{} functions, {indirect} calls through pointers not followed{dim:#}",
         elf.code.len()
+    );
+    Ok(ExitCode::SUCCESS)
+}
+
+fn code_size(
+    path: &Path,
+    by_crate: bool,
+    matches: &[String],
+    top: usize,
+) -> Result<ExitCode, String> {
+    let data = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let size = bedrock_lint::model::code_size::code_size(&data)
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    let bold = anstyle::Style::new().bold();
+    let dim = anstyle::Style::new().dimmed();
+    // files under the current directory without its prefix
+    let here = std::env::current_dir()
+        .map(|d| format!("{}/", d.display()))
+        .unwrap_or_default();
+    let all: std::collections::BTreeMap<String, u64> = if by_crate {
+        size.by_crate()
+    } else {
+        size.by_file
+            .iter()
+            .map(|(k, v)| (k.strip_prefix(here.as_str()).unwrap_or(k).to_string(), *v))
+            .collect()
+    };
+    let mut rows: Vec<(&String, u64)> = all
+        .iter()
+        .filter(|(k, _)| matches.is_empty() || matches.iter().any(|m| k.contains(m.as_str())))
+        .map(|(k, v)| (k, *v))
+        .collect();
+    rows.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+    let sum: u64 = rows.iter().map(|r| r.1).sum();
+    println!(
+        "{bold}{:>8}  {}{bold:#}",
+        "bytes",
+        if by_crate { "crate" } else { "file" }
+    );
+    let shown = if top == 0 {
+        rows.len()
+    } else {
+        top.min(rows.len())
+    };
+    for (k, v) in &rows[..shown] {
+        println!("{v:>8}  {k}");
+    }
+    if shown < rows.len() {
+        let rest: u64 = rows[shown..].iter().map(|r| r.1).sum();
+        println!("{dim}{rest:>8}  {} more{dim:#}", rows.len() - shown);
+    }
+    println!("{bold}{sum:>8}  listed{bold:#}");
+    println!(
+        "{dim}{:>8}  attributed of {} in executable sections{dim:#}",
+        size.attributed(),
+        size.exec
     );
     Ok(ExitCode::SUCCESS)
 }

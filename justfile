@@ -37,10 +37,25 @@ lint:
     cargo clippy -p bedrock_usb --all-targets --features sim,defmt,metapac-check --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt,embassy-stm32,embassy-stm32/stm32g0b1re --locked -- -D warnings
+    cargo fmt --manifest-path {{usb_example}}/Cargo.toml --check
+    cargo clippy --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked -- -D warnings
+    cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked
+    CARGO_PROFILE_RELEASE_OPT_LEVEL=3 cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked --target-dir {{usb_example}}/target/o3
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_clocks_rt --target thumbv7em-none-eabihf --features defmt --locked -- -D warnings
+
+# bedrock_usb's example firmware (STM32G0B1, vendor bulk loopback): a standalone crate with its own Cargo.lock, built
+# by `lint` at opt-level z (its release profile) and 3
+usb_example := "bedrock_usb/examples/g0b1_loopback"
+
+# Code bytes of the example per crate and per bedrock_usb file (DWARF line table), at opt-level z and 3, after `lint`
+usb-size:
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/thumbv6m-none-eabi/release/g0b1_loopback -m bedrock_usb/src
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/o3/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/o3/thumbv6m-none-eabi/release/g0b1_loopback -m bedrock_usb/src
 
 # Build bedrock-lint (the firmware lint) and install it on this PC
 install:
