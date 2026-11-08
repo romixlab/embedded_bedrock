@@ -70,7 +70,15 @@ use embassy_futures::select::{Either, select};
 use {{ hal }}::gpio::Output;
 {% endif %}
 {% if ww.usb %}
-  {% if t.family == "stm32" %}
+  {% if t.family == "stm32" and ww.bedrock_usb %}
+use bedrock_usb::buffer::Double;
+use bedrock_usb::desc::{Device, Str};
+use bedrock_usb::v4::embassy::InterruptHandler;
+use bedrock_usb::v4::{BulkIn, BulkOut, Driver, Mmio};
+use bedrock_usb::ww::{Receiver, Sender};
+use bedrock_usb::{Usb, ww_function};
+use embassy_stm32::{Peri, bind_interrupts, peripherals};
+  {% elif t.family == "stm32" %}
 use embassy_stm32::{Peri, bind_interrupts, peripherals, usb};
   {% elif t.family == "rp" %}
 use embassy_rp::usb::{Driver, InterruptHandler};
@@ -94,7 +102,12 @@ use wire_weaver::prelude::*;
 use wire_weaver::{MessageSink, WireWeaverAsyncApiBackend};
 {% if ww.usb %}
   {% set usb_ids = "vid" in o.hw.get("usb", {}) %}
-  {% if t.family == "stm32" and o.embassy == "main" and ww.stm32_usb and ww.stm32_usb.double_buffer %}
+  {% if ww.bedrock_usb %}
+use ww_device::{EmbassyClock, FramedRx, FramedTx, LinkConfig, RxBuffer};
+    {% if streams %}
+use ww_device::LinkEvent;
+    {% endif %}
+  {% elif t.family == "stm32" and o.embassy == "main" and ww.stm32_usb and ww.stm32_usb.double_buffer %}
     {% if usb_ids %}
 use wire_weaver_usb_embassy::{
     LinkConfig, UsbBuffers, UsbDevice, UsbIds, UsbServer, UsbTimings,
@@ -112,7 +125,7 @@ use wire_weaver_usb_embassy::{
   {% else %}
 use wire_weaver_usb_embassy::{LinkConfig, UsbBuffers, UsbDevice, UsbServer, UsbTimings, usb_init};
   {% endif %}
-  {% if streams %}
+  {% if streams and not ww.bedrock_usb %}
 use wire_weaver_usb_embassy::ww_device::LinkEvent;
   {% endif %}
 {% else %}
@@ -482,7 +495,123 @@ fn link_config() -> LinkConfig<'static> {
         ww_client_server::COMPACT_VERSION,
     )
 }
-{% if ww.usb %}
+{% if ww.usb and ww.bedrock_usb %}
+  {% set u = ww.stm32_usb %}
+
+/// The USB device as a `const` (bedrock_usb): the descriptors are built at compile time from it, and the endpoint
+/// registers and USB SRAM layout are checked against RM0444 there. The WireWeaver function is on EP1 (OUT) and
+/// EP2 (IN), double buffered.
+const DEVICE: Device = Device {
+  {% if o.hw.get("usb", {}).get("manufacturer") %}
+    manufacturer: Str::Const({{ o.hw.usb.manufacturer | tojson }}),
+  {% else %}
+    manufacturer: Str::Const("VHRD"),
+  {% endif %}
+    product: Str::Const({{ (o.hw.get("usb", {}).get("product") or o.name) | tojson }}),
+    serial: Str::Runtime,
+    ms_os_20: Some(bedrock_usb::ww::MS_OS_20),
+    functions: &[ww_function! {
+        out: 1, in: 2, max_packet: 64, buffering: Double,
+        user_crate: {{ ww.krate }}::{{ ww.gid }}.crate_id,
+        user_version: (
+            {{ ww.krate }}::{{ ww.gid }}.version.major.0,
+            {{ ww.krate }}::{{ ww.gid }}.version.minor.0,
+            {{ ww.krate }}::{{ ww.gid }}.version.patch.0
+        ),
+        api_id: Str::Const(server_impl::API_ID),
+    }],
+  {% if usb_ids %}
+    ..Device::new({{ "0x%04x" | format(o.hw.usb.vid) }}, {{ "0x%04x" | format(o.hw.usb.pid) }})
+  {% else %}
+    // VID:PID is c0de:cafe, WireWeaver's shared test ID; [usb] vid / pid in the board preset set others
+    ..Device::new(0xc0de, 0xcafe)
+  {% endif %}
+};
+bedrock_usb::descriptors!(Desc = DEVICE);
+bedrock_usb::state!(static USB_STATE: Desc);
+
+bind_interrupts!(struct Irqs {
+    {{ u.irq }} => InterruptHandler<peripherals::{{ u.periph }}>;
+});
+
+pub type UsbDriver = Driver<Desc, Mmio>;
+
+const MAX_USB_PACKET_LEN: usize = 64; // Full Speed
+
+/// EP0's string requests the descriptors leave to the firmware: the serial number, the chip's unique id in hex.
+struct Strings;
+
+impl bedrock_usb::control::Handler for Strings {
+    fn string(&self, index: u8) -> Option<&str> {
+        (index == bedrock_usb::desc::STRING_SERIAL).then(embassy_stm32::uid::uid_hex)
+    }
+}
+
+type UsbDevice = Usb<Desc, Mmio, Strings>;
+type UsbSender = Sender<BulkIn<Mmio, 2, Double>, embassy_time::Duration>;
+type UsbReceiver = Receiver<BulkOut<Mmio, 1, Double>>;
+pub type UsbServer =
+    ww_device::Server<'static, FramedTx<'static, UsbSender>, FramedRx<'static, UsbReceiver>, EmbassyClock>;
+
+/// The server's buffers (as wire_weaver_usb_embassy's `ServerBuffers`): packets in and out, the message being
+/// assembled, replies and events.
+struct ServerBuffers {
+    rx: RxBuffer<MAX_USB_PACKET_LEN, MAX_MESSAGE_LEN>,
+    tx: [u8; MAX_USB_PACKET_LEN],
+    scratch: [u8; MAX_MESSAGE_LEN],
+    event_scratch: [u8; MAX_MESSAGE_LEN],
+}
+
+static SERVER_BUFFERS: StaticCell<ServerBuffers> = StaticCell::new();
+static USB: StaticCell<UsbDevice> = StaticCell::new();
+
+/// `hclk_hz` is the core clock, which the driver's short waits count in (tSTARTUP, ES0548 2.16.1). The 48 MHz USB
+/// kernel clock is the RCC configuration in main.rs.
+pub fn usb_driver(
+    usb: Peri<'static, peripherals::{{ u.periph }}>,
+    dp: Peri<'static, peripherals::{{ u.dp }}>,
+    dm: Peri<'static, peripherals::{{ u.dm }}>,
+    hclk_hz: u32,
+) -> UsbDriver {
+    bedrock_usb::v4::embassy::new::<Desc, _, _>(usb, Irqs, dp, dm, &USB_STATE, hclk_hz)
+}
+
+pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
+    let out = driver.bulk_out::<1, Double>();
+    let inp = driver.bulk_in::<2, Double>();
+    driver.connect();
+    let usb = USB.init(Usb::new(driver, Strings));
+
+    let buffers = SERVER_BUFFERS.init(ServerBuffers {
+        rx: RxBuffer::new(),
+        tx: [0; MAX_USB_PACKET_LEN],
+        scratch: [0; MAX_MESSAGE_LEN],
+        event_scratch: [0; MAX_MESSAGE_LEN],
+    });
+    // packets are not sent at once, to avoid a lot of small ones; the host is told the same
+    let mut link_config = link_config();
+    link_config.accumulation_time = core::time::Duration::from_micros(1000);
+    let server = ww_device::Server::new(
+        link_config,
+        FramedTx::new(
+            Sender::new(inp, embassy_time::Duration::from_millis(250)),
+            &mut buffers.tx,
+        ),
+        FramedRx::new(Receiver::new(out), buffers.rx.assembly_buf(MAX_USB_PACKET_LEN)),
+        EmbassyClock,
+        &mut buffers.scratch,
+        &mut buffers.event_scratch,
+    );
+    spawner.spawn(unwrap!(usb_task(usb)));
+    spawner.spawn(unwrap!(server_task(server, state)));
+}
+
+#[embassy_executor::task]
+async fn usb_task(usb: &'static mut UsbDevice) -> ! {
+    usb.run().await
+}
+  {% set server_ty = "UsbServer" %}
+{% elif ww.usb %}
 
   {% if t.family == "stm32" %}
     {% set u = ww.stm32_usb %}

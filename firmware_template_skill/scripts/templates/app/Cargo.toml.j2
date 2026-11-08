@@ -207,7 +207,10 @@ embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/
 # reliable stream state of device.log; persistent-ram: its store in .uninit RAM, kept across a crash and reset
 {{ ww_dep("ww_stream", "ww_stream", o.ww_src, root, ', default-features = false, features = ["persistent-ram"]') }}
   {% endif %}
-  {% if ww.usb %}
+  {% if ww.usb and ww.bedrock_usb %}
+{{ bedrock_dep("bedrock_usb", o.bedrock, root, ", features = " ~ (feats("ww", "embassy-stm32", "embassy-time", defmt and "defmt") | toml_list)) }}
+{{ ww_dep("ww_device", "ww_device", o.ww_src, root, ", features = " ~ (feats("embassy-time", defmt and "defmt") | toml_list)) }}
+  {% elif ww.usb %}
 {{ ww_dep("wire_weaver_usb_embassy", "mcu/wire_weaver_usb_embassy", o.ww_src, root) }}
   {% else %}
 {{ ww_dep("ww_device", "ww_device", o.ww_src, root, ", features = " ~ (feats("rtt", "embassy-time", defmt and "defmt") | toml_list)) }}

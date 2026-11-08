@@ -208,6 +208,13 @@ tags = ["ww"]
 note = "embassy main, USB v4, ES0548 ASSERT"
 
 [[entry]]
+name = "g0usbb"
+args = ["--chip", "STM32G0B1RE", "--wire-weaver", "--counters", "--embassy", "main", "--usb-stack", "bedrock"]
+builds = ["dev", "release"]
+tags = ["ww"]
+note = "bedrock_usb instead of embassy-usb (TPL-82)"
+
+[[entry]]
 name = "g0m"
 args = ["--chip", "STM32G0B1RE", "--bootloader", "--settings", "--counters", "--bkp-counters", "tamp", "--embassy", "main"]
 builds = ["dev", "release", "bootloader"]

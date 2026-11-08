@@ -919,6 +919,7 @@ class Opts:
     ww_api: str = ""        # API crate name
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
     usb_phy: str = "fs"     # --usb-phy: fs (on-chip PHY, DP/DM) | ulpi (external high-speed PHY, TPL-54)
+    usb_stack: str = "embassy"  # --usb-stack (TPL-82): embassy (embassy-usb + embassy-stm32's driver) | bedrock (bedrock_usb)
     crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
     settings_flash: str = ""  # --settings code: "g0" / "h7" (ww_ecc_flash family), "plain" (no ECC), "" none
     embassy: str = "release"  # embassy crates: "release" (crates.io) or "main" (upstream git at EMBASSY_MAIN_REV)
@@ -1105,12 +1106,16 @@ def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
         "usb": o.ww_transport == "usb",
         "rtt": o.ww_transport == "rtt",
         "stm32_usb": usb,
+        "bedrock_usb": o.usb_stack == "bedrock",
         # RTT: the log channel (defmt or rprintln) stays up channel 0, WireWeaver gets the next one
         "rtt_up": 0 if o.log == "none" else 1,
     }
     if o.ww_transport == "usb":
         args = {"stm32": [usb["periph"], *usb_pins(usb)] if usb else [], "rp": ["USB"], "nrf": ["USBD"]}[t.family]
         ctx["usb_args"] = [f"p.{x}" for x in args]
+        if o.usb_stack == "bedrock":
+            # bedrock_usb counts its short waits (tSTARTUP, ES0548 2.16.1) in core clocks
+            ctx["usb_args"].append("embassy_stm32::rcc::clocks(&p.RCC).hclk1.to_hertz().unwrap().0")
         # rustfmt puts the arguments one per line past fn_call_width (60)
         ctx["usb_args_wrap"] = len(", ".join(ctx["usb_args"])) > 60
     return ctx
@@ -3105,6 +3110,14 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
         if fw != "embassy" or t.family not in ("stm32", "rp", "nrf"):
             die("--wire-weaver needs --framework embassy on STM32, RP or nRF (the server runs on embassy-time)")
         o.usb_phy = args.usb_phy
+        o.usb_stack = args.usb_stack
+        if o.usb_stack == "bedrock":
+            if o.ww_transport != "usb" or t.family != "stm32" or not re.match(r"stm32g0[bc]1", t.chip, re.I):
+                die("--usb-stack bedrock needs --ww-transport usb on STM32G0B1 or G0C1 (usb_v4 with 32-bit USB SRAM; "
+                    "other parts: USBD-9 in FEATURES.md)")
+            if o.usb_phy != "fs" or args.embassy != "main":
+                die("--usb-stack bedrock needs --usb-phy fs and --embassy main (embassy-stm32 0.6's interrupt and "
+                    "RCC types)")
         if o.usb_phy == "ulpi" and (o.ww_transport != "usb" or t.family != "stm32" or args.embassy != "release"):
             die("--usb-phy ulpi needs --ww-transport usb on STM32 with --embassy release (embassy main's "
                 "usb::Driver::new_hs_ulpi is unchecked)")
@@ -3314,6 +3327,10 @@ def main(argv=None) -> None:
                         "ulpi (USB_OTG_HS at high speed through an external ULPI PHY such as the USB3300; its 12 pins "
                         "from stm32-data, the board preset's [usb] ulpi = { NXT = \"PH4\" } chooses where there are "
                         "several)")
+    p.add_argument("--usb-stack", choices=["embassy", "bedrock"], default="embassy",
+                   help="USB device stack for --ww-transport usb: embassy (default; embassy-usb with embassy-stm32's "
+                        "driver) or bedrock (bedrock_usb: a const device, smaller flash; STM32G0B1 / G0C1 only, needs "
+                        "--embassy main)")
     p.add_argument("--ww-api", help="WireWeaver API crate name (default <name>_api)")
     p.add_argument("--ww-src", default="git",
                    help="'git' (default) or path to a local wire_weaver checkout, relative to the output directory")
