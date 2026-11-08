@@ -3,7 +3,7 @@
 //! The firmware describes its device as a `const` [desc::Device]. `const fn`s turn it into the descriptor arrays the
 //! control endpoint serves ([desc]) and into the endpoint registers and USB SRAM layout the driver programs
 //! ([layout]); [descriptors!] names both and makes the build fail on a device the hardware can't serve. Nothing is
-//! allocated, parsed or built at run time.
+//! allocated, parsed or built at run time. [v4] drives the peripheral from that layout.
 //!
 //! [control] answers the host's requests on endpoint 0 from those tables, as a state machine the driver feeds with
 //! what happened on EP0.
@@ -20,6 +20,9 @@ pub mod control;
 pub mod desc;
 pub mod layout;
 mod macros;
+#[doc(hidden)]
+pub use macros::__byte;
+pub mod v4;
 
 /// Transfer direction, seen from the host as USB names it: OUT is host to device, IN device to host.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

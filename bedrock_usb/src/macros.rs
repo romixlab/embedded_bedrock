@@ -65,6 +65,13 @@
 /// assert_eq!(Desc::CONFIG_DESC.len(), 9 + 8 + 9 + 7);
 /// assert_eq!(Desc::LAYOUT.count, 2);
 /// ```
+/// Byte `i` of `s`, `None` past its end: what [descriptors!]'s checks index empty arrays with (`slice::get` is not
+/// const, and an index into an empty array is a lint error even behind `is_empty()`).
+#[doc(hidden)]
+pub const fn __byte(s: &[u8], i: usize) -> Option<u8> {
+    if i < s.len() { Some(s[i]) } else { None }
+}
+
 #[macro_export]
 macro_rules! descriptors {
     ($vis:vis $name:ident = $device:path) => {
@@ -102,9 +109,33 @@ macro_rules! descriptors {
         const _: () = {
             assert!($name::DEVICE_DESC[0] == 18);
             assert!($name::CONFIG_DESC[1] == $crate::descriptor_type::CONFIGURATION);
-            assert!($name::BOS.is_empty() || $name::BOS[1] == $crate::descriptor_type::BOS);
-            assert!($name::MS_OS_20_SET.is_empty() || $name::MS_OS_20_SET[0] == 10);
+            assert!(matches!($crate::__byte(&$name::BOS, 1), None | Some($crate::descriptor_type::BOS)));
+            assert!(matches!($crate::__byte(&$name::MS_OS_20_SET, 0), None | Some(10)));
             assert!($name::LAYOUT.count >= 1);
         };
+    };
+}
+
+/// Declares the `static` [State](crate::v4::State) of a device, sized by its layout: one entry per endpoint
+/// register in use, nothing for the registers it leaves empty.
+///
+/// ```
+/// # use bedrock_usb::desc::{Device, Endpoint, Function, Interface, Item};
+/// # use bedrock_usb::Buffering;
+/// # const DEVICE: Device = Device {
+/// #     functions: &[Function {
+/// #         interfaces: &[Interface { items: &[Item::Endpoint(Endpoint::bulk_in(2, 64, Buffering::Single))], ..Interface::vendor() }],
+/// #         ..Function::vendor()
+/// #     }],
+/// #     ..Device::new(0xc0de, 0xcafe)
+/// # };
+/// bedrock_usb::descriptors!(Desc = DEVICE);
+/// bedrock_usb::state!(static USB_STATE: Desc);
+/// ```
+#[macro_export]
+macro_rules! state {
+    ($vis:vis static $name:ident : $desc:ty) => {
+        $vis static $name: $crate::v4::State<{ <$desc as $crate::Descriptors>::LAYOUT.count as usize }> =
+            $crate::v4::State::new();
     };
 }

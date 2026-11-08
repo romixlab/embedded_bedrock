@@ -1017,11 +1017,24 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   SET_INTERFACE, GET_STATUS, halt and toggle reset, SETUP during a data stage, MS OS 2.0, strings, class requests,
   bus reset, a Linux-like enumeration). Flash about 2.9 KiB at opt-level z, fat LTO, thumbv6m, for a Donguru-like
   device; RAM 104 B with the default 64-byte class buffer.
-- 📋 **USBD-3 usb_v4 register layer and endpoints**: CHEPnR writes with invariant and toggle values, USB SRAM word
-  copies, ISR (bus reset handled in the ISR, CTR, suspend / wakeup), async `BulkOut` / `BulkIn` / `InterruptIn`
-  for `Single` and `Double`, halt and enable with DATA0, the ES0548 2.16.1 delay (check USB-5); embassy-stm32 glue
-  (`InterruptHandler` as a typelevel `Handler`, so it shares `USB_UCPD1_2` with UCPD) and `on_interrupt()` for bare
-  firmware. Host tests on a simulated CHEPnR.
+- 🧪 **USBD-3 usb_v4 register layer and endpoints**: `bedrock_usb::v4`. `regs.rs`: offsets and bits (RM0444 Rev 6
+  §37.6-37.7) and the `Regs` trait, `Mmio` on the chip (no PAC dependency; `tests/v4_metapac.rs` holds every offset
+  and bit to stm32-metapac 21's `usb_v4` / `usbram_32_2048`). `chep.rs`: CHEPnR values from the value read, 1 in
+  every `rc_w0` bit, toggles as current XOR target. `driver.rs`: start-up (PDWN, tSTARTUP, USBRST, ISTR), the
+  interrupt handler (bus reset with EP0, buffer table and address in the handler; CTR clears VTRX / VTTX with
+  invariant writes and wakes; the status OUT of a control read re-arms EP0 there; SUSP / WKUP / ESOF), enable and
+  halt with DATA0 and retry loops, the device address. `ep0.rs`: the control endpoint's register side for USBD-2
+  (`setup`, `data_in` / `data_out` with the other direction STALL or NAK, `status_out` with STATUS_OUT,
+  `status_in`, `stall`, `idle`; a SETUP or a bus reset ends a transfer). `endpoint.rs`: `BulkOut` / `BulkIn` for
+  `Single` and `Double` and `InterruptIn`, checked against the descriptors at compile time, word copies of USB
+  SRAM, the ES0548 2.16.1 800 ns wait before every OUT read (check USB-5). Double buffering hands one buffer at a
+  time to the peripheral and the second from the handler (embassy-rs/embassy#7275), SW_BUF and STAT never in one
+  write. `state!` sizes the shared `State` by the layout; feature `embassy-stm32`: `InterruptHandler<USB>` as a
+  typelevel `Handler` (shares `USB_UCPD1_2` with UCPD) and `embassy::new`; `on_interrupt()` for bare firmware.
+  Host tests per rule on the simulated peripheral `sim.rs` (feature `sim` for crates built on it): R1-R9 and R12, R2
+  also in `chep.rs`'s own tests.
+  Builds for thumbv6m with and without `embassy-stm32`. Not run on hardware yet (USBD-7); flash, stack and cycles
+  measured with USBD-4's example.
 - 📋 **USBD-4 Device run loop and G0 example**: `Usb::run()` joining USBD-2 and USBD-3, bus state for the firmware
   (configured, suspended, reset after configured), an example firmware for the G0B1 (vendor bulk loopback with
   WinUSB) built for thumbv6m by `just lint`, flash measured.
@@ -1042,7 +1055,9 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   doesn't support on Windows (would need `claim_interface(0)`, a possible follow-up, not done).
 - 📋 **USBD-7 G0 hardware test** (nothing waits on it): USBD-4's example on B153A or a Nucleo-G0B1RE: enumeration on Linux and Windows,
   `bedrock-usb-ch9`, loopback rates, the double-buffer STAT behaviour at a conflict read from CHEPnR (RM0444 §37.5.3
-  against embassy's driver comment), the CTR-to-read delay measured.
+  against embassy's driver comment), the CTR-to-read delay measured. Also which descriptor word a double-buffered
+  OUT endpoint receives into at DTOG 0: RM0444 Table 228 names `CHEP_RXTXBD` for the reception row, embassy-stm32
+  (on Donguru's silicon) and USBD-3 use `CHEP_TXRXBD`, as for transmission.
 - 📋 **USBD-8 OTG backend**: OTG FS / HS (B135's H725 over the USB3315 ULPI PHY) under the same `desc`, control
   machine and run loop: FIFO allocation from the const layout, DMA off at first, high-speed descriptors (512-byte
   bulk, device qualifier, other-speed configuration).

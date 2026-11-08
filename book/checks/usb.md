@@ -99,6 +99,8 @@ and read too early. Found planning bedrock_usb (embedded_bedrock USBD-3), not ye
 
 **Fix:** wait at least 800 ns (full speed) between seeing the packet (STATRX NAK, or DTOG and SW_BUF differing on
 a double-buffered endpoint) and reading its count or data, on every part whose errata sheet lists this erratum.
+bedrock_usb's usb_v4 driver waits `v4::OUT_PACKET_DELAY_NS` before every OUT read, SETUP included; its simulated
+peripheral flags an SRAM read that comes sooner.
 
 **Detection:** review — the read path and the part's errata sheet; a source lint can't tell how long the path
 from the interrupt to the read is.

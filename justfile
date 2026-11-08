@@ -17,6 +17,7 @@ test *flags:
 test-all:
     cargo nextest run --workspace --locked
     cargo nextest run --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
+    cargo nextest run --locked -p bedrock_usb --features metapac-check --test v4_metapac
     cargo test --doc --workspace --locked
     cargo test --doc --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
 
@@ -33,7 +34,9 @@ lint:
     cargo clippy -p bedrock_sync --all-targets --all-features --locked -- -D warnings
     cargo clippy -p bedrock_sync --target thumbv6m-none-eabi --features embassy,ww-timebase,defmt --locked -- -D warnings
     cargo clippy -p bedrock_can --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
+    cargo clippy -p bedrock_usb --all-targets --features sim,defmt,metapac-check --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
+    cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt,embassy-stm32,embassy-stm32/stm32g0b1re --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt --locked -- -D warnings

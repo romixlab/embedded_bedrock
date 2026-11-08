@@ -2,16 +2,38 @@
 name = "bedrock_usb"
 version = "0.1.0"
 edition = "2024"
-description = "USB full-speed device stack for STM32, fixed at compile time: shared types, descriptors as const fn output, the endpoint and USB SRAM layout with const asserts, the EP0 control machine"
+description = "USB full-speed device stack for STM32, fixed at compile time: shared types, descriptors as const fn output, the endpoint and USB SRAM layout with const asserts, the EP0 control machine, the usb_v4 driver"
 license = "MIT OR Apache-2.0"
 
 [features]
 defmt = ["dep:defmt"]
+# The simulated usb_v4 peripheral (`v4::sim`, std) for host tests of code built on the driver
+sim = []
+# embassy-stm32 glue: the typelevel interrupt handler for `bind_interrupts!`, `Peri<USB>`, the RCC enable. The
+# firmware's embassy-stm32 names the chip; `unstable-pac` gives the peripheral's addresses.
+embassy-stm32 = ["dep:embassy-stm32"]
+# Test only: tests/v4_metapac.rs holds the driver's registers to stm32-metapac's G0B1. A feature, not a
+# dev-dependency, because a workspace build unifies dev-dependency features and metapac takes one chip per build
+# (bedrock_clocks_rt's tests take the H725); `just test` runs it in a `-p bedrock_usb` pass of its own.
+metapac-check = ["dep:stm32-metapac"]
 
 [dependencies]
+critical-section = "1.2"
 defmt = { version = "1.0", optional = true }
+embassy-stm32 = { version = "0.6.0", default-features = false, features = ["unstable-pac"], optional = true }
+# the same metapac embassy-stm32 0.6 resolves
+stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32g0b1re"], optional = true }
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
+# asm::delay for the tSTARTUP and ES0548 2.16.1 waits
+cortex-m = "0.7"
 
 [dev-dependencies]
 # the golden test: Donguru's descriptor set as embassy-usb's Builder writes it, read back through a dummy driver
 embassy-usb = { version = "0.6.0", default-features = false }
 embassy-futures = "0.1.2"
+critical-section = { version = "1.2", features = ["std"] }
+
+[[test]]
+name = "v4_metapac"
+required-features = ["metapac-check"]
