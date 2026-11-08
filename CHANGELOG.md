@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.57] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb` SOF timestamps: a state made with `State::with_sof(now_us)` (`state!(static USB_STATE: Desc, sof = now_us)`) unmasks SOF and ESOF, and the interrupt handler reads the firmware's local clock first thing on every SOF and keeps it with FNR's frame number, a SOF count, the missed SOFs (ESOFs while FNR's LCK is set) and LCK itself (`State::sof()`, `Driver::sof()`, `v4::Sof`). ESOF is masked while the bus is suspended. Off by default: 1000 interrupts a second (USBD-10).
