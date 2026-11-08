@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.55] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb::v4`, the driver for the usb_v4 peripheral with 32-bit USB SRAM (G0B1 first): CHEPnR writes with invariant and toggle values, USB SRAM word copies, start-up, an interrupt handler that handles the bus reset itself, `Ep0` for the control state machine, typed `BulkOut` / `BulkIn` (single- or double-buffered) and `InterruptIn` checked against the descriptors at compile time, enable and halt with DATA0, the ES0548 2.16.1 wait before every OUT read. `state!` declares the shared state sized by the layout. Feature `embassy-stm32`: the interrupt handler for `bind_interrupts!` (shares the G0's `USB_UCPD1_2` with UCPD) and `embassy::new` on `Peri<USB>`; `v4::on_interrupt()` for bare firmware. Feature `sim`: the simulated peripheral the host tests run on (USBD-3).
