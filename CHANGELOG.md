@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 - `bedrock_usb::Usb`, the device: `run()` serves bus events and EP0 in one future, as embassy-usb's `UsbDevice::run()`, joining the control machine to the usb_v4 driver (whole control transfers packet by packet, the address after SET_ADDRESS's status stage, endpoints enabled with DATA0 on SET_CONFIGURATION and SET_INTERFACE, halts, suspend and resume to the handlers). The bus status for the rest of the firmware (`State::status()`, `status_changed()`): configured, suspended, configured once, bus resets and bus resets while configured, which tell a hub bouncing the port from a host that deconfigures (USBD-4).
 
+### Fixed
+
+- `bedrock_usb::v4::Mmio`'s short waits (tSTARTUP, the ES0548 2.16.1 wait before every OUT read) count cycles without a 64-bit division: on the Cortex-M0+ it took about 1.2 KiB of flash (`__aeabi_uldivmod`) and ran on every OUT packet (USBD-3).
+
 ## [0.2.55] - 2026-11-08
 
 ### Added

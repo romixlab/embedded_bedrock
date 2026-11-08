@@ -124,7 +124,8 @@ pub trait Regs {
 pub struct Mmio {
     usb: usize,
     sram: usize,
-    hclk_hz: u32,
+    /// The core clock in MHz, rounded up.
+    mhz: u32,
 }
 
 impl Mmio {
@@ -146,7 +147,11 @@ impl Mmio {
     /// # Safety
     /// `usb` and `sram` are the peripheral's register block and its USB SRAM, and the caller owns them.
     pub const unsafe fn new(usb: usize, sram: usize, hclk_hz: u32) -> Self {
-        Mmio { usb, sram, hclk_hz }
+        Mmio {
+            usb,
+            sram,
+            mhz: hclk_hz.div_ceil(1_000_000),
+        }
     }
 
     fn reg(&self, offset: usize) -> *mut u32 {
@@ -204,10 +209,17 @@ impl Regs for Mmio {
         unsafe { ((self.sram + 4 * index) as *mut u32).write_volatile(value) }
     }
     fn delay_ns(&self, ns: u32) {
-        // cycles = ceil(ns * hclk / 1e9); u64 so 1 µs at 550 MHz doesn't overflow
-        let cycles = (ns as u64 * self.hclk_hz as u64).div_ceil(1_000_000_000) as u32;
-        delay_cycles(cycles);
+        delay_cycles(cycles(ns, self.mhz));
     }
+}
+
+/// At least `ns` nanoseconds in cycles of a `mhz` clock: `ns * mhz / 1000`, rounded up, without a division. The
+/// Cortex-M0+ has no divider, and a 64-bit one (`__aeabi_uldivmod`) cost about 1 KiB of flash and its run time on
+/// every OUT packet (the ES0548 2.16.1 wait). 1049 / 2^20 is a little more than 1 / 1000, so the wait is never
+/// shorter. Holds for `ns * mhz` below 4 000 000 (the waits here are 1 µs at most, clocks 550 MHz at most).
+pub(crate) const fn cycles(ns: u32, mhz: u32) -> u32 {
+    debug_assert!(ns as u64 * mhz as u64 <= 4_000_000);
+    ((ns * mhz * 1049) >> 20) + 1
 }
 
 /// At least `cycles` core cycles.
@@ -218,5 +230,25 @@ fn delay_cycles(cycles: u32) {
     #[cfg(not(all(target_arch = "arm", target_os = "none")))]
     for _ in 0..cycles {
         core::hint::spin_loop();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn cycles_never_short() {
+        for mhz in [1, 8, 16, 48, 64, 170, 250, 480, 550] {
+            for ns in [1, 100, 800, 1000, 7000] {
+                if ns * mhz > 4_000_000 {
+                    continue;
+                }
+                let exact = (ns as u64 * mhz as u64).div_ceil(1000) as u32;
+                let c = super::cycles(ns, mhz);
+                assert!(
+                    c >= exact && c <= exact + 1 + exact / 100,
+                    "{ns} ns at {mhz} MHz: {c}, exact {exact}"
+                );
+            }
+        }
     }
 }
