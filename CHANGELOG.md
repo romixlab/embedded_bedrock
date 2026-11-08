@@ -1,13 +1,19 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_can`, `bedrock_usb`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock_clocks`, `bedrock_clocks_rt`, `bedrock`, `bedrock_cli`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_can`, `bedrock_usb`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock_clocks`, `bedrock_clocks_rt`, `bedrock`, `bedrock_cli`, `bedrock_usb_ch9`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_usb_ch9`: `bedrock-usb-ch9`, a nusb-based host tool that runs USB chapter 9 checks (descriptors at a
+  spread of wLength, halt and toggle on each bulk endpoint, SET_CONFIGURATION / SET_INTERFACE loops, bus resets)
+  against any USB device, without depending on `bedrock_usb` (USBD-6).
 
 ## [0.2.53] - 2026-11-08
 

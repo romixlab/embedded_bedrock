@@ -1028,9 +1028,18 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
 - 📋 **USBD-5 WireWeaver class** (feature `ww`): the function fragment byte for byte as wire_weaver_usb_embassy's
   (constants from WireWeaver's embassy-free crate), `ww_device::PacketSink` / `PacketSource` on the bulk endpoints
   with a write timeout; descriptor parity test.
-- 📋 **USBD-6 `bedrock-usb-ch9` host tool**: nusb-based chapter 9 checks against any of our USB devices (descriptors,
-  wLength edges, halt and toggle on each bulk endpoint, SET_CONFIGURATION / SET_INTERFACE loops, bus resets);
-  run against today's embassy Donguru first as the baseline.
+- 🧪 **USBD-6 `bedrock-usb-ch9` host tool** (`bedrock_usb_ch9/`): nusb-based chapter 9 checks against any USB
+  device, independent of `bedrock_usb` (talks only standard requests). `list` / `info` enumerate and dump
+  descriptors; `run` checks GET_DESCRIPTOR at a spread of wLength around the device and configuration
+  descriptors' actual length (R13), SET_FEATURE / CLEAR_FEATURE(ENDPOINT_HALT) and the resulting STALL on every
+  bulk endpoint (R12), SET_CONFIGURATION / SET_INTERFACE loops ending on an undefined value that must STALL, and
+  a bus-reset loop that re-enumerates and re-opens the device each time; SET_ADDRESS (R14) and the data toggle
+  itself (R12) aren't host-observable, so they're exercised only indirectly (noted in `checks.rs`). Host-tested
+  (wLength candidate generation, device-selector matching, report counting) and run by hand against a USB2.0
+  hub and a HID keyboard on this PC (`info`, `run --only wlength,halt`); not yet run against a bulk-endpoint
+  firmware (today's embassy Donguru or a `bedrock_usb` one) — no B153A, Nucleo-G0B1RE or J-Link on this session's
+  PC (USBD-7 does that). Linux and macOS only: control transfers go through `nusb::Device` directly, which nusb
+  doesn't support on Windows (would need `claim_interface(0)`, a possible follow-up, not done).
 - 📋 **USBD-7 G0 hardware test** (nothing waits on it): USBD-4's example on B153A or a Nucleo-G0B1RE: enumeration on Linux and Windows,
   `bedrock-usb-ch9`, loopback rates, the double-buffer STAT behaviour at a conflict read from CHEPnR (RM0444 §37.5.3
   against embassy's driver comment), the CTR-to-read delay measured.

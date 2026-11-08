@@ -1,0 +1,18 @@
+[package]
+name = "bedrock_usb_ch9"
+version = "0.1.0"
+edition = "2024"
+description = "bedrock-usb-ch9: nusb-based chapter 9 checks against a USB device (descriptors, wLength edges, halt and toggle, SET_CONFIGURATION / SET_INTERFACE loops, bus resets)"
+license = "MIT"
+
+[[bin]]
+name = "bedrock-usb-ch9"
+path = "src/main.rs"
+
+[dependencies]
+anstream = "1"
+anstyle = "1"
+anyhow = "1"
+clap = { version = "4.5", features = ["derive", "env", "wrap_help"] }
+clap_complete = { version = "4.6", features = ["unstable-dynamic"] }
+nusb = "0.2"

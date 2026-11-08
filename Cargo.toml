@@ -20,6 +20,7 @@ members = [
     "bedrock_board_cli",
     "bedrock_lint",
     "bedrock_lint_cli",
+    "bedrock_usb_ch9",
     "bedrock_cli",
     "fw_registry",
 ]

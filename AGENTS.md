@@ -100,6 +100,10 @@ so a missing entry means work nobody sees.
   checks: no binaries in git). A new check: a file in `checks/`, its `mod` line, a fixture. A check with a `src`
   and an `elf` part (STK-5, SIZ-5, PERF-3, ERR-3) is one check file with both.
 - `bedrock/` — host-side prototype: reads targets through probe-rs, ELF symbol scan (`nm.rs`).
+- `bedrock_usb_ch9/` — `bedrock-usb-ch9` (FEATURES.md `USBD-6`): nusb-based USB chapter 9 checks against any USB
+  device (descriptors at a spread of wLength, halt and toggle on each bulk endpoint, SET_CONFIGURATION /
+  SET_INTERFACE loops, bus resets), independent of `bedrock_usb`. Linux and macOS only (nusb's `Device`-level
+  control transfers aren't available on Windows).
 - `bedrock_cli/`, `fw_registry/` — empty stubs (`println!("Hello, world!")`).
 - `bedrock_template/` — the older cargo-generate template, superseded by `firmware_template_skill/` (FEATURES.md
   TPL-20).
