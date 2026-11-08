@@ -9,7 +9,7 @@ use core::task::Poll;
 use super::chep::{self, Stat};
 use super::endpoint::{BulkIn, BulkOut, InterruptIn};
 use super::ep0::Ep0;
-use super::regs::{Regs, bcdr, bd, chep as bits, cntr, daddr, istr};
+use super::regs::{Regs, bd, chep as bits, cntr, daddr, istr};
 use super::state::{EpState, Queue, RxQueue, State, StateRef, TxQueue, event};
 use crate::buffer::Mode;
 use crate::layout::{Layout, RegMode, RegType};
@@ -111,12 +111,12 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
 
     /// The DP pull-up on: the host sees the device and resets the bus.
     pub fn connect(&self) {
-        critical_section::with(|_| self.regs.set_bcdr(self.regs.bcdr() | bcdr::DPPU));
+        self.regs.set_pull_up(true);
     }
 
     /// The DP pull-up off: the host sees the device leave.
     pub fn disconnect(&self) {
-        critical_section::with(|_| self.regs.set_bcdr(self.regs.bcdr() & !bcdr::DPPU));
+        self.regs.set_pull_up(false);
     }
 
     /// The interrupt handler, for the vector (or for a test driving a simulated chip).

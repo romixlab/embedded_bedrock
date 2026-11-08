@@ -130,8 +130,10 @@ pub trait Regs {
     fn fnr(&self) -> u32;
     fn daddr(&self) -> u32;
     fn set_daddr(&self, value: u32);
-    fn bcdr(&self) -> u32;
-    fn set_bcdr(&self, value: u32);
+    /// The DP pull-up on or off: whether the host sees a device. usb_v4 and usb_v3 switch it with `USB_BCDR`
+    /// DPPU ([set_dppu]); usb_v1 and usb_v2 have no BCDR, and the pull-up is outside the peripheral
+    /// (`crate::v1::PullUp`).
+    fn set_pull_up(&self, on: bool);
     /// Word `index` of USB SRAM (byte offset `4 * index`): the access scheme is 32 bits (R11, RM0444 Table 225).
     fn sram(&self, index: usize) -> u32;
     fn set_sram(&self, index: usize, value: u32);
@@ -221,13 +223,14 @@ impl Regs for Mmio {
     fn set_daddr(&self, value: u32) {
         unsafe { self.reg(offset::DADDR).write_volatile(value) }
     }
-    #[inline(always)]
-    fn bcdr(&self) -> u32 {
-        unsafe { self.reg(offset::BCDR).read_volatile() }
-    }
-    #[inline(always)]
-    fn set_bcdr(&self, value: u32) {
-        unsafe { self.reg(offset::BCDR).write_volatile(value) }
+    fn set_pull_up(&self, on: bool) {
+        let bcdr = self.reg(offset::BCDR);
+        // Safety: the register is ours (Mmio::new)
+        set_dppu(
+            on,
+            || unsafe { bcdr.read_volatile() },
+            |v| unsafe { bcdr.write_volatile(v) },
+        );
     }
     #[inline(always)]
     fn sram(&self, index: usize) -> u32 {
@@ -240,6 +243,15 @@ impl Regs for Mmio {
     fn delay_ns(&self, ns: u32) {
         delay_ns(ns, self.mhz);
     }
+}
+
+/// Sets or clears `USB_BCDR` DPPU with a read-modify-write in a critical section, the other bits (battery
+/// charging detection) as they are.
+pub fn set_dppu(on: bool, read: impl FnOnce() -> u32, write: impl FnOnce(u32)) {
+    critical_section::with(|_| {
+        let v = read();
+        write(if on { v | bcdr::DPPU } else { v & !bcdr::DPPU });
+    });
 }
 
 /// At least `ns` nanoseconds in cycles of a `mhz` clock: `ns * mhz / 1000`, rounded up, without a division. The

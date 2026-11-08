@@ -1,5 +1,8 @@
 //! The usb_v4 driver ([crate::v4]) on the STM32 USB device peripheral "usb_v3" with 16-bit USB SRAM
-//! (`usbram_16x2_1024`): STM32L4 (L412 / L422, L43x / L44x, L45x / L46x), STM32G4 and STM32WB.
+//! (`usbram_16x2_1024`): STM32L4 (L412 / L422, L43x / L44x, L45x / L46x), STM32G4, STM32WB, STM32F0 (F04x, F07x)
+//! and STM32L0 (L05x to L08x). stm32-metapac puts the F0 and L0 here too: their peripheral has `USB_BCDR` and
+//! the same SRAM (RM0091 Rev 10 §30.6, RM0367 Rev 8 Table 161 "512x16bit", "2 x 16 bits / word"). The parts
+//! without `USB_BCDR` (F1, F3, L1) are [crate::v1].
 //!
 //! The two peripherals differ in three places, and only there; the driver, its endpoints, [crate::Usb] and the
 //! layout are the same code:
@@ -86,6 +89,10 @@
 //!   packet size, so the CRC never lands outside it.
 //! - "Device not responding to USB messages to its endpoint 0xF" (ES0394 §2.17.4, WB): endpoint numbers here are
 //!   0 to 7.
+//! - F0 and L0: ES0223 Rev 6 (F072) §2.15 has the APB minimum, ESOF and CRC16 errata above and two on battery
+//!   charging detection, which the driver doesn't use. ES0251 Rev 6 (L05x / L06x) §2.16.4 is "Buffer description
+//!   table update completes after CTR interrupt triggers" again ("800 ns in Full Speed mode", workaround on every
+//!   revision): the wait covers it.
 //!
 //! The L4 and WB also need VDDUSB validated before the peripheral works: "Setting this bit is mandatory to use the
 //! USB FS peripheral" (PWR_CR2 USV, RM0394 Rev 5 §5.4.2, RM0434 Rev 16 §5.6.2): [Family::validate_vddusb]. The
@@ -99,13 +106,15 @@
 //! corresponding bit in USB_CNTR is set. An endpoint dedicated interrupt condition is activated independently
 //! from the CTRM bit", RM0440 §45.6.1 USB_ISTR).
 
-#[cfg(feature = "embassy-stm32")]
+// not on the F1, whose embassy pin traits have no alternate-function number (and which has no usb_v3)
+#[cfg(all(feature = "embassy-stm32", not(feature = "stm32f1")))]
 pub mod embassy;
 
 #[cfg(test)]
 mod tests;
 
 use crate::Descriptors;
+use crate::half::{Bus16, regs16};
 use crate::v4::Registration;
 pub use crate::v4::{
     BulkIn, BulkOut, Driver, EndpointError, Ep0, Ep0Error, INTERRUPTS, InterruptIn,
@@ -122,16 +131,10 @@ pub mod offset {
 /// Rev 5 Table 282, RM0434 Rev 16 Table 253).
 pub const SRAM_SIZE: usize = 1024;
 
-/// The bits of a usb_v3 register: the low half-word.
-const REG_MASK: u32 = 0xffff;
-
 /// The usb_v3 peripheral's registers and USB SRAM in memory, with the core clock for [Regs::delay_ns].
 #[derive(Copy, Clone, Debug)]
 pub struct Mmio {
-    usb: usize,
-    sram: usize,
-    /// The core clock in MHz, rounded up.
-    mhz: u32,
+    bus: Bus16,
 }
 
 impl Mmio {
@@ -147,6 +150,14 @@ impl Mmio {
     /// boundary addresses").
     pub const WB_USB: usize = 0x4000_6800;
     pub const WB_SRAM: usize = 0x4000_6c00;
+    /// USB at 0x4000_5C00, "USB/CAN SRAM" at 0x4000_6000 (RM0091 Rev 10 Table 1 "STM32F0xx peripheral register
+    /// boundary addresses"; on the F04x / F07x the CAN shares the USB SRAM).
+    pub const F0_USB: usize = 0x4000_5c00;
+    pub const F0_SRAM: usize = 0x4000_6000;
+    /// USB at 0x4000_5C00, USB SRAM at 0x4000_6000 (RM0367 Rev 8 Table 3 "STM32L0x3 peripheral register boundary
+    /// addresses").
+    pub const L0_USB: usize = 0x4000_5c00;
+    pub const L0_SRAM: usize = 0x4000_6000;
 
     /// The peripheral of `family`, `hclk_hz` the core clock the delays count in.
     ///
@@ -157,6 +168,8 @@ impl Mmio {
             Family::G4 => (Self::G4_USB, Self::G4_SRAM),
             Family::L4 => (Self::L4_USB, Self::L4_SRAM),
             Family::Wb => (Self::WB_USB, Self::WB_SRAM),
+            Family::F0 => (Self::F0_USB, Self::F0_SRAM),
+            Family::L0 => (Self::L0_USB, Self::L0_SRAM),
         };
         unsafe { Self::new(usb, sram, hclk_hz) }
     }
@@ -167,101 +180,18 @@ impl Mmio {
     /// `usb` and `sram` are the peripheral's register block and its USB SRAM, and the caller owns them.
     pub const unsafe fn new(usb: usize, sram: usize, hclk_hz: u32) -> Self {
         Mmio {
-            usb,
-            sram,
-            mhz: hclk_hz.div_ceil(1_000_000),
+            bus: unsafe { Bus16::new(usb, sram, hclk_hz) },
         }
-    }
-
-    fn reg(&self, offset: usize) -> *mut u32 {
-        (self.usb + offset) as *mut u32
-    }
-
-    #[inline(always)]
-    fn read(&self, offset: usize) -> u32 {
-        unsafe { self.reg(offset).read_volatile() }
-    }
-
-    #[inline(always)]
-    fn write(&self, offset: usize, value: u32) {
-        unsafe { self.reg(offset).write_volatile(value & REG_MASK) }
-    }
-
-    fn half(&self, index: usize) -> *mut u16 {
-        (self.sram + 2 * index) as *mut u16
     }
 }
 
 impl Regs for Mmio {
     const SRAM_SIZE: usize = SRAM_SIZE;
-
-    #[inline(always)]
-    fn chep(&self, n: usize) -> u32 {
-        self.read(crate::v4::regs::offset::CHEP0R + 4 * n)
-    }
-    #[inline(always)]
-    fn set_chep(&self, n: usize, value: u32) {
-        self.write(crate::v4::regs::offset::CHEP0R + 4 * n, value)
-    }
-    #[inline(always)]
-    fn cntr(&self) -> u32 {
-        self.read(crate::v4::regs::offset::CNTR)
-    }
-    #[inline(always)]
-    fn set_cntr(&self, value: u32) {
-        self.write(crate::v4::regs::offset::CNTR, value)
-    }
-    #[inline(always)]
-    fn istr(&self) -> u32 {
-        self.read(crate::v4::regs::offset::ISTR)
-    }
-    #[inline(always)]
-    fn set_istr(&self, value: u32) {
-        self.write(crate::v4::regs::offset::ISTR, value)
-    }
-    #[inline(always)]
-    fn fnr(&self) -> u32 {
-        self.read(crate::v4::regs::offset::FNR)
-    }
-    #[inline(always)]
-    fn daddr(&self) -> u32 {
-        self.read(crate::v4::regs::offset::DADDR)
-    }
-    #[inline(always)]
-    fn set_daddr(&self, value: u32) {
-        self.write(crate::v4::regs::offset::DADDR, value)
-    }
-    #[inline(always)]
-    fn bcdr(&self) -> u32 {
-        self.read(crate::v4::regs::offset::BCDR)
-    }
-    #[inline(always)]
-    fn set_bcdr(&self, value: u32) {
-        self.write(crate::v4::regs::offset::BCDR, value)
-    }
-    /// Half-words `2 * index` (low) and `2 * index + 1` (high).
-    #[inline(always)]
-    fn sram(&self, index: usize) -> u32 {
-        unsafe {
-            let lo = self.half(2 * index).read_volatile() as u32;
-            let hi = self.half(2 * index + 1).read_volatile() as u32;
-            lo | (hi << 16)
-        }
-    }
-    #[inline(always)]
-    fn set_sram(&self, index: usize, value: u32) {
-        unsafe {
-            self.half(2 * index).write_volatile(value as u16);
-            self.half(2 * index + 1)
-                .write_volatile((value >> 16) as u16);
-        }
-    }
-    #[inline(always)]
-    fn set_btable(&self, value: u32) {
-        self.write(offset::BTABLE, value)
-    }
-    fn delay_ns(&self, ns: u32) {
-        crate::v4::regs::delay_ns(ns, self.mhz);
+    // "2 x 16 bits / word": half-words at consecutive addresses
+    regs16!(bus, 2);
+    fn set_pull_up(&self, on: bool) {
+        let bcdr = crate::v4::regs::offset::BCDR;
+        crate::v4::regs::set_dppu(on, || self.bus.read(bcdr), |v| self.bus.write(bcdr, v));
     }
 }
 
@@ -272,14 +202,18 @@ pub enum Family {
     G4,
     L4,
     Wb,
+    /// STM32F04x, F07x (stm32-metapac's `usb_v3` with `usbram_16x2_1024`, as the G4).
+    F0,
+    /// STM32L05x / L06x, L07x / L08x (likewise).
+    L0,
 }
 
 impl Family {
     /// `PWR_CR2` (offset 0x04) of the L4 (PWR at 0x4000_7000, RM0394 Rev 5 Table 2) and the WB (PWR at
-    /// 0x5800_0400, RM0434 Rev 16 Table 1); the G4 has no USV.
+    /// 0x5800_0400, RM0434 Rev 16 Table 1); the G4, F0 and L0 have no USV.
     pub const fn pwr_cr2(self) -> Option<usize> {
         match self {
-            Family::G4 => None,
+            Family::G4 | Family::F0 | Family::L0 => None,
             Family::L4 => Some(0x4000_7004),
             Family::Wb => Some(0x5800_0404),
         }

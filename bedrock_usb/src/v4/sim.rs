@@ -429,14 +429,17 @@ impl Regs for &Sim {
         i.log.push(Op::Daddr(value));
     }
 
-    fn bcdr(&self) -> u32 {
-        self.inner.borrow().bcdr
-    }
-
-    fn set_bcdr(&self, value: u32) {
-        let mut i = self.inner.borrow_mut();
-        i.bcdr = value;
-        i.log.push(Op::Bcdr(value));
+    fn set_pull_up(&self, on: bool) {
+        let bcdr = self.inner.borrow().bcdr;
+        super::regs::set_dppu(
+            on,
+            || bcdr,
+            |value| {
+                let mut i = self.inner.borrow_mut();
+                i.bcdr = value;
+                i.log.push(Op::Bcdr(value));
+            },
+        );
     }
 
     fn sram(&self, index: usize) -> u32 {

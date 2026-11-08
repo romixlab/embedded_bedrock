@@ -23,11 +23,13 @@ extern crate std;
 pub mod control;
 pub mod desc;
 pub mod device;
+mod half;
 pub mod layout;
 mod macros;
 pub mod otg;
 #[doc(hidden)]
 pub use macros::__byte;
+pub mod v1;
 pub mod v3;
 pub mod v4;
 
