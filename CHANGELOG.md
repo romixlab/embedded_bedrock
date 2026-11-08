@@ -9,6 +9,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_usb::otg`, the driver for the Synopsys OTG core in device mode (STM32H72x / H73x USB1 OTG_HS first, over ULPI with a high-speed PHY or on the embedded full-speed PHY), slave mode without DMA: registers held to embassy-usb-synopsys-otg's `otg_v1`, the FIFO RAM and OUT buffers laid out from the device at compile time and checked against the core, start-up, an interrupt handler that handles the bus reset and empties the receive FIFO, `Ep0`, typed `BulkOut` / `BulkIn` (single- or double-buffered) and `InterruptIn`, enable and halt with DATA0, OUT endpoints disabled under the global OUT NAK. `descriptors!(Desc = DEVICE, otg = Core::H7_OTG_HS)` and `otg_state!` declare a device on it. Feature `sim`: the simulated core its host tests run on, at full and high speed. Feature `embassy-stm32-otg`: `otg::embassy::new_ulpi` / `new_fs` on `Peri<USB_OTG_HS>` with the pins, the USB supply and the ULPI clock (USBD-8).
+- High-speed descriptors: `Device::high_speed`, 512-byte bulk endpoints and the microframe interrupt interval at high speed, `CONFIG_DESC_HS`, `DEVICE_QUALIFIER` and OTHER_SPEED_CONFIGURATION, served by the speed the device enumerated at (USBD-8).
+- `bedrock_usb/examples/h725_loopback`: example firmware for the STM32H725 (OTG_HS over ULPI), a high-speed vendor bulk loopback; `just lint` builds it, `just usb-size` measures it (USBD-8).
+
+### Changed
+
+- `bedrock_usb::Usb` runs over a `Backend` trait (usb_v4 or OTG driver) and EP0 over `ControlEndpoint`; `Ep0Error` moved to the crate root (USBD-8).
+- The OTG driver's interrupt registration is read in place, without a copy per interrupt, as the usb_v4 driver's; a second registration panics (USBD-8).
+
 ## [0.2.57] - 2026-11-08
 
 ### Added

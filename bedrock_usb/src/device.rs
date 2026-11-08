@@ -3,7 +3,7 @@
 //! ([crate::otg]); both hand [Usb] the same bus events and an EP0 with the same steps ([ControlEndpoint]).
 //!
 //! [Usb::run] is one future for the bus events and EP0, as embassy-usb's `UsbDevice::run()`: the firmware spawns
-//! it in a task of its own. The class endpoints are taken from the [Driver] before it goes into [Usb::new], and
+//! it in a task of its own. The class endpoints are taken from the driver before it goes into [Usb::new], and
 //! each class task moves its data with their `read` / `write`, not through `run()`.
 //!
 //! ```ignore

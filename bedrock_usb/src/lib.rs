@@ -1,12 +1,14 @@
-//! A USB full-speed device stack for STM32 whose device is fixed at compile time.
+//! A USB device stack for STM32 whose device is fixed at compile time, at full speed and, on an OTG core with a
+//! high-speed PHY, at high speed.
 //!
 //! The firmware describes its device as a `const` [desc::Device]. `const fn`s turn it into the descriptor arrays the
 //! control endpoint serves ([desc]) and into the endpoint registers and USB SRAM layout the driver programs
 //! ([layout]); [descriptors!] names both and makes the build fail on a device the hardware can't serve. Nothing is
-//! allocated, parsed or built at run time. [v4] drives the peripheral from that layout.
+//! allocated, parsed or built at run time. [v4] drives the usb_v4 peripheral from that layout, [otg] the Synopsys OTG
+//! core from its own FIFO layout ([otg::Layout], `descriptors!(Desc = DEVICE, otg = CORE)`).
 //!
 //! [control] answers the host's requests on endpoint 0 from those tables, as a state machine the driver feeds with
-//! what happened on EP0. [Usb] joins the two: [Usb::run] serves the bus and EP0 and keeps the bus status
+//! what happened on EP0. [Usb] joins the two through the [Backend] trait either driver implements: [Usb::run] serves the bus and EP0 and keeps the bus status
 //! ([v4::Status]) for the firmware.
 //!
 //! This module holds the vocabulary the other parts share: endpoint addresses and kinds, single or double

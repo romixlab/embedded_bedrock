@@ -72,16 +72,20 @@ so a missing entry means work nobody sees.
 - `bedrock_can/` — an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL (bit timing, configuration and
   filter checks against a `Controller` layout, frames to send, error state), from B135; the template's `--can`
   firmware and its host client use it. Firmware takes it by path, like `bedrock_led`.
-- `bedrock_usb/` — a USB full-speed device stack for STM32 fixed at compile time (FEATURES.md area `USBD`): shared
+- `bedrock_usb/` — a USB device stack for STM32 fixed at compile time, full speed and high speed (FEATURES.md area `USBD`): shared
   types in `lib.rs`, the device as a `const` and its descriptors as `const fn` output (`desc.rs`), the usb_v4
   endpoint registers and USB SRAM layout with its RM0444 checks (`layout.rs`), `descriptors!` and `state!`
   (`macros.rs`), the EP0 state machine without registers (`control.rs`, chapter 9 host tests in
   `tests/chapter9.rs`), the usb_v4 driver (`v4/`: registers behind a `Regs` trait, ISR, EP0, typed endpoints, the
   simulated peripheral `sim.rs` its host tests run on, `embassy.rs` glue). Golden test `tests/donguru.rs` against
   embassy-usb's `Builder` on a dummy driver; `tests/v4_metapac.rs` holds the driver's registers to stm32-metapac.
-  `device.rs` is `Usb::run()`, the device on both (tests in `device/tests.rs`, on the simulated peripheral).
-  `examples/g0b1_loopback` is a standalone firmware crate with its own Cargo.lock, built by `just lint` at
-  opt-level z and 3 and measured by `just usb-size`. Firmware takes it by path, like `bedrock_led`.
+  `device.rs` is `Usb::run()` over a `Backend` trait, the device on both (tests in `device/tests.rs`, on the
+  simulated peripheral). The Synopsys OTG driver (`otg/`, H7 OTG_HS first): registers, the FIFO layout checked
+  against the core, ISR, EP0, typed endpoints, the simulated core `sim.rs` and the bench `tests.rs` at full and high
+  speed, `embassy.rs` glue (feature `embassy-stm32-otg`); `tests/otg_regs.rs` holds its registers to
+  embassy-usb-synopsys-otg's `otg_v1`. `examples/g0b1_loopback` (usb_v4) and `examples/h725_loopback` (OTG_HS over
+  ULPI) are standalone firmware crates with their own Cargo.lock, built by `just lint` at opt-level z and 3 and
+  measured by `just usb-size`. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_clocks/` — exact clock planning on the host (FEATURES.md area `RCC`): a board's clock tree as exact
   rationals, checked against RM0468 / DS13311 / ES0491 / AN5337 (each limit in `h72x/limits.rs` names its section),
   encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its

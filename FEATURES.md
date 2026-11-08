@@ -1079,9 +1079,28 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   against embassy's driver comment), the CTR-to-read delay measured. Also which descriptor word a double-buffered
   OUT endpoint receives into at DTOG 0: RM0444 Table 228 names `CHEP_RXTXBD` for the reception row, embassy-stm32
   (on Donguru's silicon) and USBD-3 use `CHEP_TXRXBD`, as for transmission.
-- 📋 **USBD-8 OTG backend**: OTG FS / HS (B135's H725 over the USB3315 ULPI PHY) under the same `desc`, control
-  machine and run loop: FIFO allocation from the const layout, DMA off at first, high-speed descriptors (512-byte
-  bulk, device qualifier, other-speed configuration).
+- 🧪 **USBD-8 OTG backend**: `bedrock_usb::otg`, the Synopsys OTG core in device mode, slave mode without DMA,
+  under the same `desc`, control machine and run loop: `Usb::run()` is generic over a `Backend` trait (`device.rs`,
+  with `ADDRESS_BEFORE_STATUS`: the OTG core wants DCFG.DAD before SET_ADDRESS's status stage) and EP0 over
+  `ControlEndpoint`. High-speed descriptors: `Device::high_speed`, 512-byte bulk and the 2^(n-1) microframe
+  interrupt interval at high speed, `CONFIG_DESC_HS`, `DEVICE_QUALIFIER`, OTHER_SPEED_CONFIGURATION, the
+  configuration by the enumerated speed (`Control::set_speed`). `otg/regs.rs` (RM0468 Rev 3 §62.14, held to
+  embassy-usb-synopsys-otg's `otg_v1` by `tests/otg_regs.rs`), `otg/layout.rs` (receive FIFO by §62.11.3 plus
+  embassy's 30 words, a transmit FIFO per IN endpoint sized for its packets at the top speed, RAM OUT buffers;
+  `Core::H7_OTG_HS` checked at compile time), `otg/driver.rs` (init in ST's order, bus reset and enumeration in the
+  ISR, the receive FIFO emptied into the OUT buffers there, IN stop by §62.15.6 with SNAK / EPDIS, OUT disable under
+  the global OUT NAK with the receive FIFO popped in place, halts with DATA0), `otg/ep0.rs`, typed `BulkOut` /
+  `BulkIn` / `InterruptIn` (one packet per transfer; `Double` is two OUT buffers, a two-packet IN FIFO),
+  `descriptors!(Desc = DEVICE, otg = Core::H7_OTG_HS)` and `otg_state!`. Host tests on the simulated core
+  (`otg/sim.rs`, feature `sim`, which lists rule violations) in `otg/tests.rs`, at full and high speed: enumeration,
+  qualifier and other-speed configuration, FIFO registers after a reset, loopback, double-buffered OUT, halt and
+  toggle reset, deconfigure, SET_INTERFACE, a reset mid-transfer, a stale EP0 IN after a new SETUP, suspend,
+  interrupt IN. Feature `embassy-stm32-otg` (`otg/embassy.rs`): `new_ulpi` / `new_fs` on `Peri<USB_OTG_HS>` with
+  the pins, VDD33USB (PWR_CR3), the ULPI clock and the AHB ≥ 30 MHz check. Example `bedrock_usb/examples/h725_loopback`
+  (STM32H725IG, ULPI, high-speed bulk loopback), built by `just lint`, measured by `just usb-size`: 8 Nov 2026,
+  thumbv7em, fat LTO, bedrock_usb's code 8968 B at z (control 2204, otg/driver 2108, otg/ep0 1346) and 11096 B at
+  3, the image 22.0 KiB / 33.6 KiB; the OTG_HS handler's frame 104 B (520 B deepest). Not run on hardware yet
+  (USBD-13); one packet per transfer limits high-speed throughput (USBD-14).
 - 📋 **USBD-9 usb_v3 port**: L4, G4, WB (16-bit USB SRAM, `usbram_16x2`); same endpoint register as usb_v4, another
   SRAM access and buffer descriptor layout behind USBD-3's SRAM trait.
 - 🧪 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
@@ -1106,6 +1125,12 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   (USBD-7).
 - 📋 **USBD-11 usb_v1 / v2 port**: F0, F1, F3, L0, L1 (16-bit USB SRAM, on F1 spaced one half-word per word,
   `usbram_16x1`); after USBD-9.
+- 📋 **USBD-13 H7 OTG hardware test**: USBD-8's `h725_loopback` (pins and clocks adapted) on B135 with its USB3315:
+  enumeration at high speed and, through a full-speed hub, at full speed, on Linux and Windows; `bedrock-usb-ch9`;
+  loopback rates; whether the receive FIFO needs embassy's 30 extra words (`RX_EXTRA_WORDS`); how long the global
+  OUT NAK takes when `stop_out` pops the pattern in place.
+- 📋 **USBD-14 OTG multi-packet transfers**: IN and OUT transfers of several packets (PKTCNT > 1) so the core
+  moves a whole buffer without the CPU between packets, for high-speed bulk throughput; DMA after that.
 
 ## Dropped and superseded
 

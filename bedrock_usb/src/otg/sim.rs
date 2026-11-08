@@ -373,7 +373,7 @@ impl Sim {
         i.reg(offset::GAHBCFG) & gahbcfg::GINT != 0 && i.gintsts() & i.reg(offset::GINTMSK) != 0
     }
 
-    /// A USB reset: USBRST, and "The core clears this bit [USBAEP] for all endpoints (other than EP 0) after
+    /// A USB reset: USBRST, and "The core clears this bit (USBAEP) for all endpoints (other than EP 0) after
     /// detecting a USB reset" (§62.14.54). The host's data toggles start over.
     pub fn bus_reset(&self) {
         let mut i = self.inner.borrow_mut();

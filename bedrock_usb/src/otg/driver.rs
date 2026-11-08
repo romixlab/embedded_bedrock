@@ -46,7 +46,7 @@ pub const FORCE_MODE_US: u32 = 25_000;
 /// Register reads a wait for the core gives up after: the core soft reset, a FIFO flush, an endpoint's NAK and
 /// disable, the global OUT NAK. Each takes a few PHY clocks or at most a packet or (micro)frame
 /// (embassy-usb-synopsys-otg measured 1.2 ms for the global OUT NAK where its interrupt handler popped the pattern;
-/// [stop_out] pops it in place). A wait that runs out leaves the core as it is.
+/// `stop_out` pops it in place). A wait that runs out leaves the core as it is.
 pub const SPIN_LIMIT: u32 = 200_000;
 
 /// An endpoint can't move data.
@@ -402,7 +402,7 @@ impl<D: OtgDescriptors, R: Regs + Copy> Driver<D, R> {
     ///
     /// Disabling is §62.15.6 "Endpoint deactivation": "clear the USB active endpoint bit ... Once the endpoint is
     /// deactivated, the core ignores tokens addressed to that endpoint". An IN transfer under way is stopped and
-    /// its FIFO flushed first ([stop_in]); an armed OUT endpoint is disabled under the global OUT NAK ([stop_out])
+    /// its FIFO flushed first (`stop_in`); an armed OUT endpoint is disabled under the global OUT NAK (`stop_out`)
     /// and its queue dropped, so it can be armed again with a fresh EPENA. Endpoints `D` lacks are ignored.
     pub fn set_enabled(&self, address: EndpointAddress, enabled: bool) {
         let n = address.number() as usize;
@@ -630,7 +630,7 @@ fn pop_into<R: Regs>(r: &R, st: StateRef, start: usize, room: usize, bcnt: usize
 
 /// The interrupt handler of a device with `layout` on `r`.
 ///
-/// - USBRST: the bus reset here ([bus_reset]), so EP0 can take a SETUP whatever the executor does. ENUMDNE: the
+/// - USBRST: the bus reset here (`bus_reset`), so EP0 can take a SETUP whatever the executor does. ENUMDNE: the
 ///   speed from DSTS.ENUMSPD and EP0's max packet size (§62.15.6 "Endpoint initialization on enumeration
 ///   completion": "read the OTG_DSTS register to determine the enumeration speed ... Program the MPSIZ field in
 ///   OTG_DIEPCTL0").
