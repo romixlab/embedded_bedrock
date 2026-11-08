@@ -44,6 +44,10 @@ lint:
     CARGO_PROFILE_RELEASE_OPT_LEVEL=3 cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked --target-dir {{usb_example}}/target/o3
     cargo clippy --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --features sof --locked --target-dir {{usb_example}}/target/sof -- -D warnings
     cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --features sof --locked --target-dir {{usb_example}}/target/sof
+    cargo fmt --manifest-path {{usb_example_h7}}/Cargo.toml --check
+    cargo clippy --manifest-path {{usb_example_h7}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked -- -D warnings
+    cargo build --manifest-path {{usb_example_h7}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked
+    CARGO_PROFILE_RELEASE_OPT_LEVEL=3 cargo build --manifest-path {{usb_example_h7}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked --target-dir {{usb_example_h7}}/target/o3
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt --locked -- -D warnings
@@ -52,6 +56,8 @@ lint:
 # bedrock_usb's example firmware (STM32G0B1, vendor bulk loopback): a standalone crate with its own Cargo.lock, built
 # by `lint` at opt-level z (its release profile) and 3, and with SOF timestamps (feature `sof`) at z
 usb_example := "bedrock_usb/examples/g0b1_loopback"
+# the same on the OTG driver: STM32H725, OTG_HS over ULPI, high speed
+usb_example_h7 := "bedrock_usb/examples/h725_loopback"
 
 # Code bytes of the example per crate and per bedrock_usb file (DWARF line table), at opt-level z and 3 and with
 # `sof` at z, after `lint`
@@ -61,6 +67,10 @@ usb-size:
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/o3/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/o3/thumbv6m-none-eabi/release/g0b1_loopback -m bedrock_usb/src
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example}}/target/sof/thumbv6m-none-eabi/release/g0b1_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/thumbv7em-none-eabihf/release/h725_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/thumbv7em-none-eabihf/release/h725_loopback -m bedrock_usb/src
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/o3/thumbv7em-none-eabihf/release/h725_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/o3/thumbv7em-none-eabihf/release/h725_loopback -m bedrock_usb/src
 
 # Build bedrock-lint (the firmware lint) and install it on this PC
 install:
