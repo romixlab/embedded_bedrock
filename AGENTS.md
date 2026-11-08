@@ -79,7 +79,8 @@ so a missing entry means work nobody sees.
   `tests/chapter9.rs`), the usb_v4 driver (`v4/`: registers behind a `Regs` trait, ISR, EP0, typed endpoints, the
   simulated peripheral `sim.rs` its host tests run on, `embassy.rs` glue). Golden test `tests/donguru.rs` against
   embassy-usb's `Builder` on a dummy driver; `tests/v4_metapac.rs` holds the driver's registers to stm32-metapac.
-  `device.rs` is `Usb::run()` over a `Backend` trait, the device on both (tests in `device/tests.rs`, on the
+  `ww.rs` (feature `ww`) is the WireWeaver class: `ww_function!` and `PacketSink` / `PacketSource` on the bulk
+  endpoints. `device.rs` is `Usb::run()` over a `Backend` trait, the device on both (tests in `device/tests.rs`, on the
   simulated peripheral). The Synopsys OTG driver (`otg/`, H7 OTG_HS first): registers, the FIFO layout checked
   against the core, ISR, EP0, typed endpoints, the simulated core `sim.rs` and the bench `tests.rs` at full and high
   speed, `embassy.rs` glue (feature `embassy-stm32-otg`); `tests/otg_regs.rs` holds its registers to

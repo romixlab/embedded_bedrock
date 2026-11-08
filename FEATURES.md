@@ -1059,9 +1059,7 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   (Donguru's stack 11.0 KiB at z, 12.5 at 3, with a second interface and the WireWeaver class) the comparable
   number comes from FW-66. Stack at z: the USB task's poll 184 B frame (504 B deepest), the interrupt handler 136 B
   (408 B). Not run on hardware yet (USBD-7).
-- 📋 **USBD-5 WireWeaver class** (feature `ww`): the function fragment byte for byte as wire_weaver_usb_embassy's
-  (constants from WireWeaver's embassy-free crate), `ww_device::PacketSink` / `PacketSource` on the bulk endpoints
-  with a write timeout; descriptor parity test.
+- ✅ **USBD-5 WireWeaver class** (feature `ww`, `bedrock_usb/src/ww.rs`): `ww_function!` writes the function fragment as wire_weaver_usb_embassy does, with the constants from `ww_link` (TR-23): vendor class, framing as protocol (`UsbFraming` or `UsbSeqFraming`), API id as interface string, bulk OUT and IN, descriptors 0x40-0x42, WinUSB and the GUID at device and function level (`MS_OS_20`, `MS_OS_FEATURES`). `ww::Sender` / `ww::Receiver` are `ww_device::PacketSink` / `PacketSource` on `BulkIn` / `BulkOut`, single or double buffered, the sender with a write timeout (`ww::Sleep`, `embassy-time` feature). Parity: `tests/donguru.rs` `ww_macro` against the embassy-usb golden; host tests in `ww/tests.rs` on the simulated peripheral. Descriptor 0x40 says `bdus` and this crate's version, not `wwue`. Blocked on landing: `Cargo.lock` takes ww_device / ww_link once TR-23 is on wire_weaver's main.
 - 🧪 **USBD-6 `bedrock-usb-ch9` host tool** (`bedrock_usb_ch9/`): nusb-based chapter 9 checks against any USB
   device, independent of `bedrock_usb` (talks only standard requests). `list` / `info` enumerate and dump
   descriptors; `run` checks GET_DESCRIPTOR at a spread of wLength around the device and configuration

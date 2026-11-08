@@ -11,8 +11,10 @@ wire_weaver = { path = "../wire_weaver/wire_weaver" }
 ww_can_bus = { path = "../wire_weaver/ww_stdlib/ww_can_bus" }
 ww_clock_sync = { path = "../wire_weaver/ww_clock_sync" }
 ww_date_time = { path = "../wire_weaver/ww_stdlib/ww_date_time" }
+ww_device = { path = "../wire_weaver/ww_device" }
 ww_dfu = { path = "../wire_weaver/ww_stdlib/ww_dfu" }
 ww_indication = { path = "../wire_weaver/ww_stdlib/ww_indication" }
+ww_link = { path = "../wire_weaver/ww_link" }
 ww_si = { path = "../wire_weaver/ww_stdlib/ww_si" }
 ww_timebase = { path = "../wire_weaver/ww_stdlib/ww_timebase" }
 ww_version = { path = "../wire_weaver/ww_stdlib/ww_version" }

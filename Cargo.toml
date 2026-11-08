@@ -45,8 +45,10 @@ wire_weaver = { git = "https://github.com/vhrdtech/wire_weaver", default-feature
 ww_can_bus = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_clock_sync = { git = "https://github.com/vhrdtech/wire_weaver" }
 ww_date_time = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_device = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_dfu = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_indication = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
+ww_link = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_si = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_timebase = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }
 ww_version = { git = "https://github.com/vhrdtech/wire_weaver", default-features = false }

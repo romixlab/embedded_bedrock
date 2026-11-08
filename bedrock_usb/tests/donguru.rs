@@ -516,3 +516,48 @@ fn donguru_layout() {
     const _: () = assert!(Desc::has(Direction::In, 3, bedrock_usb::Buffering::Single));
     const _: () = assert!(!Desc::has(Direction::In, 1, bedrock_usb::Buffering::Double));
 }
+
+/// The same device with the WireWeaver function from `ww_function!` (feature `ww`): every descriptor array equals
+/// the hand-written one above, which the golden test holds to embassy-usb's builder. Only the 0x40 payload, the
+/// crate tag and version of the stack, is given as embassy's `wwue` 0.2.0 here; the macro's own default names
+/// bedrock_usb (`ww::SELF_ID`).
+#[cfg(feature = "ww")]
+mod ww_macro {
+    use super::*;
+    use bedrock_usb::ww::MS_OS_20;
+
+    const DONGURU_MACRO: Device = Device {
+        manufacturer: Str::Const("donguru"),
+        product: Str::Const("donguru"),
+        serial: Str::Runtime,
+        ms_os_20: Some(MS_OS_20),
+        functions: &[
+            bedrock_usb::ww_function! {
+                out: EP_WW_OUT, in: EP_WW_IN, max_packet: MAX_PACKET, buffering: Double,
+                user_crate: "donguru_api", user_version: (0, 6, 0), api_id: Str::Runtime,
+                framing: bedrock_usb::ww::__ww_link::UsbFraming, self_id: WW_SELF_VERSION,
+            },
+            Function {
+                interfaces: &[Interface {
+                    string: Str::Const(DAP_STRING),
+                    items: &[
+                        Item::Endpoint(Endpoint::bulk_out(EP_CMSIS_DAP, MAX_PACKET, Single)),
+                        Item::Endpoint(Endpoint::bulk_in(EP_CMSIS_DAP, MAX_PACKET, Single)),
+                    ],
+                    ..Interface::vendor()
+                }],
+                ..Function::vendor()
+            },
+        ],
+        ..Device::new(0xc0de, 0xcafe)
+    };
+    bedrock_usb::descriptors!(DescMacro = DONGURU_MACRO);
+
+    #[test]
+    fn ww_function_equals_the_hand_written_one() {
+        assert_eq!(DescMacro::DEVICE_DESC, Desc::DEVICE_DESC);
+        assert_eq!(DescMacro::CONFIG_DESC, Desc::CONFIG_DESC);
+        assert_eq!(DescMacro::BOS, Desc::BOS);
+        assert_eq!(DescMacro::MS_OS_20_SET, Desc::MS_OS_20_SET);
+    }
+}

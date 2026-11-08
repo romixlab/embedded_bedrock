@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_usb` feature `ww`, the WireWeaver class (USBD-5): `ww_function!` writes the function's descriptors as `wire_weaver_usb_embassy` does (vendor class, the framing as interface protocol, the API id as interface string, a bulk OUT and a bulk IN endpoint, the vendor descriptors 0x40-0x42 with the constants from `ww_link`, WinUSB and the device interface GUID through MS OS 2.0 at device and function level), and a test holds the Donguru device built with it to the hand-written one that equals embassy-usb's `Builder`. `ww::Sender` and `ww::Receiver` are `ww_device::PacketSink` / `PacketSource` on the typed bulk endpoints (single or double buffered), the sender with a write timeout (a `ww::Sleep`, feature `embassy-time` for `embassy_time::Duration`). Descriptor 0x40 names this stack `bdus` and its version where embassy's says `wwue`. **Needs** wire_weaver's TR-23 (`ww_link` USB constants): until it is on wire_weaver's main, build with `just dev-local` against its branch, and `Cargo.lock` takes `ww_device` / `ww_link` with the next `cargo update -p wire_weaver`.
+
 ## [0.2.60] - 2026-11-08
 
 ### Added

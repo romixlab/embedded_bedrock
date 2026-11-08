@@ -32,6 +32,8 @@ pub use macros::__byte;
 pub mod v1;
 pub mod v3;
 pub mod v4;
+#[cfg(feature = "ww")]
+pub mod ww;
 
 pub use device::{Backend, ControlEndpoint, Ep0Error, Usb};
 
