@@ -33,6 +33,8 @@ cortex-m = "0.7"
 embassy-usb = { version = "0.6.0", default-features = false }
 embassy-futures = "0.1.2"
 critical-section = { version = "1.2", features = ["std"] }
+# tests/otg_regs.rs: the OTG offsets and bits against otg_v1; the version embassy-stm32 0.6 resolves
+embassy-usb-synopsys-otg = { version = "0.3.3", default-features = false }
 
 [[test]]
 name = "v4_metapac"
