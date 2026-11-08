@@ -91,7 +91,10 @@ interrupt, the full buffer contents may not be correct." Workaround: "Software s
 included before accessing the SRAM contents. This delay should be 800 ns in Full Speed mode and 6.4 μs in Low Speed
 mode." STM32H523/533 (ES0621 Rev 3 §2.19.1) and STM32U3 (ES0626 §2.18.1) have the same erratum. On usb_v3 (16-bit USB
 SRAM), STM32L451 / L452 / L462 has it too (ES0387 Rev 11 §2.22.4, rev Y, the same text and workaround); ES0430 (G431 /
-G441), ES0431 (G47x / G48x), ES0456 (L412 / L422) and ES0394 (WB55 / WB35) don't list it.
+G441), ES0431 (G47x / G48x), ES0456 (L412 / L422) and ES0394 (WB55 / WB35) don't list it. On usb_v1, STM32L151 /
+L152 has it (ES0125 Rev 16 §2.13.5, ES0241 Rev 6 §2.14.5, workaround on every revision), and on the usb_v3 L0
+STM32L05x / L06x (ES0251 Rev 6 §2.16.4); ES096 (F103), ES0204 (F303xB/C), ES0261 (F303xD/E), ES0189 (F373) and
+ES0223 (F072) don't list it.
 
 **Example:** embassy-stm32's `usb` driver waits 1 µs before reading an OUT packet only under
 `#[cfg(any(stm32h5, stm32u3))]` (`wait_for_out_packet_memory()`, embassy main 97c4d7e8a, 22 Oct 2026), not on the

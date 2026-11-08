@@ -150,7 +150,7 @@ cargo build --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
 cargo test --workspace
-just usb-size        # bedrock_usb's examples (G0B1, G474, H725): code per crate and per file, opt-level z and 3 (after just lint)
+just usb-size        # bedrock_usb's examples (G0B1, G474, H725, F103): code per crate and per file, opt-level z and 3 (after just lint)
 cargo run -p bedrock_lint_cli -- code-size <ELF> --by-crate   # code bytes per source file / crate (DWARF lines)
 
 S=firmware_template_skill/scripts/bedrock_gen.py

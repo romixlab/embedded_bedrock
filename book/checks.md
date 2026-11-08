@@ -217,7 +217,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="usb-2"></a>⚠️ `USB-2` A transfer that is an exact multiple of the max packet without a ZLP, or framing that waits for a short packet the host may not send · check: review · 📖 [detail](checks/usb.md#usb-2) · <!-- typec_dongle FW-19 -->
 - <a id="usb-3"></a>💡 `USB-3` Single-buffered bulk endpoints on a hot path behind a hub TT (G0 usb_v4: 500 vs 947 kB/s) · check: src easy · chip: STM32 usb_v4 · 📖 [detail](checks/usb.md#usb-3) · <!-- typec_dongle FW-24 -->
 - <a id="usb-4"></a>⚠️ `USB-4` Sending stuck when the host driver closes or the host dies without a disconnect · check: bench · 📖 [detail](checks/usb.md#usb-4) · <!-- vb135 bb820d9; typec_dongle FW-26 -->
-- <a id="usb-5"></a>⚠️ `USB-5` OUT packet read from USB SRAM within 800 ns of its CTR on a part with the "buffer description table update completes after CTR" erratum (G0B1 ES0548 2.16.1, L45x / L46x ES0387 2.22.4, H5, U3): embassy-stm32 waits only on H5 / U3 · check: review · chip: STM32 usb_v4, usb_v3 · 📖 [detail](checks/usb.md#usb-5) · <!-- embedded_bedrock USBD-3 plan -->
+- <a id="usb-5"></a>⚠️ `USB-5` OUT packet read from USB SRAM within 800 ns of its CTR on a part with the "buffer description table update completes after CTR" erratum (G0B1 ES0548 2.16.1, L45x / L46x ES0387 2.22.4, L15x ES0125 2.13.5, L05x ES0251 2.16.4, H5, U3): embassy-stm32 waits only on H5 / U3 · check: review · chip: STM32 usb_v4, usb_v3, usb_v1 · 📖 [detail](checks/usb.md#usb-5) · <!-- embedded_bedrock USBD-3 plan -->
 
 ## Interfaces and diagnostics
 

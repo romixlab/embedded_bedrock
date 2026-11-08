@@ -9,6 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_usb::v1`, the usb_v4 driver on the usb_v1 and usb_v2 peripherals, the ones without `USB_BCDR` (STM32F1, F3, L1): `v1::Mmio<A>` with the USB SRAM's spacing as a type (`Spaced512` for "1 x 16 bits / word" on F102 / F103, F303xB/C and L1, `Packed512` for the F373, `Packed1024` for the F303xD/E), and `v1::PullUp` for what connects DP (a fixed resistor, a GPIO, or the L1's SYSCFG_PMC USB_PU). Driver, endpoints, `Usb` and layout are shared with usb_v4 and usb_v3. Feature `embassy-stm32`: `v1::embassy::new` and `gpio_pull_up`, plus feature `stm32f1` on the F1; `v1::on_interrupt::<A>()` for bare firmware, reading the registration in place as usb_v4's does. SOF timestamps (`State::with_sof`, `v1::Sof`) work as on usb_v4. The 800 ns wait before an OUT read stays: ES0125 and ES0241 list the erratum on the L1 (USBD-11).
+- `bedrock_usb::v3::Family::F0` and `L0`: stm32-metapac has the F04x / F07x and L0 USB on usb_v3, with BCDR, so they run on `v3` (USBD-11).
+- `bedrock_usb/examples/f103_loopback`: the loopback device on a blue pill (STM32F103, usb_v1). `just lint` builds it at opt-level z and 3, `just usb-size` measures it: bedrock_usb is 8286 bytes at z and 9616 at 3 there (USBD-11).
+
+### Changed
+
+- `bedrock_usb::v4::Regs`: `set_pull_up(on)` replaces `bcdr()` / `set_bcdr()`, so a peripheral without `USB_BCDR` says how it connects DP; the usb_v4 and usb_v3 `Mmio` keep the DPPU read-modify-write (`v4::regs::set_dppu`) (USBD-11).
+
 ## [0.2.59] - 2026-11-08
 
 ### Added

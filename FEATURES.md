@@ -1118,7 +1118,7 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   checked: the L43x / L44x errata sheet, which the library doesn't have, and tSTARTUP, which DS12288 Rev 6 doesn't
   list (the driver keeps the G0's 1 µs). Tests: `v3/tests.rs` drives `Mmio` and the driver's start-up on memory
   laid out like the chip, `tests/v3_metapac.rs` holds offsets and bits to stm32-metapac's G474.
-  `examples/g474_loopback` (170 MHz, HSI48 with CRS) is built by `just lint` at z and 3: bedrock_usb 8230 B at z,
+  `examples/g474_loopback` (170 MHz, HSI48 with CRS) is built by `just lint` at z and 3: bedrock_usb 8274 B at z,
   8962 B at 3; deepest stack from Reset 256 B, `USB_LP` 344 B. The glue builds for G474, L432 and WB55. SOF timestamps (USBD-10) come with the shared
   driver (`Regs::fnr`, `v3::Sof`); the one-shot `Registration` is generic, so `v3::on_interrupt` reads it in place too. Not run
   on hardware yet (USBD-12).
@@ -1142,8 +1142,37 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   frame number, so it doesn't replace this. Open: the wire_weaver side (a `FrameMap` in `ww_timebase::Clock`,
   `ww_clock_sync` fitting frames per host controller), the stamp latency and its spread measured on hardware
   (USBD-7).
-- 📋 **USBD-11 usb_v1 / v2 port**: F0, F1, F3, L0, L1 (16-bit USB SRAM, on F1 spaced one half-word per word,
-  `usbram_16x1`); after USBD-9.
+- 🧪 **USBD-11 usb_v1 / v2 port**: `bedrock_usb::v1` for the peripherals without `USB_BCDR`, and F0 / L0 in
+  `v3::Family`. stm32-metapac 21 sorts the chips as: usb_v1 with `usbram_16x1_512` (F102 / F103, F302 / F303
+  xB/xC, L100 / L15x / L162), usb_v1 with `usbram_16x2_512` (F373), usb_v2 (usb_v1 plus `USB_LPMCSR`) with
+  `usbram_16x2_1024` (F302 / F303 xD/xE), and usb_v3 (with BCDR) for F04x / F07x and L05x..L08x besides G4, L4, WB,
+  L5. So F0 and L0 are `v3::Family::F0` / `L0` (addresses from RM0091 Rev 10 Table 1, RM0367 Rev 8 Table 3; no
+  VDDUSB switch), and `v1::Mmio<A>` serves the rest with the SRAM spacing as a type: `Spaced512` ("1 x 16 bits /
+  word": each half-word at the start of a 32-bit word, RM0008 Rev 21 §23.5.3 "the actual memory location address
+  must be multiplied by two"), `Packed512` (F373), `Packed1024` (F303xD/E). The driver, endpoints, `Usb` and layout
+  are usb_v4's unchanged; register and SRAM access is one `Bus16` + `regs16!` (`half.rs`) shared with `v3::Mmio`.
+  No DPPU there, so `Regs::set_pull_up` replaced `bcdr` / `set_bcdr` (usb_v4 / v3 keep the BCDR read-modify-write)
+  and `v1::PullUp` says what connects DP: `External` (a fixed 1.5 kΩ, the blue pill), `Gpio` (BSRR address, pin,
+  level; `v1::embassy::gpio_pull_up` sets it up) or `L1Syscfg` (SYSCFG_PMC USB_PU, RM0038 Rev 18 §8.5.2). RM0008
+  Figure 221 puts a double-buffered OUT endpoint's buffer 0 in the transmit half of its table entry, as the driver
+  does (USBD-7's open question on RM0444 Table 228). Errata read: ES0125 Rev 16 §2.13.5 (L151x6/8/B) and ES0241
+  Rev 6 §2.14.5 (L15xxC) have the 800 ns CTR erratum, as ES0251 Rev 6 §2.16.4 (L05x / L06x) does: the wait stays
+  everywhere; ES0125 §2.13.6 / ES0241 §2.14.6, the L1's internal pull-up measures 0.81-0.95 kΩ, workaround a
+  GPIO-switched external one; ES096 Rev 15 §2.12.4 (F103), COUNTn_RX one short at max packet size below 13 MHz APB1
+  (the firmware's clocks); the false-wakeup, ESOF and CRC16 ones need nothing now; ES0204 Rev 11 (F303xB/C), ES0261
+  Rev 5 (F303xD/E) and ES0189 Rev 6 (F373) have no USB section, ES0223 Rev 6 (F072) only APB, ESOF, CRC16 and BCD
+  ones. tSTARTUP 1 µs in DS5319 Rev 20, the F303xD/E and L151x6/8/B datasheets. `v1::embassy::new` (RCC, DP / DM on
+  their AF where the chip has one, `InterruptHandler<T, A>` on the low-priority vector, the `Access` checked against
+  the PAC's spacing); feature `stm32f1` for embassy's AFIO pin traits, which have no AF number (the F1 takes the
+  pins by itself, RM0008 Table 29). Tests: `v1/tests.rs` on memory laid out like the chip (spaced and packed SRAM,
+  start-up table, GPIO pull-up, `on_interrupt::<A>()`), compile-fail doctest for three double-buffered endpoints in
+  512 bytes (two fit), `tests/v1_metapac.rs` (F103C8) and `tests/v2_metapac.rs` (F303RE) against stm32-metapac.
+  `examples/f103_loopback` (blue pill, 72 MHz from the 8 MHz crystal, APB1 36 MHz, the G0B1 example's device in
+  408 of the 512 bytes) is built by `just lint` at z and 3: bedrock_usb 8286 B at z, 9616 B at 3 (`.text` 17.3 /
+  25.1 KiB for the image); deepest stack from Reset 256 B, `USB_LP_CAN1_RX0` 368 B (88 B frame), the USB task's
+  poll 168 B (480 B deepest). SOF timestamps (USBD-10) come with the shared driver (`regs16!` reads FNR, `v1::Sof`),
+  and `v1::on_interrupt::<A>()` reads the one-shot `Registration` in place, on the `Access`-free half of `Mmio`. The glue builds for F072, L053, F103, F303VC, F303RE, F373 and L151 (embassy-stm32 0.6
+  needs its `time` feature on the L1). Not run on hardware yet (USBD-15).
 - 📋 **USBD-13 H7 OTG hardware test**: USBD-8's `h725_loopback` (pins and clocks adapted) on B135 with its USB3315:
   enumeration at high speed and, through a full-speed hub, at full speed, on Linux and Windows; `bedrock-usb-ch9`;
   loopback rates; whether the receive FIFO needs embassy's 30 extra words (`RX_EXTRA_WORDS`); how long the global
@@ -1153,6 +1182,10 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
 - 📋 **USBD-12 usb_v3 hardware test** (nothing waits on it): `examples/g474_loopback` on a Nucleo-G474RE (and an
   L4 or WB board for the AF and VDDUSB path): enumeration on Linux and Windows, `bedrock-usb-ch9` (USBD-6),
   loopback rates, the CTR-to-read delay measured as USBD-7 does on the G0.
+- 📋 **USBD-15 usb_v1 hardware test** (nothing waits on it): `examples/f103_loopback` on a blue pill (and an L1 or
+  F303 board for the AF and pull-up paths): enumeration on Linux and Windows, `bedrock-usb-ch9` (USBD-6), loopback
+  rates, the reconnect after a flash (PA12 low for 10 ms), whether a full 64-byte OUT packet reads 64 at APB1 36 MHz
+  (ES096 §2.12.4).
 
 ## Dropped and superseded
 
