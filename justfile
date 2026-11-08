@@ -37,6 +37,7 @@ lint:
     cargo clippy -p bedrock_usb --all-targets --features sim,defmt,metapac-check --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt,embassy-stm32,embassy-stm32/stm32g0b1re --locked -- -D warnings
+    cargo clippy -p bedrock_usb --target thumbv7em-none-eabihf --features 'defmt,embassy-stm32-otg,embassy-stm32?/stm32h725ig' --locked -- -D warnings
     cargo fmt --manifest-path {{usb_example}}/Cargo.toml --check
     cargo clippy --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked -- -D warnings
     cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked

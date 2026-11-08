@@ -12,6 +12,10 @@ sim = []
 # embassy-stm32 glue: the typelevel interrupt handler for `bind_interrupts!`, `Peri<USB>`, the RCC enable. The
 # firmware's embassy-stm32 names the chip; `unstable-pac` gives the peripheral's addresses.
 embassy-stm32 = ["dep:embassy-stm32"]
+# embassy-stm32 glue for the OTG driver on the STM32H72x / H73x USB1 OTG_HS (`otg::embassy`): `Peri<USB_OTG_HS>`,
+# the interrupt handler, the USB supply, the ULPI or full-speed pins. Separate from `embassy-stm32`, whose usb_v4 glue
+# needs a chip with that peripheral; the firmware's embassy-stm32 names the chip.
+embassy-stm32-otg = ["dep:embassy-stm32"]
 # Test only: tests/v4_metapac.rs holds the driver's registers to stm32-metapac's G0B1. A feature, not a
 # dev-dependency, because a workspace build unifies dev-dependency features and metapac takes one chip per build
 # (bedrock_clocks_rt's tests take the H725); `just test` runs it in a `-p bedrock_usb` pass of its own.

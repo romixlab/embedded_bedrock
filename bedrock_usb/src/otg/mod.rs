@@ -12,8 +12,8 @@
 //! may hang when connecting the full speed interface through a hub to a low-speed device", host mode only.
 //!
 //! A device on this driver is declared with `descriptors!(Desc = DEVICE, otg = Core::H7_OTG_HS)` and its state
-//! with [crate::otg_state!]. Interrupt wiring: with the `embassy-stm32` feature, bind
-//! `otg::embassy::InterruptHandler` and create the driver with `otg::embassy::new`; without embassy,
+//! with [crate::otg_state!]. Interrupt wiring: with the `embassy-stm32-otg` feature, bind
+//! `otg::embassy::InterruptHandler` and create the driver with `otg::embassy::new_ulpi` or `new_fs`; without embassy,
 //! [Driver::register] the driver and call [on_interrupt] from the vector.
 
 mod driver;
@@ -25,6 +25,9 @@ pub mod state;
 
 #[cfg(any(test, feature = "sim"))]
 pub mod sim;
+
+#[cfg(feature = "embassy-stm32-otg")]
+pub mod embassy;
 
 #[cfg(test)]
 mod tests;
