@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.52] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb`, a USB full-speed device stack for STM32 fixed at compile time, first part: the shared types (endpoint address and direction, bulk / interrupt, `Single` / `Double` buffering as a value and as zero-sized types, the setup packet, standard request and descriptor codes), `desc` with the device as a `const` value and every descriptor as `const fn` output into `[u8; N]` (device, configuration with IADs, interfaces and alternate settings, endpoints, class-specific blobs, strings and string 0, BOS with the USB 2.0 extension and the WebUSB and MS OS 2.0 platform capabilities, the MS OS 2.0 descriptor set with function subsets), `layout` with the endpoint registers and USB SRAM of the usb_v4 peripheral (buffer table, packet buffers, initial descriptor words) and its checks against RM0444, and `descriptors!`, which names the arrays and the layout and fails the build on a device the descriptors or the peripheral can't serve. Donguru's descriptor set comes out byte for byte as embassy-usb's `Builder` writes it (golden test) (USBD-1).
