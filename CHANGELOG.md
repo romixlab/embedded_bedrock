@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.54] - 2026-11-08
+
 ### Added
 
 - `bedrock_usb_ch9`: `bedrock-usb-ch9`, a nusb-based host tool that runs USB chapter 9 checks (descriptors at a
