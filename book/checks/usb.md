@@ -84,12 +84,14 @@ On some STM32 USB device peripherals the CTR interrupt of an OUT transaction fir
 finished writing the packet and its byte count to USB SRAM. Firmware that reads the buffer straight away can get
 the previous packet's tail or a stale count.
 
-**Erratum:** ES0548 Rev 4 (STM32G0B1xB/xC/xE) §2.16.1 "Buffer description table update completes after CTR
-interrupt triggers", every silicon revision (A, Z/3, Y/4): "During OUT transfers, the correct transfer interrupt
-(CTR) is triggered a little before the last USB SRAM accesses have completed. If the software responds quickly to
-the interrupt, the full buffer contents may not be correct." Workaround: "Software should ensure that a small
-delay is included before accessing the SRAM contents. This delay should be 800 ns in Full Speed mode and 6.4 μs in
-Low Speed mode." STM32H523/533 (ES0621 Rev 3 §2.19.1) and STM32U3 (ES0626 §2.18.1) have the same erratum.
+**Erratum:** ES0548 Rev 4 (STM32G0B1xB/xC/xE) §2.16.1 "Buffer description table update completes after CTR interrupt
+triggers", every silicon revision (A, Z/3, Y/4): "During OUT transfers, the correct transfer interrupt (CTR) is
+triggered a little before the last USB SRAM accesses have completed. If the software responds quickly to the
+interrupt, the full buffer contents may not be correct." Workaround: "Software should ensure that a small delay is
+included before accessing the SRAM contents. This delay should be 800 ns in Full Speed mode and 6.4 μs in Low Speed
+mode." STM32H523/533 (ES0621 Rev 3 §2.19.1) and STM32U3 (ES0626 §2.18.1) have the same erratum. On usb_v3 (16-bit USB
+SRAM), STM32L451 / L452 / L462 has it too (ES0387 Rev 11 §2.22.4, rev Y, the same text and workaround); ES0430 (G431 /
+G441), ES0431 (G47x / G48x), ES0456 (L412 / L422) and ES0394 (WB55 / WB35) don't list it.
 
 **Example:** embassy-stm32's `usb` driver waits 1 µs before reading an OUT packet only under
 `#[cfg(any(stm32h5, stm32u3))]` (`wait_for_out_packet_memory()`, embassy main 97c4d7e8a, 22 Oct 2026), not on the

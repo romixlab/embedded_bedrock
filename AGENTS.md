@@ -83,9 +83,11 @@ so a missing entry means work nobody sees.
   simulated peripheral). The Synopsys OTG driver (`otg/`, H7 OTG_HS first): registers, the FIFO layout checked
   against the core, ISR, EP0, typed endpoints, the simulated core `sim.rs` and the bench `tests.rs` at full and high
   speed, `embassy.rs` glue (feature `embassy-stm32-otg`); `tests/otg_regs.rs` holds its registers to
-  embassy-usb-synopsys-otg's `otg_v1`. `examples/g0b1_loopback` (usb_v4) and `examples/h725_loopback` (OTG_HS over
-  ULPI) are standalone firmware crates with their own Cargo.lock, built by `just lint` at opt-level z and 3 and
-  measured by `just usb-size`. Firmware takes it by path, like `bedrock_led`.
+  embassy-usb-synopsys-otg's `otg_v1`. `v3/` runs the usb_v4 driver on usb_v3 with 16-bit USB SRAM (L4, G4, WB): its
+  own `Mmio` (half-word SRAM accesses, 16-bit registers), addresses, VDDUSB and embassy glue; `tests/v3_metapac.rs`
+  holds it to the G474's metapac. `examples/g0b1_loopback` (usb_v4), `examples/g474_loopback` (usb_v3) and
+  `examples/h725_loopback` (OTG_HS over ULPI) are standalone firmware crates with their own Cargo.lock, built by
+  `just lint` at opt-level z and 3 and measured by `just usb-size`. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_clocks/` — exact clock planning on the host (FEATURES.md area `RCC`): a board's clock tree as exact
   rationals, checked against RM0468 / DS13311 / ES0491 / AN5337 (each limit in `h72x/limits.rs` names its section),
   encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its
@@ -148,7 +150,7 @@ cargo build --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
 cargo test --workspace
-just usb-size        # bedrock_usb's example: code per crate and per file, opt-level z and 3 (after just lint)
+just usb-size        # bedrock_usb's examples (G0B1, G474, H725): code per crate and per file, opt-level z and 3 (after just lint)
 cargo run -p bedrock_lint_cli -- code-size <ELF> --by-crate   # code bytes per source file / crate (DWARF lines)
 
 S=firmware_template_skill/scripts/bedrock_gen.py

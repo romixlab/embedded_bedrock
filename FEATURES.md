@@ -1101,8 +1101,27 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   thumbv7em, fat LTO, bedrock_usb's code 8968 B at z (control 2204, otg/driver 2108, otg/ep0 1346) and 11096 B at
   3, the image 22.0 KiB / 33.6 KiB; the OTG_HS handler's frame 104 B (520 B deepest). Not run on hardware yet
   (USBD-13); one packet per transfer limits high-speed throughput (USBD-14).
-- 📋 **USBD-9 usb_v3 port**: L4, G4, WB (16-bit USB SRAM, `usbram_16x2`); same endpoint register as usb_v4, another
-  SRAM access and buffer descriptor layout behind USBD-3's SRAM trait.
+- 🧪 **USBD-9 usb_v3 port**: `bedrock_usb::v3`, L4, G4, WB (`usb_v3` with `usbram_16x2_1024`), the usb_v4 driver,
+  endpoints, `Usb` and layout unchanged. `v3::Mmio` is the `Regs` for it: each 32-bit SRAM word as two half-word
+  accesses, low first (RM0440 Rev 9 §45.6.2, "Word (32-bit) accesses are not allowed"), register writes cut to the
+  low 16 bits (usb_v4's host-mode `rc_w0` bits are reserved there), `USB_BTABLE` set to 0. The buffer table is
+  usb_v4's byte for byte, so `Layout`'s descriptor words hold. `Regs::SRAM_SIZE`: `Driver::new` fails the build
+  when the buffers need more than the peripheral has (1024 B here; seven double-buffered 64-byte endpoints don't
+  fit, compile-fail doctest). Addresses for G4, L4, WB (`Mmio::of(Family)`), `Family::validate_vddusb` for PWR_CR2
+  USV on L4 / WB. `v3::embassy::new`: VDDUSB, RCC, DP / DM on AF10 where the chip has it (L4, WB; the G4's are an
+  additional function and stay analog), `USB_LP` (G4, WB) or `USB` (L4); `USB_HP` stays off, since with CTRM set
+  every transfer also raises the generic request. Errata read: ES0387 Rev 11 §2.22.4 (L45x) is the G0B1's
+  "Buffer description table update completes after CTR interrupt triggers", so the 800 ns OUT wait stays on all
+  usb_v3 parts (ES0430, ES0431, ES0456, ES0394 don't list it); the 10 MHz APB minimum is the firmware's clocks; the
+  CRC16 one is harmless (COUNT bytes read, OUT buffer = max packet); the ESOF-after-resume one matters only once
+  remote wake-up exists (mask SUSPM for 3 ms then); WB's endpoint 0xF one can't happen (endpoints 0 to 7). Not
+  checked: the L43x / L44x errata sheet, which the library doesn't have, and tSTARTUP, which DS12288 Rev 6 doesn't
+  list (the driver keeps the G0's 1 µs). Tests: `v3/tests.rs` drives `Mmio` and the driver's start-up on memory
+  laid out like the chip, `tests/v3_metapac.rs` holds offsets and bits to stm32-metapac's G474.
+  `examples/g474_loopback` (170 MHz, HSI48 with CRS) is built by `just lint` at z and 3: bedrock_usb 8230 B at z,
+  8962 B at 3; deepest stack from Reset 256 B, `USB_LP` 344 B. The glue builds for G474, L432 and WB55. SOF timestamps (USBD-10) come with the shared
+  driver (`Regs::fnr`, `v3::Sof`); the one-shot `Registration` is generic, so `v3::on_interrupt` reads it in place too. Not run
+  on hardware yet (USBD-12).
 - 🧪 **USBD-10 SOF hook**: SOF frame number and timestamp from the ISR for bedrock_sync (µs clock sync over USB).
   `bedrock_usb`: `State::with_sof(now_us)` / `state!(..., sof = now_us)` is the switch (off by default, 1000
   interrupts a second); `v4/driver.rs` `interrupt()` reads the clock on SOF before any other work and keeps
@@ -1131,6 +1150,9 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   OUT NAK takes when `stop_out` pops the pattern in place.
 - 📋 **USBD-14 OTG multi-packet transfers**: IN and OUT transfers of several packets (PKTCNT > 1) so the core
   moves a whole buffer without the CPU between packets, for high-speed bulk throughput; DMA after that.
+- 📋 **USBD-12 usb_v3 hardware test** (nothing waits on it): `examples/g474_loopback` on a Nucleo-G474RE (and an
+  L4 or WB board for the AF and VDDUSB path): enumeration on Linux and Windows, `bedrock-usb-ch9` (USBD-6),
+  loopback rates, the CTR-to-read delay measured as USBD-7 does on the G0.
 
 ## Dropped and superseded
 
