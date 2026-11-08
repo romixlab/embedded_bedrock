@@ -66,8 +66,6 @@ Paths are relative to this skill directory; use the absolute path when invoking.
         its clock snippet sets the 48 MHz USB clock).
         On STM32G0B1 / G0C1 with `--embassy main`, `--usb-stack bedrock` [embassy] serves the API on bedrock_usb (a
         `const` device, no embassy-usb) instead of embassy-usb and embassy-stm32's driver (TPL-82).
-        On STM32G0B1 / G0C1 with `--embassy main`, `--usb-stack bedrock` [embassy] serves the API on bedrock_usb (a
-        `const` device, no embassy-usb) instead of embassy-usb and embassy-stm32's driver (TPL-82).
      3. *Name of the API crate?* → `--ww-api <name>` [`<project>_api`], snake_case. Its name + version identify
         the API on the wire.
      `--ww-src <path>` uses a local WireWeaver checkout (relative to the output directory) instead of git.
