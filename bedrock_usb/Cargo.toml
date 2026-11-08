@@ -2,7 +2,7 @@
 name = "bedrock_usb"
 version = "0.1.0"
 edition = "2024"
-description = "USB device stack for STM32, fixed at compile time, full and high speed: shared types, descriptors as const fn output, the endpoint and USB SRAM or FIFO layout with const asserts, the EP0 control machine, the usb_v4 and Synopsys OTG drivers"
+description = "USB device stack for STM32, fixed at compile time, full and high speed: shared types, descriptors as const fn output, the endpoint and USB SRAM or FIFO layout with const asserts, the EP0 control machine, the usb_v4 driver with its usb_v3 port, the Synopsys OTG driver"
 license = "MIT OR Apache-2.0"
 
 [features]
@@ -19,14 +19,17 @@ embassy-stm32-otg = ["dep:embassy-stm32"]
 # Test only: tests/v4_metapac.rs holds the driver's registers to stm32-metapac's G0B1. A feature, not a
 # dev-dependency, because a workspace build unifies dev-dependency features and metapac takes one chip per build
 # (bedrock_clocks_rt's tests take the H725); `just test` runs it in a `-p bedrock_usb` pass of its own.
-metapac-check = ["dep:stm32-metapac"]
+metapac-check = ["dep:stm32-metapac", "stm32-metapac/stm32g0b1re"]
+# Test only: tests/v3_metapac.rs, the same for usb_v3 against the STM32G474's metapac. Not together with
+# metapac-check (one chip per build): `just test` runs each in its own pass.
+metapac-check-v3 = ["dep:stm32-metapac", "stm32-metapac/stm32g474re"]
 
 [dependencies]
 critical-section = "1.2"
 defmt = { version = "1.0", optional = true }
 embassy-stm32 = { version = "0.6.0", default-features = false, features = ["unstable-pac"], optional = true }
 # the same metapac embassy-stm32 0.6 resolves
-stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32g0b1re"], optional = true }
+stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac"], optional = true }
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
 # asm::delay for the tSTARTUP and ES0548 2.16.1 waits
@@ -43,3 +46,7 @@ embassy-usb-synopsys-otg = { version = "0.3.3", default-features = false }
 [[test]]
 name = "v4_metapac"
 required-features = ["metapac-check"]
+
+[[test]]
+name = "v3_metapac"
+required-features = ["metapac-check-v3"]

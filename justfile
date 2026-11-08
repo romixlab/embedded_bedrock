@@ -18,6 +18,7 @@ test-all:
     cargo nextest run --workspace --locked
     cargo nextest run --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/sof,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
     cargo nextest run --locked -p bedrock_usb --features metapac-check --test v4_metapac
+    cargo nextest run --locked -p bedrock_usb --features metapac-check-v3 --test v3_metapac
     cargo test --doc --workspace --locked
     cargo test --doc --locked -p bedrock_led -p bedrock_sync -p bedrock_rom_boot --features bedrock_led/embassy,bedrock_led/ww-indication,bedrock_led/defmt,bedrock_sync/embassy,bedrock_sync/ww-timebase,bedrock_sync/sof,bedrock_sync/defmt,bedrock_rom_boot/ww-dfu,bedrock_rom_boot/defmt
 
@@ -35,9 +36,13 @@ lint:
     cargo clippy -p bedrock_sync --target thumbv6m-none-eabi --features embassy,ww-timebase,sof,defmt --locked -- -D warnings
     cargo clippy -p bedrock_can --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
     cargo clippy -p bedrock_usb --all-targets --features sim,defmt,metapac-check --locked -- -D warnings
+    cargo clippy -p bedrock_usb --all-targets --features sim,defmt,metapac-check-v3 --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv6m-none-eabi --features defmt,embassy-stm32,embassy-stm32/stm32g0b1re --locked -- -D warnings
     cargo clippy -p bedrock_usb --target thumbv7em-none-eabihf --features 'defmt,embassy-stm32-otg,embassy-stm32?/stm32h725ig' --locked -- -D warnings
+    cargo clippy -p bedrock_usb --target thumbv7em-none-eabihf --features defmt,embassy-stm32,embassy-stm32/stm32g474re,embassy-stm32/single-bank --locked -- -D warnings
+    cargo clippy -p bedrock_usb --target thumbv7em-none-eabihf --features defmt,embassy-stm32,embassy-stm32/stm32l432kc --locked -- -D warnings
+    cargo clippy -p bedrock_usb --target thumbv7em-none-eabihf --features defmt,embassy-stm32,embassy-stm32/stm32wb55rg --locked -- -D warnings
     cargo fmt --manifest-path {{usb_example}}/Cargo.toml --check
     cargo clippy --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked -- -D warnings
     cargo build --manifest-path {{usb_example}}/Cargo.toml --target thumbv6m-none-eabi --release --locked
@@ -48,6 +53,10 @@ lint:
     cargo clippy --manifest-path {{usb_example_h7}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked -- -D warnings
     cargo build --manifest-path {{usb_example_h7}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked
     CARGO_PROFILE_RELEASE_OPT_LEVEL=3 cargo build --manifest-path {{usb_example_h7}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked --target-dir {{usb_example_h7}}/target/o3
+    cargo fmt --manifest-path {{usb_example_v3}}/Cargo.toml --check
+    cargo clippy --manifest-path {{usb_example_v3}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked -- -D warnings
+    cargo build --manifest-path {{usb_example_v3}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked
+    CARGO_PROFILE_RELEASE_OPT_LEVEL=3 cargo build --manifest-path {{usb_example_v3}}/Cargo.toml --target thumbv7em-none-eabihf --release --locked --target-dir {{usb_example_v3}}/target/o3
     cargo clippy -p bedrock_rom_boot --all-targets --features ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv6m-none-eabi --features stm32g0,embassy,ww-dfu,defmt --locked -- -D warnings
     cargo clippy -p bedrock_rom_boot --target thumbv7em-none-eabihf --features stm32h7,embassy,ww-dfu,defmt --locked -- -D warnings
@@ -58,6 +67,8 @@ lint:
 usb_example := "bedrock_usb/examples/g0b1_loopback"
 # the same on the OTG driver: STM32H725, OTG_HS over ULPI, high speed
 usb_example_h7 := "bedrock_usb/examples/h725_loopback"
+# the same device on usb_v3 (STM32G474, 16-bit USB SRAM)
+usb_example_v3 := "bedrock_usb/examples/g474_loopback"
 
 # Code bytes of the example per crate and per bedrock_usb file (DWARF line table), at opt-level z and 3 and with
 # `sof` at z, after `lint`
@@ -71,6 +82,10 @@ usb-size:
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/thumbv7em-none-eabihf/release/h725_loopback -m bedrock_usb/src
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/o3/thumbv7em-none-eabihf/release/h725_loopback --by-crate --top 8
     cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_h7}}/target/o3/thumbv7em-none-eabihf/release/h725_loopback -m bedrock_usb/src
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_v3}}/target/thumbv7em-none-eabihf/release/g474_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_v3}}/target/thumbv7em-none-eabihf/release/g474_loopback -m bedrock_usb/src
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_v3}}/target/o3/thumbv7em-none-eabihf/release/g474_loopback --by-crate --top 8
+    cargo run -q --locked -p bedrock_lint_cli -- code-size {{usb_example_v3}}/target/o3/thumbv7em-none-eabihf/release/g474_loopback -m bedrock_usb/src
 
 # Build bedrock-lint (the firmware lint) and install it on this PC
 install:

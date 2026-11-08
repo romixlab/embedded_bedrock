@@ -16,7 +16,7 @@
 
 pub mod chep;
 mod driver;
-mod endpoint;
+pub(crate) mod endpoint;
 mod ep0;
 pub mod regs;
 pub mod state;
@@ -44,51 +44,69 @@ pub use state::{Sof, State, Status, event};
 use crate::layout::Layout;
 use state::StateRef;
 
-/// The driver [on_interrupt] serves.
+/// The driver an `on_interrupt` serves ([on_interrupt] here, `v3::on_interrupt` for usb_v3).
 #[derive(Copy, Clone)]
-pub(crate) struct Active {
-    pub(crate) regs: Mmio,
+pub(crate) struct Active<R> {
+    pub(crate) regs: R,
     pub(crate) layout: &'static Layout,
     pub(crate) state: StateRef,
 }
 
-/// The registration, written once before the interrupt is unmasked and only read after. Not a
+/// A registration, written once before the interrupt is unmasked and only read after. Not a
 /// `Mutex<Cell<Option<Active>>>`: reading that copies the 28 bytes twice through `memcpy` on every interrupt
 /// (226 cycles at opt-level z on the Cortex-M0+), before the handler has looked at a flag or timestamped a SOF.
-struct Registration {
-    active: UnsafeCell<Option<Active>>,
+pub(crate) struct Registration<R> {
+    active: UnsafeCell<Option<Active<R>>>,
     set: AtomicBool,
 }
 
 // Safety: `active` is written once, in a critical section, before `set` is stored with Release; readers load
 // `set` with Acquire first and never write.
-unsafe impl Sync for Registration {}
+unsafe impl<R: Sync> Sync for Registration<R> {}
 
-static ACTIVE: Registration = Registration {
-    active: UnsafeCell::new(None),
-    set: AtomicBool::new(false),
-};
+impl<R> Registration<R> {
+    pub(crate) const fn new() -> Self {
+        Registration {
+            active: UnsafeCell::new(None),
+            set: AtomicBool::new(false),
+        }
+    }
 
-/// Panics on a second registration: one usb_v4 peripheral, one driver.
-pub(crate) fn register(active: Active) {
-    critical_section::with(|_| {
-        assert!(
-            !ACTIVE.set.load(Ordering::Relaxed),
-            "bedrock_usb: a usb_v4 driver is registered already"
-        );
-        // Safety: not set yet, so no reader looks at it (see Registration)
-        unsafe { *ACTIVE.active.get() = Some(active) };
-        ACTIVE.set.store(true, Ordering::Release);
-    })
+    /// Panics on a second registration: one peripheral, one driver.
+    pub(crate) fn set(&self, active: Active<R>) {
+        critical_section::with(|_| {
+            assert!(
+                !self.set.load(Ordering::Relaxed),
+                "bedrock_usb: a driver for this peripheral is registered already"
+            );
+            // Safety: not set yet, so no reader looks at it
+            unsafe { *self.active.get() = Some(active) };
+            self.set.store(true, Ordering::Release);
+        })
+    }
+
+    /// The registered driver, `None` before one is.
+    #[inline(always)]
+    pub(crate) fn get(&self) -> Option<&Active<R>> {
+        if self.set.load(Ordering::Acquire) {
+            // Safety: set, so written for good
+            unsafe { (*self.active.get()).as_ref() }
+        } else {
+            None
+        }
+    }
+}
+
+static ACTIVE: Registration<Mmio> = Registration::new();
+
+pub(crate) fn register(active: Active<Mmio>) {
+    ACTIVE.set(active)
 }
 
 /// The interrupt handler of the [Driver::register]ed driver, for the USB vector. Does nothing before one is
 /// registered, and returns at once when no USB flag is pending.
 pub fn on_interrupt() {
-    if ACTIVE.set.load(Ordering::Acquire) {
-        // Safety: set, so written for good (see Registration)
-        if let Some(a) = unsafe { &*ACTIVE.active.get() } {
-            interrupt(&a.regs, a.layout, a.state);
-        }
+    if let Some(a) = ACTIVE.get() {
+        interrupt(&a.regs, a.layout, a.state);
     }
 }

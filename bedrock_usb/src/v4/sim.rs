@@ -363,6 +363,8 @@ fn istr_value(i: &Inner) -> u32 {
 }
 
 impl Regs for &Sim {
+    const SRAM_SIZE: usize = 4 * 512;
+
     fn chep(&self, n: usize) -> u32 {
         self.inner.borrow().chep[n]
     }

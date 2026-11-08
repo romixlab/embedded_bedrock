@@ -1,0 +1,10 @@
+[target.thumbv7em-none-eabihf]
+runner = "probe-rs run --chip STM32G474RETx"
+# stack overflow protection: the stack goes below .data / .bss and an overflow faults (cargo install flip-link)
+linker = "flip-link"
+
+[build]
+target = "thumbv7em-none-eabihf"
+
+[env]
+DEFMT_LOG = "info"

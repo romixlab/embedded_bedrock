@@ -68,7 +68,11 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
             assert!(
                 N == D::LAYOUT.count as usize,
                 "State<N>: N is D::LAYOUT.count, use bedrock_usb::state!"
-            )
+            );
+            assert!(
+                D::LAYOUT.end as usize <= R::SRAM_SIZE,
+                "the buffer table and packet buffers don't fit in this peripheral's USB SRAM"
+            );
         };
         Driver {
             regs,
@@ -98,6 +102,8 @@ impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
         r.delay_ns(T_STARTUP_NS);
         r.set_cntr(interrupts(self.state)); // USBRST cleared
         r.set_istr(0);
+        // usb_v3: the table at the start of USB SRAM, where the layout puts it (no-op on usb_v4)
+        r.set_btable(0);
         bus_reset(r, Self::layout(), self.state);
         // a reset event before the host has reset the bus is no news to the firmware
         self.state.bus.take(event::RESET);
@@ -355,14 +361,21 @@ impl<D: Descriptors, R: Regs + Copy> crate::Backend for Driver<D, R> {
     }
 }
 
-impl<D: Descriptors> Driver<D, super::regs::Mmio> {
-    /// Makes this driver the one [super::on_interrupt] serves. Call it before unmasking the interrupt.
-    pub fn register(&self) {
-        super::register(super::Active {
+impl<D: Descriptors, R: Regs + Copy> Driver<D, R> {
+    /// What an `on_interrupt` needs to serve this driver.
+    pub(crate) fn active(&self) -> super::Active<R> {
+        super::Active {
             regs: self.regs,
             layout: Self::layout(),
             state: self.state,
-        })
+        }
+    }
+}
+
+impl<D: Descriptors> Driver<D, super::regs::Mmio> {
+    /// Makes this driver the one [super::on_interrupt] serves. Call it before unmasking the interrupt.
+    pub fn register(&self) {
+        super::register(self.active())
     }
 }
 

@@ -4,8 +4,9 @@
 //! The firmware describes its device as a `const` [desc::Device]. `const fn`s turn it into the descriptor arrays the
 //! control endpoint serves ([desc]) and into the endpoint registers and USB SRAM layout the driver programs
 //! ([layout]); [descriptors!] names both and makes the build fail on a device the hardware can't serve. Nothing is
-//! allocated, parsed or built at run time. [v4] drives the usb_v4 peripheral from that layout, [otg] the Synopsys OTG
-//! core from its own FIFO layout ([otg::Layout], `descriptors!(Desc = DEVICE, otg = CORE)`).
+//! allocated, parsed or built at run time. [v4] drives the usb_v4 peripheral from that layout, and through [v3] the
+//! same driver runs on usb_v3 with 16-bit USB SRAM (L4, G4, WB). [otg] drives the Synopsys OTG core from its own FIFO
+//! layout ([otg::Layout], `descriptors!(Desc = DEVICE, otg = CORE)`).
 //!
 //! [control] answers the host's requests on endpoint 0 from those tables, as a state machine the driver feeds with
 //! what happened on EP0. [Usb] joins the two through the [Backend] trait either driver implements: [Usb::run] serves the bus and EP0 and keeps the bus status
@@ -27,6 +28,7 @@ mod macros;
 pub mod otg;
 #[doc(hidden)]
 pub use macros::__byte;
+pub mod v3;
 pub mod v4;
 
 pub use device::{Backend, ControlEndpoint, Ep0Error, Usb};

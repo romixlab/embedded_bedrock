@@ -115,8 +115,12 @@ pub mod bd {
 }
 
 /// What the driver needs from the peripheral. Every method is one 32-bit access, so an implementation is a
-/// volatile load or store ([Mmio]) or a model of the hardware (`v4::sim::Sim`).
+/// volatile load or store ([Mmio]) or a model of the hardware (`v4::sim::Sim`). The usb_v3 peripheral
+/// (`crate::v3::Mmio`) has the same registers in the low 16 bits and a USB SRAM that only takes 16-bit accesses;
+/// its implementation makes each word access two half-word ones.
 pub trait Regs {
+    /// Bytes of USB SRAM: [Driver](super::Driver)`::new` fails the build when the device's layout needs more.
+    const SRAM_SIZE: usize;
     fn chep(&self, n: usize) -> u32;
     fn set_chep(&self, n: usize, value: u32);
     fn cntr(&self) -> u32;
@@ -131,6 +135,9 @@ pub trait Regs {
     /// Word `index` of USB SRAM (byte offset `4 * index`): the access scheme is 32 bits (R11, RM0444 Table 225).
     fn sram(&self, index: usize) -> u32;
     fn set_sram(&self, index: usize, value: u32);
+    /// `USB_BTABLE`, the buffer table's offset in USB SRAM, on peripherals that have it (usb_v3; usb_v4 has the
+    /// table at 0). The driver writes 0.
+    fn set_btable(&self, _value: u32) {}
     /// Waits at least `ns` nanoseconds: tSTARTUP (R9) and the ES0548 2.16.1 wait before reading an OUT packet (R6).
     fn delay_ns(&self, ns: u32);
 }
@@ -176,6 +183,8 @@ impl Mmio {
 }
 
 impl Regs for Mmio {
+    /// "Dedicated packet buffer memory SRAM of 2048 bytes" (RM0444 Table 225).
+    const SRAM_SIZE: usize = crate::layout::SRAM_SIZE;
     #[inline(always)]
     fn chep(&self, n: usize) -> u32 {
         unsafe { self.reg(offset::CHEP0R + 4 * n).read_volatile() }
@@ -229,7 +238,7 @@ impl Regs for Mmio {
         unsafe { ((self.sram + 4 * index) as *mut u32).write_volatile(value) }
     }
     fn delay_ns(&self, ns: u32) {
-        delay_cycles(cycles(ns, self.mhz));
+        delay_ns(ns, self.mhz);
     }
 }
 
@@ -240,6 +249,12 @@ impl Regs for Mmio {
 pub(crate) const fn cycles(ns: u32, mhz: u32) -> u32 {
     debug_assert!(ns as u64 * mhz as u64 <= 4_000_000);
     ((ns * mhz * 1049) >> 20) + 1
+}
+
+/// At least `ns` nanoseconds of a `mhz` core clock.
+#[inline(always)]
+pub(crate) fn delay_ns(ns: u32, mhz: u32) {
+    delay_cycles(cycles(ns, mhz));
 }
 
 /// At least `cycles` core cycles.
