@@ -1236,7 +1236,7 @@ dependencies = [
 
 [[package]]
 name = "embedded-bedrock"
-version = "0.2.60"
+version = "0.2.61"
 
 [[package]]
 name = "embedded-can"
