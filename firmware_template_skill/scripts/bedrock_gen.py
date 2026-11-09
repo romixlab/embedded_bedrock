@@ -1103,6 +1103,7 @@ def ww_context(t: Target, o: Opts, usb: Optional[dict]) -> dict:
         "krate": o.ww_api.replace("-", "_"),                           # crate name as a Rust path
         "trait": "".join(x[:1].upper() + x[1:] for x in parts),        # blinky_api -> BlinkyApi
         "gid": constant_case("".join(x[:1].upper() + x[1:] for x in parts) + "_FULL_GID"),  # made by #[ww_api_root]
+        "wire_const": constant_case("".join(x[:1].upper() + x[1:] for x in parts) + "_WIRE_VERSION"),  # EVO-25
         "usb": o.ww_transport == "usb",
         "rtt": o.ww_transport == "rtt",
         "stm32_usb": usb,

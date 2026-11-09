@@ -6,6 +6,10 @@ version = "0.1.0"
 edition = "2024"
 description = "WireWeaver API of the {{ o.name }} firmware"
 
+[package.metadata.wire_weaver]
+# the API's wire version (EVO-31): w1.0 for a new API
+wire = "w1.0"
+
 [features]
 # owned (alloc) variants of the API types, for host-side users
 std = [

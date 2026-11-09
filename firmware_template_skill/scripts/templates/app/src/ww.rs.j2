@@ -490,6 +490,7 @@ impl WireWeaverAsyncApiBackend for ServerState {
 fn link_config() -> LinkConfig<'static> {
     LinkConfig::new(
         {{ ww.krate }}::{{ ww.gid }},
+        {{ ww.krate }}::{{ ww.wire_const }},
         server_impl::api_hash(),
         server_impl::image_facts(),
         ww_client_server::COMPACT_VERSION,
@@ -547,7 +548,7 @@ impl bedrock_usb::control::Handler for Strings {
     }
 }
 
-type UsbDevice = Usb<Desc, Mmio, Strings>;
+type UsbDevice = Usb<Desc, Driver<Desc, Mmio>, Strings>;
 type UsbSender = Sender<BulkIn<Mmio, 2, Double>, embassy_time::Duration>;
 type UsbReceiver = Receiver<BulkOut<Mmio, 1, Double>>;
 pub type UsbServer = ww_device::Server<
