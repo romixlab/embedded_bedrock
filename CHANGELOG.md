@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.2.63] - 2026-11-10
+
 ### Changed
 
 - `bedrock_clocks`: a divider out of its RM0468 field range is refused in exact_units' `OutOfRange` words after the knob's, `m: DIVM ÷0 is out of 1..=63 (Ratio, u8) [RM0468 Rev 3 §8.7.10 p.377]`; the planner's own range-message helper is gone (RCC-1).
