@@ -1239,14 +1239,67 @@ mod tests {
         );
     }
 
+    /// The FD frame `len` data bytes go in, written out from ISO 11898-1's DLC table (RM0468 §61.4.1, Table 503).
+    fn fd_frame_len(len: usize) -> Option<u8> {
+        Some(match len {
+            0..=8 => len as u8,
+            9..=12 => 12,
+            13..=16 => 16,
+            17..=20 => 20,
+            21..=24 => 24,
+            25..=32 => 32,
+            33..=48 => 48,
+            49..=64 => 64,
+            _ => return None,
+        })
+    }
+
     #[test]
     fn fd_lengths() {
-        assert_eq!(fd_len(0), Some(0));
-        assert_eq!(fd_len(8), Some(8));
-        assert_eq!(fd_len(9), Some(12));
-        assert_eq!(fd_len(33), Some(48));
-        assert_eq!(fd_len(64), Some(64));
-        assert_eq!(fd_len(65), None);
+        for len in (0..=300).chain([511, 512, usize::MAX]) {
+            assert_eq!(fd_len(len), fd_frame_len(len), "{len}");
+        }
+    }
+
+    /// Every data length 0..=64 by every frame kind: classic data and remote frames take 0..=8 as they are, an FD
+    /// frame pads up to the next FD length.
+    #[test]
+    fn tx_lengths() {
+        let data = [0u8; 65];
+        let fd = FrameKind::Fd {
+            brs: false,
+            esi: false,
+        };
+        for len in 0..=65 {
+            let classic = tx_plan(&frame(std(1), FrameKind::Data, &data[..len]), true);
+            let want = if len <= 8 {
+                Ok(len as u8)
+            } else {
+                Err(TxReject::BadLength)
+            };
+            assert_eq!(classic.map(|p| p.len), want, "classic {len}");
+            let p = tx_plan(&frame(std(1), fd, &data[..len]), true);
+            assert_eq!(
+                p.map(|p| p.len),
+                fd_frame_len(len).ok_or(TxReject::BadLength),
+                "fd {len}"
+            );
+        }
+        for len in 0..=15 {
+            let remote = FrameKind::Remote {
+                len: U4::new(len).unwrap(),
+            };
+            let want = if len <= 8 {
+                Ok(len)
+            } else {
+                Err(TxReject::BadLength)
+            };
+            assert_eq!(
+                tx_plan(&frame(std(1), remote, &[]), true).map(|p| p.len),
+                want,
+                "remote {len}"
+            );
+        }
     }
 
     #[test]
