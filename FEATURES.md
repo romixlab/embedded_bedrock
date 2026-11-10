@@ -1019,6 +1019,26 @@ document section it comes from, and a FRACN steering range is checked at both en
   back: PLL1 35/40 and 29/40, PLL2 27/40 and 29/40 steps latched). `set_fracn` now reads back each write and holds
   FRACEN low for `FracnRange::latch_hold_reads` (2 ref_ck periods): 240/240 for both PLLs on B135. Check catalogue
   CLK-10; vb135 PLAT-10 has the same pattern.
+- 🧪 **RCC-14 G0B1 / G0C1 clock model, checks and clocks.rs** (`bedrock_clocks::g0`, RM0444 Rev 5 / DS13560 Rev 6 /
+  ES0548 Rev 4, each limit with its section): part decoding with flash size (dual-bank), Range 1 / 2, HSE crystal or
+  bypass, HSI16 ÷ HSIDIV, HSI48 with the CRS on the USB SOF (RELOAD and FELIM from RM §6.4.3-6.4.4), the PLL (bounded
+  knob types `Pllm` 1..=8, `Plln` 8..=86, `Pllp` 2..=32, `Pllqr` 2..=8), SYSCLK / HCLK / PCLK / TIMPCLK, all RCC_CCIPR
+  / CCIPR2 muxes but CEC. Checks: PLL input 2.66..16 MHz, VCO 96..344 / 128 MHz (DS Table 47 over the RM's 64 MHz),
+  P / Q / R per range, SYSCLK 64 / 16 MHz, HCLK / PCLK 64 MHz, flash wait states (Table 12), HSE and HSI48 per range,
+  ADC kernel 122 MHz and fADC 35 / 16 MHz, USB exactly 48 MHz with PCLK ≥ 12 MHz (§37.5.2) and the CRS on HSI48, UCPD on
+  HSI16, prefetch on a dual-bank part refused (ES0548 2.2.10, `allow.prefetch_dual_bank`), HSIDIV ≠ ÷1 warned (ES0548
+  2.2.4). Register words from field positions written out (`g0::regs::field`), held to stm32-metapac's G0B1CE in their
+  own pass (`tests/g0_metapac.rs`, feature `metapac-check-g0`); metapac's CRS TRIM is 6 bits where RM0444 Table 37
+  says 7. Golden test with Donguru's tree (`tests/donguru.rs`: HSI16 × 8 ÷ 2 = 64 MHz, ADC 32 MHz, USB on HSI48 + CRS).
+  🧪 until a board runs it (B153A, RCC-16).
+- 🧪 **RCC-15 G0 apply and verify** (`bedrock_clocks_rt::g0`): RM0444 order (back to HSISYS with the PLL off, Range 1
+  before raising clocks and Range 2 after lowering them with VOSF, HSEBYP only with HSE off, PLL configured while off,
+  wait states up before the switch and down after it, muxes, the CRS with CRS_CFGR before CEN, HSI16 off when unused),
+  bounded waits named in `Error::Timeout(Step)`, `verify` naming the first register. Host tests on a simulated chip
+  with Donguru's golden plan (`bedrock_clocks_rt/tests/g0_apply.rs`). Not on hardware yet.
+- 📋 **RCC-16 G0 flash measured on Donguru**: Donguru release at opt-level z and 3 with embassy's RCC init against
+  `g0::apply` + `verify`; embassy-stm32 0.6 can't start on clocks already set (its init always runs `rcc::init` and
+  fills the frequency table drivers and the time driver read), so the switch needs RCC-8's `init_with_clocks`.
 - 💡 **RCC-11 Solver**: targets in, dividers out, written back into clocks.toml.
 - 📋 **RCC-12 Template**: H7 board presets carry clocks.toml and the generated clocks.rs.
 

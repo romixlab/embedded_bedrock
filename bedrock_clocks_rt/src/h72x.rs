@@ -129,27 +129,7 @@ mod cr {
     }
 }
 
-/// Register access. [Mmio] on the chip; a simulated chip in the host tests.
-pub trait Regs {
-    fn read(&mut self, addr: u32) -> u32;
-    fn write(&mut self, addr: u32, value: u32);
-}
-
-/// The chip's own registers.
-pub struct Mmio;
-
-impl Regs for Mmio {
-    #[inline(always)]
-    fn read(&mut self, addr: u32) -> u32 {
-        // SAFETY: only the RCC / PWR / FLASH register addresses of `addr` reach here
-        unsafe { core::ptr::read_volatile(addr as *const u32) }
-    }
-    #[inline(always)]
-    fn write(&mut self, addr: u32, value: u32) {
-        // SAFETY: as above
-        unsafe { core::ptr::write_volatile(addr as *mut u32, value) }
-    }
-}
+pub use crate::{Mmio, Regs};
 
 /// The step of [apply] that failed.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

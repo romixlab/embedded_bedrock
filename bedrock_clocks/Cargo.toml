@@ -5,7 +5,33 @@ edition = "2024"
 description = "Exact STM32 clock planning on the host: the clock tree as exact rationals, checked against the reference manual, emitted as register words and exact frequencies for bedrock_clocks_rt"
 license = "MIT OR Apache-2.0"
 
+[features]
+default = ["h72x"]
+# The RM0468 family. Its encoding uses stm32-metapac's H725 register types, and metapac takes one chip per build, so
+# the G0 family's own field positions are held to metapac's G0B1 in a separate pass without this feature.
+h72x = ["dep:stm32-metapac", "stm32-metapac/stm32h725ig"]
+# Test only: tests/g0_metapac.rs holds the G0 field positions and bedrock_clocks_rt's G0 addresses to stm32-metapac's
+# STM32G0B1CE. Not together with `h72x`: `cargo test -p bedrock_clocks --no-default-features --features
+# metapac-check-g0 --test g0_metapac`.
+metapac-check-g0 = ["dep:stm32-metapac", "stm32-metapac/stm32g0b1ce"]
+
 [dependencies]
-exact_units = { workspace = true, features = ["time", "dimensionless", "electrical"] }
-# Register types and setters for the encoding (host only: the setters aren't const, clocks.rs carries the words)
-stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32h725ig"] }
+exact_units = { workspace = true, features = ["time", "dimensionless", "electrical", "q"] }
+# Register types and setters for the H72x encoding (host only: the setters aren't const, clocks.rs carries the words)
+stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac"], optional = true }
+
+[dev-dependencies]
+# The G0 tests run the emitted plan through apply() on a simulated chip
+bedrock_clocks_rt = { path = "../bedrock_clocks_rt" }
+
+[[test]]
+name = "b135"
+required-features = ["h72x"]
+
+[[test]]
+name = "vos"
+required-features = ["h72x"]
+
+[[test]]
+name = "g0_metapac"
+required-features = ["metapac-check-g0"]

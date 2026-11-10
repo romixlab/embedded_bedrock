@@ -1,7 +1,5 @@
 //! The checker: every finding at once, each with the config key, the exact value, the allowed range and the source.
 
-use core::fmt;
-
 use exact_units::prefix::{Mega, Milli, Rational};
 use exact_units::units::{Hertz, Ratio};
 use exact_units::{Exact, Rounding};
@@ -15,35 +13,7 @@ use super::regs::muxes;
 use super::tree::{self, Tree};
 use crate::source::Source;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    Warning,
-    Error,
-}
-
-/// One problem with a config.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Finding {
-    pub severity: Severity,
-    /// The config key it is about: `pll1.n`, `sys.hpre`, `kernel.fdcan`.
-    pub key: String,
-    pub message: String,
-    pub source: Option<Source>,
-}
-
-impl fmt::Display for Finding {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let sev = match self.severity {
-            Severity::Error => "error",
-            Severity::Warning => "warning",
-        };
-        write!(f, "{sev}: {}: {}", self.key, self.message)?;
-        if let Some(s) = &self.source {
-            write!(f, " [{s}]")?;
-        }
-        Ok(())
-    }
-}
+pub use crate::finding::{Finding, Severity};
 
 struct Ctx<'a> {
     cfg: &'a Config,
