@@ -260,65 +260,97 @@ pub fn apply(r: &mut impl Regs, p: &Plan) -> Result<(), Error> {
     Ok(())
 }
 
-/// Reads every register the plan wrote and compares the planned fields.
-pub fn verify(r: &mut impl Regs, p: &Plan) -> Result<(), Mismatch> {
-    use addr::*;
-    use bits::*;
-    let osc_mask = CR_HSION | CR_HSIDIV | CR_HSEON | CR_HSEBYP | CR_HSI48ON;
-    let pll = if p.rcc_cr_pll_on != 0 {
-        CR_PLLON | CR_PLLRDY
-    } else {
-        0
-    };
-    let crs = p.crs_cr != 0;
-    let checks: [(&'static str, u32, u32, u32); 10] = [
-        ("PWR_CR1", PWR_CR1, PWR_CR1_VOS, p.pwr_cr1_vos),
-        ("FLASH_ACR", FLASH_ACR, ACR_PLAN, p.flash_acr),
-        ("RCC_CR", RCC_CR, osc_mask, p.rcc_cr_osc),
-        ("RCC_CR", RCC_CR, CR_PLLON | CR_PLLRDY, pll),
-        (
-            "RCC_PLLCFGR",
-            RCC_PLLCFGR,
-            if pll != 0 { PLLCFGR_ALL } else { 0 },
-            p.pllcfgr,
-        ),
-        (
-            "RCC_CFGR",
-            RCC_CFGR,
-            CFGR_SWS | CFGR_HPRE | CFGR_PPRE,
-            ((p.cfgr & CFGR_SW) << 3) | (p.cfgr & (CFGR_HPRE | CFGR_PPRE)),
-        ),
-        ("RCC_CCIPR", RCC_CCIPR, CCIPR_PLAN, p.ccipr),
-        ("RCC_CCIPR2", RCC_CCIPR2, CCIPR2_PLAN, p.ccipr2),
-        (
-            "CRS_CFGR",
-            CRS_CFGR,
-            if crs { CRS_CFGR_ALL } else { 0 },
-            p.crs_cfgr,
-        ),
-        (
-            "CRS_CR",
-            CRS_CR,
-            if crs {
-                CRS_CR_CEN | CRS_CR_AUTOTRIMEN
-            } else {
-                0
-            },
-            p.crs_cr,
-        ),
-    ];
-    for (register, addr, mask, want) in checks {
-        if mask == 0 {
-            continue;
-        }
-        let got = r.read(addr);
-        if got & mask != want & mask {
-            return Err(Mismatch {
+/// One planned field group of a register, as [verify] reads it back: the register reads `want` under `mask`
+/// (mask 0: not part of the plan, skipped).
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Check {
+    pub register: &'static str,
+    pub addr: u32,
+    pub mask: u32,
+    pub want: u32,
+}
+
+impl Plan {
+    /// The read-back table of [verify], as a `const fn`: firmware that keeps it in a `static`
+    /// (`static CHECKS: [Check; 10] = clocks::PLAN.checks();`) and calls [verify_checks] reads it from flash instead
+    /// of building 160 bytes of it on the stack: 172 bytes less code on Donguru at opt-level z, 176 more at 3 (RCC-16).
+    pub const fn checks(&self) -> [Check; 10] {
+        use addr::*;
+        use bits::*;
+        let osc_mask = CR_HSION | CR_HSIDIV | CR_HSEON | CR_HSEBYP | CR_HSI48ON;
+        let pll = if self.rcc_cr_pll_on != 0 {
+            CR_PLLON | CR_PLLRDY
+        } else {
+            0
+        };
+        let crs = self.crs_cr != 0;
+        const fn c(register: &'static str, addr: u32, mask: u32, want: u32) -> Check {
+            Check {
                 register,
                 addr,
                 mask,
                 want: want & mask,
-                got: got & mask,
+            }
+        }
+        [
+            c("PWR_CR1", PWR_CR1, PWR_CR1_VOS, self.pwr_cr1_vos),
+            c("FLASH_ACR", FLASH_ACR, ACR_PLAN, self.flash_acr),
+            c("RCC_CR", RCC_CR, osc_mask, self.rcc_cr_osc),
+            c("RCC_CR", RCC_CR, CR_PLLON | CR_PLLRDY, pll),
+            c(
+                "RCC_PLLCFGR",
+                RCC_PLLCFGR,
+                if pll != 0 { PLLCFGR_ALL } else { 0 },
+                self.pllcfgr,
+            ),
+            c(
+                "RCC_CFGR",
+                RCC_CFGR,
+                CFGR_SWS | CFGR_HPRE | CFGR_PPRE,
+                ((self.cfgr & CFGR_SW) << 3) | (self.cfgr & (CFGR_HPRE | CFGR_PPRE)),
+            ),
+            c("RCC_CCIPR", RCC_CCIPR, CCIPR_PLAN, self.ccipr),
+            c("RCC_CCIPR2", RCC_CCIPR2, CCIPR2_PLAN, self.ccipr2),
+            c(
+                "CRS_CFGR",
+                CRS_CFGR,
+                if crs { CRS_CFGR_ALL } else { 0 },
+                self.crs_cfgr,
+            ),
+            c(
+                "CRS_CR",
+                CRS_CR,
+                if crs {
+                    CRS_CR_CEN | CRS_CR_AUTOTRIMEN
+                } else {
+                    0
+                },
+                self.crs_cr,
+            ),
+        ]
+    }
+}
+
+/// Reads every register the plan wrote and compares the planned fields. Builds [Plan::checks] on the stack;
+/// [verify_checks] on a `static` table is smaller.
+pub fn verify(r: &mut impl Regs, p: &Plan) -> Result<(), Mismatch> {
+    verify_checks(r, &p.checks())
+}
+
+/// [verify] on a table from [Plan::checks], typically a `static`.
+pub fn verify_checks(r: &mut impl Regs, checks: &[Check]) -> Result<(), Mismatch> {
+    for c in checks {
+        if c.mask == 0 {
+            continue;
+        }
+        let got = r.read(c.addr) & c.mask;
+        if got != c.want {
+            return Err(Mismatch {
+                register: c.register,
+                addr: c.addr,
+                mask: c.mask,
+                want: c.want,
+                got,
             });
         }
     }

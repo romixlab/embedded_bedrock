@@ -196,6 +196,20 @@ fn verify_names_the_register() {
     assert_eq!((m.want, m.got), (1 << 30, 0));
 }
 
+/// The table firmware keeps in a `static` gives the same answers as `verify`.
+#[test]
+fn verify_checks_from_a_static_table() {
+    static CHECKS: [g0::Check; 10] = clocks::PLAN.checks();
+    let mut s = Sim::new();
+    g0::apply(&mut s, &clocks::PLAN).unwrap();
+    g0::verify_checks(&mut s, &CHECKS).unwrap();
+    s.regs.insert(addr::RCC_CCIPR, 0);
+    assert_eq!(
+        g0::verify_checks(&mut s, &CHECKS),
+        g0::verify(&mut s, &clocks::PLAN)
+    );
+}
+
 #[test]
 fn golden_frequencies() {
     use exact_units::q;
