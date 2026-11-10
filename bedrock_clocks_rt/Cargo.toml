@@ -7,6 +7,9 @@ license = "MIT OR Apache-2.0"
 
 [features]
 defmt = ["dep:defmt"]
+# exact_units' `q!` literals and `assert_in!`, so firmware can check the plan's consts against its own assumptions at
+# compile time (`assert_in!(clocks::HCLK, q!(64 MHz ..= 64 MHz))`) through the re-export
+q = ["exact_units/q"]
 
 [dependencies]
 defmt = { version = "1.0", optional = true }
@@ -14,5 +17,7 @@ defmt = { version = "1.0", optional = true }
 exact_units = { workspace = true, features = ["time"] }
 
 [dev-dependencies]
+# `q!` in the tests
+exact_units = { workspace = true, features = ["time", "q"] }
 # Register addresses are held to the PAC in a test
 stm32-metapac = { version = "21.0.0", default-features = false, features = ["pac", "stm32h725ig"] }

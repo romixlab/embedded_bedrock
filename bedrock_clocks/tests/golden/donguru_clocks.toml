@@ -1,0 +1,33 @@
+# Donguru (B153A, STM32G0B1CET6) clock plan (sketch of the RCC-2 format; the test only hashes this file)
+part = "STM32G0B1CET6"
+vos = 1                         # Range 1: SYSCLK up to 64 MHz
+prefetch = false                # the image spans both flash banks (ES0548 2.2.10)
+
+[hsi16]
+div = 1
+
+[hsi48]
+crs = "usb-sof"                 # USB on HSI48, trimmed from the SOF
+
+[pll]                           # 16 MHz × 8 = 128 MHz VCO
+source = "hsi16"
+m = 1
+n = 8
+p = 4                           # ADC 32 MHz
+r = 2                           # SYSCLK 64 MHz
+
+[sys]
+source = "pll_r"
+hpre = 1
+ppre = 1
+
+[kernel]
+adc = "pll_p"
+usb = "hsi48"
+
+[used]
+peripherals = ["adc", "usb", "ucpd", "i2c2"]
+
+[expect]
+usb = "48 MHz"
+adc = { freq = "32 MHz", tolerance = "1 %" }

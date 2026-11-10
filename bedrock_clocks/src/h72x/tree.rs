@@ -3,8 +3,6 @@
 
 use std::collections::BTreeMap;
 
-use core::fmt;
-
 use exact_units::Exact;
 use exact_units::prefix::Mega;
 use exact_units::units::Hertz;
@@ -13,17 +11,7 @@ use stm32_metapac::rcc::vals::Pllrge;
 use super::config::{Config, Divpqr, Ker, Periph, PllSource, Ppre, SysSource};
 use super::limits;
 
-/// An exact step of the tree went past what a `Fraction` holds (u128 numerator and denominator).
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Overflow;
-
-impl fmt::Display for Overflow {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("exact arithmetic overflowed u128")
-    }
-}
-
-impl std::error::Error for Overflow {}
+pub use crate::overflow::Overflow;
 
 /// `x` or [Overflow]: exact_units arithmetic is `None` where the result doesn't fit.
 fn fit<T>(x: Option<T>) -> Result<T, Overflow> {

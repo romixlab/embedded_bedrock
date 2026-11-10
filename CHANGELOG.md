@@ -9,6 +9,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_clocks::g0`: exact clock planning for the STM32G0B1 / G0C1 (RM0444 Rev 5, DS13560 Rev 6, ES0548 Rev 4), on the H72x pattern (RCC-14). Part number decoding (flash size, so dual-bank), Range 1 / Range 2, HSE crystal or bypass, HSI16 with HSIDIV, HSI48 with the CRS on the USB SOF, the PLL (PLLM / PLLN / PLLP / PLLQ / PLLR as bounded knob types refused in exact_units' `OutOfRange` words), SYSCLK / HCLK / PCLK / TIMPCLK, every RCC_CCIPR / CCIPR2 kernel mux, peripherals in use and targets. Checks name the key, the exact value, the range and the document: PLL input, VCO, P / Q / R per range, SYSCLK per range, HCLK and PCLK, flash wait states from RM0444 Table 12, HSE and HSI48 per range, ADC kernel clock and fADC, USB exactly 48 MHz with PCLK of at least 12 MHz, USB on HSI48 only with the CRS, UCPD needs HSI16, prefetch refused on a dual-bank part (ES0548 2.2.10) unless allowed by name, HSIDIV not ÷1 warned (ES0548 2.2.4). The CRS RELOAD and FELIM are worked out from RM0444 §6.4.3-6.4.4 (FELIM rounded up once). `g0::emit` writes `clocks.rs` for `bedrock_clocks_rt::g0`; golden test with Donguru's tree (`tests/donguru.rs`, `tests/golden/donguru_clocks.rs`).
+- `bedrock_clocks_rt::g0`: `apply(&Plan)` in RM0444's order (back to HSISYS when a PLL runs, Range 1 before the clocks go up and Range 2 after they come down, HSEBYP only with HSE off since it survives every reset but power-on, PLL configured while off, wait states up before the switch and down after it, kernel muxes, CRS_CFGR before CRS_CR turns the counter on, HSI16 off when unused), every wait bounded and named; `verify(&Plan)` names the first register that differs. Host tests on a simulated chip with Donguru's golden plan (RCC-15).
+- `bedrock_clocks_rt` feature `q`: exact_units' `q!` and `assert_in!` through the re-export, so firmware checks the plan's consts against its own assumptions at compile time.
+
+### Changed
+
+- `bedrock_clocks`: the H72x family is behind the default feature `h72x` (it alone needs stm32-metapac's H725). `Finding`, `Severity`, `KnobError` and `Overflow` live at the crate root for both families, re-exported where they were; the H72x output is unchanged (B135's golden file is byte for byte the same).
+- `bedrock_clocks_rt`: `Regs` and `Mmio` live at the crate root for both families, re-exported from `h72x`.
+- Cargo.lock takes exact_units 4abc92b.
+
 ## [0.2.63] - 2026-11-10
 
 ### Changed

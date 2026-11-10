@@ -235,6 +235,7 @@ version = "0.1.0"
 name = "bedrock_clocks"
 version = "0.1.0"
 dependencies = [
+ "bedrock_clocks_rt",
  "exact_units",
  "stm32-metapac",
 ]
@@ -1418,12 +1419,18 @@ dependencies = [
 [[package]]
 name = "exact_units"
 version = "0.1.0"
-source = "git+https://github.com/romixlab/exact_units#e362e570ead0aaae3e3e9dfe10c355897b61cf20"
+source = "git+https://github.com/romixlab/exact_units#4abc92bf21e4533b6267a1ee219141726b8248ad"
 dependencies = [
  "defmt",
+ "exact_units_macros",
  "serde",
  "shrink_wrap",
 ]
+
+[[package]]
+name = "exact_units_macros"
+version = "0.1.0"
+source = "git+https://github.com/romixlab/exact_units#4abc92bf21e4533b6267a1ee219141726b8248ad"
 
 [[package]]
 name = "fallible-iterator"
