@@ -3,7 +3,7 @@
 
 use exact_units::prefix::{One, Rational};
 use exact_units::units::{Hertz, Ratio, Volt};
-use exact_units::{Bounds, Exact, Fixed, Ppm, Range, Storage, Tolerance};
+use exact_units::{Exact, Fixed, Ppm, Range, Tolerance};
 use stm32_metapac::rcc::vals;
 
 use super::limits;
@@ -207,34 +207,32 @@ pub type Divpqr = Fixed<Ratio, One, u8, Range<1, 128>>;
 /// mode in hardware (SH_REG = 0, RM §8.5.5 p.328), so a PLL in integer mode has no FRACN.
 pub type Fracn = Fixed<Ratio, Rational<1, 8192>, u16, Range<1, 8191>>;
 
-/// `v` as the bounded knob `B` allows, else what it allows: `DIVM ÷0 outside 1..=63`.
-fn bounded<P, T: Storage + core::fmt::Display, B: Bounds<T>>(
+/// A knob value outside its field's range, in exact_units' words after the knob's: `DIVM ÷0 is out of 1..=63 (Ratio,
+/// u8)`.
+fn out_of_range(
     field: &'static str,
     what: &str,
-    v: T,
+    e: impl core::fmt::Display,
     source: Source,
-) -> Result<Fixed<Ratio, P, T, B>, KnobError> {
-    Fixed::try_new(v).map_err(|_| {
-        let end = |e: Option<T>| e.map(|e| e.to_string()).unwrap_or_default();
-        KnobError {
-            field,
-            message: format!("{what}{v} outside {}..={}", end(B::MIN), end(B::MAX)),
-            source,
-        }
-    })
+) -> KnobError {
+    KnobError {
+        field,
+        message: format!("{what}{e}"),
+        source,
+    }
 }
 
 pub fn divm(m: u8) -> Result<Divm, KnobError> {
-    bounded("m", "DIVM ÷", m, limits::DIVM_SRC)
+    Divm::try_new(m).map_err(|e| out_of_range("m", "DIVM ÷", e, limits::DIVM_SRC))
 }
 
 pub fn divn(n: u16) -> Result<Divn, KnobError> {
-    bounded("n", "DIVN ×", n, limits::DIVN_SRC)
+    Divn::try_new(n).map_err(|e| out_of_range("n", "DIVN ×", e, limits::DIVN_SRC))
 }
 
 /// `field` is `p`, `q` or `r`.
 pub fn divpqr(field: &'static str, d: u8) -> Result<Divpqr, KnobError> {
-    bounded(field, "÷", d, limits::DIVPQR_SRC)
+    Divpqr::try_new(d).map_err(|e| out_of_range(field, "÷", e, limits::DIVPQR_SRC))
 }
 
 pub fn fracn(f: u16) -> Result<Fracn, KnobError> {
@@ -246,10 +244,7 @@ pub fn fracn(f: u16) -> Result<Fracn, KnobError> {
             source: limits::FRACN_SRC,
         });
     }
-    bounded("fracn", "FRACN ", f, limits::FRACN_SRC).map_err(|e| KnobError {
-        message: format!("FRACN {f} above 8191"),
-        ..e
-    })
+    Fracn::try_new(f).map_err(|e| out_of_range("fracn", "FRACN ", e, limits::FRACN_SRC))
 }
 
 /// A FRACN steering range of the nominal VCO, both ends included: `(-100 ppm, 100 ppm)`.

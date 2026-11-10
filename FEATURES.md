@@ -921,7 +921,7 @@ document section it comes from, and a FRACN steering range is checked at both en
 
 - 🧪 **RCC-1 H72x clock model and checks** (crate `bedrock_clocks`): every clock, limit and target an exact_units
   `Exact<Hertz>` (VDD `Exact<Volt>`, targets with a `Tolerance`, steer ends `Ppm<i32>`), the dividers bounded
-  types (`Divm`, `Divn`, `Divpqr`, `Fracn` with the RM field range as their `Range`; HSIDIV, HPRE, PPRE enums whose
+  types (`Divm`, `Divn`, `Divpqr`, `Fracn` with the RM field range as their `Range`, refused in exact_units' `OutOfRange` words; HSIDIV, HPRE, PPRE enums whose
   constructors refuse what the register can't hold, with the RM section), `h72x::config` (part number decoding, supply, VOS, HSE / HSI / CSI / HSI48 / LSE, three PLLs
   with FRACN and a steer range in ppm, bus prescalers, TIMPRE, 15 kernel muxes, peripherals in use, targets, named
   allowances), `h72x::tree` (every clock exactly), `h72x::limits` (each limit with its RM0468 Rev 3 / DS13311 Rev 3 /

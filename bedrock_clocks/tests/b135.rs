@@ -419,23 +419,23 @@ fn knobs_refuse_what_their_register_cant_hold() {
     let text = |e: KnobError| e.to_string();
     assert_eq!(
         text(divm(0).unwrap_err()),
-        "m: DIVM ÷0 outside 1..=63 [RM0468 Rev 3 §8.7.10 p.377]"
+        "m: DIVM ÷0 is out of 1..=63 (Ratio, u8) [RM0468 Rev 3 §8.7.10 p.377]"
     );
     assert!(divm(63).is_ok() && divm(64).is_err());
     assert_eq!(
         text(divn(3).unwrap_err()),
-        "n: DIVN ×3 outside 4..=512 [RM0468 Rev 3 §8.7.12 p.383]"
+        "n: DIVN ×3 is out of 4..=512 (Ratio, u16) [RM0468 Rev 3 §8.7.12 p.383]"
     );
     assert!(divn(512).is_ok() && divn(513).is_err());
     assert_eq!(
         text(divpqr("q", 129).unwrap_err()),
-        "q: ÷129 outside 1..=128 [RM0468 Rev 3 §8.7.12 p.382]"
+        "q: ÷129 is out of 1..=128 (Ratio, u8) [RM0468 Rev 3 §8.7.12 p.382]"
     );
     assert!(divpqr("q", 0).is_err() && divpqr("q", 128).is_ok());
     assert!(text(fracn(0).unwrap_err()).contains("FRACN 0 is integer mode"));
     assert_eq!(
         text(fracn(8192).unwrap_err()),
-        "fracn: FRACN 8192 above 8191 [RM0468 Rev 3 §8.5.5 p.328]"
+        "fracn: FRACN 8192·2⁻¹³ is out of 1..=8191·2⁻¹³ (Ratio, u16) [RM0468 Rev 3 §8.5.5 p.328]"
     );
     assert!(fracn(8191).is_ok());
     assert!(text(HsiDiv::from_ratio(3).unwrap_err()).contains("HSIDIV ÷3 doesn't exist"));
