@@ -1030,15 +1030,33 @@ document section it comes from, and a FRACN steering range is checked at both en
   2.2.4). Register words from field positions written out (`g0::regs::field`), held to stm32-metapac's G0B1CE in their
   own pass (`tests/g0_metapac.rs`, feature `metapac-check-g0`); metapac's CRS TRIM is 6 bits where RM0444 Table 37
   says 7. Golden test with Donguru's tree (`tests/donguru.rs`: HSI16 × 8 ÷ 2 = 64 MHz, ADC 32 MHz, USB on HSI48 + CRS).
-  🧪 until a board runs it (B153A, RCC-16).
+  🧪 until a board runs it (B153A).
 - 🧪 **RCC-15 G0 apply and verify** (`bedrock_clocks_rt::g0`): RM0444 order (back to HSISYS with the PLL off, Range 1
   before raising clocks and Range 2 after lowering them with VOSF, HSEBYP only with HSE off, PLL configured while off,
   wait states up before the switch and down after it, muxes, the CRS with CRS_CFGR before CEN, HSI16 off when unused),
   bounded waits named in `Error::Timeout(Step)`, `verify` naming the first register. Host tests on a simulated chip
   with Donguru's golden plan (`bedrock_clocks_rt/tests/g0_apply.rs`). Not on hardware yet.
-- 📋 **RCC-16 G0 flash measured on Donguru**: Donguru release at opt-level z and 3 with embassy's RCC init against
-  `g0::apply` + `verify`; embassy-stm32 0.6 can't start on clocks already set (its init always runs `rcc::init` and
-  fills the frequency table drivers and the time driver read), so the switch needs RCC-8's `init_with_clocks`.
+- ✅ **RCC-16 G0 flash measured on Donguru**: no saving on the G0. Donguru (typec_dongle 65408a6, embassy fork
+  9cdf640, nightly-2026-11-02, fat LTO) built with embassy's RCC init against `g0::apply` on the golden plan, with
+  embassy-stm32 patched for the measurement (a `rcc-external` feature: no RCC writes, only the LSI / RTC setup and the
+  frequency table filled from the plan's consts, the shape RCC-8 needs). `.text` in bytes (`.data` 844 / 848 and
+  `.bss` 60208 / 60184 unchanged):
+
+  | variant | opt-level z | opt-level 3 |
+  |---|---|---|
+  | embassy RCC init | 249680 | 372056 |
+  | `apply` only | 249800 (+120) | 372476 (+420) |
+  | `apply` + `verify_checks` on a `static` table | 250220 (+540) | 373292 (+1236) |
+  | `apply` + `verify` | 250396 (+716) | 373116 (+1060) |
+
+  With a constant `Config`, LTO folds embassy's G0 init to a few hundred bytes (`bedrock-lint code-size --by-crate`
+  at z: embassy-stm32 −202, stm32-metapac −102, core −172, bedrock_clocks_rt +878), unlike the H7 init's 5620 B
+  (RCC-9). `verify` is most of the cost: its read-back table with register names. On the G0 the plan buys
+  build-time checks, reviewable register words and the errata in one place, not flash. Embassy still needs its
+  frequency table (drivers, the TIM4 time driver) and its LSI / RTC setup (RCC-17).
+- 📋 **RCC-17 LSI, LSE and the RTC clock in the G0 plan**: Donguru's backup domain (TAMP boot word, `bkp_cnt!`, the
+  rev A hub hold in RTC_CR) survives a reset only while RCC_BDCR keeps the same RTCSEL; embassy's `LsConfig` sets it
+  today, so a plan without it still needs that part of embassy's init.
 - 💡 **RCC-11 Solver**: targets in, dividers out, written back into clocks.toml.
 - 📋 **RCC-12 Template**: H7 board presets carry clocks.toml and the generated clocks.rs.
 
