@@ -15,9 +15,11 @@ use mcan::Id;
 use mcan::pac::message_ram::FrameFormat;
 use wire_weaver::prelude::*;
 use ww_can_bus::{
-    CanConfig, CanError, CanId, Capabilities, Frame, FrameKind, Mode, ProtocolStatus, RxFrame,
-    Second, Status,
+    CanConfig, CanError, CanId, Capabilities, FilterIndex, Frame, FrameKind, Mode, ProtocolStatus,
+    RxFrame, Second, Status,
 };
+use ww_si::prefix::One;
+use ww_si::{Fixed, units};
 
 /// Received frames passed on per channel and turn of the server task, so requests keep being served.
 const RX_PER_TURN: usize = 64;
@@ -233,10 +235,10 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         index_chain: [UNib32; 1],
-    ) -> RpcResult<u32> {
+    ) -> RpcResult<Fixed<units::Frame, One, u32>> {
         match CHANS[index(index_chain)].command(Command::TxAbort).await {
-            Reply::Aborted(n) => Ready(n),
-            _ => Ready(0),
+            Reply::Aborted(n) => Ready(Fixed::new(n)),
+            _ => Ready(Fixed::new(0)),
         }
     }
 
@@ -252,12 +254,12 @@ impl ServerState {
         Ready(ProtocolStatus {
             status,
             activity: s.activity,
-            error_log: Some(crate::can::take_error_log(&CHANS[i])),
+            error_log: Some(Fixed::new(crate::can::take_error_log(&CHANS[i]))),
             last_fd_frame: s
                 .fd_frame
                 .map(|(esi, brs)| ww_can_bus::FdFrameFlags { esi, brs }),
             protocol_exception: s.exception,
-            tdc_value: hw.data.and_then(|d| d.tdc).map(|_| s.tdc_value),
+            tdc_value: hw.data.and_then(|d| d.tdc).map(|_| Fixed::new(s.tdc_value)),
             memory_errors: None,
         })
     }
@@ -334,7 +336,7 @@ impl ServerState {
                 filter: h
                     .filter_index
                     .and_then(|f| self.can.filters[i].host_index(id.is_extended(), f))
-                    .map(UNib32),
+                    .and_then(|f| FilterIndex::try_new(UNib32(f)).ok()),
             };
             let t = Second::micro(item.t.as_micros() as u32);
             if super::server_impl::stream_data_ser()

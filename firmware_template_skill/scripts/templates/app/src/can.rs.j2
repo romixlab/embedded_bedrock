@@ -419,8 +419,9 @@ async fn can_task(ch: &'static Chan, mut can: FdCan<ConfigMode>, _standby: Optio
         apply(&mut can, &hw, &filters{{ ", layout" if h7 }});
         info!(
             "CAN: nominal {} bit/s, FD {}, on bus {}",
-            hw.nominal.bit_rate(controller.clock_hz),
-            hw.data.map(|d| d.timing.bit_rate(controller.clock_hz)),
+            bedrock_can::bit_rate(controller.clock_hz, &hw.nominal),
+            hw.data
+                .map(|d| bedrock_can::bit_rate(controller.clock_hz, &d.timing)),
             bedrock_can::mode_on_bus(hw.mode)
         );
         let cmd = if bedrock_can::mode_on_bus(hw.mode) {
@@ -747,13 +748,23 @@ fn mcan_config(hw: &HwConfig, filters: &HwFilters) -> Result<FdCanConfig, mcan::
 {% endif %}
     let n = &hw.nominal;
     let mut config = FdCanConfig::default()
-        .set_nominal_bit_timing(NominalBitTiming::new(n.prescaler, n.seg1, n.seg2, n.sjw)?)
+        .set_nominal_bit_timing(NominalBitTiming::new(
+            n.prescaler.get(),
+            n.seg1.get(),
+            n.seg2.get(),
+            n.sjw.get(),
+        )?)
         .set_frame_transmit(FrameTransmissionConfig::ClassicCanOnly)
         .set_non_iso_mode(false);
     if let Some(d) = &hw.data {
         let t = &d.timing;
         // DATA limits: prescaler and seg1 at most 32
-        let mut dbtr = DataBitTiming::new(t.prescaler as u8, t.seg1 as u8, t.seg2, t.sjw)?;
+        let mut dbtr = DataBitTiming::new(
+            t.prescaler.get() as u8,
+            t.seg1.get() as u8,
+            t.seg2.get(),
+            t.sjw.get(),
+        )?;
         if let Some((offset, window)) = d.tdc {
             dbtr = dbtr.with_tdc(TransceiverDelayCompensation::new(offset, window)?)?;
         }

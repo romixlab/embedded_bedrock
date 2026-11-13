@@ -15,11 +15,11 @@ use std::time::Duration;
 use wire_weaver::prelude::*;
 use wire_weaver_client::{PositionedStream, Sink, StreamEvent};
 pub use ww_can_bus::{
-    BitTiming, CanConfig, CanErrorOwned, CanId, CapabilitiesOwned, ErrorState, FdConfig, Filter,
-    FilterConfigOwned, FrameKind, FrameOwned, Mode, Options, ProtocolStatus, RxOverflow, Status,
-    Tdc, Timing, TxFrameOwned, TxOrder,
+    BitTiming, CanConfig, CanErrorOwned, CanId, CapabilitiesOwned, ErrorState, FdConfig, FifoIndex,
+    Filter, FilterConfigOwned, FrameKind, FrameOwned, Mode, Options, ProtocolStatus, RxOverflow,
+    Share, Status, Tdc, Timing, TxFrameOwned, TxOrder,
 };
-use ww_si::{Baud, Second};
+use ww_si::{Baud, Hertz, Second};
 
 use crate::{ {{- T }}, Error, Result, call, call_fallible, read};
 
@@ -31,10 +31,10 @@ pub const CHANNELS: [(u32, &str); {{ c.count }}] = [{% for ch in c.chans %}({{ c
 pub struct Setup {
     /// Nominal (arbitration) bit rate in bit/s.
     pub rate: u32,
-    /// Nominal sample point in tenths of a percent (875 = 87.5 %).
-    pub sample_point: u16,
+    /// Nominal sample point, a share of the bit (875 ‰ = 87.5 %).
+    pub sample_point: Share,
     /// CAN FD data phase: bit rate and sample point; `None` for classic CAN.
-    pub data: Option<(u32, u16)>,
+    pub data: Option<(u32, Share)>,
     pub mode: Mode,
     /// Transceiver delay compensation of the data phase (auto from about 1 Mbit/s up is usual).
     pub tdc: Tdc,
@@ -51,7 +51,7 @@ impl Setup {
     pub fn classic(rate: u32) -> Setup {
         Setup {
             rate,
-            sample_point: 875,
+            sample_point: Share::bounded(875),
             data: None,
             mode: Mode::Normal,
             tdc: Tdc::Off,
@@ -64,7 +64,7 @@ impl Setup {
     /// CAN FD at `rate` nominal and `data_rate` in the data phase (sampled at 75 %, TDC auto from 1 Mbit/s up).
     pub fn fd(rate: u32, data_rate: u32) -> Setup {
         Setup {
-            data: Some((data_rate, 750)),
+            data: Some((data_rate, Share::bounded(750))),
             tdc: if data_rate >= 1_000_000 {
                 Tdc::Auto
             } else {
@@ -76,7 +76,7 @@ impl Setup {
 
     /// The `CanConfig` to send.
     pub fn to_config(&self) -> CanConfig {
-        let timing = |rate: u32, sample_point: u16| Timing::Rate {
+        let timing = |rate: u32, sample_point: Share| Timing::Rate {
             rate: Baud::base(rate),
             sample_point,
         };
@@ -146,7 +146,7 @@ impl CanRx {
                             })
                             .and_then(|us| u64::try_from(us).ok()),
                         frame: value.frame,
-                        filter: value.filter.map(|f| f.0),
+                        filter: value.filter.map(|f| f.get().0),
                     }));
                 }
                 StreamEvent::Gap { units, .. } => return Ok(RxEvent::Lost(units)),
@@ -240,7 +240,9 @@ impl {{ T }} {
 
     /// Drops every frame queued for sending; answers how many.
     pub async fn can_tx_abort(&self, index: u32) -> Result<u32> {
-        call("Can::tx_abort", self.raw.can(index).tx_abort()).await
+        call("Can::tx_abort", self.raw.can(index).tx_abort())
+            .await
+            .map(|n| n.get())
     }
 
 {% if c.family == "g0" %}
@@ -303,7 +305,7 @@ pub fn parse_rate(s: &str) -> Result<u32> {
 }
 
 /// A sample point in percent (`87.5`) as tenths of a percent (875).
-pub fn parse_sample_point(s: &str) -> Result<u16> {
+pub fn parse_sample_point(s: &str) -> Result<Share> {
     let pct: f64 = s
         .trim()
         .trim_end_matches('%')
@@ -312,7 +314,8 @@ pub fn parse_sample_point(s: &str) -> Result<u16> {
     if !(0.0..100.0).contains(&pct) || pct == 0.0 {
         return Err(Error::Invalid(format!("sample point {pct} % out of range")));
     }
-    Ok((pct * 10.0).round() as u16)
+    Share::try_new((pct * 10.0).round() as u16)
+        .map_err(|_| Error::Invalid(format!("sample point {pct} % out of range")))
 }
 
 /// An ID in the frame syntax of [frame_text]: 3 hex digits standard, 8 extended.
@@ -352,7 +355,7 @@ pub fn parse_filter(s: &str) -> Result<Filter> {
     Ok(Filter {
         matching,
         action: FilterAction::Fifo {
-            fifo: 0,
+            fifo: FifoIndex::new(0),
             high_priority: false,
         },
     })
@@ -368,7 +371,9 @@ pub fn filter_config(
     let non_matching = if reject_others && !filters.is_empty() {
         NonMatching::Reject
     } else {
-        NonMatching::Accept { fifo: 0 }
+        NonMatching::Accept {
+            fifo: FifoIndex::new(0),
+        }
     };
     Ok(FilterConfigOwned {
         filters: MaxLen::new(filters).map_err(|_| Error::Invalid("too many filters".into()))?,
@@ -403,8 +408,11 @@ pub fn parse_mode(s: &str) -> Result<Mode> {
 /// A bit timing as `500 kbit/s at 87.5 %` (segments with the controller clock `clock_hz`).
 pub fn timing_text(t: &Timing, clock_hz: u32) -> String {
     let (rate, sp) = match t {
-        Timing::Rate { rate, sample_point } => (Some(rate.to_f64() as u32), *sample_point),
-        Timing::Segments(bt) => (bt.bit_rate(clock_hz), bt.sample_point()),
+        Timing::Rate { rate, sample_point } => (Some(rate.to_f64() as u32), sample_point.get()),
+        Timing::Segments(bt) => (
+            bt.bit_rate(Hertz::base(clock_hz)).map(|r| r.get()),
+            bt.sample_point().get(),
+        ),
         _ => (None, 0),
     };
     let rate = match rate {
@@ -484,8 +492,8 @@ mod tests {
         assert!(parse_rate("fast").is_err());
         assert!(parse_rate("0").is_err());
         assert!(parse_rate("0.5").is_err());
-        assert_eq!(parse_sample_point("87.5").unwrap(), 875);
-        assert_eq!(parse_sample_point("75%").unwrap(), 750);
+        assert_eq!(parse_sample_point("87.5").unwrap().get(), 875);
+        assert_eq!(parse_sample_point("75%").unwrap().get(), 750);
         assert!(parse_sample_point("100").is_err());
     }
 
@@ -527,7 +535,9 @@ mod tests {
         let all = filter_config(vec![], true, false).unwrap();
         assert_eq!(
             all.non_matching_standard,
-            ww_can_bus::NonMatching::Accept { fifo: 0 }
+            ww_can_bus::NonMatching::Accept {
+                fifo: FifoIndex::new(0),
+            }
         );
         let slice = all.filters.clone().into_inner();
         let borrowed = ww_can_bus::FilterConfig {
@@ -582,9 +592,10 @@ mod tests {
         ] {
             let hw = bedrock_can::resolve(&setup.to_config(), &CONTROLLER).unwrap();
             let clock = CONTROLLER.clock_hz;
-            assert_eq!(hw.nominal.bit_rate(clock), Some(setup.rate));
+            assert_eq!(bedrock_can::bit_rate(clock, &hw.nominal), Some(setup.rate));
             assert_eq!(
-                hw.data.map(|d| d.timing.bit_rate(clock).unwrap()),
+                hw.data
+                    .map(|d| bedrock_can::bit_rate(clock, &d.timing).unwrap()),
                 setup.data.map(|(r, _)| r)
             );
         }

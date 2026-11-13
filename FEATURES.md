@@ -594,10 +594,12 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   frames to send (`tx_plan`), error state (`status`), capabilities with the board's terminators, all in `ww_can_bus`'s typed numbers (wire_weaver STD-114). Host-tested,
   no_std (clippy for thumbv6m). Used by the template's `--can` (TPL-53, matrix `g0can` / `h7can`) and its host client; B135 could move onto it
   (its firmware keeps `b135_board::can` until its owner decides).
-- 🚧 **DEV-19 CAN on typed ww_can_bus** (wire_weaver STD-114, wire `w2.0`): `bedrock_can` on `ww_can_bus`'s typed
+- ✅ **DEV-19 CAN on typed ww_can_bus** (wire_weaver STD-114, wire `w2.0`): `bedrock_can`, the template's `--can`
+  firmware (`src/can.rs`, `src/ww/can.rs`) and its suite client (`client/src/can.rs`) on `ww_can_bus`'s typed
   numbers. The arithmetic stays on plain integers and converts at the `ww_can_bus` boundary (`.get()`,
-  `Fixed::new`, `Index::new`); `bedrock_can::bit_rate` keeps the plain-integer rate for firmware logs. Not yet: the
-  template's `--can` firmware and suite client.
+  `Fixed::new`, `Index::new`); `bedrock_can::bit_rate` keeps the plain-integer rate for firmware logs. The CAN code
+  of the h7can matrix firmware got 178 B smaller. Matrix `h7can` / `g0can` build against wire_weaver 98913ad only
+  once the rest of the template has moved to it (P2528#13nov-0117).
 - 📋 **DEV-3 `hw_info` trait**: PCBA name, revision, variant, serial.
 - 📋 **DEV-4 `bootloader` trait**: status and entering the bootloader; the built-in ROM bootloader stays reachable
   through the BOOT0 button even when the firmware fails (PCB rule; the button can double as a user button).
