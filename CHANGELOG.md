@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 - `bedrock_clocks` reads exact_units' fallible `numer()` / `denom()` (a value that does not fit u128 is refused) when it writes `clocks.rs`; the output is unchanged (RCC-1).
 - Cargo.lock takes wire_weaver 98913ad (STD-114) and exact_units f81c1a7, which moved together (DEV-19).
 - `bedrock_sync` with `ww-timebase` follows wire_weaver EVO-58 (`ww_timebase` on wire `w2.0`): it reads a `SteerPoint`'s typed `shared` (`UnixMicros`), `rate` (`Ppb`) and `error` (`Micros`) and a steerer's `InstanceId`, and reports `SyncStatus::slew` as `Micros<i32>`. The clock itself still runs on plain µs, and its behaviour is unchanged (DEV-13).
+- `bedrock_rom_boot` with `ww-dfu` follows wire_weaver EVO-65 (`ww_dfu` on wire `w2.0`): `dfu::node` answers `app: None` (no image descriptor), `security_floor` 0 and `geometry` 0, and the last result has no version. These are the same facts as before in the new shape (DEV-16).
 
 ## [0.2.63] - 2026-11-10
 

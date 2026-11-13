@@ -26,7 +26,8 @@
 use crate::Reboot;
 use wire_weaver::prelude::MaxLen;
 use ww_dfu::{
-    BootState, BootTarget, Error, LastResult, NodeInfo, Offers, Outcome, Profile, Role, Seal,
+    BootState, BootTarget, Error, GeometryId, LastResult, NodeInfo, Offers, Outcome, Profile, Role,
+    Seal, SecurityCounter,
 };
 
 /// `BootControl::boot_state`: the running image is the only one, always confirmed.
@@ -53,7 +54,7 @@ pub const fn reboot_target(into: BootTarget) -> Reboot {
 }
 
 /// `UpdateNode::node`: the firmware in place, updated by the ROM bootloader (`device.boot` only, like an RP2350 with
-/// BOOTSEL), images not sealed (no product id, version, floor or manifest). `product` is cut to
+/// BOOTSEL), images not sealed (no image descriptor, so no `app`, a zero security floor, no manifest). `product` is cut to
 /// `ww_dfu::MAX_PRODUCT_LEN` bytes at a character boundary; `fell_back` (the runtime's `fell_back`) makes the last
 /// result `Recovery`: the ROM took over after a boot loop. Requested updates are not tracked.
 pub fn node(product: &str, fell_back: bool) -> NodeInfo<'_> {
@@ -65,11 +66,10 @@ pub fn node(product: &str, fell_back: bool) -> NodeInfo<'_> {
         role: Role::App,
         profile: Profile::InPlace,
         product: MaxLen::new_unchecked(&product[..len]),
-        geometry_id: 0,
-        product_id: 0,
+        geometry: GeometryId(0),
         seal: Seal::Unsigned,
-        app_version: None,
-        version_floor: 0,
+        app: None,
+        security_floor: SecurityCounter(0),
         manifest_digest: None,
         boot_state: BootState::Confirmed,
         last_result: LastResult {
@@ -78,7 +78,7 @@ pub fn node(product: &str, fell_back: bool) -> NodeInfo<'_> {
             } else {
                 Outcome::Nothing
             },
-            version: 0,
+            version: None,
         },
         offers: Offers {
             boot_control: true,
