@@ -591,7 +591,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `Controller` (`h7`: 64 / 32 filters, FIFOs 64 / 32, TX 32 as B135; `h7_half` for a second H7 instance; `g0`: the
   fixed 3 / 3 / 3 RAM and no filter elements, which the `mcan` driver lacks on G0 so far): bit timing from a rate and
   sample point (exact rates only), configuration checks (`resolve`), filters onto elements (`HwFilters::map`),
-  frames to send (`tx_plan`), error state (`status`), capabilities with the board's terminators, all in `ww_can_bus`'s typed numbers (wire_weaver STD-114). Host-tested,
+  frames to send (`tx_plan`, its length a `FrameLen`: exact_units' `OneOf<CanFdLengths>`, an FD payload padded
+  up by `fd_len`), error state (`status`), capabilities with the board's terminators, all in `ww_can_bus`'s typed
+  numbers (wire_weaver STD-114). Host-tested,
   no_std (clippy for thumbv6m). Used by the template's `--can` (TPL-53, matrix `g0can` / `h7can`) and its host client; B135 could move onto it
   (its firmware keeps `b135_board::can` until its owner decides).
 - ✅ **DEV-19 CAN on typed ww_can_bus** (wire_weaver STD-114, wire `w2.0`): `bedrock_can`, the template's `--can`

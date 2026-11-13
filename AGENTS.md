@@ -71,7 +71,8 @@ so a missing entry means work nobody sees.
   wire_weaver's `ww_clock_sync`. Firmware takes it by path, like `bedrock_led`, which aligns its animations to it.
 - `bedrock_can/` — an FDCAN (M_CAN) channel as `ww_can_bus::Can` without a HAL (bit timing, configuration and
   filter checks against a `Controller` layout, frames to send, error state), from B135; the template's `--can`
-  firmware and its host client use it. Firmware takes it by path, like `bedrock_led`.
+  firmware and its host client use it. CAN FD lengths are exact_units' `OneOf<CanFdLengths>` (`FrameLen`), never a
+  local table. Firmware takes it by path, like `bedrock_led`.
 - `bedrock_usb/` — a USB device stack for STM32 fixed at compile time, full speed and high speed (FEATURES.md area `USBD`): shared
   types in `lib.rs`, the device as a `const` and its descriptors as `const fn` output (`desc.rs`), the usb_v4
   endpoint registers and USB SRAM layout with its RM0444 checks (`layout.rs`), `descriptors!` and `state!`

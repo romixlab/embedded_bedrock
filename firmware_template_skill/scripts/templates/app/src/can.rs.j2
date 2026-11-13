@@ -897,7 +897,7 @@ pub fn tx_frame(plan: &bedrock_can::TxPlan, data: &[u8]) -> Option<TxFrame> {
             marker: None,
         },
         data: bytes,
-        len: plan.len,
+        len: plan.len.get(),
     })
 }
 

@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ### Changed
 
+- **Breaking:** `bedrock_can` takes its CAN FD lengths from exact_units NUM-31: `FrameLen` is `Fixed<Byte, One, u8, OneOf<CanFdLengths>>`, a length a DLC can say (0..=8, 12, 16, 20, 24, 32, 48, 64); `fd_len` returns `Option<FrameLen>` (`try_new_rounded(len, Rounding::Ceil)`), and `TxPlan::len` is a `FrameLen` (`.get()` for the byte count). The local `FD_LENGTHS` table is gone. Lengths are unchanged: tests pin every length 0..=300 and every frame kind (DEV-17).
 - **Breaking:** `bedrock_can` follows wire_weaver STD-114 (`ww_can_bus` typed numbers, wire `w2.0`): `NOMINAL` and `DATA` hold their limits as `Fixed` time quanta and prescalers, `rate_segments` and `check_segments` read and build `BitTiming` with typed segments, `capabilities` reports its FIFOs, queues and filters as counted `Fixed`s, and an invalid argument names its position as an `Index`. Behaviour is unchanged: the tests pin every length and every frame kind (DEV-19).
 - `bedrock_clocks` reads exact_units' fallible `numer()` / `denom()` (a value that does not fit u128 is refused) when it writes `clocks.rs`; the output is unchanged (RCC-1).
 - Cargo.lock takes wire_weaver 98913ad (STD-114) and exact_units f81c1a7, which moved together (DEV-19).

@@ -20,7 +20,10 @@ use ww_can_bus::{
 use ww_si::ww_numeric::NumericValue;
 use ww_si::{Overflow, Prefix, Rounding};
 
-use exact_units::{Fixed, Index};
+use exact_units::codec::CanFdLengths;
+use exact_units::prefix::One;
+use exact_units::units::Byte;
+use exact_units::{Fixed, Index, OneOf};
 
 /// Nominal bit timing as M_CAN `NBTP` holds it (RM0468 FDCAN_NBTP, `mcan::NominalBitTiming`).
 pub const NOMINAL: TimingLimits = TimingLimits {
@@ -653,15 +656,13 @@ fn map_filter(f: &Filter) -> Result<(bool, HwFilter), CanError<'static>> {
 
 // ---- frames ----
 
-/// CAN FD data lengths, by DLC 9..15.
-const FD_LENGTHS: [u8; 7] = [12, 16, 20, 24, 32, 48, 64];
+/// A data length a frame can say with its DLC: 0..=8, 12, 16, 20, 24, 32, 48 or 64 bytes (exact_units'
+/// `CanFdLengths`; the DLC itself is `Coded<CanFdDlc>`). A classic frame's length is one of 0..=8.
+pub type FrameLen = Fixed<Byte, One, u8, OneOf<CanFdLengths>>;
 
-/// The FD frame length `len` bytes are sent in (padded with zeroes), `None` above 64.
-pub fn fd_len(len: usize) -> Option<u8> {
-    if len <= 8 {
-        return Some(len as u8);
-    }
-    FD_LENGTHS.iter().copied().find(|&l| l as usize >= len)
+/// The FD frame length `len` bytes are sent in (padded with zeroes): the next FD length up, `None` above 64.
+pub fn fd_len(len: usize) -> Option<FrameLen> {
+    FrameLen::try_new_rounded(u8::try_from(len).ok()?, exact_units::Rounding::Ceil)
 }
 
 /// A frame to hand to the controller.
@@ -674,7 +675,7 @@ pub struct TxPlan {
     pub brs: bool,
     pub rtr: bool,
     /// Length on the bus: the remote frame's DLC, or the data padded up to an FD length.
-    pub len: u8,
+    pub len: FrameLen,
 }
 
 /// Why a frame of `tx` is not sent.
@@ -693,10 +694,12 @@ pub enum TxReject {
 pub fn tx_plan(frame: &Frame<'_>, fd_on: bool) -> Result<TxPlan, TxReject> {
     let (extended, id) = raw(frame.id);
     let data_len = frame.data.len();
+    // a classic length (0..=8) is one of the set: `try_new` refuses nothing it is given here
+    let classic = |len: u8| FrameLen::try_new(len).map_err(|_| TxReject::BadLength);
     let (fd, brs, rtr, len) = match frame.kind {
-        FrameKind::Data if data_len <= 8 => (false, false, false, data_len as u8),
+        FrameKind::Data if data_len <= 8 => (false, false, false, classic(data_len as u8)?),
         FrameKind::Remote { len } if data_len == 0 && len.value() <= 8 => {
-            (false, false, true, len.value())
+            (false, false, true, classic(len.value())?)
         }
         FrameKind::Fd { brs, .. } => {
             if !fd_on {
@@ -1255,7 +1258,7 @@ mod tests {
     fn tx_frames() {
         let p = tx_plan(&frame(std(0x123), FrameKind::Data, &[1, 2, 3]), false).unwrap();
         assert_eq!(
-            (p.extended, p.id, p.fd, p.rtr, p.len),
+            (p.extended, p.id, p.fd, p.rtr, p.len.get()),
             (false, 0x123, false, false, 3)
         );
         let p = tx_plan(
@@ -1269,13 +1272,13 @@ mod tests {
             false,
         )
         .unwrap();
-        assert_eq!((p.extended, p.rtr, p.len), (true, true, 8));
+        assert_eq!((p.extended, p.rtr, p.len.get()), (true, true, 8));
         let fd = FrameKind::Fd {
             brs: true,
             esi: false,
         };
         let p = tx_plan(&frame(std(1), fd, &[0; 13]), true).unwrap();
-        assert_eq!((p.fd, p.brs, p.len), (true, true, 16));
+        assert_eq!((p.fd, p.brs, p.len.get()), (true, true, 16));
         assert_eq!(
             tx_plan(&frame(std(1), fd, &[0; 13]), false),
             Err(TxReject::FdOff)
@@ -1330,7 +1333,7 @@ mod tests {
     #[test]
     fn fd_lengths() {
         for len in (0..=300).chain([511, 512, usize::MAX]) {
-            assert_eq!(fd_len(len), fd_frame_len(len), "{len}");
+            assert_eq!(fd_len(len).map(|l| l.get()), fd_frame_len(len), "{len}");
         }
     }
 
@@ -1350,10 +1353,10 @@ mod tests {
             } else {
                 Err(TxReject::BadLength)
             };
-            assert_eq!(classic.map(|p| p.len), want, "classic {len}");
+            assert_eq!(classic.map(|p| p.len.get()), want, "classic {len}");
             let p = tx_plan(&frame(std(1), fd, &data[..len]), true);
             assert_eq!(
-                p.map(|p| p.len),
+                p.map(|p| p.len.get()),
                 fd_frame_len(len).ok_or(TxReject::BadLength),
                 "fd {len}"
             );
@@ -1368,7 +1371,7 @@ mod tests {
                 Err(TxReject::BadLength)
             };
             assert_eq!(
-                tx_plan(&frame(std(1), remote, &[]), true).map(|p| p.len),
+                tx_plan(&frame(std(1), remote, &[]), true).map(|p| p.len.get()),
                 want,
                 "remote {len}"
             );
