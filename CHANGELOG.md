@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 - **Breaking:** `bedrock_can` follows wire_weaver STD-114 (`ww_can_bus` typed numbers, wire `w2.0`): `NOMINAL` and `DATA` hold their limits as `Fixed` time quanta and prescalers, `rate_segments` and `check_segments` read and build `BitTiming` with typed segments, `capabilities` reports its FIFOs, queues and filters as counted `Fixed`s, and an invalid argument names its position as an `Index`. Behaviour is unchanged: the tests pin every length and every frame kind (DEV-19).
 - `bedrock_clocks` reads exact_units' fallible `numer()` / `denom()` (a value that does not fit u128 is refused) when it writes `clocks.rs`; the output is unchanged (RCC-1).
 - Cargo.lock takes wire_weaver 98913ad (STD-114) and exact_units f81c1a7, which moved together (DEV-19).
+- `bedrock_sync` with `ww-timebase` follows wire_weaver EVO-58 (`ww_timebase` on wire `w2.0`): it reads a `SteerPoint`'s typed `shared` (`UnixMicros`), `rate` (`Ppb`) and `error` (`Micros`) and a steerer's `InstanceId`, and reports `SyncStatus::slew` as `Micros<i32>`. The clock itself still runs on plain µs, and its behaviour is unchanged (DEV-13).
 
 ## [0.2.63] - 2026-11-10
 
