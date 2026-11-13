@@ -20,26 +20,28 @@ use ww_can_bus::{
 use ww_si::ww_numeric::NumericValue;
 use ww_si::{Overflow, Prefix, Rounding};
 
+use exact_units::{Fixed, Index};
+
 /// Nominal bit timing as M_CAN `NBTP` holds it (RM0468 FDCAN_NBTP, `mcan::NominalBitTiming`).
 pub const NOMINAL: TimingLimits = TimingLimits {
-    prescaler_min: 1,
-    prescaler_max: 512,
-    seg1_min: 2,
-    seg1_max: 256,
-    seg2_min: 1,
-    seg2_max: 128,
-    sjw_max: 128,
+    prescaler_min: Fixed::new(1),
+    prescaler_max: Fixed::new(512),
+    seg1_min: Fixed::new(2),
+    seg1_max: Fixed::new(256),
+    seg2_min: Fixed::new(1),
+    seg2_max: Fixed::new(128),
+    sjw_max: Fixed::new(128),
 };
 
 /// Data bit timing as M_CAN `DBTP` holds it (RM0468 FDCAN_DBTP, `mcan::DataBitTiming`).
 pub const DATA: TimingLimits = TimingLimits {
-    prescaler_min: 1,
-    prescaler_max: 32,
-    seg1_min: 1,
-    seg1_max: 32,
-    seg2_min: 1,
-    seg2_max: 16,
-    sjw_max: 16,
+    prescaler_min: Fixed::new(1),
+    prescaler_max: Fixed::new(32),
+    seg1_min: Fixed::new(1),
+    seg1_max: Fixed::new(32),
+    seg2_min: Fixed::new(1),
+    seg2_max: Fixed::new(16),
+    sjw_max: Fixed::new(16),
 };
 
 /// Most standard filter elements a [Controller] may have ([HwFilters] holds this many).
@@ -154,13 +156,13 @@ pub fn capabilities(
             resolution: Second::from_parts(Prefix::Micro, NumericValue::U8(1)),
             point: TimestampPoint::Software,
         }),
-        rx_fifos: 2,
-        rx_fifo_depth: rx_queue,
-        tx_queue_depth: tx_queue,
-        tx_buffers: 0,
-        rx_buffers: 0,
-        standard_filters: controller.standard_filters as u16,
-        extended_filters: controller.extended_filters as u16,
+        rx_fifos: Fixed::new(2),
+        rx_fifo_depth: Fixed::new(rx_queue),
+        tx_queue_depth: Fixed::new(tx_queue),
+        tx_buffers: Fixed::new(0),
+        rx_buffers: Fixed::new(0),
+        standard_filters: Fixed::new(controller.standard_filters as u16),
+        extended_filters: Fixed::new(controller.extended_filters as u16),
         filter_mask: controller.max_filters() > 0,
         filter_range: controller.max_filters() > 0,
         memory: None,
@@ -176,7 +178,7 @@ pub fn capabilities(
 
 fn invalid(arg: u8, reason: &'static str) -> CanError<'static> {
     CanError::Common(CommonError::InvalidArgument {
-        arg,
+        arg: Index::new(arg),
         reason: MaxLen::new_unchecked(reason),
     })
 }
@@ -187,18 +189,31 @@ fn unsupported() -> CanError<'static> {
 
 /// `bt` is within `limits` and a valid bit (`sjw` no longer than either phase segment).
 pub fn check_segments(bt: &BitTiming, limits: &TimingLimits) -> Result<(), CanError<'static>> {
-    let ok = (limits.prescaler_min..=limits.prescaler_max).contains(&bt.prescaler)
-        && (limits.seg1_min..=limits.seg1_max).contains(&bt.seg1)
-        && (limits.seg2_min..=limits.seg2_max).contains(&bt.seg2)
-        && bt.sjw >= 1
-        && bt.sjw <= limits.sjw_max
-        && bt.sjw <= bt.seg2
-        && bt.sjw as u16 <= bt.seg1;
+    let (prescaler, seg1, seg2, sjw) = (
+        bt.prescaler.get(),
+        bt.seg1.get(),
+        bt.seg2.get(),
+        bt.sjw.get(),
+    );
+    let ok = (limits.prescaler_min.get()..=limits.prescaler_max.get()).contains(&prescaler)
+        && (limits.seg1_min.get()..=limits.seg1_max.get()).contains(&seg1)
+        && (limits.seg2_min.get()..=limits.seg2_max.get()).contains(&seg2)
+        && sjw >= 1
+        && sjw <= limits.sjw_max.get()
+        && sjw <= seg2
+        && sjw as u16 <= seg1;
     if ok {
         Ok(())
     } else {
         Err(invalid(0, "bit timing outside the controller's limits"))
     }
+}
+
+/// Bit rate of `bt` at kernel clock `clock_hz`, rounded down; `None` for a zero prescaler. `BitTiming::bit_rate` on
+/// plain integers, for firmware that logs the rate without converting a `Hertz`.
+pub fn bit_rate(clock_hz: u32, bt: &BitTiming) -> Option<u32> {
+    let quanta = 1 + bt.seg1.get() as u32 + bt.seg2.get() as u32;
+    clock_hz.checked_div((bt.prescaler.get() as u32).checked_mul(quanta)?)
 }
 
 /// Segments for `rate` bit/s sampled at `sample_point` tenths of a percent, at an exact bit rate: the prescaler with
@@ -214,10 +229,12 @@ pub fn rate_segments(
     if rate == 0 || sample_point == 0 || sample_point >= 1000 {
         return None;
     }
-    let min_quanta = 1 + limits.seg1_min as u32 + limits.seg2_min as u32;
-    let max_quanta = 1 + limits.seg1_max as u32 + limits.seg2_max as u32;
+    let (seg1_min, seg1_max) = (limits.seg1_min.get() as u32, limits.seg1_max.get() as u32);
+    let (seg2_min, seg2_max) = (limits.seg2_min.get() as u32, limits.seg2_max.get() as u32);
+    let min_quanta = 1 + seg1_min + seg2_min;
+    let max_quanta = 1 + seg1_max + seg2_max;
     let mut best: Option<(u32, BitTiming)> = None;
-    for prescaler in limits.prescaler_min..=limits.prescaler_max {
+    for prescaler in limits.prescaler_min.get()..=limits.prescaler_max.get() {
         let per_bit = prescaler as u64 * rate as u64;
         if !(clock_hz as u64).is_multiple_of(per_bit) {
             continue;
@@ -228,19 +245,19 @@ pub fn rate_segments(
         }
         // quanta up to the sample point, rounded, then moved into the limits
         let before = (quanta * sample_point as u32 + 500) / 1000;
-        let seg2 = (quanta - before).clamp(limits.seg2_min as u32, limits.seg2_max as u32);
+        let seg2 = (quanta - before).clamp(seg2_min, seg2_max);
         let seg1 = quanta - 1 - seg2;
-        if seg1 < limits.seg1_min as u32 || seg1 > limits.seg1_max as u32 {
+        if seg1 < seg1_min || seg1 > seg1_max {
             continue;
         }
-        let sjw = seg2.min(seg1).min(limits.sjw_max as u32);
+        let sjw = seg2.min(seg1).min(limits.sjw_max.get() as u32);
         let bt = BitTiming {
-            prescaler,
-            seg1: seg1 as u16,
-            seg2: seg2 as u8,
-            sjw: sjw as u8,
+            prescaler: Fixed::new(prescaler),
+            seg1: Fixed::new(seg1 as u16),
+            seg2: Fixed::new(seg2 as u8),
+            sjw: Fixed::new(sjw as u8),
         };
-        let error = (bt.sample_point() as i32 - sample_point as i32).unsigned_abs();
+        let error = (bt.sample_point().get() as i32 - sample_point as i32).unsigned_abs();
         if best.as_ref().is_none_or(|(e, _)| error < *e) {
             best = Some((error, bt));
         }
@@ -263,7 +280,7 @@ pub fn segments(
             let rate = rate
                 .to_in::<u32>(Prefix::Unit, Rounding::Truncate, Overflow::Checked)
                 .ok_or(invalid(0, "bit rate out of range"))?;
-            rate_segments(clock_hz, rate, *sample_point, limits).ok_or(invalid(
+            rate_segments(clock_hz, rate, sample_point.get(), limits).ok_or(invalid(
                 0,
                 "bit rate not reachable exactly at the controller clock",
             ))
@@ -395,14 +412,16 @@ fn resolve_fd(fd: &FdConfig, clock_hz: u32) -> Result<DataPhase, CanError<'stati
         Tdc::Off => None,
         Tdc::Auto => {
             // secondary sample point at the data sample point, in clock periods
-            let offset = (1 + timing.seg1 as u32) * timing.prescaler as u32;
+            let offset = (1 + timing.seg1.get() as u32) * timing.prescaler.get() as u32;
             Some((offset, 0))
         }
-        Tdc::Manual { offset, filter } => Some((offset as u32, filter.unwrap_or(0) as u32)),
+        Tdc::Manual { offset, filter } => {
+            Some((offset.get() as u32, filter.map_or(0, |f| f.get()) as u32))
+        }
         _ => return Err(unsupported()),
     };
     if let Some((offset, filter)) = tdc {
-        if timing.prescaler > TDC_MAX_PRESCALER {
+        if timing.prescaler.get() > TDC_MAX_PRESCALER {
             return Err(invalid(0, "TDC needs a data prescaler of 1 or 2"));
         }
         if offset > TDC_MAX as u32 || filter > TDC_MAX as u32 {
@@ -427,8 +446,8 @@ impl HwConfig {
                 tdc: match d.tdc {
                     None => Tdc::Off,
                     Some((offset, filter)) => Tdc::Manual {
-                        offset,
-                        filter: (filter != 0).then_some(filter),
+                        offset: Fixed::new(offset),
+                        filter: (filter != 0).then_some(Fixed::new(filter)),
                     },
                 },
                 iso: d.iso,
@@ -533,13 +552,15 @@ impl HwFilters {
         for filter in config.filters.iter() {
             let filter = filter.map_err(|_| invalid(0, "malformed filter"))?;
             if n >= max {
-                return Err(CanError::OutOfFilters { max: max as u16 });
+                return Err(CanError::OutOfFilters {
+                    max: Fixed::new(max as u16),
+                });
             }
             let (extended, element) = map_filter(&filter)?;
             if extended {
                 if ext >= extended_max {
                     return Err(CanError::OutOfFilters {
-                        max: extended_max as u16,
+                        max: Fixed::new(extended_max as u16),
                     });
                 }
                 hw.extended[ext] = Some(element);
@@ -548,7 +569,7 @@ impl HwFilters {
             } else {
                 if std >= standard_max {
                     return Err(CanError::OutOfFilters {
-                        max: standard_max as u16,
+                        max: Fixed::new(standard_max as u16),
                     });
                 }
                 hw.standard[std] = Some(element);
@@ -578,7 +599,7 @@ impl HwFilters {
 
 fn non_matching(n: NonMatching) -> Result<HwNonMatching, CanError<'static>> {
     match n {
-        NonMatching::Accept { fifo } if fifo <= 1 => Ok(Some(fifo)),
+        NonMatching::Accept { fifo } if fifo.get() <= 1 => Ok(Some(fifo.get())),
         NonMatching::Accept { .. } => Err(invalid(0, "receive FIFO 0 or 1 only")),
         NonMatching::Reject => Ok(None),
         _ => Err(unsupported()),
@@ -618,8 +639,8 @@ fn map_filter(f: &Filter) -> Result<(bool, HwFilter), CanError<'static>> {
         FilterAction::Fifo {
             fifo,
             high_priority,
-        } if fifo <= 1 => HwAction::Fifo {
-            fifo,
+        } if fifo.get() <= 1 => HwAction::Fifo {
+            fifo: fifo.get(),
             priority: high_priority,
         },
         FilterAction::Fifo { .. } => return Err(invalid(0, "receive FIFO 0 or 1 only")),
@@ -767,7 +788,25 @@ pub fn status(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ww_can_bus::Baud;
+    use ww_can_bus::{Baud, Hertz, Share};
+
+    /// Bit rate of `bt` at `clock_hz`, in whole bit/s, by `ww_can_bus`; [super::bit_rate] must agree.
+    fn bit_rate(bt: &BitTiming, clock_hz: u32) -> Option<u32> {
+        let rate = bt
+            .bit_rate(Hertz::from_parts(Prefix::Unit, NumericValue::U32(clock_hz)))
+            .map(|b| b.get());
+        assert_eq!(super::bit_rate(clock_hz, bt), rate, "{bt:?}");
+        rate
+    }
+
+    /// Prescaler, quanta per bit and sample point of `bt`, as plain numbers.
+    fn shape(bt: &BitTiming) -> (u16, u32, u16) {
+        (
+            bt.prescaler.get(),
+            bt.quanta().get(),
+            bt.sample_point().get(),
+        )
+    }
 
     /// B135's kernel clock (PLL2P): 80 MHz hits every common nominal and data rate exactly (2, 4, 5 and 8 Mbit/s
     /// too, which 135 MHz can't).
@@ -777,7 +816,7 @@ mod tests {
     fn rate(r: u32, sp: u16) -> Timing {
         Timing::Rate {
             rate: Baud::from_parts(Prefix::Unit, NumericValue::U32(r)),
-            sample_point: sp,
+            sample_point: Share::try_new(sp).unwrap(),
         }
     }
 
@@ -794,17 +833,17 @@ mod tests {
             (1_000_000, 800),
         ] {
             let bt = segments(CLOCK_HZ, &rate(r, sp), &NOMINAL).unwrap();
-            assert_eq!(bt.bit_rate(CLOCK_HZ), Some(r), "{r}");
-            assert!(CLOCK_HZ.is_multiple_of(bt.prescaler as u32 * bt.quanta()));
+            assert_eq!(bit_rate(&bt, CLOCK_HZ), Some(r), "{r}");
+            assert!(CLOCK_HZ.is_multiple_of(bt.prescaler.get() as u32 * bt.quanta().get()));
             assert!(
-                (bt.sample_point() as i32 - sp as i32).abs() <= 10,
+                (bt.sample_point().get() as i32 - sp as i32).abs() <= 10,
                 "{r}: {bt:?}"
             );
             check_segments(&bt, &NOMINAL).unwrap();
         }
         for r in [1_000_000, 2_000_000, 4_000_000, 5_000_000, 8_000_000] {
             let bt = segments(CLOCK_HZ, &rate(r, 750), &DATA).unwrap();
-            assert_eq!(bt.bit_rate(CLOCK_HZ), Some(r), "{r}");
+            assert_eq!(bit_rate(&bt, CLOCK_HZ), Some(r), "{r}");
             check_segments(&bt, &DATA).unwrap();
         }
     }
@@ -816,18 +855,18 @@ mod tests {
         assert_eq!(
             bt,
             BitTiming {
-                prescaler: 1,
-                seg1: 139,
-                seg2: 20,
-                sjw: 20
+                prescaler: Fixed::new(1),
+                seg1: Fixed::new(139),
+                seg2: Fixed::new(20),
+                sjw: Fixed::new(20)
             }
         );
         // 2 Mbit/s data: 40 quanta of one clock period
         let bt = rate_segments(CLOCK_HZ, 2_000_000, 750, &DATA).unwrap();
-        assert_eq!((bt.prescaler, bt.quanta(), bt.sample_point()), (1, 40, 750));
+        assert_eq!(shape(&bt), (1, 40, 750));
         // 1 Mbit/s data: 80 quanta don't fit seg1 <= 31 + seg2 <= 15, so prescaler 2 with 40
         let bt = rate_segments(CLOCK_HZ, 1_000_000, 750, &DATA).unwrap();
-        assert_eq!((bt.prescaler, bt.quanta(), bt.sample_point()), (2, 40, 750));
+        assert_eq!(shape(&bt), (2, 40, 750));
     }
 
     #[test]
@@ -845,31 +884,58 @@ mod tests {
     #[test]
     fn segments_checked() {
         let ok = BitTiming {
-            prescaler: 1,
-            seg1: 13,
-            seg2: 2,
-            sjw: 1,
+            prescaler: Fixed::new(1),
+            seg1: Fixed::new(13),
+            seg2: Fixed::new(2),
+            sjw: Fixed::new(1),
         };
         check_segments(&ok, &DATA).unwrap();
         for bad in [
-            BitTiming { prescaler: 0, ..ok },
             BitTiming {
-                prescaler: 33,
+                prescaler: Fixed::new(0),
                 ..ok
             },
-            BitTiming { seg1: 33, ..ok },
-            BitTiming { seg2: 0, ..ok },
-            BitTiming { seg2: 17, ..ok },
-            BitTiming { sjw: 0, ..ok },
-            BitTiming { sjw: 3, ..ok },
+            BitTiming {
+                prescaler: Fixed::new(33),
+                ..ok
+            },
+            BitTiming {
+                seg1: Fixed::new(33),
+                ..ok
+            },
+            BitTiming {
+                seg2: Fixed::new(0),
+                ..ok
+            },
+            BitTiming {
+                seg2: Fixed::new(17),
+                ..ok
+            },
+            BitTiming {
+                sjw: Fixed::new(0),
+                ..ok
+            },
+            BitTiming {
+                sjw: Fixed::new(3),
+                ..ok
+            },
         ] {
             assert!(check_segments(&bad, &DATA).is_err(), "{bad:?}");
         }
-        assert!(check_segments(&BitTiming { seg1: 1, ..ok }, &NOMINAL).is_err());
         assert!(
             check_segments(
                 &BitTiming {
-                    prescaler: 512,
+                    seg1: Fixed::new(1),
+                    ..ok
+                },
+                &NOMINAL
+            )
+            .is_err()
+        );
+        assert!(
+            check_segments(
+                &BitTiming {
+                    prescaler: Fixed::new(512),
                     ..ok
                 },
                 &NOMINAL
@@ -879,7 +945,7 @@ mod tests {
         assert!(
             check_segments(
                 &BitTiming {
-                    prescaler: 513,
+                    prescaler: Fixed::new(513),
                     ..ok
                 },
                 &NOMINAL
@@ -888,10 +954,10 @@ mod tests {
         );
         // the largest values the registers hold
         let max = BitTiming {
-            prescaler: 32,
-            seg1: 32,
-            seg2: 16,
-            sjw: 16,
+            prescaler: Fixed::new(32),
+            seg1: Fixed::new(32),
+            seg2: Fixed::new(16),
+            sjw: Fixed::new(16),
         };
         check_segments(&max, &DATA).unwrap();
     }
@@ -934,10 +1000,10 @@ mod tests {
         // TDC with prescaler 4 (1 Mbit/s data at 20 quanta) is not possible
         let fd = FdConfig {
             data: Timing::Segments(BitTiming {
-                prescaler: 4,
-                seg1: 14,
-                seg2: 5,
-                sjw: 5,
+                prescaler: Fixed::new(4),
+                seg1: Fixed::new(14),
+                seg2: Fixed::new(5),
+                sjw: Fixed::new(5),
             }),
             tdc: Tdc::Auto,
             iso: true,
@@ -951,7 +1017,7 @@ mod tests {
         let fd = FdConfig {
             data: rate(2_000_000, 750),
             tdc: Tdc::Manual {
-                offset: 128,
+                offset: Fixed::new(128),
                 filter: None,
             },
             iso: true,
@@ -1011,8 +1077,8 @@ mod tests {
     #[test]
     fn default_is_250k() {
         let hw = default_config(&H7).unwrap();
-        assert_eq!(hw.nominal.bit_rate(CLOCK_HZ), Some(250_000));
-        assert_eq!(hw.nominal.sample_point(), 875);
+        assert_eq!(bit_rate(&hw.nominal, CLOCK_HZ), Some(250_000));
+        assert_eq!(hw.nominal.sample_point().get(), 875);
         assert_eq!(resolve(&hw.to_config(), &H7).unwrap(), hw);
     }
 
@@ -1026,7 +1092,7 @@ mod tests {
 
     fn fifo(fifo: u8) -> FilterAction {
         FilterAction::Fifo {
-            fifo,
+            fifo: Index::new(fifo),
             high_priority: false,
         }
     }
@@ -1035,7 +1101,9 @@ mod tests {
         FilterConfig {
             filters: MaxLen::new_unchecked(RefVec::Slice { slice: list }),
             non_matching_standard: NonMatching::Reject,
-            non_matching_extended: NonMatching::Accept { fifo: 1 },
+            non_matching_extended: NonMatching::Accept {
+                fifo: Index::new(1),
+            },
             reject_remote: true,
         }
     }
@@ -1060,7 +1128,7 @@ mod tests {
                     mask: U29::new(0x7F0).unwrap(),
                 },
                 action: FilterAction::Fifo {
-                    fifo: 1,
+                    fifo: Index::new(1),
                     high_priority: true,
                 },
             },
@@ -1118,7 +1186,10 @@ mod tests {
     fn filters_rejected() {
         let one = |matching, action| [Filter { matching, action }];
         let bad = [
-            one(FilterMatch::Exact(std(1)), FilterAction::Buffer(0)),
+            one(
+                FilterMatch::Exact(std(1)),
+                FilterAction::Buffer(Index::new(0)),
+            ),
             one(FilterMatch::Exact(std(1)), fifo(2)),
             one(
                 FilterMatch::Mask {
@@ -1152,7 +1223,7 @@ mod tests {
         assert_eq!(
             HwFilters::map(&filters(&many), &H7),
             Err(CanError::OutOfFilters {
-                max: EXTENDED_FILTERS as u16
+                max: Fixed::new(EXTENDED_FILTERS as u16)
             })
         );
         let many = [Filter {
@@ -1162,11 +1233,13 @@ mod tests {
         assert_eq!(
             HwFilters::map(&filters(&many), &H7),
             Err(CanError::OutOfFilters {
-                max: STANDARD_FILTERS as u16
+                max: Fixed::new(STANDARD_FILTERS as u16)
             })
         );
         let mut c = filters(&[]);
-        c.non_matching_standard = NonMatching::Accept { fifo: 2 };
+        c.non_matching_standard = NonMatching::Accept {
+            fifo: Index::new(2),
+        };
         assert!(HwFilters::map(&c, &H7).is_err());
     }
 
@@ -1346,18 +1419,18 @@ mod tests {
             Some(CLOCK_HZ)
         );
         assert_eq!(c.termination.len(), 0);
-        assert_eq!(c.standard_filters, 64);
-        assert_eq!(c.extended_filters, 32);
+        assert_eq!(c.standard_filters.get(), 64);
+        assert_eq!(c.extended_filters.get(), 32);
     }
     #[test]
     fn g0_global_filter_only() {
         // G0B1 at 64 MHz PCLK: 250 kbit/s exact
         let g0 = Controller::g0(64_000_000);
         let hw = default_config(&g0).unwrap();
-        assert_eq!(hw.nominal.bit_rate(g0.clock_hz), Some(250_000));
-        assert_eq!(hw.nominal.sample_point(), 875);
+        assert_eq!(bit_rate(&hw.nominal, g0.clock_hz), Some(250_000));
+        assert_eq!(hw.nominal.sample_point().get(), 875);
         let c = capabilities(&g0, 64, 32, &[]);
-        assert_eq!((c.standard_filters, c.extended_filters), (0, 0));
+        assert_eq!((c.standard_filters.get(), c.extended_filters.get()), (0, 0));
         assert!(!c.filter_mask && !c.filter_range);
         // no elements: the global filter alone maps, any element is out of filters
         let hw = HwFilters::map(&filters(&[]), &g0).unwrap();
@@ -1368,7 +1441,7 @@ mod tests {
         }];
         assert_eq!(
             HwFilters::map(&filters(&one), &g0),
-            Err(CanError::OutOfFilters { max: 0 })
+            Err(CanError::OutOfFilters { max: Fixed::new(0) })
         );
     }
 

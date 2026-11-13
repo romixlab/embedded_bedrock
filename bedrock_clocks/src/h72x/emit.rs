@@ -35,8 +35,8 @@ fn fixed(name: &str, h: Exact<Hertz>, doc: &str, out: &mut String) {
     let _ = writeln!(
         out,
         "pub const {name}: Fixed<Hertz, Rational<1, {}>, u64> = Fixed::new({});",
-        r.denom(),
-        r.numer()
+        r.denom().expect("a clock's denominator fits u128"),
+        r.numer().expect("a clock fits u128 Hz")
     );
     let _ = writeln!(
         out,
@@ -499,8 +499,10 @@ pub fn emit(cfg: &Config, t: &Tree, r: &Regs, origin: &Origin) -> String {
             i + 1,
             i + 1,
             p.n.get(),
-            step.get().numer(),
-            step.get().denom()
+            step.get().numer().expect("a VCO step fits u128 Hz"),
+            step.get()
+                .denom()
+                .expect("a VCO step's denominator fits u128")
         );
     }
     o

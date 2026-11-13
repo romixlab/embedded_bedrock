@@ -9,10 +9,12 @@ license = "MIT OR Apache-2.0"
 # points that git source at it with a [patch].
 
 [features]
-defmt = ["dep:defmt", "wire_weaver/defmt", "ww_can_bus/defmt", "ww_si/defmt"]
+defmt = ["dep:defmt", "exact_units/defmt", "wire_weaver/defmt", "ww_can_bus/defmt", "ww_si/defmt"]
 
 [dependencies]
 defmt = { version = "1.0", optional = true }
+# typed counts and indices of ww_can_bus (Fixed, Index)
+exact_units = { workspace = true }
 wire_weaver = { workspace = true }
 ww_can_bus = { workspace = true }
 # number types a host may send a bit rate or a time in

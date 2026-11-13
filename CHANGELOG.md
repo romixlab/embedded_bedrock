@@ -9,6 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Added
+
+- `bedrock_can::bit_rate(clock_hz, &BitTiming)`: the bit rate on plain integers, as `BitTiming::bit_rate` was before STD-114, so firmware logs it without converting a `Hertz` (DEV-19).
+
+### Changed
+
+- **Breaking:** `bedrock_can` follows wire_weaver STD-114 (`ww_can_bus` typed numbers, wire `w2.0`): `NOMINAL` and `DATA` hold their limits as `Fixed` time quanta and prescalers, `rate_segments` and `check_segments` read and build `BitTiming` with typed segments, `capabilities` reports its FIFOs, queues and filters as counted `Fixed`s, and an invalid argument names its position as an `Index`. Behaviour is unchanged: the tests pin every length and every frame kind (DEV-19).
+- `bedrock_clocks` reads exact_units' fallible `numer()` / `denom()` (a value that does not fit u128 is refused) when it writes `clocks.rs`; the output is unchanged (RCC-1).
+- Cargo.lock takes wire_weaver 98913ad (STD-114) and exact_units f81c1a7, which moved together (DEV-19).
+
 ## [0.2.63] - 2026-11-10
 
 ### Changed
