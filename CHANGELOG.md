@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-13
+
 ### Added
 
 - `bedrock_can::bit_rate(clock_hz, &BitTiming)`: the bit rate on plain integers, as `BitTiming::bit_rate` was before STD-114, so firmware logs it without converting a `Hertz` (DEV-19).
