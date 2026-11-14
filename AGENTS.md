@@ -101,9 +101,9 @@ so a missing entry means work nobody sees.
   reboots, ROM USB serial; `embassy` and `ww-dfu` features (`BootControl` / `UpdateNode` in place). Firmware takes
   it by path, like `bedrock_led`. RP firmware uses `Reboot` and the `dfu` module for BOOTSEL updates.
 - `bedrock_board_model/` — the board description `board.toml` (FEATURES.md area `BOARD`, `book/board-description.md`):
-  schema, loading with spans, revisions and reworks as patches, checks against stm32-data chip JSON and the PCB's
-  nets (a pin to net map the caller fills). `bedrock-board check` in `bedrock_board_cli` is its command line; B135's
-  description lives in its `tests/boards/b135/`.
+  schema, loading with spans, revisions and reworks as patches; the schema's one loader. Its checks against chip
+  data and PCB nets are spirit_level's board lints (`spl check`, `brd-*`), which take this crate by git: keep it a
+  small std crate. B135's description lives in its `tests/boards/b135/`.
 - `bedrock_board/`, `bedrock_board_cli/` — board infographics (`boardmap`: top and bottom views, power tree, pin
   table) from a `.kicad_pcb` and a TOML description, for the templates' `docs/board/`; FEATURES.md area `MAP`,
   example in the template's board preset `firmware_template_skill/scripts/data/boards/nucleo_g0b1re/`.

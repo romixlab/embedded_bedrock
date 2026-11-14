@@ -141,3 +141,19 @@ fn removing_what_is_not_there() {
         other => panic!("{other:?}"),
     }
 }
+
+#[test]
+fn b135_loads_both_revisions() {
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/boards/b135/board.toml");
+    let d = Description::load(&path).unwrap_or_else(|e| panic!("{e}"));
+    let labels: Vec<&str> = d
+        .configurations()
+        .iter()
+        .map(|b| b.label.as_str())
+        .collect();
+    assert_eq!(labels, ["rev A", "rev B"]);
+    let rev_a = &d.configurations()[0];
+    assert_eq!(rev_a.pcb.as_ref().unwrap().value, "b135a-mcu.geometry.json");
+    assert!(rev_a.entries.led.contains_key("can"));
+}

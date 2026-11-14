@@ -791,7 +791,8 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
 ## Board description (`BOARD`)
 
 One typed `board.toml` per board says which MCU pin does what, for every revision and rework; `bedrock_board_model`
-(library) and `bedrock-board` (`bedrock_board_cli`). Format and checks: [book/board-description.md](book/board-description.md).
+(schema and loader). Its checks are spirit_level's board lints (`spl check`, embedded tier `brd-1` to `brd-7`).
+Format and checks: [book/board-description.md](book/board-description.md).
 Release board-0.1 in tpm (P2528): a generated `board.rs` with every revision compiled in, picked at run time.
 
 - ✅ **BOARD-1 Schema and loading**: `[board]`, `gpio` (output with `init`, input with `pull`, analog), `periph`
@@ -800,16 +801,10 @@ Release board-0.1 in tpm (P2528): a generated `board.rs` with every revision com
   Revisions (`[rev.X]`) and reworks (`[rework.N]`, `revisions` they apply to) are patches over the base (an entry
   replaced whole, `remove = ["SECTION.NAME"]`, a revision's own `pcb`); configurations: each revision, with each
   rework, with all; two reworks changing one entry refused · `bedrock_board_model/src/load/`.
-- ✅ **BOARD-2 `bedrock-board check`**: pin used twice, free pin in use, both pins of a short used, pins and packages
-  against the chip, signals on pins that cannot carry them (with the pins that can and their AF), the description
-  against the PCB's nets (`.kicad_pcb` or boardmap's geometry JSON through `bedrock_board::geometry`: unconnected,
-  wrong net, shared nets without a short, connected pins not named); findings merged across configurations; text
-  like rustc's and `--format json`, `--fail-on`, completion of `board.toml` paths. Chip data: stm32-data chip JSON
-  from `--chip-data`, `BEDROCK_CHIP_DATA` or the generator's cache, a note when missing (stm32-metapac holds one
-  chip per build) · `bedrock_board_model/src/check/`, `bedrock_board_cli/src/bin/bedrock_board/`.
 - ✅ **BOARD-3 B135's description**: rev B from the B135B preset and board map, rev A from the B135A KiCad board,
-  clean on both PCBs in `bedrock_board_cli`'s tests. The first run found PA0_C and PA1_C (J203-1 / J203-2) named
-  nowhere, in the preset and the board map too; the firmware's pins as they are (`b135b-fw-today.toml`) show
+  clean on both PCBs (spirit_level's `sl_lints_board` fixtures; loaded in `bedrock_board_model`'s tests). The
+  first check found PA0_C and PA1_C (J203-1 / J203-2) named nowhere, in the preset and the board map too; the
+  firmware's pins as they are (spirit_level's `b135_fw_today` fixture) show
   vb135_fdcan_iso_usb_fw driving B135A's LEDs on B135B (PD14, PD13, PA10 not connected, PD12 is FDCAN3 RX) ·
   `bedrock_board_model/tests/boards/b135/board.toml`.
 - 📋 **BOARD-4 `bedrock-board gen` for embassy-stm32**: committed `board.rs` (`Revision`, `Parts`, `split`, early
@@ -1230,6 +1225,8 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
 
 ## Dropped and superseded
 
+- **BOARD-2 `bedrock-board check`**: moved to spirit_level as TIER-5 `board-lints` (`brd-1` to `brd-7`, run by
+  `spl check`); the command and `bedrock_board_model`'s checks are removed, the model stays the schema's loader.
 - **MAP-14 Two MCU pins on one net in the pin table** (B200A's GP26 / GP34, GP30 / GP39): superseded by MAP-11,
   which fixed the same for the B135B; `pins.rs` test `two_rp_pins_on_one_net_get_a_row_each` covers the RP case.
 - **BLD-7 Git hook** that replaces path dependencies with git links before pushing: superseded by BLD-8 (git

@@ -192,13 +192,8 @@ dependencies = [
  "anstyle",
  "anyhow",
  "bedrock_board",
- "bedrock_board_model",
  "clap",
  "clap_complete",
- "regex-lite",
- "serde_json",
- "stm32-metapac",
- "tempfile",
 ]
 
 [[package]]
@@ -206,7 +201,6 @@ name = "bedrock_board_model"
 version = "0.1.0"
 dependencies = [
  "serde",
- "serde_json",
  "toml 1.1.6+spec-1.1.0",
 ]
 

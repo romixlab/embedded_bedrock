@@ -1,6 +1,6 @@
 # Board description (`board.toml`)
 
-One typed file per board says which MCU pin does what, for every revision and rework of the board. `bedrock-board check` holds it against the chip's data and the PCB's nets. The library is `bedrock_board_model`.
+One typed file per board says which MCU pin does what, for every revision and rework of the board. The library `bedrock_board_model` is its schema and loader. spirit_level's board lints hold it against itself, the chip's data and the PCB's nets: `spl check` in the firmware repo, with the `embedded` tier.
 
 The file is written per board, beside the firmware that runs on it. The PCB stays the truth for copper: the description names pins, and optionally the net a pin must be on, and never repeats the connectivity.
 
@@ -60,27 +60,30 @@ Every entry may have a `note`. Unknown keys are refused.
 
 ## Configurations
 
-The checks run on every configuration: each revision, each revision with each rework that applies to it, and each revision with all of them. Two reworks that change the same entry are refused (`rework-overlap`), since fitted together the result would be ambiguous. A finding names the configurations it holds in when that is not all of them.
+The board lints run on every configuration: each revision, each revision with each rework that applies to it, and each revision with all of them. Two reworks that change the same entry are refused (`rework-overlap`), since fitted together the result would be ambiguous. A finding names the configurations it holds in when that is not all of them.
 
 ## Checks
 
-| Code | Finds |
+`spl check` reports what is wrong as the `brd-*` lints of the `embedded` tier, each finding at its line and column in `board.toml`:
+
+| Lint | Finds |
 |---|---|
-| `pin-twice` | a pin used by two entries |
-| `free-used` | a `[free]` pin some entry uses |
-| `short-both` | two pins of one `[short]` both used (a free one counts) |
-| `pin-unknown`, `package-unknown` | a pin the chip or its package does not have |
-| `periph-unknown`, `signal-unknown` | a peripheral or a signal the chip does not have |
-| `signal-pin` | a signal on a pin that cannot carry it; help names the pins that can, with their AF |
-| `pcb-unconnected`, `pcb-pad` | a used pin not connected on the PCB, or not on the MCU footprint |
-| `pcb-net` | a pin on another net than its `net` says (the whole name or its last `/` segment) |
-| `pcb-shared`, `pcb-short` | MCU pins on one net without a `[short]`; a `[short]` across different nets |
-| `pcb-undescribed` | a connected pin the description does not name (warning) |
+| `brd-1` | the file does not read or breaks the schema; chip data or a PCB file that does not read |
+| `brd-2` | a pin used by two entries, a `[free]` pin some entry uses, a pin in two `[short]` groups |
+| `brd-3` | two pins of one `[short]` both used (a free one counts) |
+| `brd-4` | a pin, package, peripheral or signal the chip does not have |
+| `brd-5` | a signal on a pin that cannot carry it; help names the pins that can, with their AF |
+| `brd-6` | a used pin not connected on the PCB or not on the MCU footprint, a pin on another net than its `net` says, MCU pins on one net without a `[short]`, a `[short]` across different nets |
+| `brd-7` | a connected pin the description does not name, a `[free]` pin not connected (warning) |
+
+`spl explain brd-6` explains each one; spirit_level's book page "Board descriptions" has the configuration.
 
 Structural mistakes (an output without `init`, `rgb` without three pins, a `[rev.X]` for no listed revision, removing what is not there) are reported when the file loads, each at its line.
 
-## Chip data
+## Chip data and the PCB
 
-STM32 pin and signal data comes from stm32-data's chip JSON (`<CHIP>.json` of embassy-rs/stm32-data-generated `data/chips`), the source of stm32-metapac's metadata. stm32-metapac itself holds one chip per build, so the host tool reads the JSON. `bedrock-board check` looks in `--chip-data DIR`, `BEDROCK_CHIP_DATA`, or the firmware template generator's cache `~/.cache/bedrock_gen/chips` (`bedrock_gen.py chip-info --chip STM32H725IG` fills it). Without it, the chip checks are skipped with a note.
+STM32 pin and signal data comes from stm32-data's chip JSON (`<CHIP>.json` of embassy-rs/stm32-data-generated `data/chips`), the source of stm32-metapac's metadata; stm32-metapac holds one chip per build, so the linter reads the JSON. The firmware repo commits it under the directory its `spirit_level.toml` names (`[board] chip-data`, default `boards/chips`); `bedrock_gen.py chip-info --chip STM32H725IG` fills the generator's cache `~/.cache/bedrock_gen/chips` with the same file. Without it the chip lints do not run, and the report says so.
+
+The PCB is boardmap's geometry JSON named by `pcb` (`boardmap extract` writes it from a `.kicad_pcb`).
 
 stm32-data's list of a chip's pins leaves out H7's analog-only pads (`PA0_C`); the pins its peripherals name are added.

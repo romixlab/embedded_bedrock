@@ -3,8 +3,6 @@
 use std::ops::Range;
 use std::path::PathBuf;
 
-use serde::Serialize;
-
 /// Byte range in the description's text.
 pub type Span = Range<usize>;
 
@@ -61,54 +59,26 @@ impl Source {
     }
 }
 
-/// How bad a diagnostic is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Severity {
-    /// Information: a check that could not run, and why.
-    Note,
-    /// Probably a mistake, or a fact the description does not state yet.
-    Warning,
-    /// The description is wrong or contradicts the chip or the PCB.
-    Error,
-}
-
-/// One finding: what is wrong, where, and in which configurations.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+/// A mistake in the description: what is wrong and where. Every one makes the description invalid.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
-    /// Stable kebab-case name of the check (`pin-twice`, `pcb-net`).
+    /// Stable kebab-case name of the loader's check (`gpio-fields`, `rev-twice`).
     pub code: &'static str,
-    pub severity: Severity,
     pub message: String,
-    /// Where in the description; `None` for a finding about the file as a whole.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Where in the description; `None` for a mistake about the file as a whole.
     pub span: Option<Span>,
-    /// What would fix it, or the facts that help (the pins that can carry a signal).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// What would fix it.
     pub help: Option<String>,
-    /// The configurations it holds in (`rev A`, `rev A + rework 5`); empty for the file as a whole.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub configs: Vec<String>,
 }
 
 impl Diagnostic {
-    pub(crate) fn new(code: &'static str, severity: Severity, message: impl Into<String>) -> Self {
+    pub(crate) fn error(code: &'static str, message: impl Into<String>) -> Self {
         Self {
             code,
-            severity,
             message: message.into(),
             span: None,
             help: None,
-            configs: Vec::new(),
         }
-    }
-
-    pub(crate) fn error(code: &'static str, message: impl Into<String>) -> Self {
-        Self::new(code, Severity::Error, message)
-    }
-
-    pub(crate) fn warning(code: &'static str, message: impl Into<String>) -> Self {
-        Self::new(code, Severity::Warning, message)
     }
 
     pub(crate) fn at(mut self, span: &Span) -> Self {

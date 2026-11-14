@@ -1,6 +1,4 @@
-//! The binaries driven as a person would: `boardmap` and `bedrock-board`.
-
-mod check;
+//! `boardmap` driven as a person would.
 
 use std::process::Command;
 
