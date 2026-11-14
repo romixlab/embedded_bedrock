@@ -174,6 +174,16 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="pin-15"></a>⚠️ `PIN-15` IO speed, drive and load against the frequency used (edge rates, EMC) · check: review · 📖 [detail](checks/pin.md#pin-15) · <!-- notion -->
 - <a id="pin-16"></a>⚠️ `PIN-16` Pin read that a dead-battery pull-down still holds (G0 UCPD DBCC pins until the SYSCFG strobe; never clear the strobe again) · check: src mid · chip: G0 · 📖 [detail](checks/pin.md#pin-16) · <!-- typec_dongle FW-22 -->
 
+### 🧭 BRD - Board description
+Checks of a firmware's `board.toml` ([board-description.md](board-description.md)) on every revision and rework, automated by spirit_level (`spl check`, embedded tier), not by `bedrock-lint`.
+- <a id="brd-1"></a>🛑 `BRD-1` Board description does not read or breaks the schema; chip data or a PCB file it names does not read · check: cfg easy · <!-- embedded_bedrock BOARD-1 -->
+- <a id="brd-2"></a>🛑 `BRD-2` A pin with two jobs in one configuration: two entries, a `[free]` pin in use, a pin in two `[short]` groups · check: cfg easy · <!-- embedded_bedrock BOARD-2 -->
+- <a id="brd-3"></a>🛑 `BRD-3` Two MCU pins joined on the board (`[short]`) both used · check: cfg easy · <!-- B135 J203 -->
+- <a id="brd-4"></a>🛑 `BRD-4` A pin, package, peripheral or signal the chip does not have · check: cfg mid · <!-- embedded_bedrock BOARD-2 -->
+- <a id="brd-5"></a>🛑 `BRD-5` A peripheral signal on a pin that cannot carry it · check: cfg mid · <!-- embedded_bedrock BOARD-2 -->
+- <a id="brd-6"></a>🛑 `BRD-6` Description against the PCB: a used pin unconnected or on another net, joined pins without a `[short]`, a `[short]` across nets · check: cfg mid · <!-- vb135_fdcan_iso_usb_fw drives B135A's LED pins on B135B, P2404 -->
+- <a id="brd-7"></a>⚠️ `BRD-7` A connected MCU pin the description does not name, a `[free]` pin the PCB leaves unconnected · check: cfg mid · <!-- B135B PA0_C / PA1_C -->
+
 ### 🕰️ CLK - Clocks and timers
 - <a id="clk-1"></a>⚠️ `CLK-1` Core clock not measured once (DWT cycles against the time driver): prescaler math goes wrong silently (H7 at 270 instead of 540 MHz) · check: bench · 📖 [detail](checks/clk.md#clk-1) · <!-- vb135 PLAT-8 -->
 - <a id="clk-2"></a>🛑 `CLK-2` embassy time driver `time-driver-any`, or the named timer also used for PWM or capture · check: cfg easy + src mid · chip: STM32 · 📖 [detail](checks/clk.md#clk-2) · <!-- template TPL-39; typec_dongle; b135_template -->
