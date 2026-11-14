@@ -107,6 +107,10 @@ impl Diagnostic {
         Self::new(code, Severity::Error, message)
     }
 
+    pub(crate) fn warning(code: &'static str, message: impl Into<String>) -> Self {
+        Self::new(code, Severity::Warning, message)
+    }
+
     pub(crate) fn at(mut self, span: &Span) -> Self {
         self.span = Some(span.clone());
         self

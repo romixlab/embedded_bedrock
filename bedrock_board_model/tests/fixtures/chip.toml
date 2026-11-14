@@ -1,0 +1,22 @@
+# Pins and signals the chip does not have.
+[board]
+name = "T6"
+chip = "STM32TEST"
+package = "TSSOP8"
+
+[periph.can1]
+instance = "FDCAN1"
+pins = { RX = "PB0", TX = "PC0" }
+
+[periph.can2]
+instance = "FDCAN2"
+pins = { RX = "PA0", TX = "PA1" }
+
+[periph.spi]
+instance = "SPI1"
+pins = { SCK = "PB1" }
+
+[gpio.nope]
+pin = "PZ9"
+mode = "input"
+pull = "down"

@@ -1,0 +1,38 @@
+{
+  "name": "STM32TEST",
+  "packages": [
+    {
+      "name": "STM32TESTTx",
+      "package": "TSSOP8",
+      "pins": [
+        { "position": "1", "signals": ["PA0"] },
+        { "position": "2", "signals": ["PA1"] },
+        { "position": "3", "signals": ["PB0"] },
+        { "position": "4", "signals": ["PB1"] },
+        { "position": "5", "signals": ["PA0_C"] },
+        { "position": "6", "signals": ["VDD"] },
+        { "position": "7", "signals": ["VSS"] },
+        { "position": "8", "signals": ["NRST"] }
+      ]
+    }
+  ],
+  "cores": [
+    {
+      "name": "cm4",
+      "pins": [{ "name": "PA0" }, { "name": "PA1" }, { "name": "PB0" }, { "name": "PB1" }, { "name": "PC0" }],
+      "peripherals": [
+        {
+          "name": "FDCAN1",
+          "pins": [
+            { "pin": "PA0", "signal": "RX", "af": 9 },
+            { "pin": "PA1", "signal": "TX", "af": 9 },
+            { "pin": "PB0", "signal": "RX", "af": 3 },
+            { "pin": "PC0", "signal": "TX", "af": 9 }
+          ]
+        },
+        { "name": "FDCAN2", "pins": [{ "pin": "PB1", "signal": "TX", "af": 9 }] },
+        { "name": "ADC1", "pins": [{ "pin": "PA0_C", "signal": "INP0" }] }
+      ]
+    }
+  ]
+}

@@ -100,6 +100,9 @@ so a missing entry means work nobody sees.
   register, `early()` before the HAL (jump to system memory, reset after the ROM's leave, boot-loop rescue),
   reboots, ROM USB serial; `embassy` and `ww-dfu` features (`BootControl` / `UpdateNode` in place). Firmware takes
   it by path, like `bedrock_led`. RP firmware uses `Reboot` and the `dfu` module for BOOTSEL updates.
+- `bedrock_board_model/` — the board description `board.toml` (FEATURES.md area `BOARD`, `book/board-description.md`):
+  schema, loading with spans, revisions and reworks as patches, checks against stm32-data chip JSON and the PCB's
+  nets (a pin to net map the caller fills). `bedrock-board check` in `bedrock_board_cli` is its command line.
 - `bedrock_board/`, `bedrock_board_cli/` — board infographics (`boardmap`: top and bottom views, power tree, pin
   table) from a `.kicad_pcb` and a TOML description, for the templates' `docs/board/`; FEATURES.md area `MAP`,
   example in the template's board preset `firmware_template_skill/scripts/data/boards/nucleo_g0b1re/`.

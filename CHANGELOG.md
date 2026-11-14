@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 ### Added
 
 - `bedrock_board_model`: the `board.toml` schema, loading with spans, revisions and reworks as patches (BOARD-1).
+- `bedrock-board check`: pins, chip signals (stm32-data) and PCB nets on every revision and rework, text or JSON (BOARD-2).
 
 ### Fixed
 

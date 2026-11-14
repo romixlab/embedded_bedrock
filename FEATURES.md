@@ -791,7 +791,7 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
 ## Board description (`BOARD`)
 
 One typed `board.toml` per board says which MCU pin does what, for every revision and rework; `bedrock_board_model`
-(library).
+(library) and `bedrock-board` (`bedrock_board_cli`). Format and checks: [book/board-description.md](book/board-description.md).
 Release board-0.1 in tpm (P2528): a generated `board.rs` with every revision compiled in, picked at run time.
 
 - ✅ **BOARD-1 Schema and loading**: `[board]`, `gpio` (output with `init`, input with `pull`, analog), `periph`
@@ -800,7 +800,13 @@ Release board-0.1 in tpm (P2528): a generated `board.rs` with every revision com
   Revisions (`[rev.X]`) and reworks (`[rework.N]`, `revisions` they apply to) are patches over the base (an entry
   replaced whole, `remove = ["SECTION.NAME"]`, a revision's own `pcb`); configurations: each revision, with each
   rework, with all; two reworks changing one entry refused · `bedrock_board_model/src/load/`.
-- 📋 **BOARD-2 `bedrock-board check`**: the description against the chip's data and the PCB's nets.
+- ✅ **BOARD-2 `bedrock-board check`**: pin used twice, free pin in use, both pins of a short used, pins and packages
+  against the chip, signals on pins that cannot carry them (with the pins that can and their AF), the description
+  against the PCB's nets (`.kicad_pcb` or boardmap's geometry JSON through `bedrock_board::geometry`: unconnected,
+  wrong net, shared nets without a short, connected pins not named); findings merged across configurations; text
+  like rustc's and `--format json`, `--fail-on`, completion of `board.toml` paths. Chip data: stm32-data chip JSON
+  from `--chip-data`, `BEDROCK_CHIP_DATA` or the generator's cache, a note when missing (stm32-metapac holds one
+  chip per build) · `bedrock_board_model/src/check/`, `bedrock_board_cli/src/bin/bedrock_board/`.
 - 📋 **BOARD-3 B135's description**: both revisions, checked against both PCBs.
 - 📋 **BOARD-4 `bedrock-board gen` for embassy-stm32**: committed `board.rs` (`Revision`, `Parts`, `split`, early
   init, `[config]`, revision selector, variants), a generic stamp check in `bedrock_build` (shared with RCC-7);

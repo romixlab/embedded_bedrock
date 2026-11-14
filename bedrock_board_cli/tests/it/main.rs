@@ -1,5 +1,7 @@
 //! The binaries driven as a person would: `boardmap` and `bedrock-board`.
 
+mod check;
+
 use std::process::Command;
 
 #[test]
