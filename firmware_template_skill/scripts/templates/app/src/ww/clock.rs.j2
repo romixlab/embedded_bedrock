@@ -21,7 +21,7 @@ use ww_error::CommonError;
 use ww_si::ww_numeric::NumericValue;
 use ww_si::{Prefix, Second};
 use ww_timebase::{
-    ClockError, ClockInfo, DateTime, SteerPoint, SyncConfig, SyncSource, SyncStatus,
+    ClockError, ClockInfo, DateTime, SteerPoint, SyncConfig, SyncSource, SyncStatus, UnixMicros,
 };
 
 {% if c.m0 %}
@@ -150,7 +150,7 @@ impl ServerState {
     pub(super) fn clock_shared_now(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> RpcResult<Option<u64>> {
+    ) -> RpcResult<Option<UnixMicros<u64>>> {
         Ready(SYNC.with(|clock, now_us| self.clock.server.shared_now(clock, now_us)))
     }
 

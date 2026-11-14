@@ -14,6 +14,7 @@
 //! the `ww_timebase` one the board answers `sources()` with.
 
 use wire_weaver::prelude::*;
+use ww_si::origins::UnixMicros;
 use ww_si::{Fixed, Index, Overflow, Prefix, Rounding};
 use ww_timebase::{
     ClockError, InstanceId, Second, SteerPoint, Steerer, SyncConfig, SyncFormat, SyncSource,
@@ -251,8 +252,10 @@ impl ClockServer {
     }
 
     /// `Clock::shared_now` at local time `now_us`.
-    pub fn shared_now(&self, clock: &mut SharedClock, now_us: u64) -> Option<u64> {
-        clock.shared(now_us)
+    pub fn shared_now(&self, clock: &mut SharedClock, now_us: u64) -> Option<UnixMicros<u64>> {
+        clock
+            .shared(now_us)
+            .map(|us| UnixMicros::new(Fixed::new(us)))
     }
 
     /// `info().sync_formats` of a board without a sync line: none (host steering needs no format).
@@ -353,7 +356,6 @@ fn unwrap_near(low: u32, now_us: u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ww_si::origins::UnixMicros;
     use ww_si::ww_numeric::NumericValue;
 
     /// UTC `us` µs after the epoch, as a steer point holds it.
@@ -392,7 +394,7 @@ mod tests {
         );
         assert_eq!(
             server.shared_now(&mut clock, now),
-            Some(1_761_000_000_000_500)
+            Some(utc(1_761_000_000_000_500))
         );
         let status = server.sync_status(&clock, now);
         assert_eq!(status.state, SyncState::Locked);

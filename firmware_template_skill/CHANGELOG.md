@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- wire_weaver's typed shared time in ww_timebase (wire_weaver 69fa1dc18): with the shared clock (`--clock-sync`), `src/ww/clock.rs` answers `Clock::shared_now` as `Option<UnixMicros<u64>>` (bedrock_sync's `ClockServer::shared_now` returns it), and the suite client reads it with `.get().get()` and `SyncStatus::slew` (a typed `Micros<i32>`, was `slew_us`) with `.get()`.
+
+  Upgrade notes (firmware with the shared clock): needs bedrock_sync with the typed `shared_now`. In `src/ww/clock.rs`, `clock_shared_now` returns `RpcResult<Option<UnixMicros<u64>>>` (`UnixMicros` from `ww_timebase`). In the client, `clock_check` maps `shared` with `t.get().get()`, `status_line` and the Python `sync_status` read `s.slew` with `.get()` instead of `s.slew_us`. Wire unchanged, no hardware test needed.
+
 - wire_weaver CLT-62 (`WwClient::try_from_cmd` is the required method): the suite client implements `try_from_cmd` and answers `Ok(Self { cmd })`.
 
   Upgrade notes (firmware with `--host`): in `client/src/lib.rs`, `fn from_cmd(cmd: Commander) -> Self { Self { cmd } }` becomes `fn try_from_cmd(cmd: Commander) -> Result<Self, wire_weaver_client::Error> { Ok(Self { cmd }) }`. Firmware unchanged, no hardware test needed.
