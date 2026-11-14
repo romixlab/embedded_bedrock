@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-14
+
 ### Removed
 
 - **Breaking:** `bedrock-board check` and the model's checks: run `spl check` (spirit_level's `brd-*` lints) instead (BOARD-2).
