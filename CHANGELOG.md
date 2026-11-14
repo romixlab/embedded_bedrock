@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-14
+
 ### Added
 
 - `bedrock_clocks::g0`: exact clock planning for the STM32G0B1 / G0C1 (RM0444 Rev 5, DS13560 Rev 6, ES0548 Rev 4), on the H72x pattern (RCC-14). Part number decoding (flash size, so dual-bank), Range 1 / Range 2, HSE crystal or bypass, HSI16 with HSIDIV, HSI48 with the CRS on the USB SOF, the PLL (PLLM / PLLN / PLLP / PLLQ / PLLR as bounded knob types refused in exact_units' `OutOfRange` words), SYSCLK / HCLK / PCLK / TIMPCLK, every RCC_CCIPR / CCIPR2 kernel mux, peripherals in use and targets. Checks name the key, the exact value, the range and the document: PLL input, VCO, P / Q / R per range, SYSCLK per range, HCLK and PCLK, flash wait states from RM0444 Table 12, HSE and HSI48 per range, ADC kernel clock and fADC, USB exactly 48 MHz with PCLK of at least 12 MHz, USB on HSI48 only with the CRS, UCPD needs HSI16, prefetch refused on a dual-bank part (ES0548 2.2.10) unless allowed by name, HSIDIV not ÷1 warned (ES0548 2.2.4). The CRS RELOAD and FELIM are worked out from RM0444 §6.4.3-6.4.4 (FELIM rounded up once). `g0::emit` writes `clocks.rs` for `bedrock_clocks_rt::g0`; golden test with Donguru's tree (`tests/donguru.rs`, `tests/golden/donguru_clocks.rs`).
