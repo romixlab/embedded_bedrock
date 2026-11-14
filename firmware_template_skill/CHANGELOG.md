@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- wire_weaver CLT-62 (`WwClient::try_from_cmd` is the required method): the suite client implements `try_from_cmd` and answers `Ok(Self { cmd })`.
+
+  Upgrade notes (firmware with `--host`): in `client/src/lib.rs`, `fn from_cmd(cmd: Commander) -> Self { Self { cmd } }` becomes `fn try_from_cmd(cmd: Commander) -> Result<Self, wire_weaver_client::Error> { Ok(Self { cmd }) }`. Firmware unchanged, no hardware test needed.
+
 - wire_weaver STD-115 (resource paths as `ResourceIndex`): with `--can`, `src/ww/can.rs` takes `index_chain: [ResourceIndex; 1]` (`ww_client_server::ResourceIndex`) and reads the channel with `index_chain[0].get().0`.
 
   Upgrade notes (firmware with `--can`): in `src/ww/can.rs`, every `[UNib32; 1]` index chain becomes `[ResourceIndex; 1]`, `use ww_client_server::ResourceIndex;` joins the imports, and `index()` returns `index_chain[0].get().0 as usize`. Wire unchanged, no hardware test needed.
