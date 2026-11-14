@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- wire_weaver EVO-65 (ww_dfu typed numbers, `NodeInfo` with `app: Option<ImageInfo>` and `security_floor`): the suite client's `node_lines` shows the app image (version, product id, security counter), the security floor and the last result's version, or `none`.
+
+  Upgrade notes (firmware with `--host` and the ROM bootloader update node): take the new `node_lines` in `client/src/lib.rs`; `n.app_version`, `n.product_id` and `n.version_floor` no longer exist. The `info` output's update-node lines change from `app version` to `app image` and `floor`. Firmware unchanged (bedrock_rom_boot answers the new `NodeInfo`), no hardware test needed.
+
 - wire_weaver EVO-58 (typed, bounded calendar fields in ww_date_time): the suite client's `firmware_line` reads the build time's seconds, month and day with `.get().value()`.
 
   Upgrade notes (firmware with `--host`): in `client/src/lib.rs` `firmware_line`, `built.time.secs.value()`, `built.date.month.value()` and `built.date.day.value()` become `.get().value()`. Firmware unchanged, no hardware test needed.

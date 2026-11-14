@@ -359,24 +359,31 @@ pub fn reset_lines(r: &ResetRecordOwned, boots: u32) -> Vec<String> {
 {% endif %}
 {% if d.dfu %}
 
-/// The update node as `name  value` lines: product, role, profile, boot state, app version, last result.
+/// The update node as `name  value` lines: product, role, profile, boot state, app image, last result.
 pub fn node_lines(n: &NodeInfoOwned) -> Vec<String> {
-    let version = n
-        .app_version
-        .map_or_else(|| "none".to_string(), |v| v.to_string());
+    let app = n.app.map_or_else(
+        || "none".to_string(),
+        |a| {
+            format!(
+                "version {} (product id {:#010x}, security counter {})",
+                a.version.0, a.product.0, a.security_counter.0
+            )
+        },
+    );
+    let last_version = n
+        .last_result
+        .version
+        .map_or_else(|| "none".to_string(), |v| v.0.to_string());
     vec![
-        format!(
-            "product      {} (id {:#010x})",
-            n.product.as_str(),
-            n.product_id
-        ),
+        format!("product      {}", n.product.as_str()),
         format!("role         {:?}", n.role),
         format!("profile      {:?}", n.profile),
         format!("boot state   {:?}", n.boot_state),
-        format!("app version  {version} (floor {})", n.version_floor),
+        format!("app image    {app}"),
+        format!("floor        security counter {}", n.security_floor.0),
         format!(
-            "last result  {:?} (version {})",
-            n.last_result.outcome, n.last_result.version
+            "last result  {:?} (version {last_version})",
+            n.last_result.outcome
         ),
     ]
 }
