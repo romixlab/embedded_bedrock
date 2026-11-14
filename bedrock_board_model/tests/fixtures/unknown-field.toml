@@ -1,0 +1,9 @@
+[board]
+name = "T4"
+chip = "STM32TEST"
+
+[gpio.x]
+pin = "PA0"
+mode = "output"
+init = "high"
+speed = "fast"

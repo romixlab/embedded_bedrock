@@ -1,0 +1,51 @@
+# Two revisions and three reworks; rework 2 and 3 both change led.status.
+[board]
+name = "T2"
+chip = "STM32TEST"
+revisions = ["A", "B"]
+pcb = "b.json"
+mcu = "U1"
+
+[led.status]
+pin = "PB1"
+active = "low"
+
+[gpio.reset]
+pin = "PB0"
+mode = "output"
+init = "low"
+
+[free]
+PA1 = "J1-1"
+
+[rev.A]
+pcb = "a.json"
+note = "first build"
+remove = ["gpio.reset"]
+
+[rev.A.led.status]
+pin = "PA0"
+active = "high"
+
+[rework.1]
+revisions = ["A"]
+note = "reset line added by a wire"
+
+[rework.1.gpio.reset]
+pin = "PB0"
+mode = "output"
+init = "high"
+
+[rework.2]
+remove = ["free.PA1"]
+
+[rework.2.led.status]
+pin = "PA1"
+active = "low"
+
+[rework.3]
+revisions = ["B"]
+
+[rework.3.led.status]
+pin = "PB0"
+active = "low"

@@ -788,6 +788,30 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   another pad's takes its other GPIO name (pin 33 is PA11), and views and the pin table show a hierarchical
   sheet's net without its path (`/MCU/IO7_EXT` is `IO7_EXT`) · `geometry.rs`, `nets.rs`.
 
+## Board description (`BOARD`)
+
+One typed `board.toml` per board says which MCU pin does what, for every revision and rework; `bedrock_board_model`
+(library).
+Release board-0.1 in tpm (P2528): a generated `board.rs` with every revision compiled in, picked at run time.
+
+- ✅ **BOARD-1 Schema and loading**: `[board]`, `gpio` (output with `init`, input with `pull`, analog), `periph`
+  (instance and signals as stm32-data names them), `led`, `button`, `reserved`, `short`, `free`; a pin as `"PB9"`
+  or `{ pin, net }`; unknown keys refused; every value with its span, structural mistakes reported at their line.
+  Revisions (`[rev.X]`) and reworks (`[rework.N]`, `revisions` they apply to) are patches over the base (an entry
+  replaced whole, `remove = ["SECTION.NAME"]`, a revision's own `pcb`); configurations: each revision, with each
+  rework, with all; two reworks changing one entry refused · `bedrock_board_model/src/load/`.
+- 📋 **BOARD-2 `bedrock-board check`**: the description against the chip's data and the PCB's nets.
+- 📋 **BOARD-3 B135's description**: both revisions, checked against both PCBs.
+- 📋 **BOARD-4 `bedrock-board gen` for embassy-stm32**: committed `board.rs` (`Revision`, `Parts`, `split`, early
+  init, `[config]`, revision selector, variants), a generic stamp check in `bedrock_build` (shared with RCC-7);
+  vb135_fdcan_iso_usb_fw on it.
+- 📋 **BOARD-5 RP2350**: GPIO function table, `gen` for embassy-rp, B200A / B200B with `SdPins` and reworks from the
+  file (after the B200B boards arrive).
+- 📋 **BOARD-6 One board command**: `boardmap` folds into `bedrock-board`, the board map takes pin roles from
+  `board.toml`; the template presets on `board.toml` (TPL-83).
+- 📋 **BOARD-7 Against `clocks.toml`**: kernel clocks in the plan, USB at 48 MHz, a PWM LED's timer not the time
+  driver's (after RCC-2).
+
 ## Firmware checks (`LINT`)
 
 Every firmware lesson and checklist item in one catalogue, and a tool that checks what can be checked

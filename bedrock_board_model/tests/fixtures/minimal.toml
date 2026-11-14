@@ -1,0 +1,22 @@
+# One board, no revisions: every kind of entry once.
+[board]
+name = "T1"
+chip = "STM32TEST"
+package = "TSSOP8"
+
+[periph.can]
+instance = "FDCAN1"
+pins = { RX = "PA0", TX = { pin = "PA1", net = "CAN_TX" } }
+
+[gpio.reset]
+pin = "PB0"
+mode = "output"
+init = "high"
+
+[led.status]
+pin = "PB1"
+active = "low"
+
+[gpio.vsense]
+pin = "PA0_C"
+mode = "analog"

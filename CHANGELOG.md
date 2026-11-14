@@ -1,13 +1,17 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_can`, `bedrock_usb`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock_clocks`, `bedrock_clocks_rt`, `bedrock`, `bedrock_cli`, `bedrock_usb_ch9`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_can`, `bedrock_usb`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_board_model`, `bedrock_lint`, `bedrock_clocks`, `bedrock_clocks_rt`, `bedrock`, `bedrock_cli`, `bedrock_usb_ch9`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/). Feature IDs refer to [FEATURES.md](FEATURES.md).
 
 ## [Unreleased]
+
+### Added
+
+- `bedrock_board_model`: the `board.toml` schema, loading with spans, revisions and reworks as patches (BOARD-1).
 
 ### Fixed
 

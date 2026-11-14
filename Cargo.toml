@@ -17,6 +17,7 @@ members = [
     "bedrock_usb",
     "bedrock_build_info",
     "bedrock_board",
+    "bedrock_board_model",
     "bedrock_board_cli",
     "bedrock_lint",
     "bedrock_lint_cli",
