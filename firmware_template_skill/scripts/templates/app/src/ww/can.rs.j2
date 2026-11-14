@@ -18,6 +18,7 @@ use ww_can_bus::{
     CanConfig, CanError, CanId, Capabilities, FilterIndex, Frame, FrameKind, Mode, ProtocolStatus,
     RxFrame, Second, Status,
 };
+use ww_client_server::ResourceIndex;
 use ww_si::prefix::One;
 use ww_si::{Fixed, units};
 
@@ -60,8 +61,8 @@ fn wrong_state(reason: &'static str) -> CanError<'static> {
 }
 
 /// The channel `index_chain` names (the dispatcher only passes indices of `valid_indices_root_can`).
-fn index(index_chain: [UNib32; 1]) -> usize {
-    index_chain[0].0 as usize
+fn index(index_chain: [ResourceIndex; 1]) -> usize {
+    index_chain[0].get().0 as usize
 }
 
 impl ServerState {
@@ -72,7 +73,7 @@ impl ServerState {
     pub(super) fn can_capabilities(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        _index_chain: [UNib32; 1],
+        _index_chain: [ResourceIndex; 1],
     ) -> RpcResult<Capabilities<'_>> {
         Ready(bedrock_can::capabilities(
             &crate::can::controller(),
@@ -85,7 +86,7 @@ impl ServerState {
     pub(super) async fn can_configure(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
         config: CanConfig,
     ) -> RpcResult<Result<CanConfig, CanError<'_>>> {
         let i = index(index_chain);
@@ -101,7 +102,7 @@ impl ServerState {
     pub(super) fn can_config(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> RpcResult<CanConfig> {
         Ready(self.can.hw[index(index_chain)].to_config())
     }
@@ -109,7 +110,7 @@ impl ServerState {
     pub(super) fn get_can_status(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> GetResult<Status, ()> {
         let i = index(index_chain);
         let s = crate::can::status(&CHANS[i]);
@@ -126,7 +127,7 @@ impl ServerState {
     pub(super) fn can_rx(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        _index_chain: [UNib32; 1],
+        _index_chain: [ResourceIndex; 1],
     ) -> RpcResult<()> {
         Ready(())
     }
@@ -134,13 +135,13 @@ impl ServerState {
     pub(super) fn close_can_rx(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        _index_chain: [UNib32; 1],
+        _index_chain: [ResourceIndex; 1],
     ) {
     }
 
     pub(super) fn stream_can_rx(
         &mut self,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> &mut ww_stream::tx::Counted {
         &mut self.can.rx[index(index_chain)]
     }
@@ -149,7 +150,7 @@ impl ServerState {
 
     pub(super) fn credit_can_tx(
         &mut self,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> &mut ww_stream::sink::SinkCredit {
         &mut self.can.tx_credit[index(index_chain)]
     }
@@ -157,7 +158,7 @@ impl ServerState {
     pub(super) fn sideband_can_tx(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        _index_chain: [UNib32; 1],
+        _index_chain: [ResourceIndex; 1],
         _sideband: ww_client_server::StreamSideband,
     ) -> Option<ww_client_server::StreamSideband> {
         None
@@ -167,7 +168,7 @@ impl ServerState {
     pub(super) fn write_can_tx(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
         value: ww_can_bus::TxFrame<'_>,
     ) {
         let i = index(index_chain);
@@ -203,7 +204,7 @@ impl ServerState {
     pub(super) async fn can_set_mode(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
         mode: Mode,
     ) -> RpcResult<Result<Mode, CanError<'_>>> {
         let i = index(index_chain);
@@ -223,7 +224,7 @@ impl ServerState {
     pub(super) async fn can_recover(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> RpcResult<Result<(), CanError<'_>>> {
         match CHANS[index(index_chain)].command(Command::Recover).await {
             Reply::NotBusOff => Ready(Err(wrong_state("not bus-off"))),
@@ -234,7 +235,7 @@ impl ServerState {
     pub(super) async fn can_tx_abort(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> RpcResult<Fixed<units::Frame, One, u32>> {
         match CHANS[index(index_chain)].command(Command::TxAbort).await {
             Reply::Aborted(n) => Ready(Fixed::new(n)),
@@ -245,7 +246,7 @@ impl ServerState {
     pub(super) fn can_protocol_status(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
     ) -> RpcResult<ProtocolStatus> {
         let i = index(index_chain);
         let s = crate::can::status(&CHANS[i]);
@@ -267,7 +268,7 @@ impl ServerState {
     pub(super) async fn can_set_filters(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        index_chain: [UNib32; 1],
+        index_chain: [ResourceIndex; 1],
         filters: ww_can_bus::FilterConfig<'_>,
     ) -> RpcResult<Result<(), CanError<'_>>> {
         let i = index(index_chain);

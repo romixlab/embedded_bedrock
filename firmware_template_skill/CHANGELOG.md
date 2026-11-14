@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- wire_weaver STD-115 (resource paths as `ResourceIndex`): with `--can`, `src/ww/can.rs` takes `index_chain: [ResourceIndex; 1]` (`ww_client_server::ResourceIndex`) and reads the channel with `index_chain[0].get().0`.
+
+  Upgrade notes (firmware with `--can`): in `src/ww/can.rs`, every `[UNib32; 1]` index chain becomes `[ResourceIndex; 1]`, `use ww_client_server::ResourceIndex;` joins the imports, and `index()` returns `index_chain[0].get().0 as usize`. Wire unchanged, no hardware test needed.
+
 - wire_weaver EVO-65 (ww_dfu typed numbers, `NodeInfo` with `app: Option<ImageInfo>` and `security_floor`): the suite client's `node_lines` shows the app image (version, product id, security counter), the security floor and the last result's version, or `none`.
 
   Upgrade notes (firmware with `--host` and the ROM bootloader update node): take the new `node_lines` in `client/src/lib.rs`; `n.app_version`, `n.product_id` and `n.version_floor` no longer exist. The `info` output's update-node lines change from `app version` to `app image` and `floor`. Firmware unchanged (bedrock_rom_boot answers the new `NodeInfo`), no hardware test needed.
