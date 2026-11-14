@@ -18,3 +18,7 @@ ww_link = { path = "../wire_weaver/ww_link" }
 ww_si = { path = "../wire_weaver/ww_stdlib/ww_si" }
 ww_timebase = { path = "../wire_weaver/ww_stdlib/ww_timebase" }
 ww_version = { path = "../wire_weaver/ww_stdlib/ww_version" }
+
+# The board description's schema and loader comes from spirit_level the same way (../spirit_level).
+[patch."https://github.com/romixlab/spirit_level"]
+sl_board_model = { path = "../spirit_level/crates/sl_board_model" }

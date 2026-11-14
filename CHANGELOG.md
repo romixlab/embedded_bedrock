@@ -1,7 +1,7 @@
 # Changelog
 
 Changes to the embedded_bedrock Rust crates (`bedrock_build`, `bedrock_build_info`, `bedrock_crash`, `bedrock_led`,
-`bedrock_sync`, `bedrock_can`, `bedrock_usb`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_board_model`, `bedrock_lint`, `bedrock_clocks`, `bedrock_clocks_rt`, `bedrock`, `bedrock_cli`, `bedrock_usb_ch9`, `fw_registry`). The firmware template has its own changelog and version:
+`bedrock_sync`, `bedrock_can`, `bedrock_usb`, `bedrock_rom_boot`, `bedrock_board`, `bedrock_lint`, `bedrock_clocks`, `bedrock_clocks_rt`, `bedrock`, `bedrock_cli`, `bedrock_usb_ch9`, `fw_registry`). The firmware template has its own changelog and version:
 [firmware_template_skill/CHANGELOG.md](firmware_template_skill/CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/), versions follow
@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 ### Removed
 
 - **Breaking:** `bedrock-board check` and the model's checks: run `spl check` (spirit_level's `brd-*` lints) instead (BOARD-2).
+- **Breaking:** `bedrock_board_model` moved to spirit_level as `sl_board_model`; the schema stays the same (BOARD-1).
 
 ## [0.3.1] - 2026-11-14
 

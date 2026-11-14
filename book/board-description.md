@@ -1,6 +1,6 @@
 # Board description (`board.toml`)
 
-One typed file per board says which MCU pin does what, for every revision and rework of the board. The library `bedrock_board_model` is its schema and loader. spirit_level's board lints hold it against itself, the chip's data and the PCB's nets: `spl check` in the firmware repo, with the `embedded` tier.
+One typed file per board says which MCU pin does what, for every revision and rework of the board. Its schema and loader are spirit_level's crate `sl_board_model`, the one loader every tool uses. spirit_level's board lints hold it against itself, the chip's data and the PCB's nets: `spl check` in the firmware repo, with the `embedded` tier.
 
 The file is written per board, beside the firmware that runs on it. The PCB stays the truth for copper: the description names pins, and optionally the net a pin must be on, and never repeats the connectivity.
 
