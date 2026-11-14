@@ -12,6 +12,15 @@ use bedrock_board::Geometry;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::CompleteEnv;
 
+const VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("GIT_SHA"),
+    ", commit ",
+    env!("BUILD_TIME"),
+    ")"
+);
+
 const BOLD: Style = Style::new().bold();
 const DIM: Style = Style::new().dimmed();
 const RED: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
@@ -20,7 +29,7 @@ const RED: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
 #[derive(Parser)]
 #[command(
     name = "boardmap",
-    version = env!("BOARDMAP_VERSION"),
+    version = VERSION,
     after_help = "Shell completion: source <(COMPLETE=bash boardmap), COMPLETE=zsh boardmap, COMPLETE=fish boardmap | source"
 )]
 struct Cli {

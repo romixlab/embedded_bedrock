@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Fixed
+
+- `boardmap --version` shows the commit's time instead of the build clock, also in a worktree (MAP-9).
+
 ## [0.3.0] - 2026-11-13
 
 ### Added

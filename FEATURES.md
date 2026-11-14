@@ -759,7 +759,7 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   next to them (CN8 on the Nucleo); a general placement pass would.
 - 📋 **MAP-8 Highlight a peripheral**: colour the pins of one function (an SPI, the USB pair) on request, for a
   wiring picture in a docs page.
-- ✅ **MAP-9 `boardmap --version` names the git SHA**: version, SHA (`-dirty`) and build time from a small
+- ✅ **MAP-9 `boardmap --version` names the git SHA**: version, SHA (`-dirty`) and the commit's time (not the clock) from a small
   `build.rs` (AGENTS.md *Versions*), so an installed build can be identified exactly: `bedrock_board_cli/build.rs`.
 - ✅ **MAP-13 `extract --rename` for a vendor's own pin naming**: a whole-string regex rename (`$1` groups,
   repeatable, first match wins) applied to every pad's net and pin right after extraction, before anything else
