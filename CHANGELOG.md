@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-14
+
 ### Changed
 
 - **Breaking:** `bedrock_sync::clock::ClockServer::shared_now` returns `UnixMicros<u64>`, the type of wire_weaver's typed `Clock::shared_now`.
