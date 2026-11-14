@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- wire_weaver EVO-58 (typed, bounded calendar fields in ww_date_time): the suite client's `firmware_line` reads the build time's seconds, month and day with `.get().value()`.
+
+  Upgrade notes (firmware with `--host`): in `client/src/lib.rs` `firmware_line`, `built.time.secs.value()`, `built.date.month.value()` and `built.date.day.value()` become `.get().value()`. Firmware unchanged, no hardware test needed.
+
 - wire_weaver's typed `CommonError::InvalidArgument::arg` (`Index<Argument, u8>`, wire_weaver f817d9f1b): `src/ww/leds.rs` writes `arg: 0.into()` in the identify refusal.
 
   Upgrade notes (firmware with `[[leds]]` and `--wire-weaver`): every `CommonError::InvalidArgument { arg: N, .. }` becomes `arg: N.into()`. Wire unchanged, no hardware test needed.

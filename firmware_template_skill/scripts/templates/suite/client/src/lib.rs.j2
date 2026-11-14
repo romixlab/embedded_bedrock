@@ -283,12 +283,12 @@ pub fn firmware_line(fw: &FirmwareSummaryOwned) -> String {
         });
     }
     if let Some(built) = &fw.built {
-        let secs = built.time.secs.value();
+        let secs = built.time.secs.get().value();
         facts.push(format!(
             "built {}-{:02}-{:02} {:02}:{:02} UTC",
             built.date.year.year(),
-            built.date.month.value(),
-            built.date.day.value(),
+            built.date.month.get().value(),
+            built.date.day.get().value(),
             secs / 3600,
             secs % 3600 / 60
         ));
