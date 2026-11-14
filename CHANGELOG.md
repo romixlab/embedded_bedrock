@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-14
+
 ### Added
 
 - `bedrock_board_model`: the `board.toml` schema, loading with spans, revisions and reworks as patches (BOARD-1).
