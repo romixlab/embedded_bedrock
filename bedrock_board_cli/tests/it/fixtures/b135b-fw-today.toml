@@ -1,0 +1,20 @@
+# What vb135_fdcan_iso_usb_fw's b135_fw drives today (src/main.rs assign_resources!, src/led.rs: TIM4 SD LED on
+# PD14 / PD13 / PD12, TIM3 + TIM1 CAN LED on PC7 / PC6 / PA10, with B135A's net names), checked against the B135B
+# PCB: the firmware still has B135A's LED wiring.
+[board]
+name = "B135 firmware today"
+chip = "STM32H725IG"
+mcu = "U201"
+pcb = "../../../../firmware_template_skill/scripts/data/boards/b135b/b135b.geometry.json"
+
+[periph.can1]
+instance = "FDCAN1"
+pins = { TX = "PB9", RX = "PB8" }
+
+[led.sd]
+rgb = ["PD14", "PD13", { pin = "PD12", net = "LED_SD_B" }]
+active = "low"
+
+[led.can]
+rgb = ["PC7", "PC6", "PA10"]
+active = "low"

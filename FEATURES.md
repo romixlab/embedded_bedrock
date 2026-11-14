@@ -807,7 +807,11 @@ Release board-0.1 in tpm (P2528): a generated `board.rs` with every revision com
   like rustc's and `--format json`, `--fail-on`, completion of `board.toml` paths. Chip data: stm32-data chip JSON
   from `--chip-data`, `BEDROCK_CHIP_DATA` or the generator's cache, a note when missing (stm32-metapac holds one
   chip per build) · `bedrock_board_model/src/check/`, `bedrock_board_cli/src/bin/bedrock_board/`.
-- 📋 **BOARD-3 B135's description**: both revisions, checked against both PCBs.
+- ✅ **BOARD-3 B135's description**: rev B from the B135B preset and board map, rev A from the B135A KiCad board,
+  clean on both PCBs in `bedrock_board_cli`'s tests. The first run found PA0_C and PA1_C (J203-1 / J203-2) named
+  nowhere, in the preset and the board map too; the firmware's pins as they are (`b135b-fw-today.toml`) show
+  vb135_fdcan_iso_usb_fw driving B135A's LEDs on B135B (PD14, PD13, PA10 not connected, PD12 is FDCAN3 RX) ·
+  `bedrock_board_model/tests/boards/b135/board.toml`.
 - 📋 **BOARD-4 `bedrock-board gen` for embassy-stm32**: committed `board.rs` (`Revision`, `Parts`, `split`, early
   init, `[config]`, revision selector, variants), a generic stamp check in `bedrock_build` (shared with RCC-7);
   vb135_fdcan_iso_usb_fw on it.

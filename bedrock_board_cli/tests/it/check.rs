@@ -1,15 +1,46 @@
-//! `bedrock-board check` on the model's fixtures and its synthetic chip (stm32-data's format).
+//! `bedrock-board check` on B135's description and on fixtures, with STM32H725IG chip data written from
+//! stm32-metapac's metadata in stm32-data's format (no download, no cache of the host).
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
         .to_path_buf()
+}
+
+fn b135() -> PathBuf {
+    repo().join("bedrock_board_model/tests/boards/b135/board.toml")
+}
+
+/// A directory with `STM32H725IG.json` in stm32-data's chip format, from the metapac (no packages there).
+fn chip_dir() -> tempfile::TempDir {
+    use stm32_metapac::metadata::METADATA;
+    let peripherals: Vec<Value> = METADATA
+        .peripherals
+        .iter()
+        .map(|p| {
+            let pins: Vec<Value> = p
+                .pins
+                .iter()
+                .map(|s| json!({ "pin": s.pin, "signal": s.signal, "af": s.af }))
+                .collect();
+            json!({ "name": p.name, "pins": pins })
+        })
+        .collect();
+    let pins: Vec<Value> = METADATA
+        .pins
+        .iter()
+        .map(|p| json!({ "name": p.name }))
+        .collect();
+    let chip = json!({ "name": "STM32H725IG", "cores": [{ "name": "cm7", "pins": pins, "peripherals": peripherals }] });
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("STM32H725IG.json"), chip.to_string()).unwrap();
+    dir
 }
 
 fn run(desc: &Path, chips: &Path, extra: &[&str]) -> Output {
@@ -43,6 +74,105 @@ fn codes(v: &Value) -> Vec<(String, String)> {
             )
         })
         .collect()
+}
+
+#[test]
+fn b135_is_clean_on_both_revisions() {
+    let chips = chip_dir();
+    let (code, v) = report(&b135(), chips.path());
+    assert_eq!(code, 0, "{v:#}");
+    assert_eq!(v["configurations"], json!(["rev A", "rev B"]));
+    assert_eq!(v["errors"], 0);
+    assert_eq!(v["warnings"], 0);
+    // the metapac has no package data: one note that pins were checked against the die
+    assert_eq!(
+        codes(&v).iter().map(|c| c.0.as_str()).collect::<Vec<_>>(),
+        ["package-data"]
+    );
+}
+
+#[test]
+fn b135b_pins_of_j203_were_missing_from_the_preset() {
+    // the description as first written from the preset and the board map: PA0_C and PA1_C (J203-1 / J203-2) unnamed
+    let text = std::fs::read_to_string(b135()).unwrap();
+    let text: String = text
+        .lines()
+        .filter(|l| !l.starts_with("PA0_C") && !l.starts_with("PA1_C"))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .replace(", \"free.PA0_C\", \"free.PA1_C\"", "");
+    // in a scratch directory, the PCB paths made absolute
+    let dir = b135().parent().unwrap().to_path_buf();
+    let text = text
+        .replace("pcb = \"../", &format!("pcb = \"{}/../", dir.display()))
+        .replace("pcb = \"b135a", &format!("pcb = \"{}/b135a", dir.display()));
+    let scratch = tempfile::tempdir().unwrap();
+    let copy = scratch.path().join("board.toml");
+    std::fs::write(&copy, text).unwrap();
+    let chips = chip_dir();
+    let (code, v) = report(&copy, chips.path());
+    assert_eq!(code, 1);
+    let found: Vec<_> = codes(&v)
+        .into_iter()
+        .filter(|c| c.0 != "package-data")
+        .collect();
+    assert_eq!(
+        found,
+        [
+            (
+                "pcb-undescribed".to_owned(),
+                "PA0_C is on net /MCU_H7/PA0_C, but the description does not name it".to_owned()
+            ),
+            (
+                "pcb-undescribed".to_owned(),
+                "PA1_C is on net /MCU_H7/PA1_C, but the description does not name it".to_owned()
+            ),
+        ]
+    );
+    assert_eq!(v["diagnostics"][1]["configs"], json!(["rev B"]));
+}
+
+#[test]
+fn b135_firmware_today_drives_rev_a_leds_on_rev_b() {
+    let chips = chip_dir();
+    let fixture =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/it/fixtures/b135b-fw-today.toml");
+    let (code, v) = report(&fixture, chips.path());
+    assert_eq!(code, 1);
+    let errors: Vec<String> = v["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["severity"] == "error" && d["code"] != "pcb-shared")
+        .map(|d| d["message"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(
+        errors,
+        [
+            "PD14 (led.sd red) is not connected on the PCB",
+            "PD13 (led.sd green) is not connected on the PCB",
+            "PD12 (led.sd blue) is on net /MCU_H7/PA7_PD12, not LED_SD_B",
+            "PA10 (led.can blue) is not connected on the PCB",
+        ]
+    );
+}
+
+#[test]
+fn text_report_points_at_the_line() {
+    let chips = chip_dir();
+    let fixture =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/it/fixtures/b135b-fw-today.toml");
+    let out = run(&fixture, chips.path(), &[]);
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        text.contains("error[pcb-unconnected]: PA10 (led.can blue) is not connected on the PCB\n"),
+        "{text}"
+    );
+    assert!(text.contains("b135b-fw-today.toml:19:22"), "{text}");
+    assert!(
+        text.contains("rgb = [\"PC7\", \"PC6\", \"PA10\"]\n"),
+        "{text}"
+    );
 }
 
 fn model_fixture(name: &str) -> PathBuf {

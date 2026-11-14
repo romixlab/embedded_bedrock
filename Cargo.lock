@@ -197,6 +197,7 @@ dependencies = [
  "clap_complete",
  "regex-lite",
  "serde_json",
+ "stm32-metapac",
  "tempfile",
 ]
 
