@@ -20,7 +20,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 - `bedrock_clocks`: the H72x family is behind the default feature `h72x` (it alone needs stm32-metapac's H725). `Finding`, `Severity`, `KnobError` and `Overflow` live at the crate root for both families, re-exported where they were; the H72x output is unchanged (B135's golden file is byte for byte the same).
 - `bedrock_clocks_rt`: `Regs` and `Mmio` live at the crate root for both families, re-exported from `h72x`.
-- Cargo.lock takes exact_units 4abc92b.
 
 ## [0.4.0] - 2026-11-14
 
