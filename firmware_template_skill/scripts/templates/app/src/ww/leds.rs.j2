@@ -144,7 +144,7 @@ impl ServerState {
         }
         let Some(ms) = to_ms(&duration) else {
             return Ready(Err(CommonError::InvalidArgument {
-                arg: 0,
+                arg: 0.into(),
                 reason: MaxLen::new_unchecked("not an integer number of s, ms or us"),
             }));
         };
