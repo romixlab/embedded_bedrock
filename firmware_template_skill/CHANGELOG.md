@@ -10,6 +10,10 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- wire_weaver's typed boot counts and counter offsets (ww_firmware_info, ww_counters, wire_weaver fabddb980): `src/last_reset.rs` hands `boots_since_crash` over as a `Count<Boot, u32>`, `src/ww/device.rs` answers `LastReset::boot_count` as a `Count<Boot, u32>` and takes `Counters::read`'s `offset` as an `Index<Word, u16>`. The suite client reads both with `.get()`; `Board::boot_count` still returns a `u32`.
+
+  Upgrade notes (firmware with `--wire-weaver`): in `src/last_reset.rs` `record()`, `crash.map_or(0, |c| c.boots_since)` gets `.into()`; in `src/ww/device.rs`, `device_last_reset_boot_count` returns `RpcResult<ww_firmware_info::Count<ww_firmware_info::Boot, u32>>` with `.into()`, and `device_counters_read` takes `offset: Index<Word, u16>` (imported from `ww_counters`) and passes `offset.get()` to `read_words`. In the client, `r.boots_since_crash` becomes `r.boots_since_crash.get()` and `boot_count` maps its answer with `.get()`. Wire unchanged, no hardware test needed.
+
 - `bedrock_can::TxPlan::len` is a typed CAN FD length (exact_units `OneOf<CanFdLengths>`, DEV-17): with `--can`, `src/can.rs` `tx_frame` takes `plan.len.get()` for `TxFrame::len`.
 
   Upgrade notes (firmware with `--can`): in `src/can.rs` `tx_frame`, `len: plan.len,` becomes `len: plan.len.get(),`; the firmware stops building against a bedrock_can with this change until it does. No answers/options involved; frame lengths on the bus are unchanged, no hardware test needed.

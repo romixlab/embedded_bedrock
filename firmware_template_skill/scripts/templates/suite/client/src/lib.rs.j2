@@ -333,8 +333,11 @@ pub fn board_line(b: &BoardSummaryOwned) -> String {
 /// the record has them (`{{ s.cli }} report` names the crash's addresses with the ELF).
 pub fn reset_lines(r: &ResetRecordOwned, boots: u32) -> Vec<String> {
     let mut first = format!("{:?}, boot {boots} since cleared", r.cause);
-    if r.boots_since_crash > 0 {
-        first.push_str(&format!(", crash data {} boots old", r.boots_since_crash));
+    if r.boots_since_crash.get() > 0 {
+        first.push_str(&format!(
+            ", crash data {} boots old",
+            r.boots_since_crash.get()
+        ));
     }
     if let Some(up) = &r.uptime {
         first.push_str(&format!(", ran {:.1} s", up.to_f64()));
@@ -577,6 +580,7 @@ impl {{ T }} {
             self.raw.device().last_reset().boot_count(),
         )
         .await
+        .map(|boots| boots.get())
     }
 
     /// Forgets the crash record and zeroes the boot counter.
