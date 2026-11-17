@@ -13,12 +13,12 @@
 //! `set_sources` / `sources` keep the explicit source list in both forms: the [SharedClock]'s, which decides, and
 //! the `ww_timebase` one the board answers `sources()` with.
 
-use wire_weaver::prelude::*;
+use ww_api::prelude::*;
 use ww_si::origins::UnixMicros;
 use ww_si::{Fixed, Index, Overflow, Prefix, Rounding};
 use ww_timebase::{
-    ClockError, InstanceId, Second, SteerPoint, Steerer, SyncConfig, SyncFormat, SyncSource,
-    SyncState, SyncStatus, TimeMapPoint,
+    InstanceId, Second, SteerPoint, Steerer, SyncConfig, SyncFormat, SyncSource, SyncState,
+    SyncStatus, TimeMapPoint,
 };
 
 use crate::{
@@ -132,12 +132,12 @@ impl ClockServer {
         &mut self,
         config: SyncConfig,
         supported: &[SyncFormat],
-    ) -> Result<(), ClockError<'static>> {
+    ) -> Result<(), CommonError<'static>> {
         match config {
             SyncConfig::Off => {}
             SyncConfig::Master { format } | SyncConfig::Slave { format }
                 if supported.contains(&format) => {}
-            _ => return Err(CommonError::Unsupported.into()),
+            _ => return Err(CommonError::Unsupported),
         }
         self.config = config;
         Ok(())
@@ -156,7 +156,7 @@ impl ClockServer {
         clock: &mut SharedClock,
         now_us: u64,
         point: &SteerPoint,
-    ) -> Result<Option<SyncSource>, ClockError<'static>> {
+    ) -> Result<Option<SyncSource>, CommonError<'static>> {
         self.steer_with(clock, now_us, point, &mut NoOscillator)
     }
 
@@ -168,13 +168,12 @@ impl ClockServer {
         now_us: u64,
         point: &SteerPoint,
         osc: &mut impl Oscillator,
-    ) -> Result<Option<SyncSource>, ClockError<'static>> {
-        let invalid = |reason| -> ClockError<'static> {
+    ) -> Result<Option<SyncSource>, CommonError<'static>> {
+        let invalid = |reason| -> CommonError<'static> {
             CommonError::InvalidArgument {
                 arg: Index::new(0),
                 reason: MaxLen::new_unchecked(reason),
             }
-            .into()
         };
         if point.local.prefix != Prefix::Micro {
             return Err(invalid("local not in µs"));
@@ -269,13 +268,12 @@ impl ClockServer {
         clock: &mut SharedClock,
         sources: Option<MaxLen<RefVec<'_, SyncSource>, 8>>,
         supported: &[SyncFormat],
-    ) -> Result<(), ClockError<'static>> {
-        let invalid = |reason| -> ClockError<'static> {
+    ) -> Result<(), CommonError<'static>> {
+        let invalid = |reason| -> CommonError<'static> {
             CommonError::InvalidArgument {
                 arg: Index::new(0),
                 reason: MaxLen::new_unchecked(reason),
             }
-            .into()
         };
         let Some(sources) = sources else {
             clock.set_sources(None);
@@ -293,7 +291,7 @@ impl ClockServer {
             list[len] = match s {
                 SyncSource::Host => Source::Host,
                 SyncSource::Line { format } if !supported.contains(&format) => {
-                    return Err(CommonError::Unsupported.into());
+                    return Err(CommonError::Unsupported);
                 }
                 SyncSource::Line {
                     format: SyncFormat::IrigB,
@@ -454,7 +452,7 @@ mod tests {
                 },
                 ClockServer::NO_LINE
             ),
-            Err(CommonError::Unsupported.into())
+            Err(CommonError::Unsupported)
         );
         server
             .configure_sync(
@@ -506,7 +504,7 @@ mod tests {
         };
         assert_eq!(
             server.set_sources(&mut clock, Some(list()), ClockServer::NO_LINE),
-            Err(CommonError::Unsupported.into())
+            Err(CommonError::Unsupported)
         );
         server
             .set_sources(&mut clock, Some(list()), &[SyncFormat::IrigB])

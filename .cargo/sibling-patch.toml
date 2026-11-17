@@ -1,23 +1,47 @@
-# Co-development with the sibling WireWeaver checkout (../wire_weaver): `just dev-local` copies this file to
-# .cargo/dev-local.toml (gitignored, included by .cargo/config.toml), so builds here take WireWeaver from the sibling
-# and a change there is picked up at once; `just dev-git` removes it again. Cargo does not read this file by itself.
-# Committed builds never see it: Cargo.toml takes WireWeaver by git, pinned to a commit in Cargo.lock.
-# While it is active Cargo.lock names the sibling paths instead of the git commit: never commit the lock in that
-# state (the --locked gate refuses it). exact_units (pulled by ww_si) names shrink_wrap by the same git source:
-# without its line here it brings a second shrink_wrap (E0277 in ww_si).
+# Co-development with the sibling WireWeaver checkouts (../wire_weaver, ../ww_base, ../ww_stdlib): `just dev-local`
+# copies this file to .cargo/dev-local.toml (gitignored, included by .cargo/config.toml), so builds here take
+# WireWeaver from the siblings and a change there is picked up at once; `just dev-git` removes it again. Cargo does not
+# read this file by itself. Committed builds never see it: Cargo.toml takes WireWeaver by git, pinned to a commit in
+# Cargo.lock. While it is active Cargo.lock names the sibling paths instead of the git commits: never commit the lock in
+# that state (the --locked gate refuses it).
+# Every crate of a patched source that the tree uses is listed: the siblings name each other by git, and a crate left
+# on git would bring a second copy of the crates it shares with the patched ones (E0277 on a shrink_wrap or ww_api
+# trait). shrink_wrap, exact_units and ww_tape stay on git: the siblings take them by git too.
 [patch."https://github.com/vhrdtech/wire_weaver"]
-shrink_wrap = { path = "../wire_weaver/shrink_wrap/shrink_wrap" }
+stm32_dfu_host = { path = "../wire_weaver/stm32_dfu_host" }
 wire_weaver = { path = "../wire_weaver/wire_weaver" }
-ww_can_bus = { path = "../wire_weaver/ww_stdlib/ww_can_bus" }
+wire_weaver_client = { path = "../wire_weaver/wire_weaver_client" }
+wire_weaver_core = { path = "../wire_weaver/wire_weaver_core" }
+wire_weaver_derive = { path = "../wire_weaver/wire_weaver_derive" }
+wire_weaver_evolution = { path = "../wire_weaver/wire_weaver_evolution" }
+ww_api = { path = "../wire_weaver/ww_api" }
+ww_client_server = { path = "../wire_weaver/ww_client_server" }
 ww_clock_sync = { path = "../wire_weaver/ww_clock_sync" }
-ww_date_time = { path = "../wire_weaver/ww_stdlib/ww_date_time" }
 ww_device = { path = "../wire_weaver/ww_device" }
-ww_dfu = { path = "../wire_weaver/ww_stdlib/ww_dfu" }
-ww_indication = { path = "../wire_weaver/ww_stdlib/ww_indication" }
+ww_framer = { path = "../wire_weaver/ww_framer" }
 ww_link = { path = "../wire_weaver/ww_link" }
-ww_si = { path = "../wire_weaver/ww_stdlib/ww_si" }
-ww_timebase = { path = "../wire_weaver/ww_stdlib/ww_timebase" }
-ww_version = { path = "../wire_weaver/ww_stdlib/ww_version" }
+ww_local_socket = { path = "../wire_weaver/ww_local_socket" }
+ww_lz4 = { path = "../wire_weaver/ww_lz4" }
+ww_self = { path = "../wire_weaver/ww_self" }
+ww_snapshots = { path = "../wire_weaver/ww_snapshots" }
+ww_stream = { path = "../wire_weaver/ww_stream" }
+ww_tap = { path = "../wire_weaver/ww_tap" }
+ww_timebase = { path = "../wire_weaver/ww_timebase" }
+
+[patch."https://github.com/vhrdtech/ww_base"]
+ww_crc = { path = "../ww_base/ww_crc" }
+ww_date_time = { path = "../ww_base/ww_date_time" }
+ww_error = { path = "../ww_base/ww_error" }
+ww_global = { path = "../ww_base/ww_global" }
+ww_keyed = { path = "../ww_base/ww_keyed" }
+ww_numeric = { path = "../ww_base/ww_numeric" }
+ww_si = { path = "../ww_base/ww_si" }
+ww_version = { path = "../ww_base/ww_version" }
+
+[patch."https://github.com/vhrdtech/ww_stdlib"]
+ww_can_bus = { path = "../ww_stdlib/ww_can_bus" }
+ww_dfu = { path = "../ww_stdlib/ww_dfu" }
+ww_indication = { path = "../ww_stdlib/ww_indication" }
 
 # The board description's schema and loader comes from spirit_level the same way (../spirit_level).
 [patch."https://github.com/romixlab/spirit_level"]

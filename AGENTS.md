@@ -136,21 +136,25 @@ scriptable CLI and the shared crates.
 
 ## WireWeaver dependency
 
-WireWeaver crates (and exact_units, by git without a rev, pinned by Cargo.lock) come from git only: the root
-`Cargo.toml` names the source, `Cargo.lock` pins the commit. Nothing committed points at a sibling checkout, so a
-`--locked` build gives the same result on every PC, with or without `../wire_weaver` next to this checkout, and at
-whatever commit that sibling is (BLD-10).
+WireWeaver crates come from git only, from their own repositories: framework crates (`ww_api`, `ww_device`,
+`ww_link`, `ww_timebase`, `ww_clock_sync`) from `wire_weaver`, base types (`ww_si`, `ww_version`, `ww_date_time`)
+from `ww_base`, standard APIs (`ww_can_bus`, `ww_dfu`, `ww_indication`) from `ww_stdlib`, shrink_wrap and
+exact_units from romixlab. The root `Cargo.toml` names the source without a rev, `Cargo.lock` pins the commit.
+Nothing committed points at a sibling checkout, so a `--locked` build gives the same result on every PC, with or
+without the siblings next to this checkout (BLD-10). Crates that only describe or check API types take `ww_api`
+(the API crate prelude), never the `wire_weaver` runtime.
 
-- **Bump WireWeaver:** `cargo update -p wire_weaver` (moves every crate of the wire_weaver repository to its main
-  together; `--precise SHA` for a given commit), build and test, commit `Cargo.lock` as `build: wire_weaver <sha>`.
-- **Work on both repos at once:** `just dev-local` copies `.cargo/sibling-patch.toml` to the gitignored
-  `.cargo/dev-local.toml`, which `.cargo/config.toml` includes, so builds take WireWeaver from `../wire_weaver`.
-  Push the WireWeaver change first, then `just dev-git` (back to git), `cargo update -p wire_weaver`, commit the
-  lock. Never commit `Cargo.lock` while dev-local is on: it names sibling paths, and the `--locked` gate refuses it.
-- **A new WireWeaver crate:** add it to `[workspace.dependencies]` by git and to `.cargo/sibling-patch.toml`.
-- **One source per crate:** `cargo tree -d` must not show wire_weaver, shrink_wrap, a `ww_*` crate or exact_units
-  from two sources (CFG-4). exact_units has no `rev` here: Cargo.lock pins one commit, so after wire_weaver moves
-  its exact_units pin, run `cargo update -p exact_units` and check `cargo tree -d`.
+- **Bump WireWeaver:** `just ww-bump` (one `-p` per repository moves all its crates to main; `--precise SHA` by
+  hand for a given commit), build and test, commit the locks as `build: wire_weaver <sha>`.
+- **Work on several repos at once:** `just dev-local` copies `.cargo/sibling-patch.toml` to the gitignored
+  `.cargo/dev-local.toml`, which `.cargo/config.toml` includes, so builds take WireWeaver from `../wire_weaver`,
+  `../ww_base` and `../ww_stdlib`. Push those changes first, then `just dev-git` (back to git), `just ww-bump`,
+  commit the locks. Never commit `Cargo.lock` while dev-local is on: it names sibling paths, and the `--locked`
+  gate refuses it.
+- **A new WireWeaver crate:** add it to `[workspace.dependencies]` by git from its repository and to
+  `.cargo/sibling-patch.toml`, beside every crate of that repository the tree uses.
+- **One source per crate:** `cargo tree -d` must not show shrink_wrap, a `ww_*` crate or exact_units from two
+  sources (CFG-4); the same name twice from one source is a host and a target build, not a second copy.
 
 ## Commands
 

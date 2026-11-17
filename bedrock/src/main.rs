@@ -2,7 +2,7 @@ use bedrock_build_info::{BedrockBuildInfo, COMPACT_INFO_MAGIC, build_info_crc};
 use probe_rs::probe::WireProtocol;
 use probe_rs::{MemoryInterface, Session, SessionConfig};
 use std::path::Path;
-use wire_weaver::prelude::DeserializeShrinkWrap;
+use ww_api::prelude::DeserializeShrinkWrap;
 
 struct FlashMemory {
     bytes: Vec<u8>,

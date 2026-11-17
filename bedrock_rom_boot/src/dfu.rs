@@ -24,7 +24,7 @@
 //! ```
 
 use crate::Reboot;
-use wire_weaver::prelude::MaxLen;
+use ww_api::prelude::MaxLen;
 use ww_dfu::{
     BootState, BootTarget, Error, GeometryId, LastResult, NodeInfo, Offers, Outcome, Profile, Role,
     Seal, SecurityCounter,

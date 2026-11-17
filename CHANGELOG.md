@@ -9,6 +9,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** WireWeaver crates come from their new repositories: wire_weaver, ww_base and ww_stdlib; `just ww-bump` moves them (BLD-10).
+- **Breaking:** `bedrock_can` answers `ww_api::Error<CanError>`: common errors leave `CanError` as in ww_can_bus.
+- **Breaking:** `bedrock_sync::clock::ClockServer` answers `CommonError` where it answered `ClockError`, as ww_timebase's `Clock` does now.
+- `bedrock_build`, `bedrock_build_info`, `bedrock_can`, `bedrock_sync`, `bedrock_rom_boot`, `bedrock` take `ww_api`, not the `wire_weaver` runtime.
+
 ## [0.5.0] - 2026-11-14
 
 ### Changed

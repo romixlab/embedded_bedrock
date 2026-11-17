@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use wire_weaver::prelude::*;
+use ww_api::prelude::*;
 use ww_date_time::{DateTime, NaiveDate};
 use ww_version::Version;
 #[cfg(feature = "std")]

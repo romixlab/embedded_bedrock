@@ -3,14 +3,14 @@
 //! can do ([Controller]), mapping of acceptance filters onto M_CAN filter elements, frames to send, error state.
 //!
 //! The firmware (the template's `src/can.rs`) turns the results into calls of the `mcan` driver; a host tool uses the
-//! same functions to compute what a device will answer. Everything here answers with a `CanError` instead of
+//! same functions to compute what a device will answer. Everything here answers with a `CanError` or a common error instead of
 //! panicking: every value comes from the host.
 //!
 //! Ported from the B135 firmware (`b135_board::can`), with the kernel clock and the layout as parameters.
 
 #![no_std]
 
-use wire_weaver::prelude::*;
+use ww_api::prelude::*;
 use ww_can_bus::{
     Activity, BitTiming, CanConfig, CanError, CanId, Capabilities, ErrorState, FdConfig, Filter,
     FilterAction, FilterConfig, FilterMatch, Frame, FrameKind, Mode, NonMatching, Ohm, Options,
@@ -179,19 +179,22 @@ pub fn capabilities(
     }
 }
 
-fn invalid(arg: u8, reason: &'static str) -> CanError<'static> {
-    CanError::Common(CommonError::InvalidArgument {
+fn invalid(arg: u8, reason: &'static str) -> Error<'static, CanError> {
+    Error::Common(CommonError::InvalidArgument {
         arg: Index::new(arg),
         reason: MaxLen::new_unchecked(reason),
     })
 }
 
-fn unsupported() -> CanError<'static> {
-    CanError::Common(CommonError::Unsupported)
+fn unsupported() -> Error<'static, CanError> {
+    Error::Common(CommonError::Unsupported)
 }
 
 /// `bt` is within `limits` and a valid bit (`sjw` no longer than either phase segment).
-pub fn check_segments(bt: &BitTiming, limits: &TimingLimits) -> Result<(), CanError<'static>> {
+pub fn check_segments(
+    bt: &BitTiming,
+    limits: &TimingLimits,
+) -> Result<(), Error<'static, CanError>> {
     let (prescaler, seg1, seg2, sjw) = (
         bt.prescaler.get(),
         bt.seg1.get(),
@@ -273,7 +276,7 @@ pub fn segments(
     clock_hz: u32,
     timing: &Timing,
     limits: &TimingLimits,
-) -> Result<BitTiming, CanError<'static>> {
+) -> Result<BitTiming, Error<'static, CanError>> {
     match timing {
         Timing::Segments(bt) => {
             check_segments(bt, limits)?;
@@ -343,7 +346,7 @@ pub fn default_config(controller: &Controller) -> Option<HwConfig> {
 }
 
 /// `mode` is one this channel has.
-pub fn check_mode(mode: Mode) -> Result<Mode, CanError<'static>> {
+pub fn check_mode(mode: Mode) -> Result<Mode, Error<'static, CanError>> {
     match mode {
         Mode::Off
         | Mode::Config
@@ -369,7 +372,7 @@ pub fn mode_sends(mode: Mode) -> bool {
     )
 }
 
-fn check_options(o: &Options) -> Result<(), CanError<'static>> {
+fn check_options(o: &Options) -> Result<(), Error<'static, CanError>> {
     let missing = o.presume_ack
         || o.triple_sample
         || o.tx_order != TxOrder::Fifo
@@ -380,7 +383,10 @@ fn check_options(o: &Options) -> Result<(), CanError<'static>> {
 
 /// Checks a host's configuration and computes the segments; the answer of `configure` is
 /// [HwConfig::to_config] of the result.
-pub fn resolve(config: &CanConfig, controller: &Controller) -> Result<HwConfig, CanError<'static>> {
+pub fn resolve(
+    config: &CanConfig,
+    controller: &Controller,
+) -> Result<HwConfig, Error<'static, CanError>> {
     let clock_hz = controller.clock_hz;
     let mode = check_mode(config.mode)?;
     let nominal = segments(clock_hz, &config.nominal, &NOMINAL)?;
@@ -409,7 +415,7 @@ pub fn resolve(config: &CanConfig, controller: &Controller) -> Result<HwConfig, 
     })
 }
 
-fn resolve_fd(fd: &FdConfig, clock_hz: u32) -> Result<DataPhase, CanError<'static>> {
+fn resolve_fd(fd: &FdConfig, clock_hz: u32) -> Result<DataPhase, Error<'static, CanError>> {
     let timing = segments(clock_hz, &fd.data, &DATA)?;
     let tdc = match fd.tdc {
         Tdc::Off => None,
@@ -546,7 +552,7 @@ impl HwFilters {
     pub fn map(
         config: &FilterConfig<'_>,
         controller: &Controller,
-    ) -> Result<HwFilters, CanError<'static>> {
+    ) -> Result<HwFilters, Error<'static, CanError>> {
         let max = controller.max_filters();
         let standard_max = (controller.standard_filters as usize).min(STANDARD_FILTERS);
         let extended_max = (controller.extended_filters as usize).min(EXTENDED_FILTERS);
@@ -555,25 +561,25 @@ impl HwFilters {
         for filter in config.filters.iter() {
             let filter = filter.map_err(|_| invalid(0, "malformed filter"))?;
             if n >= max {
-                return Err(CanError::OutOfFilters {
+                return Err(Error::Api(CanError::OutOfFilters {
                     max: Fixed::new(max as u16),
-                });
+                }));
             }
             let (extended, element) = map_filter(&filter)?;
             if extended {
                 if ext >= extended_max {
-                    return Err(CanError::OutOfFilters {
+                    return Err(Error::Api(CanError::OutOfFilters {
                         max: Fixed::new(extended_max as u16),
-                    });
+                    }));
                 }
                 hw.extended[ext] = Some(element);
                 hw.extended_host[ext] = n as u8;
                 ext += 1;
             } else {
                 if std >= standard_max {
-                    return Err(CanError::OutOfFilters {
+                    return Err(Error::Api(CanError::OutOfFilters {
                         max: Fixed::new(standard_max as u16),
-                    });
+                    }));
                 }
                 hw.standard[std] = Some(element);
                 hw.standard_host[std] = n as u8;
@@ -600,7 +606,7 @@ impl HwFilters {
     }
 }
 
-fn non_matching(n: NonMatching) -> Result<HwNonMatching, CanError<'static>> {
+fn non_matching(n: NonMatching) -> Result<HwNonMatching, Error<'static, CanError>> {
     match n {
         NonMatching::Accept { fifo } if fifo.get() <= 1 => Ok(Some(fifo.get())),
         NonMatching::Accept { .. } => Err(invalid(0, "receive FIFO 0 or 1 only")),
@@ -614,7 +620,7 @@ fn raw(id: CanId) -> (bool, u32) {
     (id.is_extended(), id.raw())
 }
 
-fn map_filter(f: &Filter) -> Result<(bool, HwFilter), CanError<'static>> {
+fn map_filter(f: &Filter) -> Result<(bool, HwFilter), Error<'static, CanError>> {
     let (extended, matching) = match f.matching {
         FilterMatch::Exact(id) => {
             let (ext, id) = raw(id);
@@ -1225,9 +1231,9 @@ mod tests {
         }; EXTENDED_FILTERS + 1];
         assert_eq!(
             HwFilters::map(&filters(&many), &H7),
-            Err(CanError::OutOfFilters {
+            Err(Error::Api(CanError::OutOfFilters {
                 max: Fixed::new(EXTENDED_FILTERS as u16)
-            })
+            }))
         );
         let many = [Filter {
             matching: FilterMatch::Exact(std(1)),
@@ -1235,9 +1241,9 @@ mod tests {
         }; STANDARD_FILTERS + 1];
         assert_eq!(
             HwFilters::map(&filters(&many), &H7),
-            Err(CanError::OutOfFilters {
+            Err(Error::Api(CanError::OutOfFilters {
                 max: Fixed::new(STANDARD_FILTERS as u16)
-            })
+            }))
         );
         let mut c = filters(&[]);
         c.non_matching_standard = NonMatching::Accept {
@@ -1444,7 +1450,7 @@ mod tests {
         }];
         assert_eq!(
             HwFilters::map(&filters(&one), &g0),
-            Err(CanError::OutOfFilters { max: Fixed::new(0) })
+            Err(Error::Api(CanError::OutOfFilters { max: Fixed::new(0) }))
         );
     }
 

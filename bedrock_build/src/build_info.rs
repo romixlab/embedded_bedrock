@@ -3,7 +3,7 @@ use bedrock_build_info::{
     Profile, TargetInfoOwned, VersionControlOwned,
 };
 use build_info_common::BuildInfo;
-use wire_weaver::shrink_wrap::prelude::*;
+use ww_api::shrink_wrap::prelude::*;
 
 pub fn shrink_wrap_build_info(info: BuildInfo) -> (Vec<u8>, Vec<u8>) {
     let mut info = BedrockBuildInfoOwned {

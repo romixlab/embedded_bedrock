@@ -9,7 +9,7 @@ test *flags:
 # crate at its default (no extra) features, which is the only run that still covers bedrock_led / bedrock_sync /
 # bedrock_rom_boot's HAL-free, feature-off build (nextest can't tell "no features" from "fewer features", so this
 # run must stay separate, never folded into the second); the second unions the three crates' extra feature passes
-# into one build instead of three, so wire_weaver, embassy-time and friends compile once for all of them instead
+# into one build instead of three, so WireWeaver, embassy-time and friends compile once for all of them instead
 # of once per crate. `pkg/feature` scopes each feature to its crate: a bare `--features embassy` would also turn
 # embassy on for bedrock_rom_boot, which needs a chip family (firmware only) for that to make sense.
 # Doctests separately: nextest doesn't run them (its own limitation), and they're cheap next to the unit tests'
@@ -119,15 +119,23 @@ install:
     # one copy on PATH); otherwise: cargo install
     if command -v tpm >/dev/null; then tpm install target/deploy/bedrock-lint; else cargo install --locked --path bedrock_lint_cli; fi
 
-# Build against the sibling WireWeaver checkout ../wire_weaver (co-development): .cargo/sibling-patch.toml becomes
-# the gitignored .cargo/dev-local.toml. Cargo.lock then names the sibling paths: don't commit it in this state.
+# One crate per git repository moves all crates of that repository (wire_weaver, ww_base, ww_stdlib, ww_tape,
+# shrink_wrap, exact_units); commit the locks as `build: wire_weaver <sha>`.
+# Move every WireWeaver repository in Cargo.lock and the G0B1 example's lock to its main
+ww-bump:
+    cargo update -p ww_api -p ww_si -p ww_dfu -p ww_tape -p shrink_wrap -p exact_units
+    cargo update --manifest-path {{usb_example}}/Cargo.toml -p ww_api -p ww_si -p shrink_wrap -p exact_units
+
+# Build against the sibling WireWeaver checkouts ../wire_weaver, ../ww_base, ../ww_stdlib (co-development):
+# .cargo/sibling-patch.toml becomes the gitignored .cargo/dev-local.toml. Cargo.lock then names the sibling paths:
+# don't commit it in this state.
 dev-local:
     cp .cargo/sibling-patch.toml .cargo/dev-local.toml
-    cargo tree --workspace -i wire_weaver --target all --depth 0
+    cargo tree --workspace -i ww_api --target all --depth 0
 
 # Back to WireWeaver from git, the committed setup. Cargo relocks to wire_weaver's main if the lock lost its git
 # pin under dev-local: `git diff Cargo.lock` shows whether the pin moved (commit it as a bump, or check out the lock).
 dev-git:
     rm -f .cargo/dev-local.toml
-    cargo tree --workspace -i wire_weaver --target all --depth 0
+    cargo tree --workspace -i ww_api --target all --depth 0
     git diff --stat Cargo.lock

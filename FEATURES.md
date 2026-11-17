@@ -640,7 +640,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   the lock follow each PC's sibling). Co-development is explicit: `just dev-local` copies
   `.cargo/sibling-patch.toml` to the gitignored `.cargo/dev-local.toml` (included by `.cargo/config.toml`), `just
   dev-git` removes it; bumping is
-  `cargo update -p wire_weaver` plus a commit (AGENTS.md *WireWeaver dependency*). Supersedes BLD-8's local patch.
+  `just ww-bump` plus a commit (AGENTS.md *WireWeaver dependency*). Supersedes BLD-8's local patch. WireWeaver's
+  layering split moved the crates to `wire_weaver`, `ww_base` and `ww_stdlib`: the workspace takes each from its
+  repository, the sibling patch covers all three.
 
 ## Robustness (`ROB`)
 
