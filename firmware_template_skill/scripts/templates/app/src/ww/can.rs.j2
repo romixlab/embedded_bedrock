@@ -54,8 +54,8 @@ impl CanState {
     }
 }
 
-fn wrong_state(reason: &'static str) -> CanError<'static> {
-    CanError::Common(CommonError::WrongState {
+fn wrong_state(reason: &'static str) -> Error<'static, CanError> {
+    Error::Common(CommonError::WrongState {
         reason: MaxLen::new_unchecked(reason),
     })
 }
@@ -88,7 +88,7 @@ impl ServerState {
         _cx: &mut Context<'_, impl EventOut>,
         index_chain: [ResourceIndex; 1],
         config: CanConfig,
-    ) -> RpcResult<Result<CanConfig, CanError<'_>>> {
+    ) -> RpcResult<Result<CanConfig, Error<'_, CanError>>> {
         let i = index(index_chain);
         let hw = match bedrock_can::resolve(&config, &crate::can::controller()) {
             Ok(hw) => hw,
@@ -111,7 +111,7 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         index_chain: [ResourceIndex; 1],
-    ) -> GetResult<Status, ()> {
+    ) -> GetResult<Status, CommonError<'_>> {
         let i = index(index_chain);
         let s = crate::can::status(&CHANS[i]);
         Value(bedrock_can::status(
@@ -206,7 +206,7 @@ impl ServerState {
         _cx: &mut Context<'_, impl EventOut>,
         index_chain: [ResourceIndex; 1],
         mode: Mode,
-    ) -> RpcResult<Result<Mode, CanError<'_>>> {
+    ) -> RpcResult<Result<Mode, Error<'_, CanError>>> {
         let i = index(index_chain);
         let mode = match bedrock_can::check_mode(mode) {
             Ok(m) => m,
@@ -225,7 +225,7 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         index_chain: [ResourceIndex; 1],
-    ) -> RpcResult<Result<(), CanError<'_>>> {
+    ) -> RpcResult<Result<(), Error<'_, CanError>>> {
         match CHANS[index(index_chain)].command(Command::Recover).await {
             Reply::NotBusOff => Ready(Err(wrong_state("not bus-off"))),
             _ => Ready(Ok(())),
@@ -270,7 +270,7 @@ impl ServerState {
         _cx: &mut Context<'_, impl EventOut>,
         index_chain: [ResourceIndex; 1],
         filters: ww_can_bus::FilterConfig<'_>,
-    ) -> RpcResult<Result<(), CanError<'_>>> {
+    ) -> RpcResult<Result<(), Error<'_, CanError>>> {
         let i = index(index_chain);
         let filters = match HwFilters::map(&filters, &crate::can::controller()) {
             Ok(f) => f,

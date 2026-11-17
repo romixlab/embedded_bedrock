@@ -15,24 +15,30 @@
 {{ name }} = { {% if bedrock == "git" %}git = "{{ BEDROCK_GIT }}"{% else %}path = "{{ "" if bedrock.startswith("/") else prefix }}{{ bedrock }}/{{ name }}"{% endif %}{{ extra }} }
 {%- endmacro %}
 
-{#- WireWeaver crate from git, or from a local checkout (--ww-src, relative to the output directory; `prefix` leads there) -#}
-{% macro ww_dep(name, subdir, src, prefix, extra="") -%}
-{{ name }} = { {% if src == "git" %}git = "{{ WW_GIT }}"{% else %}path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}"{% endif %}{{ extra }} }
+{#- WireWeaver crate from its repository by git, or from a local checkout (--ww-src: the wire_weaver checkout,
+    relative to the output directory, with ww_base and ww_stdlib beside it; `prefix` leads there) -#}
+{% macro ww_dep(name, src, prefix, extra="") -%}
+{{ ww_named(name) }}{{ name }} = { {% if src == "git" %}git = "{{ ww_git(name) }}"{% else %}path = "{{ ww_path(name, src, prefix) }}"{% endif %}{{ extra }} }
 {%- endmacro %}
 
-{#- [patch] pointing the WireWeaver crates embedded_bedrock's crates take from git (bedrock_build; bedrock_rom_boot with
-    `dfu`; `extra`: (bedrock crate, WireWeaver crate, its subdir) of the others, bedrock_led's ww_indication) at the
-    local --ww-src checkout, so the build has one WireWeaver. Starts with a blank line, no newline at the end -#}
-{% macro bedrock_ww_patch(src, prefix, dfu=false, extra=[]) %}
-{% set takers = ["bedrock_build"] + (["bedrock_rom_boot"] if dfu else []) + extra | map(attribute=0) | unique | list %}
-
-# {{ takers | and_join }} {{ "take" if takers | length > 1 else "takes" }} WireWeaver from git: the local checkout (--ww-src) instead
-[patch."{{ WW_GIT }}"]
-{% set pairs = [("shrink_wrap", "shrink_wrap/shrink_wrap"), ("wire_weaver", "wire_weaver"), ("ww_date_time", "ww_stdlib/ww_date_time"), ("ww_device", "ww_device"), ("ww_link", "ww_link"), ("ww_version", "ww_stdlib/ww_version")] + ([("ww_dfu", "ww_stdlib/ww_dfu")] if dfu else []) %}
-{% for _, name, subdir in extra %}{% set _ = pairs.append((name, subdir)) %}{% endfor %}
-{% for name, subdir in pairs %}
-{{ name }} = { path = "{{ "" if src.startswith("/") else prefix }}{{ src }}/{{ subdir }}" }{{ "\n" if not loop.last }}
+{#- [patch] for a local --ww-src: WireWeaver's repositories name each other by git, so every crate of theirs that the
+    crates named so far (ww_dep), embedded_bedrock's `takers` (BEDROCK_WW) and `extra` reach points at its local
+    checkout, and the build has one copy of each. Starts with a blank line, no newline at the end; nothing with git -#}
+{% macro ww_local_patch(o, prefix, takers=[], extra=[]) %}
+{% if o.ww_src != "git" %}
+{% set seeds = extra | list %}
+{% for b in takers %}{% for c in BEDROCK_WW[b] %}{% set _ = seeds.append(c) %}{% endfor %}{% endfor %}
+{% for url, crates in ww_patch(o, prefix, seeds) %}
+{{ "\n" if not loop.first }}
+{% if loop.first %}
+# WireWeaver from the local checkouts (--ww-src){{ (", also for " ~ (takers | and_join) ~ " (from git)") if takers }}
+{% endif %}
+[patch."{{ url }}"]
+{% for name, path in crates %}
+{{ name }} = { path = "{{ path }}" }{{ "\n" if not loop.last }}
 {%- endfor %}
+{% endfor %}
+{% endif %}
 {%- endmacro %}
 
 {#- [patch.crates-io] taking `crates` from embassy main (--embassy main), or the same block commented out ready to

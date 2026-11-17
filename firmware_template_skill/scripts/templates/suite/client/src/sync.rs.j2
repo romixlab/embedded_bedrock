@@ -23,7 +23,7 @@ use wire_weaver_client::clock_sync::{ClockSteering, HostClock, Phase, Status};
 use ww_si::Second;
 {% endif %}
 
-use crate::{{ "{" }}Error, {{ T }}, Result{{ ", call" if s.clock }}{{ ", call_fallible, read" if s.leds }}{{ "}" }};
+use crate::{{ "{" }}Error, {{ T }}, Result{{ ", call" if s.clock or s.leds }}{{ ", read, write_plain" if s.leds }}{{ "}" }};
 
 {% if s.leds %}
 pub use ww_indication::{Brightness, Mode};
@@ -54,11 +54,7 @@ impl {{ T }} {
     }
 
     pub async fn set_leds_mode(&self, mode: Mode) -> Result<()> {
-        let item = "Indication::mode";
-        let w = self.raw.leds().write_mode(mode);
-        w.write()
-            .await
-            .map_err(|source| Error::Link { item, source })
+        write_plain("Indication::mode", self.raw.leds().write_mode(mode)).await
     }
 
     /// {{ L[:1] | upper }}{{ L[1:] }}'s peak brightness (RAM only, `Normal` after a reset).
@@ -67,11 +63,11 @@ impl {{ T }} {
     }
 
     pub async fn set_brightness(&self, brightness: Brightness) -> Result<()> {
-        let item = "Indication::brightness";
-        let w = self.raw.leds().write_brightness(brightness);
-        w.write()
-            .await
-            .map_err(|source| Error::Link { item, source })
+        write_plain(
+            "Indication::brightness",
+            self.raw.leds().write_brightness(brightness),
+        )
+        .await
     }
 
 {% filter rewrap("    /// ") %}
@@ -80,7 +76,7 @@ impl {{ T }} {
     pub async fn identify(&self, duration: Duration) -> Result<()> {
         let ms = u32::try_from(duration.as_millis())
             .map_err(|_| Error::Invalid(format!("identify for {duration:?}: too long")))?;
-        call_fallible(
+        call(
             "Indication::identify",
             self.raw.leds().identify(Second::milli(ms)),
         )

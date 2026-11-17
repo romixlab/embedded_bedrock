@@ -68,7 +68,8 @@ Paths are relative to this skill directory; use the absolute path when invoking.
         `const` device, no embassy-usb) instead of embassy-usb and embassy-stm32's driver (TPL-82).
      3. *Name of the API crate?* → `--ww-api <name>` [`<project>_api`], snake_case. Its name + version identify
         the API on the wire.
-     `--ww-src <path>` uses a local WireWeaver checkout (relative to the output directory) instead of git.
+     `--ww-src <path>` uses a local `wire_weaver` checkout, with `ww_base` and `ww_stdlib` beside it (relative to
+     the output directory), instead of git.
      With `--wire-weaver` the output directory is laid out differently, see *What gets generated*.
      4. *Also the host side (a client, CLI and Python package next to the firmware, justfile, CI, git hooks, README /
         AGENTS / FEATURES / CHANGELOG / LICENSE, logo)?* → `--host` (needs `--wire-weaver`); `--cli-name SHORT` names

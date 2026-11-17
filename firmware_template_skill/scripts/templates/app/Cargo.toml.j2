@@ -1,4 +1,4 @@
-{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep, bedrock_ww_patch, embassy_patch %}
+{% from "macros.j2" import dep, bedrock_build, bedrock_dep, ww_dep, ww_local_patch, embassy_patch %}
 {% set defmt = o.log == "defmt" %}
 {% set ww_rtt = o.ww and ww.rtt %}
 {% set d = s.dev %}
@@ -22,7 +22,7 @@ defmt = "{{ V["defmt"] }}"
     {% if d.log %}
 # defmt's global logger: every frame into device.log over WireWeaver, teed to the RTT channel "defmt" that probe-rs /
 # cnt run show (src/log.rs)
-{{ ww_dep("ww_defmt_logger", "ww_defmt_logger", o.ww_src, root, ', features = ["rtt"]') }}
+{{ ww_dep("ww_defmt_logger", o.ww_src, root, ', features = ["rtt"]') }}
 rtt-target = "{{ V["rtt-target"] }}" # the RTT channels: the log's tee{{ " and WireWeaver's up and down" if ww_rtt else "" }} (src/log.rs)
     {% elif ww_rtt %}
 {{ dep("rtt-target", ["defmt"]) }} # defmt shares RTT with WireWeaver, instead of defmt-rtt
@@ -138,24 +138,24 @@ mcan = { {% if o.mcan_src == "git" %}git = "{{ MCAN_GIT }}"{% else %}path = "{{ 
 {% endif %}
 {% set pins_deps %}
 # raw access to the free pins (src/pins.rs)
-{{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
-{{ ww_dep("ww_gpio", "ww_stdlib/ww_gpio", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }} # its Level, Pull
+{{ ww_dep("ww_pin_diag", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
+{{ ww_dep("ww_gpio", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }} # its Level, Pull
 {% endset %}
 {% if o.settings_flash %}
 # settings store in the SETTINGS flash region (src/settings.rs)
-{{ ww_dep("ww_settings", "ww_settings/ww_settings", o.ww_src, root, (', features = ["defmt"]' if defmt else "")) }}
+{{ ww_dep("ww_settings", o.ww_src, root, (', features = ["defmt"]' if defmt else "")) }}
   {% if o.settings_flash in ("g0", "h7") %}
 # flash reads that survive an ECC error left by a power cut
-{{ ww_dep("ww_ecc_flash", "mcu/ww_ecc_flash", o.ww_src, root, ', features = ["stm32' ~ o.settings_flash ~ '"' ~ (', "defmt"' if o.log == "defmt" else '') ~ ']') }}
+{{ ww_dep("ww_ecc_flash", o.ww_src, root, ', features = ["stm32' ~ o.settings_flash ~ '"' ~ (', "defmt"' if o.log == "defmt" else '') ~ ']') }}
   {% else %}
 embassy-embedded-hal = "{{ V["embassy-embedded-hal"] }}" # BlockingAsync: the flash as an async NorFlash
   {% endif %}
   {% if o.ww %}
-{{ ww_dep("ww_user_info", "ww_stdlib/ww_user_info", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_user_info", o.ww_src, root, ", default-features = false") }}
     {% if s.pins %}
 {{ pins_deps }}
     {%- endif %}
-{{ ww_dep("ww_error", "ww_stdlib/ww_error", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_error", o.ww_src, root, ", default-features = false") }}
   {% endif %}
 {% endif %}
 {% if o.bootloader %}
@@ -168,52 +168,52 @@ embassy-sync = "{{ V["embassy-sync"] }}"
 {% if o.ww %}
 # WireWeaver: API crate next to the firmware, served by src/ww.rs
 {{ ww.api }} = { path = "../{{ ww.api }}"{{ ', features = ["defmt"]' if defmt else "" }} }
-{{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
-{{ ww_dep("ww_client_server", "ww_stdlib/ww_client_server", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("wire_weaver", o.ww_src, root, ', default-features = false' ~ (', features = ["defmt"]' if defmt else "")) }}
+{{ ww_dep("ww_client_server", o.ww_src, root, ", default-features = false") }}
   {% if o.settings_flash or d.log or s.can %}
 embassy-futures = "{{ V["embassy-futures"] }}" # select in the server task (src/ww.rs)
   {% endif %}
-{{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
+{{ ww_dep("ww_firmware_info", o.ww_src, root, ", default-features = false, features = " ~ (feats("build-id", "cortex-m", defmt and "defmt") | toml_list)) }}
 # the device contract's stdlib traits (`device` in the API crate): types in the handler signatures (src/ww/device.rs)
-{{ ww_dep("ww_board_info", "ww_stdlib/ww_board_info", o.ww_src, root, ", default-features = false") }}
-{{ ww_dep("ww_si", "ww_stdlib/ww_si", o.ww_src, root, ", default-features = false, features = " ~ (feats("time", (s.leds or s.clock) and "u32") | toml_list)) }}
+{{ ww_dep("ww_board_info", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_si", o.ww_src, root, ", default-features = false, features = " ~ (feats("time", (s.leds or s.clock) and "u32") | toml_list)) }}
   {% if s.leds %}
-{{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_indication", o.ww_src, root, ", default-features = false") }}
   {% endif %}
   {% if s.can %}
-{{ ww_dep("ww_can_bus", "ww_stdlib/ww_can_bus", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_can_bus", o.ww_src, root, ", default-features = false") }}
   {% endif %}
   {% if s.clock %}
-{{ ww_dep("ww_timebase", "ww_stdlib/ww_timebase", o.ww_src, root, ", default-features = false") }}
-{{ ww_dep("ww_date_time", "ww_stdlib/ww_date_time", o.ww_src, root, ", default-features = false") }} # clock.set_time_of_day
+{{ ww_dep("ww_timebase", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_date_time", o.ww_src, root, ", default-features = false") }} # clock.set_time_of_day
   {% endif %}
   {% if (s.leds or s.clock) and not o.settings_flash %}
-{{ ww_dep("ww_error", "ww_stdlib/ww_error", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_error", o.ww_src, root, ", default-features = false") }}
   {% endif %}
-{{ ww_dep("ww_uid", "ww_stdlib/ww_uid", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_uid", o.ww_src, root, ", default-features = false") }}
   {% if d.counters %}
-{{ ww_dep("ww_counters", "ww_stdlib/ww_counters", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_counters", o.ww_src, root, ", default-features = false") }}
   {% endif %}
   {% if d.log %}
-{{ ww_dep("ww_log", "ww_stdlib/ww_log", o.ww_src, root, ", default-features = false") }}
+{{ ww_dep("ww_log", o.ww_src, root, ", default-features = false") }}
   {% endif %}
   {% if d.dfu %}
-{{ ww_dep("ww_dfu", "ww_stdlib/ww_dfu", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
+{{ ww_dep("ww_dfu", o.ww_src, root, ", default-features = false" ~ (', features = ["defmt"]' if defmt else "")) }}
   {% endif %}
   {% if s.pins and not o.settings_flash %}
 {{ pins_deps }}
   {%- endif %}
   {% if d.log %}
 # reliable stream state of device.log; persistent-ram: its store in .uninit RAM, kept across a crash and reset
-{{ ww_dep("ww_stream", "ww_stream", o.ww_src, root, ', default-features = false, features = ["persistent-ram"]') }}
+{{ ww_dep("ww_stream", o.ww_src, root, ', default-features = false, features = ["persistent-ram"]') }}
   {% endif %}
   {% if ww.usb and ww.bedrock_usb %}
 {{ bedrock_dep("bedrock_usb", o.bedrock, root, ", features = " ~ (feats("ww", "embassy-stm32", "embassy-time", defmt and "defmt") | toml_list)) }}
-{{ ww_dep("ww_device", "ww_device", o.ww_src, root, ", features = " ~ (feats("embassy-time", defmt and "defmt") | toml_list)) }}
+{{ ww_dep("ww_device", o.ww_src, root, ", features = " ~ (feats("embassy-time", defmt and "defmt") | toml_list)) }}
   {% elif ww.usb %}
-{{ ww_dep("wire_weaver_usb_embassy", "mcu/wire_weaver_usb_embassy", o.ww_src, root) }}
+{{ ww_dep("wire_weaver_usb_embassy", o.ww_src, root) }}
   {% else %}
-{{ ww_dep("ww_device", "ww_device", o.ww_src, root, ", features = " ~ (feats("rtt", "embassy-time", defmt and "defmt") | toml_list)) }}
+{{ ww_dep("ww_device", o.ww_src, root, ", features = " ~ (feats("rtt", "embassy-time", defmt and "defmt") | toml_list)) }}
   {% endif %}
 {% endif %}
 
@@ -223,16 +223,14 @@ bedrock_build = {{ bedrock_build(o.bedrock, prefix=root, flip_link=o.flip_link a
 build-info-build = "{{ V["build-info-build"] }}"
 {% endif %}
 {% if o.ww %}
-{{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, root, ', features = ["build"]') }} # FirmwareInfo facts (build.rs)
+{{ ww_dep("ww_firmware_info", o.ww_src, root, ', features = ["build"]') }} # FirmwareInfo facts (build.rs)
 {% endif %}
 {% if not (o.build_info or o.ww) %}
 # (none)
 {% endif %}
-{% if (o.build_info or s.dev.boot or s.leds or s.clock or s.can) and o.ww_src != "git" %}
-{{ bedrock_ww_patch(o.ww_src, root, s.dev.boot, ([("bedrock_led", "ww_indication", "ww_stdlib/ww_indication")] if s.leds else [])
-                   + ([("bedrock_sync", "ww_timebase", "ww_stdlib/ww_timebase"), ("bedrock_sync", "ww_si", "ww_stdlib/ww_si")] if s.clock else [])
-                   + ([("bedrock_can", "ww_can_bus", "ww_stdlib/ww_can_bus")] + ([] if s.clock else [("bedrock_can", "ww_si", "ww_stdlib/ww_si")]) if s.can else [])) }}
-{% endif %}
+{{ ww_local_patch(o, root, (["bedrock_build"] if o.build_info else []) + (["bedrock_rom_boot"] if s.dev.boot else [])
+                 + (["bedrock_led"] if s.leds else []) + (["bedrock_sync"] if s.clock else []) + (["bedrock_can"] if s.can else []),
+                 ["ww_board_info", "ww_firmware_info", "ww_uid"] if o.ww else []) }}
 
 # See https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html
 [profile.dev]

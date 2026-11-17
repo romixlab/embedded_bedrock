@@ -38,6 +38,7 @@ import difflib
 import itertools
 import json
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -58,6 +59,35 @@ import jinja2
 STM32_DATA_BASE = "https://raw.githubusercontent.com/embassy-rs/stm32-data-generated/main/data"
 BEDROCK_GIT = "https://github.com/romixlab/embedded_bedrock"
 WW_GIT = "https://github.com/vhrdtech/wire_weaver"
+# WireWeaver's repositories: the framework, the base types and the standard APIs. A local --ww-src names the
+# wire_weaver checkout; the other two are its siblings.
+WW_REPOS = {
+    "wire_weaver": WW_GIT,
+    "ww_base": "https://github.com/vhrdtech/ww_base",
+    "ww_stdlib": "https://github.com/vhrdtech/ww_stdlib",
+}
+WW_TOOLS_GIT = "https://github.com/vhrdtech/ww_tools"  # the `ww` binary with every standard API compiled in
+# The WireWeaver crates generated projects and embedded_bedrock's crates name: (repository, directory in it)
+WW_CRATES = {
+    **{c: ("wire_weaver", c) for c in ("wire_weaver", "wire_weaver_client", "wire_weaver_evolution", "ww_api",
+                                       "ww_client_server", "ww_device", "ww_link", "ww_stream", "ww_timebase")},
+    "wire_weaver_usb_embassy": ("wire_weaver", "mcu/wire_weaver_usb_embassy"),
+    "ww_ecc_flash": ("wire_weaver", "mcu/ww_ecc_flash"),
+    "ww_settings": ("wire_weaver", "ww_settings/ww_settings"),
+    **{c: ("ww_base", c) for c in ("ww_date_time", "ww_error", "ww_si", "ww_version")},
+    **{c: ("ww_stdlib", c) for c in ("ww_board_info", "ww_can_bus", "ww_counters", "ww_defmt_logger", "ww_dfu",
+                                     "ww_firmware_info", "ww_gpio", "ww_indication", "ww_log", "ww_pin_diag",
+                                     "ww_report", "ww_uid", "ww_user_info")},
+}
+# The WireWeaver crates each embedded_bedrock crate takes from git, the seeds of a local --ww-src's [patch]
+BEDROCK_WW = {
+    "bedrock_build": ["ww_api"],
+    "bedrock_rom_boot": ["ww_api", "ww_dfu"],
+    "bedrock_led": ["ww_indication"],
+    "bedrock_sync": ["ww_api", "ww_si", "ww_timebase"],
+    "bedrock_can": ["ww_api", "ww_can_bus", "ww_si"],
+}
+WW_CLOSURE_CRATES_MAX = 512  # crates a local --ww-src closure may visit before the walk is taken as runaway
 EMBASSY_GIT = "https://github.com/embassy-rs/embassy"
 WW_FW_DIR = "firmware"  # with --wire-weaver the firmware goes into <out>/firmware, next to the API crate
 LICENSE_HOLDER = "vhrd.tech"  # LICENSE copyright line of --host projects (a preset's [board] holder overrides)
@@ -862,7 +892,8 @@ JINJA.filters.update(
     and_join=and_join,
     rust_use=rust_use,
 )
-JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, WW_GIT=WW_GIT, EMBASSY_GIT=EMBASSY_GIT, feats=feats, nightly_channel=nightly_channel)
+JINJA.globals.update(V=V, BEDROCK_GIT=BEDROCK_GIT, WW_GIT=WW_GIT, WW_TOOLS_GIT=WW_TOOLS_GIT, EMBASSY_GIT=EMBASSY_GIT,
+                     BEDROCK_WW=BEDROCK_WW, feats=feats, nightly_channel=nightly_channel)
 
 
 def embassy_crates(o: "Opts", bootloader_crate: bool = False) -> list[str]:
@@ -880,8 +911,97 @@ def embassy_crates(o: "Opts", bootloader_crate: bool = False) -> list[str]:
     return crates
 
 
+WW_NAMED: set[str] = set()  # WireWeaver crates the template being rendered named through ww_dep, for ww_patch
+
+
 def render(template: str, **ctx) -> str:
+    WW_NAMED.clear()
     return JINJA.get_template(template).render(**ctx)
+
+
+def ww_named(name: str) -> str:
+    """Records a WireWeaver crate a manifest names (ww_dep), so the same template's ww_patch covers its closure."""
+    if name not in WW_CRATES:
+        die(f"template names WireWeaver crate {name}, which WW_CRATES doesn't place in a repository")
+    WW_NAMED.add(name)
+    return ""
+
+
+def ww_git(name: str) -> str:
+    return WW_REPOS[WW_CRATES[name][0]]
+
+
+def ww_sibling(src: str, prefix: str, rel: str) -> str:
+    """`rel` (a path below the directory holding the checkouts) as a manifest names it: the local wire_weaver
+    checkout `src` is relative to the output directory, `prefix` leads from the manifest there."""
+    return posixpath.normpath(f"{'' if src.startswith('/') else prefix}{src}/../{rel}")
+
+
+def ww_path(name: str, src: str, prefix: str) -> str:
+    repo, subdir = WW_CRATES[name]
+    return ww_sibling(src, prefix, f"{repo}/{subdir}")
+
+
+def ww_crate_dirs(root: Path) -> dict[str, Path]:
+    """Package name -> directory of every crate below a checkout (no target/ or .git/)."""
+    found = {}
+    for d, subdirs, files in os.walk(root):
+        subdirs[:] = [x for x in subdirs if x not in ("target", ".git", "node_modules")]
+        if "Cargo.toml" in files:
+            with open(Path(d) / "Cargo.toml", "rb") as f:
+                name = tomllib.load(f).get("package", {}).get("name")
+            if name:
+                found.setdefault(name, Path(d))
+    return found
+
+
+def ww_patch(o: Opts, prefix: str, extra: list[str]) -> list[tuple[str, list[tuple[str, str]]]]:
+    """[patch] sections for a local --ww-src: every crate of WireWeaver's repositories the crates named so far
+    (ww_dep) and `extra` reach, walked through the sibling checkouts' manifests. The siblings name each other by
+    git, so each such crate is pointed at its checkout, or the build would hold a git and a path copy of it.
+    Optional dependencies count too: cargo warns about a patch an unused optional one leaves out of the graph."""
+    src = o.ww_src
+    base = (Path(o.out_dir) / src).resolve().parent
+    url_repo = {url: repo for repo, url in WW_REPOS.items()}
+    dirs, ws = {}, {}
+    for repo in WW_REPOS:
+        if not (base / repo / "Cargo.toml").is_file():
+            die(f"--ww-src {src}: no {repo} checkout at {base / repo} (WireWeaver's repositories sit side by side)")
+        dirs[repo] = ww_crate_dirs(base / repo)
+        with open(base / repo / "Cargo.toml", "rb") as f:
+            ws[repo] = tomllib.load(f).get("workspace", {}).get("dependencies", {})
+    todo = [(n, WW_CRATES[n][0]) for n in sorted(WW_NAMED | set(extra))]
+    seen: dict[str, tuple[str, Path]] = {}
+    while todo:
+        name, repo = todo.pop()
+        if name in seen:
+            continue
+        if len(seen) >= WW_CLOSURE_CRATES_MAX:
+            die(f"--ww-src {src}: more than {WW_CLOSURE_CRATES_MAX} WireWeaver crates in the closure")
+        d = dirs[repo].get(name) or die(f"--ww-src {src}: no crate {name} in the {repo} checkout")
+        seen[name] = (repo, d)
+        with open(d / "Cargo.toml", "rb") as f:
+            m = tomllib.load(f)
+        tables = [m.get("dependencies", {}), m.get("build-dependencies", {})]
+        for tgt in m.get("target", {}).values():
+            tables += [tgt.get("dependencies", {}), tgt.get("build-dependencies", {})]
+        for table in tables:
+            for key, spec in table.items():
+                spec = spec if isinstance(spec, dict) else {}
+                if spec.get("workspace"):
+                    w = ws[repo].get(key, {})
+                    spec = w if isinstance(w, dict) else {}
+                pkg = spec.get("package", key)
+                if "git" in spec and spec["git"].removesuffix(".git") in url_repo:
+                    todo.append((pkg, url_repo[spec["git"].removesuffix(".git")]))
+                elif "path" in spec:
+                    todo.append((pkg, repo))
+    return [(url, [(n, ww_sibling(src, prefix, posixpath.relpath(d.as_posix(), base.as_posix())))
+                   for n, (r, d) in sorted(seen.items()) if r == repo])
+            for repo, url in WW_REPOS.items() if any(r == repo for r, _ in seen.values())]
+
+
+JINJA.globals.update(ww_named=ww_named, ww_git=ww_git, ww_path=ww_path, ww_patch=ww_patch)
 
 
 # ----------------------------------------------------------------------------
@@ -918,6 +1038,7 @@ class Opts:
     ww_transport: str = ""  # usb | rtt
     ww_api: str = ""        # API crate name
     ww_src: str = "git"     # "git" or a path to a local wire_weaver checkout (relative to the output directory)
+    out_dir: str = "."      # the output directory, where a relative --ww-src starts
     usb_phy: str = "fs"     # --usb-phy: fs (on-chip PHY, DP/DM) | ulpi (external high-speed PHY, TPL-54)
     usb_stack: str = "embassy"  # --usb-stack (TPL-82): embassy (embassy-usb + embassy-stm32's driver) | bedrock (bedrock_usb)
     crash: bool = False     # crash capture (bedrock_crash): fault / panic record kept across reset, reset cause
@@ -1937,9 +2058,9 @@ def suite_context(t: Target, o: Opts, lay: Optional[Layout] = None) -> dict:
         s["boot"] = {}
     s["uid"] = {"arg": False, "reg": "", "ref": False, **uid_context(t, o)} if o.ww else {}
     # src/log.rs: the logger's ring and the stream's store, a quarter of them on parts with less than 64 KiB of RAM
-    # (12 KiB of 20 on an L073 left no stack)
+    # (12 KiB of 20 on an L073 left no stack; the store is 1.5 KiB there since the common errors grew the server task)
     ram = next((r.length for r in lay.regions if r.kind == "ram" and r.is_main_ram), 0) if lay else 0
-    s["log"] = {"ring": 4096, "store": 8192} if not ram or ram >= 64 * 1024 else {"ring": 1024, "store": 2048}
+    s["log"] = {"ring": 4096, "store": 8192} if not ram or ram >= 64 * 1024 else {"ring": 1024, "store": 1536}
     # the LED (TPL-39): its name on the board for prose, `pwm` the timer channel it breathes on (led_pwm(), None: a
     # plain GPIO); `leds`: ww_indication::Indication in the API, with breath and --wire-weaver
     # [[leds]] (TPL-18): `name` all of them ("D201 and D202"), `first` the one led_on / led_off drive
@@ -2115,7 +2236,7 @@ def setup_context(t: Target, o: Opts) -> dict:
         tools.append(("cnt", "defmt log and event counters of the running firmware (`just cnt`, `cnt tui`)", ["cnt_cli"]))
     if o.ww or t.family == "rp":
         what = "WireWeaver command line: introspect and call any API" if o.ww else "`just flash-bootsel` (PICOBOOT)"
-        tools.append(("ww", what, ["--git", WW_GIT, "wire_weaver_cli"]))
+        tools.append(("ww", what, ["--git", WW_TOOLS_GIT, "ww"]))
     if o.host and o.board and o.board.get("boardmap"):
         tools.append(("boardmap", "re-draws the board pictures in docs/board/ (`just board`)",
                       ["--git", BEDROCK_GIT, "bedrock_board_cli"]))
@@ -3063,6 +3184,7 @@ def cmd_new(args, p_new: argparse.ArgumentParser) -> None:
              min_bootloader=args.min_bootloader, main_ram=args.main_ram or "", led=led, bedrock=args.bedrock,
              build_info=build_info, ww=args.wire_weaver, crash=t.cortex_m and not args.no_crash_capture, regs=regs)
     o.embassy = args.embassy
+    o.out_dir = str(Path(args.out or name))
     o.rom_boot = rom_boot
     o.rp_boot = rp_boot(t, args)
     o.board = getattr(args, "preset", None)

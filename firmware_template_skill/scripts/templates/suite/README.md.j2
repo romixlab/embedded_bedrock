@@ -122,7 +122,7 @@ scans the RAM for the RTT control block (about 1.5 s through an {{ probe[0] }});
 (`{{ s.cli }} probes` lists them, and the shell completes the serials: `source <(COMPLETE=bash {{ s.cli }})`).{% endif +%}
 
 `cnt tui --chip {{ s.chip }}` shows the event counters; `ww` (the WireWeaver CLI,
-`cargo install --git https://github.com/vhrdtech/wire_weaver wire_weaver_cli`) can introspect and call any API
+`cargo install --git {{ WW_TOOLS_GIT }} ww`) can introspect and call any API
 without the generated client: `ww {{ "--rtt " ~ s.chip ~ " " if ww.rtt else "" }}introspect`.
 {% if s.has_cli and s.has_device %}
 

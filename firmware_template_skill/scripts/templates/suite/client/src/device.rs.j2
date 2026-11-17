@@ -2,8 +2,8 @@
 {% set A = ww.krate %}
 {% set d = s.dev %}
 {% set decode = d.counters or d.log %}
-{% set uses = feats("Error" if decode or s.led_at_boot else "", T, "Result", "call" if d.boot or d.dfu else "",
-                    "call_fallible" if d.counters or d.settings or d.boot else "", "read", "write" if s.led_at_boot else "") %}
+{% set uses = feats("Error" if decode else "", T, "Result", "call" if d.boot or d.dfu or d.counters or d.settings else "",
+                    "call_fallible" if d.boot else "", "read", "write_plain" if s.led_at_boot else "") %}
 {% set items = feats("board" if d.board else "", "ids" if d.uid else "", "variant" if d.variant else "",
                      "counters" if d.counters else "", "log" if d.log else "", "settings" if d.settings else "",
                      "boot" if d.boot else "", "the update node" if d.dfu else "") %}
@@ -91,7 +91,7 @@ impl {{ T }} {
 
     /// Zeroes the counters of one buffer.
     pub async fn reset_counters(&self, buffer: CounterBuffer) -> Result<()> {
-        call_fallible(
+        call(
             "Counters::reset",
             self.raw.device().counters().reset(buffer),
         )
@@ -208,13 +208,9 @@ impl {{ T }} {
 
     /// Sets the LED after boot; it is in flash when the call returns.
     pub async fn set_led_at_boot(&self, on: bool) -> Result<()> {
-        write(
+        write_plain(
             "Settings::led_at_boot",
             self.raw.device().settings().write_led_at_boot(on),
-            |e| Error::Device {
-                item: "Settings::led_at_boot",
-                message: format!("{e:?}"),
-            },
         )
         .await
     }
@@ -223,7 +219,7 @@ impl {{ T }} {
 
     /// Every setting back to its default{{ ", the label too" if d.label else "" }}; in flash when the call returns.
     pub async fn reset_settings(&self) -> Result<()> {
-        call_fallible("Settings::reset", self.raw.device().settings().reset()).await
+        call("Settings::reset", self.raw.device().settings().reset()).await
     }
 {% endif %}
 {% if d.boot %}

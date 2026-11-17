@@ -63,7 +63,7 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         value: Mode,
-    ) -> SetResult<()> {
+    ) -> SetResult<CommonError<'_>> {
 {% if multi %}
         let (normal, essential) = match value {
             Mode::AllOff => (false, false),
@@ -103,7 +103,7 @@ impl ServerState {
     pub(super) fn get_leds_mode(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> GetResult<Mode, ()> {
+    ) -> GetResult<Mode, CommonError<'_>> {
         Value(self.leds.mode)
     }
 
@@ -111,7 +111,7 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         value: Brightness,
-    ) -> SetResult<()> {
+    ) -> SetResult<CommonError<'_>> {
 {% if o.counters %}
         let peak = PEAKS.peak(value).unwrap_or_else(|| {
             cnt!(leds_brightness_unknown: u32);
@@ -128,7 +128,7 @@ impl ServerState {
     pub(super) fn get_leds_brightness(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> GetResult<Brightness, ()> {
+    ) -> GetResult<Brightness, CommonError<'_>> {
         Value(self.leds.brightness)
     }
 

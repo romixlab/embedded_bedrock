@@ -61,7 +61,7 @@ use wire_weaver_client::{
 pub use wire_weaver_client::{ClientConfig, DeviceApiInfo, WwClient};
 pub use ww_firmware_info::{FirmwareSummaryOwned{{ ", ResetRecordOwned" if d.last_reset else "" }}};
 {% if d.label %}
-pub use ww_user_info::UserInfoErrorOwned;
+pub use ww_user_info::UserInfoError;
 {% endif %}
 {% if ww.rtt %}
 
@@ -99,9 +99,9 @@ pub enum Error {
 {% if d.label %}
     /// The firmware refused to store the label (too long, flash busy or faulted).
     #[error("label: {0:?}")]
-    Label(UserInfoErrorOwned),
+    Label(UserInfoError),
 {% endif %}
-    /// The firmware refused a call with its error{{ (" (" ~ feats("counters" if d.counters else "", "settings" if d.settings else "", "boot" if d.boot else "") | join(", ") ~ ")") if d.counters or d.settings or d.boot else "" }}.
+    /// The firmware refused a call with its error or a common one (`Busy`, `Unsupported`, ...){{ (" (" ~ feats("counters" if d.counters else "", "settings" if d.settings else "", "boot" if d.boot else "") | join(", ") ~ ")") if d.counters or d.settings or d.boot else "" }}.
     #[error("{item}: {message}")]
     Device { item: &'static str, message: String },
 {% if decode %}
@@ -395,14 +395,23 @@ pub fn api_line(info: &DeviceApiInfo) -> String {
     format!("{} {:?}", v.crate_id, v.version)
 }
 
+/// The client's error of `item` as [Error]: a common error the firmware answered with becomes [Error::Device].
+fn link(item: &'static str, source: wire_weaver_client::Error) -> Error {
+    match source.common() {
+        Some(c) => Error::Device {
+            item,
+            message: c.to_string(),
+        },
+        None => Error::Link { item, source },
+    }
+}
+
 /// A method call of the generated client, with [Error] instead of the client's error.
 pub async fn call<T: DeserializeShrinkWrapOwned>(
     item: &'static str,
     p: PreparedCall<T>,
 ) -> Result<T> {
-    p.call()
-        .await
-        .map_err(|source| Error::Link { item, source })
+    p.call().await.map_err(|source| link(item, source))
 }
 
 /// A method call of the generated client whose error type is `E` (`Result<T, E>` in the API), with [Error] instead of
@@ -417,6 +426,10 @@ where
             item,
             message: format!("{e:?}"),
         },
+        CallError::Common(c) => Error::Device {
+            item,
+            message: c.to_string(),
+        },
         CallError::Unimplemented { .. } => Error::Unimplemented { item },
         CallError::Client(source) => Error::Link { item, source },
     })
@@ -427,9 +440,7 @@ pub async fn read<T: DeserializeShrinkWrapOwned + std::fmt::Debug>(
     item: &'static str,
     p: PreparedRead<T>,
 ) -> Result<T> {
-    p.read()
-        .await
-        .map_err(|source| Error::Link { item, source })
+    p.read().await.map_err(|source| link(item, source))
 }
 
 /// A property write of the generated client whose error type is `E`, mapped through `device`.
@@ -443,9 +454,18 @@ where
 {
     p.write().await.map_err(|e| match e {
         CallError::Device(e) => device(e),
+        CallError::Common(c) => Error::Device {
+            item,
+            message: c.to_string(),
+        },
         CallError::Unimplemented { .. } => Error::Unimplemented { item },
         CallError::Client(source) => Error::Link { item, source },
     })
+}
+
+/// A write of a property without an error type of its own, with [Error] instead of the client's error.
+pub async fn write_plain(item: &'static str, p: PreparedWrite) -> Result<()> {
+    p.write().await.map_err(|source| link(item, source))
 }
 
 impl {{ T }} {

@@ -133,7 +133,8 @@ use ww_device::rtt::{RttBuffers, RttConfig, RttServer, rtt_server};
 use ww_device::{EmbassyClock, LinkConfig{{ ", LinkEvent" if streams else "" }}};
 {% endif %}
 {% if pins %}
-use ww_pin_diag::{Level, PinDiagError, PointState};
+use ww_pin_diag::{Level, PinDiagError, PointState, TestPoint};
+use ww_si::Index;
 {% endif %}
 use ww_uid::{UidKind, UidSource, UniqueId};
 {% if buttons %}
@@ -380,22 +381,30 @@ impl ServerState {
     fn pins_set(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        point: u16,
+        point: Index<TestPoint, u16>,
         state: PointState,
-    ) -> RpcResult<Result<(), PinDiagError<'_>>> {
+    ) -> RpcResult<Result<(), Error<'_, PinDiagError<'_>>>> {
+        let point = point.get();
         Ready(
             self.pins
                 .set(point, state)
-                .inspect_err(|e| refused(point, e)),
+                .inspect_err(|e| refused(point, e))
+                .map_err(Error::Api),
         )
     }
 
     fn pins_read(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-        point: u16,
-    ) -> RpcResult<Result<Level, PinDiagError<'_>>> {
-        Ready(self.pins.read(point).inspect_err(|e| refused(point, e)))
+        point: Index<TestPoint, u16>,
+    ) -> RpcResult<Result<Level, Error<'_, PinDiagError<'_>>>> {
+        let point = point.get();
+        Ready(
+            self.pins
+                .read(point)
+                .inspect_err(|e| refused(point, e))
+                .map_err(Error::Api),
+        )
     }
 
     fn pins_release_all(&mut self, _cx: &mut Context<'_, impl EventOut>) -> RpcResult<()> {

@@ -19,7 +19,7 @@ dependencies); the firmware is a standalone crate next to it, excluded from the 
 - `firmware/` — the firmware; `src/ww.rs` implements the API on `ServerState` (`ww_codegen!`) and runs the transport.
   All firmware commands (`cargo build`, `cargo run`) run there{{ ", the bootloader is in `firmware/bootloader/`" if o.bootloader else "" }}.
 
-WireWeaver crates come from {{ "git (`" ~ WW_GIT ~ "`, pinned by `firmware/Cargo.lock` and the root's)" if o.ww_src == "git" else "the local checkout `" ~ o.ww_src ~ "`" }}.
+WireWeaver crates come from {{ "git (`wire_weaver`, `ww_base`, `ww_stdlib` under `" ~ WW_GIT.rsplit("/", 1)[0] ~ "`, pinned by `firmware/Cargo.lock` and the root's)" if o.ww_src == "git" else "the local checkouts `" ~ o.ww_src ~ "` and its siblings `ww_base`, `ww_stdlib`" }}.
 Its `AGENTS.md` and `docs/` explain the API DSL (methods, properties, streams) and the wire format.
 
 The trait, `ServerState` and the method implementations were blinky stubs; after generation they are this

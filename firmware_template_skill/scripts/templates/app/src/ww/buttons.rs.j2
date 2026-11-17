@@ -34,7 +34,7 @@ impl ServerState {
     pub(super) fn get_buttons_{{ b.var }}(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> GetResult<bool, ()> {
+    ) -> GetResult<bool, CommonError<'_>> {
 {% if b in e9 %}
         Value(read_e9({{ b.gpio }}, || self.buttons.{{ b.var }}.is_{{ b.pressed }}()))
 {% else %}

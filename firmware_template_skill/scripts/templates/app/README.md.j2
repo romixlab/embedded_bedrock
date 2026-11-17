@@ -31,7 +31,7 @@ cargo run --release
 {% endif %}
 {% if t.family == "rp" %}
 Without a probe free: hold BOOTSEL and reset, then `just flash-bootsel [SERIAL]` writes the ELF straight through
-PICOBOOT (`cargo install --git {{ WW_GIT }} wire_weaver_cli` for `ww`), no picotool/elf2uf2/objcopy step.
+PICOBOOT (`cargo install --git {{ WW_TOOLS_GIT }} ww` for `ww`), no picotool/elf2uf2/objcopy step.
 
 {% endif %}
 {% if lay %}

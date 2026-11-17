@@ -20,9 +20,7 @@ use {{ ww.krate }}::{SiliconRevision, Variant};
 use wire_weaver::prelude::*;
 use ww_board_info::{BoardSummary, RevisionSource};
 {% if d.counters %}
-use ww_counters::{
-    BufferInfo, CounterBuffer, CountersError, CountersInfo, Index, Word, read_words, reset_words,
-};
+use ww_counters::{BufferInfo, CounterBuffer, CountersInfo, Index, Word, read_words, reset_words};
 {% endif %}
 {% if d.dfu %}
 use ww_dfu::{BootState, BootTarget, Error as DfuError, NodeInfo};
@@ -32,7 +30,7 @@ use ww_error::CommonError;
 {% endif %}
 use ww_firmware_info::{BUILD_ID_MAX_LEN, FirmwareSummary{{ ", ResetRecord" if d.last_reset else "" }}};
 {% if d.log %}
-use ww_log::{DefmtInfo, LogError};
+use ww_log::DefmtInfo;
 {% endif %}
 {% if d.label %}
 use ww_settings::shrink_wrap::ArrayString;
@@ -42,7 +40,7 @@ use ww_pin_diag::Point;
 {% endif %}
 use ww_uid::UniqueId;
 {% if d.label %}
-use ww_user_info::{MAX_NAME_LEN, UserInfoCaps, UserInfoError};
+use ww_user_info::{Bytes, MAX_NAME_LEN, NameMax, NotesMax, UserInfoCaps, UserInfoError};
 {% endif %}
 
 /// Product name of `device.board`{{ " and `device.dfu.node`" if d.dfu else "" }}.
@@ -84,23 +82,23 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         value: MaxLen<&'_ str, MAX_NAME_LEN>,
-    ) -> SetResult<UserInfoError<'_>> {
+    ) -> SetResult<Error<'_, UserInfoError>> {
         let Ok(label) = ArrayString::try_from(*value) else {
-            return SetError(UserInfoError::TooLong {
-                max: MAX_NAME_LEN as u16,
-            });
+            return SetError(Error::Api(UserInfoError::TooLong {
+                max: Bytes::new(MAX_NAME_LEN as u16),
+            }));
         };
         self.settings.set(|s| s.label = label);
         match self.persist_settings().await {
             Ok(()) => Set,
-            Err(e) => SetError(UserInfoError::Common(e)),
+            Err(e) => SetError(Error::Common(e)),
         }
     }
 
     pub(super) async fn get_device_label_name(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> GetResult<MaxLen<&'_ str, MAX_NAME_LEN>, UserInfoError<'_>> {
+    ) -> GetResult<MaxLen<&'_ str, MAX_NAME_LEN>, Error<'_, UserInfoError>> {
         Value(MaxLen::new_unchecked(self.settings.get().label.as_str()))
     }
 }
@@ -114,7 +112,7 @@ impl ServerState {
         _cx: &mut Context<'_, impl EventOut>,
         buffer: CounterBuffer,
         offset: Index<Word, u16>,
-    ) -> RpcResult<Result<MaxLen<RefVec<'_, UVlq32>, { ww_counters::MAX_WORDS }>, CountersError<'_>>>
+    ) -> RpcResult<Result<MaxLen<RefVec<'_, UVlq32>, { ww_counters::MAX_WORDS }>, CommonError<'_>>>
     {
         let (words, used) = counter_buffer(buffer);
         Ready(read_words(
@@ -129,7 +127,7 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         buffer: CounterBuffer,
-    ) -> RpcResult<Result<(), CountersError<'_>>> {
+    ) -> RpcResult<Result<(), CommonError<'_>>> {
         reset_words(counter_buffer(buffer).0);
         Ready(Ok(()))
     }
@@ -151,7 +149,7 @@ impl ServerState {
     pub(super) fn device_log_frames(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> RpcResult<Result<(), LogError<'_>>> {
+    ) -> RpcResult<Result<(), CommonError<'_>>> {
         Ready(Ok(()))
     }
 
@@ -169,7 +167,7 @@ impl ServerState {
     pub(super) fn get_device_variant(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> GetResult<Variant, ()> {
+    ) -> GetResult<Variant, CommonError<'_>> {
         Value(variant())
     }
 }
@@ -278,15 +276,15 @@ impl ServerState {
     pub(super) fn device_boot_confirm(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> RpcResult<Result<(), DfuError>> {
-        Ready(bedrock_rom_boot::dfu::confirm())
+    ) -> RpcResult<Result<(), Error<'_, DfuError>>> {
+        Ready(bedrock_rom_boot::dfu::confirm().map_err(Error::Api))
     }
 
     pub(super) fn device_boot_revert(
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
-    ) -> RpcResult<Result<(), DfuError>> {
-        Ready(bedrock_rom_boot::dfu::revert())
+    ) -> RpcResult<Result<(), Error<'_, DfuError>>> {
+        Ready(bedrock_rom_boot::dfu::revert().map_err(Error::Api))
     }
 
 {% if s.boot.kind == "rp" %}
@@ -298,7 +296,7 @@ impl ServerState {
         &mut self,
         _cx: &mut Context<'_, impl EventOut>,
         into: BootTarget,
-    ) -> RpcResult<Result<(), DfuError>> {
+    ) -> RpcResult<Result<(), Error<'_, DfuError>>> {
         defmt::info!("reboot into {}", into);
 {% if s.boot.kind == "rp" %}
         crate::boot::request_reboot(bedrock_rom_boot::dfu::reboot_target(into));
@@ -367,8 +365,8 @@ impl super::server_impl::{{ ww.trait }}Consts for ServerState {
 
     // kept in the settings store, no room for notes (`omit` in ww.rs)
     const DEVICE_LABEL_CAPABILITIES: UserInfoCaps = UserInfoCaps {
-        name_max: MAX_NAME_LEN as u16,
-        notes_max: 0,
+        name_max: NameMax::bounded(MAX_NAME_LEN as u8),
+        notes_max: NotesMax::bounded(0),
         persistent: true,
     };
 {% endif %}

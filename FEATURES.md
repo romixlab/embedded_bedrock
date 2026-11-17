@@ -632,8 +632,8 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
 - ✅ **BLD-8 Builds from git**: the workspace takes WireWeaver by git (root `Cargo.toml`), local work takes the
   sibling `../wire_weaver` through the `[patch]` in `.cargo/config.toml`, which only builds run inside the checkout
   see. So firmware's `bedrock_build` and `cargo install --git ... bedrock_board_cli --locked` work on a PC without
-  the sibling; generated firmware with a local `--ww-src` patches bedrock_build's WireWeaver to that checkout (one
-  WireWeaver in the build). Tested matrix entries `g0bi` and `g0bigit`.
+  the sibling; generated firmware with a local `--ww-src` patches every crate of wire_weaver, ww_base and ww_stdlib
+  that the build reaches to the local checkouts (one copy of each). Tested matrix entries `g0bi` and `g0bigit`.
 - ✅ **BLD-10 WireWeaver pinned by git, no committed sibling patch**: the workspace takes WireWeaver and exact_units
   from git only and Cargo.lock pins the commit, so `--locked` lint and test pass the same on every PC, with no
   `../wire_weaver` next to the checkout or one at any other commit (the committed path patch made

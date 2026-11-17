@@ -13,11 +13,11 @@ wire = "w1.0"
 [features]
 # owned (alloc) variants of the API types, for host-side users
 std = [
-{% for c in feats("wire_weaver", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", s.leds and "ww_indication", d.log and "ww_log", s.pins and "ww_pin_diag", s.clock and "ww_timebase", s.can and "ww_can_bus", "ww_uid", d.label and "ww_user_info") %}
+{% for c in feats("ww_api", "ww_board_info", d.counters and "ww_counters", d.dfu and "ww_dfu", "ww_firmware_info", s.leds and "ww_indication", d.log and "ww_log", s.pins and "ww_pin_diag", s.clock and "ww_timebase", s.can and "ww_can_bus", "ww_uid", d.label and "ww_user_info") %}
     "{{ c }}/std",
 {% endfor %}
 ]
-{% set dm = feats("wire_weaver/defmt", "ww_firmware_info/defmt", s.leds and "ww_indication/defmt", s.pins and "ww_pin_diag/defmt", s.clock and "ww_timebase/defmt", s.can and "ww_can_bus/defmt", d.label and "ww_user_info/defmt", "dep:defmt") %}
+{% set dm = feats("ww_api/defmt", "ww_firmware_info/defmt", s.leds and "ww_indication/defmt", s.pins and "ww_pin_diag/defmt", s.clock and "ww_timebase/defmt", s.can and "ww_can_bus/defmt", d.label and "ww_user_info/defmt", "dep:defmt") %}
 {% if dm | length > 4 %}
 defmt = [
   {% for c in dm %}
@@ -30,28 +30,29 @@ defmt = {{ dm | toml_list }}
 
 [dependencies]
 defmt = { version = "{{ V["defmt"] }}", optional = true }
-{{ ww_dep("wire_weaver", "wire_weaver", o.ww_src, "../", ", default-features = false") }}
+# the API crate prelude: macros, markers, the wire format and the common error, without the runtime
+{{ ww_dep("ww_api", o.ww_src, "../", ", default-features = false") }}
 # the device contract (`device`): stdlib traits generic host tools know
 # FirmwareInfo, LastReset; `std` reads every architecture's fault record
-{{ ww_dep("ww_firmware_info", "ww_stdlib/ww_firmware_info", o.ww_src, "../", ', default-features = false, features = ["cortex-m"]') }}
-{{ ww_dep("ww_board_info", "ww_stdlib/ww_board_info", o.ww_src, "../", ", default-features = false") }}
-{{ ww_dep("ww_uid", "ww_stdlib/ww_uid", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_firmware_info", o.ww_src, "../", ', default-features = false, features = ["cortex-m"]') }}
+{{ ww_dep("ww_board_info", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_uid", o.ww_src, "../", ", default-features = false") }}
 {% if d.label %}
 # UserInfo: the unit's name, kept in the firmware's settings store
-{{ ww_dep("ww_user_info", "ww_stdlib/ww_user_info", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_user_info", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if d.counters %}
-{{ ww_dep("ww_counters", "ww_stdlib/ww_counters", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_counters", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if d.log %}
-{{ ww_dep("ww_log", "ww_stdlib/ww_log", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_log", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if d.dfu %}
-{{ ww_dep("ww_dfu", "ww_stdlib/ww_dfu", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_dfu", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if s.pins %}
 # PinDiag: raw access to the free pins for pin tests (`ww pins tui`)
-{{ ww_dep("ww_pin_diag", "ww_stdlib/ww_pin_diag", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_pin_diag", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if s.leds and s.clock %}
 # `leds` and `clock`: {{ s.led.name }}'s indication, the clock a host steers onto UTC
@@ -61,16 +62,16 @@ defmt = { version = "{{ V["defmt"] }}", optional = true }
 # `clock`: the clock a host steers onto UTC
 {% endif %}
 {% if s.leds %}
-{{ ww_dep("ww_indication", "ww_stdlib/ww_indication", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_indication", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if s.clock %}
-{{ ww_dep("ww_timebase", "ww_stdlib/ww_timebase", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_timebase", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 {% if s.can %}
 # `can[]`: the CAN FD channels
-{{ ww_dep("ww_can_bus", "ww_stdlib/ww_can_bus", o.ww_src, "../", ", default-features = false") }}
+{{ ww_dep("ww_can_bus", o.ww_src, "../", ", default-features = false") }}
 {% endif %}
 
 [dev-dependencies]
 # the evolution check (tests/evolution.rs): this crate compared with its snapshots in api_snapshots/
-{{ ww_dep("wire_weaver_evolution", "wire_weaver_evolution", o.ww_src, "../") }}
+{{ ww_dep("wire_weaver_evolution", o.ww_src, "../") }}

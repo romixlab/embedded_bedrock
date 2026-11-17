@@ -173,10 +173,11 @@ switching the default runner.
 `bedrock_build::common()` replaces the manual `-Tlink.x/-Tdefmt.x/--nmagic` lines and adds `RAM_LINK=1` support
 (link and run from RAM, `link_ram_cortex_m.x`). `bedrock_build::serialize_build_info()` writes `build_info.rs`
 with `compact()` (CRC'd blob in flash) and `full()` (defmt-interned, ELF only). Requires a checkout of
-`embedded_bedrock` (`--bedrock <relative path>`, default `git`); its WireWeaver crates come from git. With a local
-`--ww-src`, `Cargo.toml` and `bootloader/Cargo.toml` get a `[patch."https://github.com/vhrdtech/wire_weaver"]` that
-points bedrock_build's `wire_weaver`, `ww_date_time` and `ww_version` (and bedrock_rom_boot's `ww_dfu` with
-`device.boot`) at that checkout, so the build has one WireWeaver. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
+`embedded_bedrock` (`--bedrock <relative path>`, default `git`); its WireWeaver crates come from git. A local
+`--ww-src` names the `wire_weaver` checkout, with `ww_base` and `ww_stdlib` beside it. WireWeaver's repositories
+name each other by git, so `Cargo.toml`, `bootloader/Cargo.toml` and the suite's root get one `[patch]` per
+repository for every crate of theirs the build reaches (the generator walks the checkouts' manifests from the crates
+the manifest names and those embedded_bedrock's crates take), and the build has one copy of each. The bootloader embeds `compact()` alone unless its `defmt` feature is on (`full()` needs defmt).
 
 ## Hubris
 
