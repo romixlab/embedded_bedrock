@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-17
+
 ### Changed
 
 - **Breaking:** WireWeaver crates come from their new repositories: wire_weaver, ww_base and ww_stdlib; `just ww-bump` moves them (BLD-10).
