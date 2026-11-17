@@ -579,12 +579,12 @@ impl<D: OtgDescriptors, R: Regs + Copy> crate::Backend for Driver<D, R> {
 pub(crate) fn bus_reset<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
     critical_section::with(|cs| {
         stop_out(r, layout, st, !0);
-        for n in 0..layout.count as usize {
+        for (n, ep) in st.eps.iter().enumerate().take(layout.count as usize) {
             stop_in(r, n, false);
             set_ctl(r, offset::doepctl(n), |v| v & !ctl::STALL, ctl::SNAK);
             r.write(offset::diepint(n), !0);
             r.write(offset::doepint(n), !0);
-            st.eps[n].set_out(cs, OutQueue::DISABLED);
+            ep.set_out(cs, OutQueue::DISABLED);
         }
         flush_tx(r, grstctl::TXFNUM_ALL);
         flush_rx(r);
@@ -592,8 +592,8 @@ pub(crate) fn bus_reset<R: Regs>(r: &R, layout: &Layout, st: StateRef) {
         let v = r.read(offset::DCFG) & !dcfg::DAD;
         r.write(offset::DCFG, v);
         r.write(offset::GRXFSIZ, layout.rx_words as u32);
-        for n in 0..layout.count as usize {
-            let d = &layout.eps[n].inp;
+        for (n, ep) in layout.eps.iter().enumerate().take(layout.count as usize) {
+            let d = &ep.inp;
             if d.is_used() {
                 r.write(offset::dieptxf(n), fsiz::value(d.start, d.words));
             }

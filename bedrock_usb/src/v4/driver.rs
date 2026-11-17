@@ -461,9 +461,9 @@ fn reset_double<R: Regs>(
             chep::to_dtog_rx(w, v, false)
         }
         Direction::Out => {
-            for b in 0..2 {
+            for (b, &bd) in layout.regs[n].bd.iter().enumerate() {
                 let i = 2 * n + b;
-                r.set_sram(i, layout.regs[n].bd[b]);
+                r.set_sram(i, bd);
             }
             // DTOG (DTOGRX) 0 and SW_BUF (DTOGTX) 1: the peripheral receives into buffer 0
             let w = chep::to_dtog_rx(chep::clear_vtrx(v), v, false);

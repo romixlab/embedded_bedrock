@@ -97,8 +97,8 @@ pub fn planned() -> Config {
         pll(5, 166, Some(5461), None, Some(10), Some(8)),
         pll(3, 96, None, Some(8), Some(16), Some(16)),
     ];
-    for i in 0..2 {
-        c.pll[i].as_mut().unwrap().steer = Some(SteerPpm::symmetric(100));
+    for pll in c.pll.iter_mut().take(2) {
+        pll.as_mut().unwrap().steer = Some(SteerPpm::symmetric(100));
     }
     c
 }

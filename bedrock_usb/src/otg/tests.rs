@@ -381,8 +381,8 @@ fn fifo_registers_after_a_reset() {
     let l = &Desc::OTG;
     assert_eq!(b.sim.reg(offset::GRXFSIZ), l.rx_words as u32);
     let mut next = l.rx_words;
-    for n in 0..l.count as usize {
-        let d = &l.eps[n].inp;
+    for (n, ep) in l.eps.iter().enumerate().take(l.count as usize) {
+        let d = &ep.inp;
         if !d.is_used() {
             assert_eq!(b.sim.reg(offset::dieptxf(n)), 0);
             continue;

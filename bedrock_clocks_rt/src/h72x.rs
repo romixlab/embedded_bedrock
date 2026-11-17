@@ -277,12 +277,12 @@ pub fn apply(r: &mut impl Regs, p: &Plan) -> Result<(), Error> {
 
     // 4. PLLs, Figure 48 order
     r.write(RCC_PLLCKSELR, p.pllckselr);
-    for i in 0..3 {
-        r.write(rcc_pllfracr(i), p.pllfracr[i]);
+    for (i, &v) in p.pllfracr.iter().enumerate() {
+        r.write(rcc_pllfracr(i), v);
     }
     r.write(RCC_PLLCFGR, p.pllcfgr);
-    for i in 0..3 {
-        r.write(rcc_plldivr(i), p.plldivr[i]);
+    for (i, &v) in p.plldivr.iter().enumerate() {
+        r.write(rcc_plldivr(i), v);
     }
     modify(r, RCC_CR, 0, p.rcc_cr_pll_on);
     for i in 0..3 {
