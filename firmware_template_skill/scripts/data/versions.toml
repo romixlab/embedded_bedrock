@@ -5,7 +5,7 @@
 # The nightly every firmware builds with (TPL-81, rust-toolchain.toml `nightly-<date>`): rustfmt, clippy and rust-src
 # must be in it (`rustup toolchain install nightly-<date> -c rustfmt,clippy,rust-src`). Move it with care: run the
 # matrix and compare a firmware's flash (llvm-size text + data) before and after.
-nightly = "2026-11-02"
+nightly = "2026-11-19"
 
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
