@@ -27,7 +27,7 @@ prints where the sheet is (`note: errata: ...`, also in the generated `README.md
   function calls across flash memory banks, when the device operates in dual-bank mode. The failing prefetch then
   provides incorrect data to the CPU, which corrupts code execution and may lead to HardFault interrupt."
   Applies to 512 KiB parts (always dual-bank) and 256 KiB parts with `DUAL_BANK` set; workaround "None" (prefetch
-  off, or no code branching across the banks). Seen on Donguru: a call from bank 2 into bank 1 HardFaulted under USB
+  off, or no code branching across the banks). Seen on Portwright: a call from bank 2 into bank 1 HardFaulted under USB
   load. The template turns flash prefetch on for G0 with `--framework embassy` (embassy main does it itself) and, on
   a dual-bank G0B1 / G0C1, adds `ASSERT(__etext <= <bank 2 base>)` to `memory.x`, so code reaching bank 2 fails to
   link instead of faulting at run time; the fix then is prefetch off in `src/main.rs` (and dropping the ASSERT) or a

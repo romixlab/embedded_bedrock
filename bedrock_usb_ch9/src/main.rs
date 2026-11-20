@@ -1,7 +1,7 @@
 //! `bedrock-usb-ch9`: nusb-based chapter 9 checks against a USB device's descriptors, wLength edges, halt and
 //! toggle behaviour, SET_CONFIGURATION / SET_INTERFACE loops and bus resets (USBD-6). It does not depend on
 //! `bedrock_usb` and talks to any USB device through its standard requests, so it runs against today's
-//! embassy-usb Donguru, usb_io_fw on RP2350, or a `bedrock_usb` firmware alike.
+//! embassy-usb Portwright, usb_io_fw on RP2350, or a `bedrock_usb` firmware alike.
 //!
 //! Linux and macOS only for now: the control transfers run on `nusb::Device` directly (no interface claimed),
 //! which `nusb` does not support on Windows.

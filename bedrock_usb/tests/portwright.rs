@@ -1,10 +1,10 @@
-//! Golden test: Donguru's USB device (typec_dongle `fw/donguru`, `src/ww/mod.rs` and `src/cmsis_dap.rs`) as a
-//! bedrock_usb `const` gives the same descriptors as embassy-usb 0.6's `Builder` built the way Donguru builds it.
+//! Golden test: Portwright's USB device (typec_dongle `fw/portwright`, `src/ww/mod.rs` and `src/cmsis_dap.rs`) as a
+//! bedrock_usb `const` gives the same descriptors as embassy-usb 0.6's `Builder` built the way Portwright builds it.
 //!
 //! The embassy side runs on a dummy driver: its control pipe is fed GET_DESCRIPTOR and the MS OS 2.0 vendor
 //! request, and what `UsbDevice` answers is compared byte for byte. The WireWeaver function repeats the builder
-//! calls of `wire_weaver_usb_embassy::WireWeaverClass::with_endpoints` (wire_weaver 2d50b95e) with Donguru's values;
-//! that crate itself needs defmt and an embassy-time driver, which a host test doesn't have. Donguru builds the
+//! calls of `wire_weaver_usb_embassy::WireWeaverClass::with_endpoints` (wire_weaver 2d50b95e) with Portwright's values;
+//! that crate itself needs defmt and an embassy-time driver, which a host test doesn't have. Portwright builds the
 //! WireWeaver endpoints with the `endpoint_bulk_*_double_buffered` calls of its embassy fork; those differ from
 //! `endpoint_bulk_*` only in the driver's allocation, not in the descriptor, so the plain calls stand in for them.
 //!
@@ -39,7 +39,7 @@ use embassy_usb::msos::{self, windows_version};
 use embassy_usb::types::StringIndex;
 use embassy_usb::{Builder, Config, Handler};
 
-// Donguru's values (typec_dongle fw/donguru src/ww/mod.rs, src/cmsis_dap.rs; wire_weaver_usb_embassy 0.2.0)
+// Portwright's values (typec_dongle fw/portwright src/ww/mod.rs, src/cmsis_dap.rs; wire_weaver_usb_embassy 0.2.0)
 const EP_WW_OUT: u8 = 1;
 const EP_WW_IN: u8 = 2;
 const EP_CMSIS_DAP: u8 = 3;
@@ -49,11 +49,11 @@ const WW_PROTOCOL: u8 = 0x37;
 const WW_GUIDS: &[&str] = &["{4987DAA6-F852-4B79-A4C8-8C0E0648C845}"];
 /// 0x40: "wwue" and wire_weaver_usb_embassy's own version
 const WW_SELF_VERSION: [u8; 7] = [b'w', b'w', b'u', b'e', 0, 2, 0];
-/// 0x41 / 0x42: the user API crate and its version, `donguru_api::DONGURU_API_FULL_GID`
-const WW_USER_CRATE: &[u8] = b"donguru_api";
+/// 0x41 / 0x42: the user API crate and its version, `portwright_api::PORTWRIGHT_API_FULL_GID`
+const WW_USER_CRATE: &[u8] = b"portwright_api";
 const WW_USER_VERSION: [u8; 3] = [0, 6, 0];
 const DAP_STRING: &str = "CMSIS-DAP v2 Interface";
-const API_ID: &str = "donguru_api 0.6.0 label";
+const API_ID: &str = "portwright_api 0.6.0 label";
 const SERIAL: &str = "0123456789ABCDEF01234567";
 
 const WW_FEATURES: &[MsOsFeature] = &[
@@ -67,9 +67,9 @@ const WW_FEATURES: &[MsOsFeature] = &[
     },
 ];
 
-const DONGURU: Device = Device {
-    manufacturer: Str::Const("donguru"),
-    product: Str::Const("donguru"),
+const PORTWRIGHT: Device = Device {
+    manufacturer: Str::Const("vhrd.tech"),
+    product: Str::Const("Portwright"),
     serial: Str::Runtime,
     ms_os_20: Some(MsOs20 {
         vendor_code: 0,
@@ -119,7 +119,7 @@ const DONGURU: Device = Device {
     ..Device::new(0xc0de, 0xcafe)
 };
 
-bedrock_usb::descriptors!(Desc = DONGURU);
+bedrock_usb::descriptors!(Desc = PORTWRIGHT);
 
 // --- embassy-usb on a dummy driver ---
 
@@ -282,7 +282,7 @@ impl Handler for Strings {
     }
 }
 
-/// Donguru's `start()` and the two classes' constructors, on the dummy driver; answers `setups` in order.
+/// Portwright's `start()` and the two classes' constructors, on the dummy driver; answers `setups` in order.
 fn embassy_answers(setups: &[Setup]) -> Vec<Option<Vec<u8>>> {
     let script = Rc::new(RefCell::new(Script {
         setups: setups.iter().map(|s| s.to_bytes()).collect(),
@@ -295,8 +295,8 @@ fn embassy_answers(setups: &[Setup]) -> Vec<Option<Vec<u8>>> {
     }));
 
     let mut config = Config::new(0xc0de, 0xcafe);
-    config.manufacturer = Some("donguru");
-    config.product = Some("donguru");
+    config.manufacturer = Some("vhrd.tech");
+    config.product = Some("Portwright");
     config.serial_number = Some(SERIAL);
     config.device_class = 0xEF;
     config.device_sub_class = 0x02;
@@ -384,7 +384,7 @@ const fn get_descriptor(kind: u8, index: u8, lang: u16) -> Setup {
 }
 
 #[test]
-fn donguru_matches_embassy_usb() {
+fn portwright_matches_embassy_usb() {
     let ms_os_request = Setup {
         request_type: 0xC0, // IN, vendor, device
         request: 0,         // the vendor code
@@ -424,15 +424,17 @@ fn donguru_matches_embassy_usb() {
     assert_eq!(answer(4), &STRING0[..], "string 0");
 
     // the constant strings, encoded at compile time
-    const MANUFACTURER: [u8; string_len("donguru")] = string_descriptor("donguru");
+    const MANUFACTURER: [u8; string_len("vhrd.tech")] = string_descriptor("vhrd.tech");
+    const PRODUCT: [u8; string_len("Portwright")] = string_descriptor("Portwright");
     const DAP: [u8; string_len(DAP_STRING)] = string_descriptor(DAP_STRING);
-    assert_eq!(DONGURU.string(1), Some(Str::Const("donguru")));
+    assert_eq!(PORTWRIGHT.string(1), Some(Str::Const("vhrd.tech")));
+    assert_eq!(PORTWRIGHT.string(2), Some(Str::Const("Portwright")));
     assert_eq!(answer(5), &MANUFACTURER[..]);
-    assert_eq!(answer(6), &MANUFACTURER[..]);
-    assert_eq!(DONGURU.string(5), Some(Str::Const(DAP_STRING)));
+    assert_eq!(answer(6), &PRODUCT[..]);
+    assert_eq!(PORTWRIGHT.string(5), Some(Str::Const(DAP_STRING)));
     assert_eq!(answer(9), &DAP[..]);
     // the run-time ones on the same indices: serial 3, API id 4
-    assert_eq!(DONGURU.string(3), Some(Str::Runtime));
+    assert_eq!(PORTWRIGHT.string(3), Some(Str::Runtime));
     assert_eq!(
         answer(7)[2..],
         SERIAL
@@ -440,7 +442,7 @@ fn donguru_matches_embassy_usb() {
             .flat_map(u16::to_le_bytes)
             .collect::<Vec<_>>()[..]
     );
-    assert_eq!(DONGURU.string(4), Some(Str::Runtime));
+    assert_eq!(PORTWRIGHT.string(4), Some(Str::Runtime));
     assert_eq!(
         answer(8)[2..],
         API_ID
@@ -450,21 +452,21 @@ fn donguru_matches_embassy_usb() {
     );
     // and nothing beyond
     assert_eq!(answers[10], None);
-    assert_eq!(DONGURU.string(6), None);
+    assert_eq!(PORTWRIGHT.string(6), None);
 }
 
 #[test]
-fn donguru_hand_checked() {
-    // the lengths Donguru's UsbBuffers were sized for: 192 / 40 / 330
+fn portwright_hand_checked() {
+    // the lengths Portwright's UsbBuffers were sized for: 192 / 40 / 330
     assert_eq!(
         Desc::CONFIG_DESC.len(),
-        9 + (8 + 9 + 7 + 7 + 9 + 13 + 5) + (8 + 9 + 7 + 7)
+        9 + (8 + 9 + 7 + 7 + 9 + 16 + 5) + (8 + 9 + 7 + 7)
     );
     assert_eq!(Desc::BOS.len(), 5 + 7 + 28);
     assert_eq!(Desc::MS_OS_20_SET.len(), 10 + 2 * (20 + 132) + 8 + 8);
     #[rustfmt::skip]
     let head: &[u8] = &[
-        9, 2, 98, 0, 2, 1, 0, 0x80, 50,
+        9, 2, 101, 0, 2, 1, 0, 0x80, 50,
         8, 11, 0, 1, 0xff, 0, 0x37, 0,
         9, 4, 0, 0, 2, 0xff, 0, 0x37, 4,
         7, 5, 0x01, 0x02, 64, 0, 0,
@@ -473,7 +475,7 @@ fn donguru_hand_checked() {
     ];
     assert_eq!(&Desc::CONFIG_DESC[..head.len()], head);
     assert_eq!(
-        &Desc::CONFIG_DESC[98 - 23..],
+        &Desc::CONFIG_DESC[101 - 23..],
         &[
             9, 4, 1, 0, 2, 0xff, 0, 0, 5, 7, 5, 0x03, 0x02, 64, 0, 0, 7, 5, 0x83, 0x02, 64, 0, 0,
         ]
@@ -481,7 +483,7 @@ fn donguru_hand_checked() {
 }
 
 #[test]
-fn donguru_layout() {
+fn portwright_layout() {
     let l = Desc::LAYOUT;
     assert_eq!((l.count, l.table_len), (4, 32));
     assert_eq!(l.regs[0].reg_type, RegType::Control);
@@ -526,15 +528,15 @@ mod ww_macro {
     use super::*;
     use bedrock_usb::ww::MS_OS_20;
 
-    const DONGURU_MACRO: Device = Device {
-        manufacturer: Str::Const("donguru"),
-        product: Str::Const("donguru"),
+    const PORTWRIGHT_MACRO: Device = Device {
+        manufacturer: Str::Const("vhrd.tech"),
+        product: Str::Const("Portwright"),
         serial: Str::Runtime,
         ms_os_20: Some(MS_OS_20),
         functions: &[
             bedrock_usb::ww_function! {
                 out: EP_WW_OUT, in: EP_WW_IN, max_packet: MAX_PACKET, buffering: Double,
-                user_crate: "donguru_api", user_version: (0, 6, 0), api_id: Str::Runtime,
+                user_crate: "portwright_api", user_version: (0, 6, 0), api_id: Str::Runtime,
                 framing: bedrock_usb::ww::__ww_link::UsbFraming, self_id: WW_SELF_VERSION,
             },
             Function {
@@ -551,7 +553,7 @@ mod ww_macro {
         ],
         ..Device::new(0xc0de, 0xcafe)
     };
-    bedrock_usb::descriptors!(DescMacro = DONGURU_MACRO);
+    bedrock_usb::descriptors!(DescMacro = PORTWRIGHT_MACRO);
 
     #[test]
     fn ww_function_equals_the_hand_written_one() {

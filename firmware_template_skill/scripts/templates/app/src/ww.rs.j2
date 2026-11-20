@@ -740,7 +740,7 @@ pub fn start(spawner: Spawner, driver: UsbDriver, state: ServerState) {
 {% set db = t.family == "stm32" and o.embassy == "main" and u.double_buffer %}
   {% if db %}
     // Double-buffered bulk endpoints (embassy-rs/embassy#7275): {{ u.periph }} takes the next packet while the last one
-    // is processed instead of making the host retry, ~2x the throughput behind a USB hub (Donguru FW-24).
+    // is processed instead of making the host retry, ~2x the throughput behind a USB hub (Portwright FW-24).
   {% endif %}
     let (usb, server) = {{ "usb_init_with_endpoints" if db else "usb_init" }}{{ "_with_ids" if usb_ids }}(
         driver,

@@ -52,7 +52,7 @@ can stop compiling, or a `cfg`-gated branch can silently diverge from the defaul
 it until someone actually reaches for that feature during a release crunch.
 
 **Example:** typec_dongle's FW-23 fix made `just lint` run `cargo fmt --check` and
-`cargo clippy --bins --examples -D warnings` three times over `fw/donguru` — default features,
+`cargo clippy --bins --examples -D warnings` three times over `fw/portwright` — default features,
 `--all-features`, and `--no-default-features` — specifically so a feature-gated path that stops building fails
 CI instead of being discovered later. The thirteen lints outstanding on 15 Oct 2026 were down to doc-list
 indentation and one dead-code warning by 24 Oct, once every combination ran.
@@ -77,7 +77,7 @@ while `bedrock_led` and `bedrock_sync` brought WireWeaver a *second* time from g
 `[patch]` to the sibling `../wire_weaver` checkout — thirteen `E0308` type mismatches in `ww/leds.rs` and
 `ww/clock.rs`, all "expected `shrink_wrap::X`, found `shrink_wrap::X`" from the two copies. The fix made
 `bedrock_crash` a path dependency on `../embedded_bedrock`, like the other bedrock crates, and patched
-`fw/donguru/Cargo.toml`'s WireWeaver source to the same sibling checkout that `bedrock_led`'s own `Cargo.toml`
+`fw/portwright/Cargo.toml`'s WireWeaver source to the same sibling checkout that `bedrock_led`'s own `Cargo.toml`
 already asked for.
 
 **Fix:** patch every crate in the tree to exactly one source (git xor the sibling path) in the workspace root's

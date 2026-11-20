@@ -25,7 +25,7 @@ fn boot_word_fields() {
     };
     assert_eq!(w.word(), 0xB007_C003);
     assert_eq!(BootWord::from_word(0xB007_C003), w);
-    // Donguru's FW-12 request word reads the same
+    // Portwright's FW-12 request word reads the same
     assert_eq!(
         BootWord::from_word(0xB007_8000),
         BootWord {

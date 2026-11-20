@@ -78,7 +78,7 @@ so a missing entry means work nobody sees.
   endpoint registers and USB SRAM layout with its RM0444 checks (`layout.rs`), `descriptors!` and `state!`
   (`macros.rs`), the EP0 state machine without registers (`control.rs`, chapter 9 host tests in
   `tests/chapter9.rs`), the usb_v4 driver (`v4/`: registers behind a `Regs` trait, ISR, EP0, typed endpoints, the
-  simulated peripheral `sim.rs` its host tests run on, `embassy.rs` glue). Golden test `tests/donguru.rs` against
+  simulated peripheral `sim.rs` its host tests run on, `embassy.rs` glue). Golden test `tests/portwright.rs` against
   embassy-usb's `Builder` on a dummy driver; `tests/v4_metapac.rs` holds the driver's registers to stm32-metapac.
   `ww.rs` (feature `ww`) is the WireWeaver class: `ww_function!` and `PacketSink` / `PacketSource` on the bulk
   endpoints. `device.rs` is `Usb::run()` over a `Backend` trait, the device on both (tests in `device/tests.rs`, on the
@@ -95,7 +95,7 @@ so a missing entry means work nobody sees.
   encoded as register words and emitted as a reviewable `clocks.rs` that the board commits next to its
   `clocks.toml`. `g0/` does the same for the STM32G0B1 / G0C1 (RM0444 / DS13560 / ES0548), its field positions held
   to stm32-metapac's G0B1 in the `metapac-check-g0` pass (metapac takes one chip per build; `h72x`, the default
-  feature, uses its H725). Golden tests for B135 and Donguru in `tests/`; `BLESS=1 cargo test -p bedrock_clocks`
+  feature, uses its H725). Golden tests for B135 and Portwright in `tests/`; `BLESS=1 cargo test -p bedrock_clocks`
   rewrites the golden files.
 - `bedrock_clocks_rt/` — applies such a plan at boot (no_std, no PAC): `h72x` and `g0` each with `apply` and
   `verify` (H72x also `set_fracn`) against the crate's `Regs` trait, tested on a simulated chip with the golden

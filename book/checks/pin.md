@@ -10,7 +10,7 @@ goes back to its reset state (usually a floating input) right after it was confi
 drove the pin, because the register write happened, but the driver object that was supposed to hold that
 configuration for the firmware's life never lived past the line that created it.
 
-**Example:** donguru_template's `firmware/src/main.rs` shows the pattern to follow instead: `let _pa4 =
+**Example:** portwright_template's `firmware/src/main.rs` shows the pattern to follow instead: `let _pa4 =
 Output::new(p.PA4, Level::High, Speed::Low)` binds the driver to a named (if underscore-prefixed) local that lives
 for the rest of `main`, so the pin stays driven. The generic Notion firmware checklist item on "destructors" is
 the same lesson in HAL-agnostic form: anything whose `Drop` undoes a hardware configuration needs an owner that

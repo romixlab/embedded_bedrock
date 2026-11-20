@@ -144,7 +144,7 @@ was innocent the whole time gets worked around or replaced.
 GoodCRC retries against a sink were initially suspicious of the sink's FUSB302B, but the actual investigation
 (our internal PD-controller design notes) ruled it out methodically: (1) the sink's own log
 showed every retried message's `MessageID` received twice, meaning the sink had the first attempt whole — it
-wasn't losing anything; (2) Donguru's PD task shared the thread-mode executor with its USB server, and embassy
+wasn't losing anything; (2) Portwright's PD task shared the thread-mode executor with its USB server, and embassy
 arms UCPD's RX DMA only inside `receive()`, so a USB server turn across the end of a transmission let the
 GoodCRC's first bytes overrun RXDR; (3) retries ran 3.5% of Get_Sink_Cap exchanges with logging streaming, 0.5%
 without — correlated with *our* logging load, not the sink; (4) moving extra I2C reads onto the sink to rule out

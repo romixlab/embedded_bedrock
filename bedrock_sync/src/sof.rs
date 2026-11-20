@@ -468,7 +468,7 @@ mod tests {
         assert_eq!(t.push(11, 6_001), Push::Taken);
     }
 
-    // An HSI16 2000 ppm fast (Donguru's was about that): after a minute the rate is within a ppm and every frame's
+    // An HSI16 2000 ppm fast (Portwright's was about that): after a minute the rate is within a ppm and every frame's
     // local time within a few µs, through 30 wraps of the 11-bit frame number.
     #[test]
     fn rc_oscillator_fitted_through_wraps() {

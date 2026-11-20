@@ -1,6 +1,6 @@
 //! The bedrock look (DEV-15): what a status LED shows for what it means, the same on every board. A board says
 //! [OK], [BUSY], [WARN], [FAULT], [ALERT] (in a colour from [colour] where it has an RGB LED) and gets the same
-//! animation as Donguru, rePort and B135B; nothing visual is chosen per board.
+//! animation as Portwright, rePort and B135B; nothing visual is chosen per board.
 //!
 //! Timing: every period divides [CYCLE_MS], so all looks start a cycle together every 3 s, and with shared time
 //! (DEV-14) every board's cycles start on the same UTC multiples of it: a breath on one board and a blink on another

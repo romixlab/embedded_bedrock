@@ -273,7 +273,7 @@ pub struct Check {
 impl Plan {
     /// The read-back table of [verify], as a `const fn`: firmware that keeps it in a `static`
     /// (`static CHECKS: [Check; 10] = clocks::PLAN.checks();`) and calls [verify_checks] reads it from flash instead
-    /// of building 160 bytes of it on the stack: 172 bytes less code on Donguru at opt-level z, 176 more at 3 (RCC-16).
+    /// of building 160 bytes of it on the stack: 172 bytes less code on Portwright at opt-level z, 176 more at 3 (RCC-16).
     pub const fn checks(&self) -> [Check; 10] {
         use addr::*;
         use bits::*;

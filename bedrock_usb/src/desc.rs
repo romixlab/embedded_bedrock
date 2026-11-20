@@ -35,7 +35,7 @@
 //! The byte layouts are those of USB 2.0 chapter 9, the IAD ECN (bInterfaceCount and the 0xEF / 0x02 / 0x01
 //! device class), USB 3.2 §9.6.2 for BOS, the Microsoft OS 2.0 Descriptors Specification and WebUSB §4. Indices
 //! and order follow embassy-usb's `Builder` where both have a choice, so a firmware that moves from embassy-usb
-//! keeps its descriptors (the golden test in `tests/donguru.rs`).
+//! keeps its descriptors (the golden test in `tests/portwright.rs`).
 
 use crate::{Buffering, Direction, EndpointAddress, EndpointKind, Speed, descriptor_type};
 

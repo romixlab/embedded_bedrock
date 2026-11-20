@@ -1,5 +1,5 @@
 # Test preset for the matrix (TPL-18): an RGB LED lit low on an H725, PC7 / PC6 on TIM3 and PH13 on TIM8_CH1N (a
-# complementary output), the way Donguru wires it. Not a real board: `--board matrix_presets/h7rgb`.
+# complementary output), the way Portwright wires it. Not a real board: `--board matrix_presets/h7rgb`.
 
 [answers]
 chip = "STM32H725IG"
@@ -19,7 +19,7 @@ rgb = ["PC7", "PC6", "PH13"]
 active = "low"
 role = "status"
 
-# a test of [bring_up]: the shape of Donguru's USB251xB set-up over I2C2, the address and bytes made up
+# a test of [bring_up]: the shape of Portwright's USB251xB set-up over I2C2, the address and bytes made up
 [bring_up]
 use = "embassy_stm32::i2c::{self, I2c}"
 takes = ["I2C2", "PB10", "PB11"]

@@ -3420,7 +3420,7 @@ def main(argv=None) -> None:
                         "release builds without panic locations (-Zlocation-detail=none; the crash record's return "
                         "addresses name the site); ESP keeps its own toolchain. stable: none of these")
     p.add_argument("--panic-immediate-abort", action="store_true",
-                   help="release builds turn a panic into a trap: smaller still (-14 KB on donguru), but no panic "
+                   help="release builds turn a panic into a trap: smaller still (-14 KB on portwright), but no panic "
                         "message and a crash record names the panicking function without the line (nightly)")
     p.add_argument("--rtc", action="store_true", help="RTC will be used: do not reset the backup domain at boot")
     p.add_argument("--supply-config", help="STM32H7 SupplyConfig variant (required when the part has SMPS pins)")

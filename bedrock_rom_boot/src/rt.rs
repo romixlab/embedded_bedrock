@@ -323,7 +323,7 @@ mod tasks {
 
     /// The body of a task that marks the boot healthy once USB is configured ([usb_configured]) or the firmware has
     /// run `after` (a board that only charges never sees a USB host). A firmware that crashes later than that, or
-    /// after its USB was configured, is not caught: the host can still reach `device.boot` then. Donguru takes 10 s.
+    /// after its USB was configured, is not caught: the host can still reach `device.boot` then. Portwright takes 10 s.
     pub async fn healthy_watch(after: Duration) -> Healthy {
         let why = match select(USB_CONFIGURED.wait(), Timer::after(after)).await {
             Either::First(()) => Healthy::UsbConfigured,

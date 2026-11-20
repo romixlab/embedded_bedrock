@@ -1,4 +1,4 @@
-// donguru_template main.rs: the boot word lives in a backup register, and embassy resets the backup domain when
+// portwright_template main.rs: the boot word lives in a backup register, and embassy resets the backup domain when
 // RCC_BDCR differs from config.rcc.ls
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {

@@ -1,5 +1,5 @@
 //! `g0::apply` against a simulated RM0444 chip: the RM order of the writes, bounded waits, a second apply on a running
-//! PLL, HSEBYP kept through a reset, Range 2, and verify. The plan is Donguru's golden `clocks.rs` from
+//! PLL, HSEBYP kept through a reset, Range 2, and verify. The plan is Portwright's golden `clocks.rs` from
 //! bedrock_clocks, so the generated file also compiles against this crate.
 
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use bedrock_clocks_rt::Regs;
 use bedrock_clocks_rt::g0::{self, Error, Plan, Step, addr, bits::*};
 
-#[path = "../../bedrock_clocks/tests/golden/donguru_clocks.rs"]
+#[path = "../../bedrock_clocks/tests/golden/portwright_clocks.rs"]
 mod clocks;
 
 /// Enough of RCC / PWR / FLASH / CRS: ready flags follow their ON bits, SWS follows SW once its source is ready,
@@ -97,7 +97,7 @@ impl Regs for Sim {
 }
 
 #[test]
-fn applies_donguru_in_rm_order() {
+fn applies_portwright_in_rm_order() {
     let mut s = Sim::new();
     g0::apply(&mut s, &clocks::PLAN).unwrap();
     g0::verify(&mut s, &clocks::PLAN).unwrap();

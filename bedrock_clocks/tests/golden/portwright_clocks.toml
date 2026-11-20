@@ -1,4 +1,4 @@
-# Donguru (B153A, STM32G0B1CET6) clock plan (sketch of the RCC-2 format; the test only hashes this file)
+# Portwright (B153A, STM32G0B1CET6) clock plan (sketch of the RCC-2 format; the test only hashes this file)
 part = "STM32G0B1CET6"
 vos = 1                         # Range 1: SYSCLK up to 64 MHz
 prefetch = false                # the image spans both flash banks (ES0548 2.2.10)

@@ -268,8 +268,8 @@ mod tests {
         ((x * x * (3 * 65536 - 2 * x)) >> 32) as u32
     }
 
-    /// Donguru's ease before bedrock_led: 32-bit, the square rounded down first.
-    fn ease_donguru(x: u32) -> u32 {
+    /// Portwright's ease before bedrock_led: 32-bit, the square rounded down first.
+    fn ease_portwright(x: u32) -> u32 {
         let x2 = (x * x) >> 16;
         (x2 * ((3 * 65536 - 2 * x) >> 2)) >> 14
     }
@@ -279,9 +279,9 @@ mod tests {
         for x in 0..=70000 {
             assert_eq!(ease(x), ease_u64(x), "ease({x})");
         }
-        // within 3 counts of the old Donguru curve
+        // within 3 counts of the old Portwright curve
         let worst = (0..=65535)
-            .map(|x| ease(x).abs_diff(ease_donguru(x)))
+            .map(|x| ease(x).abs_diff(ease_portwright(x)))
             .max()
             .unwrap();
         assert_eq!(worst, 3);

@@ -52,7 +52,7 @@ ww_link = { workspace = true, optional = true }
 cortex-m = "0.7"
 
 [dev-dependencies]
-# the golden test: Donguru's descriptor set as embassy-usb's Builder writes it, read back through a dummy driver
+# the golden test: Portwright's descriptor set as embassy-usb's Builder writes it, read back through a dummy driver
 embassy-usb = { version = "0.6.0", default-features = false }
 embassy-futures = "0.1.2"
 critical-section = { version = "1.2", features = ["std"] }

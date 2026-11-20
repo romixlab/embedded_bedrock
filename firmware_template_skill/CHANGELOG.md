@@ -10,6 +10,8 @@ or options; purely internal refactors only need a line under the next version.
 
 ## [Unreleased]
 
+- Board preset `donguru_b153a` is now `portwright_b153a`, matrix entry `g0portwright` (TPL-60). Upgrade notes: a B153A firmware made with `--board donguru_b153a` changes `bedrock_fw.json` to `--board portwright_b153a`; the preset now generates the CLI `portwright` and USB strings `vhrd.tech` / `Portwright`.
+- Generated Python bindings: `boot_state` keeps one shape under rustfmt for any board name length (the `g0portwright` host-fmt step failed). Upgrade notes: take the two lines from `suite/py/src/lib.rs.j2`.
 - WireWeaver's layering split (wire_weaver, ww_base, ww_stdlib, ww_tools): generated manifests take each WireWeaver crate from its repository (`ww_si`, `ww_date_time`, `ww_error`, `ww_version` from ww_base; the standard APIs from ww_stdlib; framework crates from wire_weaver). The API crate takes `ww_api` instead of `wire_weaver` and writes `use ww_api::prelude::*;`. Common errors leave the API error enums: handlers return `Error<'_, E>` (`wire_weaver::Error`, `Common` or `Api`) for items with an error type and `CommonError` for items without one; `Settings::led_at_boot` and `Settings::reset` lose their `CommonError` type (`#[errors(CommonError(Fault))]`). The suite client reports a common error as `Error::Device` and `write_plain` writes properties without an error type. `ww` installs from ww_tools (`cargo install --git https://github.com/vhrdtech/ww_tools ww`). A local `--ww-src` names the wire_weaver checkout with ww_base and ww_stdlib beside it, and every manifest gets one `[patch]` per repository for the crates the build reaches.
 
   On parts with less than 64 KiB of RAM the log stream's store (`STORE_LEN` in `src/log.rs`) is 1.5 KiB, was 2 KiB: the server task grew with the common errors and an L073 / F103CB dev build ran out of RAM.
@@ -77,11 +79,11 @@ or options; purely internal refactors only need a line under the next version.
   firmware stops building once STD-98 lands on wire_weaver main. No answers/options involved, no hardware test
   needed.
 
-- No `defmt::Debug2Format` in generated firmware (TPL-81): `src/settings.rs` (settings read, write, erase ahead) and `src/ww/device.rs` (settings save) log the `ww_settings` error with `{}` through its `defmt::Format`, `ww_ecc_flash` gets its `defmt` feature with `--log defmt`, and the HardFault handler logs pc, lr, xpsr, r0-r3 and r12 as hex words instead of `ExceptionFrame`'s Debug. `Debug2Format` pulled core::fmt's Debug machinery and every variant name into flash. donguru release: 146,804 B → 140,756 B (−6,048 B) for the settings errors, → 140,048 B (−708 B) for the HardFault line.
+- No `defmt::Debug2Format` in generated firmware (TPL-81): `src/settings.rs` (settings read, write, erase ahead) and `src/ww/device.rs` (settings save) log the `ww_settings` error with `{}` through its `defmt::Format`, `ww_ecc_flash` gets its `defmt` feature with `--log defmt`, and the HardFault handler logs pc, lr, xpsr, r0-r3 and r12 as hex words instead of `ExceptionFrame`'s Debug. `Debug2Format` pulled core::fmt's Debug machinery and every variant name into flash. portwright release: 146,804 B → 140,756 B (−6,048 B) for the settings errors, → 140,048 B (−708 B) for the HardFault line.
 
   Upgrade notes: in `src/settings.rs` and `src/ww/device.rs` replace `Debug2Format(&e)` with `e` (drop the `Debug2Format` import), add `"defmt"` to the `ww_ecc_flash` features, and take the new `error!` line of the HardFault handler in `src/main.rs`. A firmware with its own `Debug2Format` calls gains the same way where the type has `defmt::Format`.
 
-- Flash diet of the toolchain (TPL-81): generated firmware builds on a pinned nightly by default, with core built at the firmware's opt-level, no home paths in the binary and release builds without panic locations. Measured on donguru (STM32G0B1CE, WireWeaver over USB, release, llvm-size text + data), step by step:
+- Flash diet of the toolchain (TPL-81): generated firmware builds on a pinned nightly by default, with core built at the firmware's opt-level, no home paths in the binary and release builds without panic locations. Measured on portwright (STM32G0B1CE, WireWeaver over USB, release, llvm-size text + data), step by step:
 
   | step | flash B | change |
   |---|---:|---:|
@@ -113,14 +115,14 @@ or options; purely internal refactors only need a line under the next version.
 
   Upgrade notes: optional. Add the section to `AGENTS.md`; uncomment or add `DEFMT_RTT_BUFFER_SIZE = "1024"` in `.cargo/config.toml`; replace `time-driver-any` in `Cargo.toml` with the named timer only if nothing else uses that timer (check `--can` firmware: the driver's interrupt must not be shared). Hardware test not needed for the first two; the third changes which timer runs embassy-time, so run the firmware once.
 
-- Board preset `donguru_b153a` (TPL-60): `--board donguru_b153a` generates firmware for the Donguru B153A
+- Board preset `portwright_b153a` (TPL-60): `--board portwright_b153a` generates firmware for the Portwright B153A
   (STM32G0B1CET6, LQFP48, rev A): WireWeaver over the MCU's own USB behind the board's USB2512B hub, settings,
-  counters, backup counters, the host crates with the CLI `donguru`, `pins` on every free pin (J101's I/O lines, the
+  counters, backup counters, the host crates with the CLI `portwright`, `pins` on every free pin (J101's I/O lines, the
   plug's SBU and A2 / B2 pins), HSI16 through the PLL to 64 MHz, the LEDs LD101 (red, PF0, TIM14) and LD102 (green,
   PF1, TIM15) with embassy's time driver on TIM4, ROM boot over the hub, the board map from the B153A KiCad board and
   README board sections. Its `[bring_up]` releases the hub's reset from RTC_OUT1 (PC13, held through a reset) and
   configures it over I2C2 with the `usb251xb` crate. The probe defaults to `1366:0101` (a J-Link on the receptacle's
-  SBU pins). Matrix entry `g0donguru`.
+  SBU pins). Matrix entry `g0portwright`.
 
   Upgrade notes: none for existing firmware; other presets' output is unchanged.
 
@@ -610,11 +612,11 @@ or options; purely internal refactors only need a line under the next version.
   `Driver::new_fs(usb, dp, dm, Irqs, buf, config)`). `release` prints the same block commented out, ready to switch.
   STM32 with `--framework embassy` only (RP / nRF / ESP: TPL-29). With `--wire-weaver` on a USB v1 / v4 part (F1, F3,
   L1, C0, G0, H5, U0, U3, U5) `src/ww.rs` calls `usb_init_with_endpoints` with double-buffered bulk endpoints
-  (embassy-rs/embassy#7275, ~2x throughput behind a hub on Donguru); this needs WireWeaver with
+  (embassy-rs/embassy#7275, ~2x throughput behind a hub on Portwright); this needs WireWeaver with
   `usb_init_with_endpoints` (wire_weaver_usb_embassy, TR-12).
 
   Upgrade notes: new answer `embassy` (missing = `release`, nothing changes but the commented-out block at the end
-  of `Cargo.toml`). A firmware already on embassy main by hand (Donguru: `[patch.crates-io]` on 262fdba, main's API
+  of `Cargo.toml`). A firmware already on embassy main by hand (Portwright: `[patch.crates-io]` on 262fdba, main's API
   in its own code) records `"embassy": "main"`; take the generated block only if its crate list or rev differs.
 
 - G0 flash prefetch and the ES0548 check (TPL-32): with `--framework embassy` on STM32G0, `main.rs` turns
@@ -622,10 +624,10 @@ or options; purely internal refactors only need a line under the next version.
   8-16% slower code at 64 MHz; embassy main does it itself). On dual-bank G0B1 / G0C1, `memory.x` gets
   `ASSERT(__etext <= 0x08040000, ...)`: ES0548 2.2.10, "the code prefetch may fail upon branching and function calls
   across flash memory banks", not fixed in any revision, so code reaching bank 2 now fails to link instead of
-  HardFaulting at run time (seen on Donguru, its FW-38).
+  HardFaulting at run time (seen on Portwright, its FW-38).
 
   Upgrade notes: G0 firmwares get the three `PRFTEN` lines in `main.rs` (embassy 0.6) or a comment (main), and on
-  G0B1 / G0C1 the ASSERT in `memory.x`. A firmware whose code already spans both banks (Donguru: ~400 KiB) must keep
+  G0B1 / G0C1 the ASSERT in `memory.x`. A firmware whose code already spans both banks (Portwright: ~400 KiB) must keep
   prefetch off and leave the ASSERT out: reject both, note it in `nuances`. Check after taking it: the firmware
   links (the ASSERT holds), and runs.
 
@@ -638,7 +640,7 @@ or options; purely internal refactors only need a line under the next version.
 - `src/last_reset.rs` uses `Second::milli` (ww_si 0.2 removed `Second::milliseconds`), so `--wire-weaver` projects
   build against today's WireWeaver again.
 
-  Upgrade notes: take the one-line change in `last_reset.rs` (firmware on ww_si 0.2 already has it, e.g. Donguru).
+  Upgrade notes: take the one-line change in `last_reset.rs` (firmware on ww_si 0.2 already has it, e.g. Portwright).
 
 - `just flash-bootsel [SERIAL]` for RP targets (TPL-27): a generated `justfile` with one recipe — build release,
   then `ww bootsel flash` (wire_weaver CLT-21) writes the ELF straight through PICOBOOT in the RP2040/RP2350 boot
@@ -683,7 +685,7 @@ dependencies, the NMI handler on G0, and `SettingsStore::load(p.FLASH)` in `main
 the API crate with its `std` / `defmt` features, the `label` line in the API trait (an API change: bump the API
 crate's version), `LABEL_CAPABILITIES` in the `Consts` impl, the two `label_name` handlers, `"label.notes"` in
 `omit`, and the server task's `select` loop (or call `persist_if_due()` from the firmware's own loop). A firmware
-with its own settings API (Donguru `device.settings`, API-19) keeps its own fields in `DeviceSettings` at new slots.
+with its own settings API (Portwright `device.settings`, API-19) keeps its own fields in `DeviceSettings` at new slots.
 `--ww-transport rtt` firmware (with or without settings) needs WireWeaver with TR-13: since TR-12 the RTT server
 panicked on its first request. Test on hardware: set the label (`ww` over USB), cut the power, check it after the boot; and cut the power while a
 write runs (a loop of label writes), the device still boots and has the old or the new label.

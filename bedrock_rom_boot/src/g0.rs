@@ -1,4 +1,4 @@
-//! STM32G0 (RM0444): addresses and how a reset is told from the ROM's jump. Tested on the G0B1 (Donguru B153A,
+//! STM32G0 (RM0444): addresses and how a reset is told from the ROM's jump. Tested on the G0B1 (Portwright B153A,
 //! 21 Oct 2026); the other G0 parts have the same registers and the ROM at the same address.
 
 /// RCC.
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn addresses() {
-        // Donguru's TAMP_BKP4R
+        // Portwright's TAMP_BKP4R
         assert_eq!(bkp_address(BOOT_WORD), 0x4000_B110);
     }
 

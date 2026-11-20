@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-// Pins done wrong: donguru_template (a driver dropped at once), usb_io_fw PLAT-9 (USB before the safe state),
+// Pins done wrong: portwright_template (a driver dropped at once), usb_io_fw PLAT-9 (USB before the safe state),
 // usb_io_fw IF-16 (two owners), a pin map chosen by cargo feature, typec_dongle FW-22 (a strap read under the dead-battery
 // pull-down)
 

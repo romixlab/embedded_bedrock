@@ -1,29 +1,29 @@
-# Board preset for `bedrock_gen.py new --board donguru_b153a`: Donguru B153A (rev A, the Main variant: USB2512B
-# hub), the board of donguru_template. [answers] are defaults for `new`'s options (explicit flags and --answers win),
+# Board preset for `bedrock_gen.py new --board portwright_b153a`: Portwright B153A (rev A, the Main variant: USB2512B
+# hub), the board of portwright_template. [answers] are defaults for `new`'s options (explicit flags and --answers win),
 # the rest is what only the board knows. Facts: the B153A KiCad schematic and board
 # (hw/b153_typec_serial/source/b153a), hw/b153_typec_serial/doc/hw_b153a.md (the rework on the built boards, §0),
-# typec_dongle's fw/donguru (hub.rs, main.rs, boot.rs, led.rs) and donguru_board, DS13560 Rev 6, ES0548 Rev 4.
+# typec_dongle's fw/portwright (hub.rs, main.rs, boot.rs, led.rs) and portwright_board, DS13560 Rev 6, ES0548 Rev 4.
 
 [answers]
 chip = "STM32G0B1CE"  # U202 STM32G0B1CET6, LQFP48
-probe = "1366:0101"   # a J-Link on the receptacle's SBU (PA14 SWCLK on SBU1, PA13 SWDIO on SBU2) through a C-to-SWD cable; another Donguru's SWD-host works too
+probe = "1366:0101"   # a J-Link on the receptacle's SBU (PA14 SWCLK on SBU1, PA13 SWDIO on SBU2) through a C-to-SWD cable; another Portwright's SWD-host works too
 settings = true
 counters = true
 bkp_counters = "auto"
 wire_weaver = true
 ww_transport = "usb"  # the board's own USB behind its hub: the probe only flashes
 host = true
-cli_name = "donguru"
+cli_name = "portwright"
 pins = "board"        # PinDiag on every free pin of the board map, [pins] below
 
 [board]
-title = "Donguru"                  # prose and the README title
-maker = "B153A"                    # the README's link text: "B153A Donguru board"
-product = "B153A Donguru"          # ww_board_info product
+title = "Portwright"               # prose and the README title
+maker = "B153A"                    # the README's link text: "B153A Portwright board"
+product = "B153A Portwright"       # ww_board_info product
 revision = "A"                     # B153A
 url = "https://vhrd.tech"  # no public hardware repo for this board yet
 core = "Cortex-M0+"
-client = "Donguru"                 # the client library's typed board type
+client = "Portwright"              # the client library's typed board type
 probe_name = "the J-Link on the receptacle's SBU pins"
 probe_kind = "J-Link"              # the host crates' "the only J-Link attached"
 probe_kind_a = "a J-Link"
@@ -31,7 +31,7 @@ template = true                    # a GitHub template repository: the README sa
 
 # README pieces; longer ones are the readme*.md files next to this one
 [readme]
-plural = "Dongurus"                # "with two Dongurus attached"
+plural = "Portwrights"             # "with two Portwrights attached"
 variant = "STM32G0B1/G0C1 (0x467) rev A (0x1000), 512 KiB flash"
 led = "LD102"
 reset_how = "plug the USB-C cable in again"  # no reset button: NRST is only on the MCU
@@ -50,14 +50,14 @@ healthy = "the USB host configuring the board would call it healthy earlier, `be
 rescue = "the hub is configured and held running by the board bring-up in main, which runs before this"
 
 [logo]
-board = "Donguru"
+board = "Portwright"
 chip = "G0B1"
 subtitle = "WireWeaver firmware template"
 
 # docs/board/: boardmap's description (what to draw, what every pin does) and the geometry from the KiCad board
 [boardmap]
-toml = "donguru_b153a.toml"
-geometry = "donguru_b153a.geometry.json"
+toml = "portwright_b153a.toml"
+geometry = "portwright_b153a.geometry.json"
 
 # LD101 red through R104 from PF0 (LED_RED), LD102 green through R105 from PF1 (LED_GREEN), both to GND: high lights
 # them. PF0 is TIM14_CH1, PF1 TIM15_CH1N; embassy's time driver goes to TIM4. Roles as in typec_dongle's firmware.
@@ -83,7 +83,7 @@ what = "HUB_I2C_EN: the hub's SDA pull-up R301 (rev A), high for I2C2 to work"
 
 # The hub U301 (USB2512B) carries the MCU's own USB on its port 1: it runs and is configured over I2C2 before USB
 # starts. Its RESET_N is PC13 on rev A (rework, R304 pulls it low), driven from RTC_OUT1 so it holds through a reset
-# (typec_dongle fw/donguru/src/hub.rs, donguru_board::boot::rtc_cr_hub and hub_config, tested on B153A 21 Oct 2026)
+# (typec_dongle fw/portwright/src/hub.rs, portwright_board::boot::rtc_cr_hub and hub_config, tested on B153A 21 Oct 2026)
 [bring_up]
 use = """usb251xb::{
     Config, Milliamps, Port, Usb251xb,
@@ -169,7 +169,7 @@ usb251xb = { version = "0.1.0", default-features = false, features = ["defmt"] }
 
 # the firmware's own USB device (port 1 of the hub); VID:PID: wire_weaver's default c0de:cafe
 [usb]
-product = "Donguru"
+product = "Portwright"
 manufacturer = "vhrd.tech"
 
 # src/pins.rs (`--pins board`): besides the pins the board map marks free, the pins left out (the doc of src/pins.rs;
@@ -177,7 +177,7 @@ manufacturer = "vhrd.tech"
 [pins]
 left_out = "the SWD pins (PA13, PA14, also BOOT0), USB (PA11, PA12), the LEDs (PF0, PF1), the hub (PC13, PA4, PB10, PB14), UCPD (PA8, PB15, PD0, PD2, PA15), the SBU switch and its controls (PA9, PA10, PB2, PC15, PD3), the VBUS switches (PA6, PD1, PC14), the relay (PA5), the analog inputs (PA3, PB0, PA7), the pins tied to GND and 3.3 V (PC6, PC7) and reset (PF2)"
 readme_left_out = "The SWD pins, USB, the LEDs, the hub, UCPD, the SBU switch, the VBUS switches, the relay, the analog inputs, the pins tied to the supplies and reset"
-test = "donguru_b153a-pins-test.toml"
+test = "portwright_b153a-pins-test.toml"
 
 # main.rs clock tree (embassy-stm32): replaces the "configure config.rcc" TODO; timer_mhz: the timers' clock (the
 # LEDs' PWM resolution in src/led.rs)

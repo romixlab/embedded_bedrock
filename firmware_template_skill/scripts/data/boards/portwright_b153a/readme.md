@@ -1,15 +1,15 @@
 ## The board
 
-![Donguru top view: the header J101 pin by pin, coloured by what it is for](docs/board/donguru_b153a-top.svg)
+![Portwright top view: the header J101 pin by pin, coloured by what it is for](docs/board/portwright_b153a-top.svg)
 
-The B153A Donguru sits between a PC and a USB-C device: the receptacle J401 goes to the PC, the plug J501 to the
+The B153A Portwright sits between a PC and a USB-C device: the receptacle J401 goes to the PC, the plug J501 to the
 device under test. An STM32G0B1CET6 (LQFP48) runs it: a USB2512B hub (U301) passes the device's USB through on
 its port 2 and carries the MCU's own USB on port 1, U601 switches VBUS to the device and PB0 measures its current,
 UCPD1 / UCPD2 reach both CC sides, and the plug's SBU pins go to the MCU (directly on PA0 / PA1, or through the
 TXS0102 level shifter on PB6..PB11). The header J101 has four protected I/O lines, 3.3 V, the switched receptacle
 VBUS and a photo-MOS relay. [docs/board/](docs/board/) has the bottom view, the power tree and
-[the pin table](docs/board/donguru_b153a-pins.md) with a note per pin; `just board` re-draws them from
-`docs/board/donguru_b153a.toml` with [boardmap](https://github.com/romixlab/embedded_bedrock) (bedrock_board).
+[the pin table](docs/board/portwright_b153a-pins.md) with a note per pin; `just board` re-draws them from
+`docs/board/portwright_b153a.toml` with [boardmap](https://github.com/romixlab/embedded_bedrock) (bedrock_board).
 
 **Rev A as built differs from its schematic** (hw/b153_typec_serial/doc/hw_b153a.md §0): the CC / SBU
 over-voltage protection (U402, U501) is removed and bridged, so nothing protects those pins above 5 V; a 5K1 Rd on
@@ -27,7 +27,7 @@ receptacle's VBUS on J101-10, up to 20 V when the PC negotiated it: the template
 hold them so).
 
 **The probe:** SWD is on the receptacle's SBU pins: SWCLK (PA14) on SBU1, SWDIO (PA13) on SBU2, also on TP202 /
-TP201. A J-Link through a USB-C-to-SWD breakout, or another Donguru as the SWD host, reaches it. PA14 is BOOT0 as
+TP201. A J-Link through a USB-C-to-SWD breakout, or another Portwright as the SWD host, reaches it. PA14 is BOOT0 as
 well, pulled low by R209.
 
 **The LEDs:** LD101 red on PF0 (TIM14_CH1), LD102 green on PF1 (TIM15_CH1N), high lights them; the firmware

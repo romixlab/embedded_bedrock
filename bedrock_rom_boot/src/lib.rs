@@ -1,6 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 //! Firmware updates through the STM32 ROM bootloader (DEV-16): the early boot that runs first thing in `main`, before
-//! clocks and embassy, and the reboots `device.boot.reboot` asks for. Extracted from Donguru (typec_dongle FW-12,
+//! clocks and embassy, and the reboots `device.boot.reboot` asks for. Extracted from Portwright (typec_dongle FW-12,
 //! FW-45, STM32G0B1) and B135 (BOOT-4, BOOT-5, BOOT-9, BOOT-10, STM32H725).
 //!
 //! The firmware sits alone at the start of flash; the ROM's USB DFU (`ww dfu stm32 flash`) is the updater.
@@ -71,7 +71,7 @@ pub const BOOT_LOOP_LIMIT: u8 = 3;
 /// | 13:4  | free                                     |                                            |                                    |
 /// | 3:0   | [unhealthy_boots](Self::unhealthy_boots) | each boot's [count_boot](Self::count_boot) | the [healthy](Self::healthy) mark  |
 ///
-/// The same word as Donguru's (typec_dongle FW-12, FW-45): a firmware switching to this crate keeps reading what the
+/// The same word as Portwright's (typec_dongle FW-12, FW-45): a firmware switching to this crate keeps reading what the
 /// one before it wrote.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

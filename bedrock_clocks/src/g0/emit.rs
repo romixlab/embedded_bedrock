@@ -12,7 +12,7 @@ use super::tree::Tree;
 
 /// Where the config came from, for the generated header.
 pub struct Origin<'a> {
-    /// As the user names it on the command line: `fw/donguru/clocks.toml`.
+    /// As the user names it on the command line: `fw/portwright/clocks.toml`.
     pub path: &'a str,
     /// [source_hash](crate::source_hash) of the file's bytes.
     pub hash: u64,

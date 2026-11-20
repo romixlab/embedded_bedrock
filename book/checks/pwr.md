@@ -80,7 +80,7 @@ handles by resetting the domain — which, per `PWR-3`'s logic, is the right mov
 the wrong move here: it wipes the counters or time state the firmware was relying on surviving the reset that just
 happened.
 
-**Example.** donguru_template's `main.rs` needed this worked out explicitly: a clock-config edit that touched the
+**Example.** portwright_template's `main.rs` needed this worked out explicitly: a clock-config edit that touched the
 RTC source reset backup-domain state nobody meant to lose.
 
 **How to check.** `src mid`: a clock-config change affecting the RTC source, in a firmware model that also shows

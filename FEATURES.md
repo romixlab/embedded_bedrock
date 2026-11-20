@@ -48,7 +48,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   embassy-stm32's `Flash`, read through `ww_ecc_flash::EccSafeFlash` on G0 / H7 (SRV-19, NMI handler on G0) or
   `BlockingAsync` on parts without flash ECC, with one setting (`label`), writes once a change settles and an erase
   ahead after each write. `--wire-weaver` serves it as `label: ww_user_info::UserInfo`, written before the call
-  answers. Builds for the tested matrix. On Donguru B153A (16 Oct 2026, `--ww-transport rtt` through a J-Link,
+  answers. Builds for the tested matrix. On Portwright B153A (16 Oct 2026, `--ww-transport rtt` through a J-Link,
   needs WireWeaver TR-13): label set over RTT, reloaded after a reset and after a power cut (USB unplugged). H7 and F4 built, not run. Code only for embassy on STM32 without `--bootloader` (TPL-24, TPL-25, TPL-26); elsewhere the
   region is reserved.
 - ✅ **TPL-6 Logging**: defmt (explicit buffer size and level, optional non-blocking), RTT, esp-println, none.
@@ -141,7 +141,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   dev and release (app and bootloader); `-Zlocation-detail=none` for release through `profile-rustflags`;
   `build-std = ["core"]` with `optimize_for_size` for the app. `--toolchain stable` keeps the old output;
   `--panic-immediate-abort` is the release profile's `panic = "immediate-abort"`. Matrix checks every Cortex-M ELF for
-  home and cargo paths. donguru: 159,048 → 146,804 B (template CHANGELOG has the steps). Open: the host side of the
+  home and cargo paths. portwright: 159,048 → 146,804 B (template CHANGELOG has the steps). Open: the host side of the
   panic call chain (ROB-13) in ww_report (session crash-frames).
 
 ## Device contract (`DEV`)
@@ -157,11 +157,11 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   prints the same block commented out. With `--wire-weaver` on a USB v1 / v4 part (`u.double_buffer`), `src/ww.rs`
   sets up double-buffered bulk endpoints through wire_weaver_usb_embassy's `usb_init_with_endpoints` (needs
   WireWeaver with it: branch s/19oct2026-ww-usb-endpoints, to land first). Builds for the tested matrix's
-  `--embassy main` entries; not run on a board through the template yet (Donguru runs the same endpoints).
+  `--embassy main` entries; not run on a board through the template yet (Portwright runs the same endpoints).
 - ✅ **TPL-32 G0 flash prefetch, ES0548 check**: with `--framework embassy` on G0, `main.rs` sets `FLASH_ACR.PRFTEN`
   after `embassy_stm32::init` (embassy 0.6 leaves it off; main does it itself). On dual-bank G0B1 / G0C1 `memory.x`
   gets `ASSERT(__etext <= <bank 2 base>)` (`es0548_bank2()`): ES0548 2.2.10, prefetch fails on branches across the
-  banks, so code reaching bank 2 fails to link instead of HardFaulting (Donguru FW-38). Checked: the ASSERT stops the
+  banks, so code reaching bank 2 fails to link instead of HardFaulting (Portwright FW-38). Checked: the ASSERT stops the
   link with its message when tightened.
 - 🐛 **TPL-34 `f103` (STM32F103C8, `--wire-weaver`) no longer fits 64 KiB**: the release build overflows FLASH by
   ~1.3 KiB against WireWeaver main of 19 Oct 2026, with the template of `main` (0d6bd3a, plus the `Second::milli`
@@ -172,7 +172,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `DEFMT_RTT_BUFFER_SIZE` always explicit (`app/cargo_config.toml.j2`); STM32 embassy names its time driver
   (`time_driver()` in `bedrock_gen.py`) instead of `time-driver-any`. The linked `book/*.md` files land with the
   fw-checklist session.
-- 🐛 **TPL-76 `g0donguru` matrix: empty pin table, `board_pins` test fails**: `docs/board/donguru_b153a-pins.md` has a header and no rows, so the generated `board_pins` test panics with "pin table not parsed". Seen on 3 Nov 2026 while running the matrix for TPL-73; unrelated to it (the same output without the TPL-73 files). Not chased.
+- 🐛 **TPL-76 `g0portwright` matrix: empty pin table, `board_pins` test fails**: `docs/board/portwright_b153a-pins.md` has a header and no rows, so the generated `board_pins` test panics with "pin table not parsed". Seen on 3 Nov 2026 while running the matrix for TPL-73; unrelated to it (the same output without the TPL-73 files). Not chased.
 - 🐛 **TPL-71 `l073` (STM32L073RZ, `--wire-weaver`) dev build overflows RAM**: `cortex-m-rt`'s `.uninit` section
   overflows RAM by 212 bytes under flip-link; seen in the 29 Oct 2026 matrix run, unrelated to this branch's
   pico/TPL-70 work (matrix.toml and the generated firmware for this chip are untouched here). Not chased further:
@@ -237,7 +237,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   512-byte bulk packets and `UsbTimings::hs_higher_speed()`; the preset's `[clock] usb = true` says its snippet sets
   the USB kernel clock (PLL3Q 48 MHz, which embassy checks also with a ULPI PHY), else HSI48 + CRS as for FS. Embassy
   STM32 release only (`--embassy main` refuses). Matrix `h7ulpi` (H725, NXT on PH4, HSE bypass + PLL3Q preset) builds;
-  ES0491 Rev 9 has no device-mode OTG_HS erratum (`references/errata.md`). Not run on a board yet (Donguru).
+  ES0491 Rev 9 has no device-mode OTG_HS erratum (`references/errata.md`). Not run on a board yet (Portwright).
 - 🧪 **TPL-52 Silicon revisions that can grow**: the API's `SiliconRevision` (`ww/api/src/lib.rs.j2`) has `Unknown`
   first and the errata sheet's revisions in its order after it (`stm32.toml` `[variant.<dev_id>]` `revisions`, quoted
   from the sheet's Table 2 "Device variants"), `ww_repr = unib32`, catch-all `Newer(u32)`, the raw `rev_id` beside it:
@@ -385,19 +385,19 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   ST-LINK sits on J2 (VID:PID), flash, the README's device steps, ROM boot over J3, the pin test of a bare board
   (`--save`), the ES0548 read for HSE / PLL / USB on the silicon revision fitted. CAN (FDCAN1 TX PD1, RX PB8, STB
   PC13 low) comes in with TPL-53 through a template upgrade of cannify_micro_template.
-- 🧪 **TPL-60 Board preset `donguru_b153a`**: Donguru B153A (STM32G0B1CET6 LQFP48, rev A, Main variant: USB2512B
-  hub) in `scripts/data/boards/donguru_b153a/`: answers (WireWeaver over the MCU's own USB behind the hub, settings,
-  counters, backup counters, host crates, CLI `donguru`, `--pins board`, probe `1366:0101` for a J-Link on the
+- 🧪 **TPL-60 Board preset `portwright_b153a`**: Portwright B153A (STM32G0B1CET6 LQFP48, rev A, Main variant: USB2512B
+  hub) in `scripts/data/boards/portwright_b153a/`: answers (WireWeaver over the MCU's own USB behind the hub, settings,
+  counters, backup counters, host crates, CLI `portwright`, `--pins board`, probe `1366:0101` for a J-Link on the
   receptacle's SBU), HSI16 through the PLL to 64 MHz (USB on HSI48 + CRS), the LEDs LD101 red PF0 (TIM14_CH1) and
   LD102 green PF1 (TIM15_CH1N) with the time driver on TIM4, PA4 high for the hub's SDA pull-up (`[[init]]`), the hub
   bring-up in `[bring_up]` (RESET_N on PC13 driven from RTC_OUT1 so it holds through a reset, as typec_dongle FW-46;
   usb251xb config over I2C2 PB10 / PB14 with port 2's D+ / D- swap; kept when RTC_CR shows it running), VID:PID
   c0de:cafe (wire_weaver's default), the analog PA7 button / slide switch documented (no digital button), ROM boot,
-  the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0donguru` (passes, with
-  `g0cannify` and `g0board` unchanged); `donguru_template` generated from it (session folder for now, no remote yet):
+  the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0portwright` (passes, with
+  `g0cannify` and `g0board` unchanged); `portwright_template` generated from it (session folder for now, no remote yet):
   `just test`, `just lint`, the firmware build and `just board` pass. Probe: nothing attached on one of our PCs (29 Oct
-  2026: no USB devices, no probe-rs), so the J-Link or second Donguru on the SBU is still to be found. Hardware (🧪,
-  never through the Donguru J-Link): flash, the README's device steps, the hub kept through `boot reboot --updater`
+  2026: no USB devices, no probe-rs), so the J-Link or second Portwright on the SBU is still to be found. Hardware (🧪,
+  never through the Portwright J-Link): flash, the README's device steps, the hub kept through `boot reboot --updater`
   into the ROM's DFU, the pin test of a bare board (`--save`).
 - 🧪 **TPL-63 Board preset `pico2`**: Raspberry Pi Pico 2 (RP2350A, 4 MB W25Q32RV flash) in
   `scripts/data/boards/pico2/`: answers (WireWeaver over its own micro-USB, settings, counters, CLI `pico2`,
@@ -418,7 +418,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   split `NAME: CAPS` (STM32), not RP's `` | `G `` rows or `NAME = PIN_n: CAPS`; `suite/py/src/lib.rs.j2`'s `blink()`
   wrapper was always the multi-line form, which only happens to be what rustfmt wants for a long enough board
   accessor name (`pico2` is short enough that rustfmt collapses it to one line) — now a length check picks the
-  right form. Open hardware notes (parked for Roman's review, never the Donguru J-Link): flashing over
+  right form. Open hardware notes (parked for Roman's review, never the Portwright J-Link): flashing over
   BOOTSEL and the Debug Probe, the README's device steps, the pin test of a bare board (`--save`), the SWD / debug
   connector's physical style (Pico 2's datasheet says it may differ from the R3 board the geometry is taken from).
 - 🧪 **TPL-59 Board preset `b135b`**: B135B FDCAN ISO USB (STM32H725IGK6 TFBGA176+25, 1 MiB single bank, rev B) in
@@ -470,7 +470,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   firmware from `bedrock_fw.json` and diffing the rendered `omit` list; `rustfmt --edition 2024 --check` passes on
   it. The tested matrix (`uv run bedrock_gen.py matrix`) wasn't run: it builds every preset, and hit an unrelated,
   pre-existing exact_units git-HEAD / wire_weaver_core incompatibility in every downstream repo this was checked
-  against (vb135_fdcan_iso_usb_fw, typec_dongle, donguru_template), unrelated to this change.
+  against (vb135_fdcan_iso_usb_fw, typec_dongle, portwright_template), unrelated to this change.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
@@ -512,9 +512,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   host-tested); `Channel` and `Pwm` over embedded-hal 1.0 `SetDutyCycle` (active-low option, `max_duty_cycle` read
   once); feature `embassy`: `Indication<N>` in a `static` (zero-initialised, `.bss`; one critical section per tick
   for all changes) and its `run` loop (10 ms ticker, sleeps while nothing animates); feature `ww-indication`:
-  brightness peaks and the identify busy / cap of a `ww_indication::Indication` server. Used by Donguru (two mono
+  brightness peaks and the identify busy / cap of a `ww_indication::Indication` server. Used by Portwright (two mono
   LEDs, typec_dongle FW-2 / API-9, +32 B flash) and rePort (one, usb_io_fw PLAT-3, +100 B), the same compare values
-  as before but for Donguru's old 32-bit ease (at most 6 of 64000 counts). rePort B200 flashed, `device.indication`
+  as before but for Portwright's old 32-bit ease (at most 6 of 64000 counts). rePort B200 flashed, `device.indication`
   mode, brightness and identify answered (21 Oct 2026, with the interim 64-bit ease, same curve); the RGB path not
   run on a board yet (B135 next). The template does not generate LED code with it yet.
 - 🧪 **DEV-13 Shared clock crate** (`bedrock_sync`): the local clock disciplined onto UTC (wire_weaver STD-49 host
@@ -529,7 +529,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (once a second) a 64-bit divide. `Oscillator` backend: a chip with a fractional PLL takes the rate in hardware
   (1/64 of each point's rate, unquantised target, clamp without wind-up; tested against a host whose rate lags by its
   30 s window: a PLL 50 ppm slow converges without overshoot); first user B135B PLL1 FRACN,
-  not Donguru's HSI trim (too coarse) nor the RP2350 (no fractional PLL). Feature `embassy`: `Sync` in a `static` on
+  not Portwright's HSI trim (too coarse) nor the RP2350 (no fractional PLL). Feature `embassy`: `Sync` in a `static` on
   `Instant` (`shared_now`, `steer`, `wait_until_shared`); feature `ww-timebase`: `ClockServer`, the `Clock` server
   bookkeeping (`steer` reading 32-bit `local`, `sync_status`, `time_map_point`, `configure_sync`, `set_sources` /
   `sources`). States (21 Oct 2026): `Acquiring` while the slew left plus the source's error is above
@@ -538,15 +538,15 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   One steerer at a time (22 Oct 2026, wire_weaver SRV-31): of the host's points, the clock follows one steerer
   (`Steer::steerer`) while its points come within the holdover time, notes others (`Steered::OtherSteerer`), and
   lets the next one take over (slewed) once the followed one was quiet that long; `sync_status` names the followed
-  and the last noted steerer (`SyncStatus::steerer` / `noted`, names cut to 24 B). Cost on Donguru (release,
+  and the last noted steerer (`SyncStatus::steerer` / `noted`, names cut to 24 B). Cost on Portwright (release,
   opt-level 3): flash +1552 B (text +1240, rodata +304, data +8), RAM +144 B; frames at opt-level 3 on thumbv6m:
   `ClockServer::steer` 88 -> 120 B, `SharedClock::steer_with` 104 -> 112 B, `sync_status` 104 -> 176 B. Hardware
   (one of our PCs, 22 Oct 2026): `ww sync` locks the three boards as before (1.2-1.6 s); wire_weaver's
-  `two_steerers` example on Donguru and B135: A followed, B noted (answered `Host`, `sync_status` names both) and
+  `two_steerers` example on Portwright and B135: A followed, B noted (answered `Host`, `sync_status` names both) and
   still noted 10 s later, B followed and locked once A stopped (seen by B's host 6.5 s after, its checks come every
   5 s once locked; on the device 3 s quiet plus B's next point).
   Closed-loop test against wire_weaver's `Estimator` (`tests/closed_loop.rs`, simulated USB): a board 250 ms off is
-  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware (one of our PCs, 21 Oct 2026, `ww sync` with Donguru B153A, rePort B200 and B135B): all three locked within 2 ms after 1.2 s from a fresh start and 2.4 s after 45 s in holdover; LED phase as ww sync estimates it 30 µs to 1.0 ms apart (±1.5-2.5 ms, rePort's and Donguru's ~1.4-1.8 ms round trips); over 5 min Donguru left once on a -2.0 ms residual (±1.2 ms) and was back in 37 s. No logic analyser on this PC: the phase is not measured on the pins.
+  within 2 ms in 5 s (was 25 s), ticks never above 10.1 ms. Hardware (one of our PCs, 21 Oct 2026, `ww sync` with Portwright B153A, rePort B200 and B135B): all three locked within 2 ms after 1.2 s from a fresh start and 2.4 s after 45 s in holdover; LED phase as ww sync estimates it 30 µs to 1.0 ms apart (±1.5-2.5 ms, rePort's and Portwright's ~1.4-1.8 ms round trips); over 5 min Portwright left once on a -2.0 ms residual (±1.2 ms) and was back in 37 s. No logic analyser on this PC: the phase is not measured on the pins.
 - 🧪 **DEV-14 Status LEDs in phase** (`bedrock_led` with `bedrock_sync`): `Animation::align(SharedTime)` puts a breath
   or blink at `t mod period` of shared time (UTC), WSPR-style, so boards showing the same mode are in phase with
   nothing passed around (wire_weaver STD-50); `Leds::align` for all LEDs, `Indication::run_with(modes, shared, show)`
@@ -556,11 +556,11 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   libcall, checked in the disassembly at opt-level `z` and `3`); the cycle start is found with one 64-bit remainder
   only after a mode change or a step of the clock (`generation`). `align` 180 B, `anchor_at` 52 B at `z`. Host
   tests: aligned breath and blink, two devices set at different times agree tick by tick, hand-over to free running,
-  a new generation. Hardware check open: Donguru and rePort breathing in phase on one of our PCs.
+  a new generation. Hardware check open: Portwright and rePort breathing in phase on one of our PCs.
 - 🧪 **DEV-15 Common look** (`bedrock_led::look`): what a status LED shows for what it means, named by meaning and
   the same on every board (`OK`, `BUSY`, `WARN`, `FAULT`, `ALERT`, `HEARTBEAT`, `IDENTIFY`, `OFF`; palette
   `colour::{OK, WARN, FAULT, STORAGE}`; `Look::under` for the `ww_indication` mode); every period divides the 3 s
-  `CYCLE_MS`, so on shared time all looks of all boards start together. Used by Donguru (power `OK`, status
+  `CYCLE_MS`, so on shared time all looks of all boards start together. Used by Portwright (power `OK`, status
   `HEARTBEAT`), rePort (`OK`, was a 4 s breath) and B135 (SD `OK` in `STORAGE` / `FAULT`, CAN `OK` / `WARN` /
   `ALERT`). Kept on a module of `bedrock_led`: it holds `Mode`, the fades and the peaks already; a buzzer or display
   vocabulary would get its own module next to it when one exists. Flashed on all three boards (21 Oct 2026); the looks themselves not yet looked at by a person.
@@ -571,9 +571,9 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   guard), 2 `RecordUnreadable`; new reasons take the next number. Host tests of the pattern; the table for people
   is `book/blink_codes.md`. First user: usb_io_fw PLAT-18.
 - 🧪 **DEV-16 STM32 ROM bootloader entry crate** (`bedrock_rom_boot`): firmware alone at the start of flash, updated
-  by the STM32 ROM bootloader's USB DFU (`ww dfu stm32 flash`); extracted from Donguru (typec_dongle FW-12, FW-45,
+  by the STM32 ROM bootloader's USB DFU (`ww dfu stm32 flash`); extracted from Portwright (typec_dongle FW-12, FW-45,
   G0B1) and B135 (BOOT-4, BOOT-5, BOOT-9, BOOT-10, H725). `BootWord` in the family's last backup register (G0
-  TAMP_BKP4R, H7 RTC_BKP31R; Donguru's format): ROM request, fell-back flag, unhealthy-boot count. `early()` first in
+  TAMP_BKP4R, H7 RTC_BKP31R; Portwright's format): ROM request, fell-back flag, unhealthy-boot count. `early()` first in
   `main`, before the HAL: resets once when the ROM's leave jumped here (`Entered::from_reset` per family, a second
   jump in a row goes on), takes a request and jumps to system memory (AN2606: G0 0x1FFF_0000, H72x-75x 0x1FF0_9800),
   else counts the boot and returns `Start::Rescue` after three boots without `mark_healthy`; `rescue()`, `reboot()`,
@@ -583,7 +583,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   (`Profile::InPlace`, always `Confirmed`, last result `Recovery` after a rescue). Raw RM addresses, no HAL
   dependency (checked against stm32-metapac 21). Decisions host-tested; builds and links for thumbv6m (G0B1) and
   thumbv7em (H725) (`just lint`, a scratch firmware calling every function). Not run on a board through this crate
-  yet: Donguru and B135 run the code it came from; first user nucleo_g0b1re_template's device suite.
+  yet: Portwright and B135 run the code it came from; first user nucleo_g0b1re_template's device suite.
   Not yet: H7A3/7B3 (other RCC offsets, ROM at 0x1FF0_A000), dual-core H745/H755, other families; B135's A/B
   bootloader path (feature `ab`) and its LED codes stay in B135 (`early_with` takes a closure for the code).
 - 🚧 **DEV-17 FDCAN channel crate** (`bedrock_can`): an FDCAN (Bosch M_CAN) channel as `ww_can_bus::Can` without a
@@ -785,7 +785,7 @@ request, resvg). Example: `firmware_template_skill/scripts/data/boards/nucleo_g0
   `bedrock_gen.py` `board_pins()`.
 
 - ✅ **MAP-12 Pin names from symbols that number every pin**: some KiCad symbols name pins `PC13_1` and the G0's
-  remap pads `PA9/PA11_33` (B153A Donguru): `extract` drops the `_<pad>` suffix when every pad of a footprint has
+  remap pads `PA9/PA11_33` (B153A Portwright): `extract` drops the `_<pad>` suffix when every pad of a footprint has
   it (not when that would leave a connector's `Pin_1`, `Pin_2` all one name), a remap pad whose first name is
   another pad's takes its other GPIO name (pin 33 is PA11), and views and the pin table show a hierarchical
   sheet's net without its path (`/MCU/IO7_EXT` is `IO7_EXT`) · `geometry.rs`, `nets.rs`.
@@ -927,7 +927,7 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   ES0491 (`references/errata.md`), the RP2350 datasheet appendix D and efton.sk. Shared helpers in
   `model/scan/words.rs` (every identifier with its place, identifier words, method calls in order, constants).
   The `clean` fixture carries the right code for each (`src/lint11_*.rs`). Run on usb_io_fw, typec_dongle,
-  vb135_fdcan_iso_usb_fw, donguru_template and generated g0 / h7app / rp2350 firmware (3 Nov 2026); the findings
+  vb135_fdcan_iso_usb_fw, portwright_template and generated g0 / h7app / rp2350 firmware (3 Nov 2026); the findings
   read by hand are real (TPL-69, TPL-79, TPL-80 in the template; typec_dongle's `ww_ecc_flash` without `on_nmi()`
   and its UCPD clock not read back; vb135's HSE without CSS), the one false positive (PWR-3 in an embassy-boot
   bootloader) is fixed with a fixture. Filing them in those repos is LINT-9.
@@ -1031,14 +1031,14 @@ document section it comes from, and a FRACN steering range is checked at both en
   HSI16, prefetch on a dual-bank part refused (ES0548 2.2.10, `allow.prefetch_dual_bank`), HSIDIV ≠ ÷1 warned (ES0548
   2.2.4). Register words from field positions written out (`g0::regs::field`), held to stm32-metapac's G0B1CE in their
   own pass (`tests/g0_metapac.rs`, feature `metapac-check-g0`); metapac's CRS TRIM is 6 bits where RM0444 Table 37
-  says 7. Golden test with Donguru's tree (`tests/donguru.rs`: HSI16 × 8 ÷ 2 = 64 MHz, ADC 32 MHz, USB on HSI48 + CRS).
+  says 7. Golden test with Portwright's tree (`tests/portwright.rs`: HSI16 × 8 ÷ 2 = 64 MHz, ADC 32 MHz, USB on HSI48 + CRS).
   🧪 until a board runs it (B153A).
 - 🧪 **RCC-15 G0 apply and verify** (`bedrock_clocks_rt::g0`): RM0444 order (back to HSISYS with the PLL off, Range 1
   before raising clocks and Range 2 after lowering them with VOSF, HSEBYP only with HSE off, PLL configured while off,
   wait states up before the switch and down after it, muxes, the CRS with CRS_CFGR before CEN, HSI16 off when unused),
   bounded waits named in `Error::Timeout(Step)`, `verify` naming the first register. Host tests on a simulated chip
-  with Donguru's golden plan (`bedrock_clocks_rt/tests/g0_apply.rs`). Not on hardware yet.
-- ✅ **RCC-16 G0 flash measured on Donguru**: no saving on the G0. Donguru (typec_dongle 65408a6, embassy fork
+  with Portwright's golden plan (`bedrock_clocks_rt/tests/g0_apply.rs`). Not on hardware yet.
+- ✅ **RCC-16 G0 flash measured on Portwright**: no saving on the G0. Portwright (typec_dongle 65408a6, embassy fork
   9cdf640, nightly-2026-11-02, fat LTO) built with embassy's RCC init against `g0::apply` on the golden plan, with
   embassy-stm32 patched for the measurement (a `rcc-external` feature: no RCC writes, only the LSI / RTC setup and the
   frequency table filled from the plan's consts, the shape RCC-8 needs). `.text` in bytes (`.data` 844 / 848 and
@@ -1056,7 +1056,7 @@ document section it comes from, and a FRACN steering range is checked at both en
   (RCC-9). `verify` is most of the cost: its read-back table with register names. On the G0 the plan buys
   build-time checks, reviewable register words and the errata in one place, not flash. Embassy still needs its
   frequency table (drivers, the TIM4 time driver) and its LSI / RTC setup (RCC-17).
-- 📋 **RCC-17 LSI, LSE and the RTC clock in the G0 plan**: Donguru's backup domain (TAMP boot word, `bkp_cnt!`, the
+- 📋 **RCC-17 LSI, LSE and the RTC clock in the G0 plan**: Portwright's backup domain (TAMP boot word, `bkp_cnt!`, the
   rev A hub hold in RTC_CR) survives a reset only while RCC_BDCR keeps the same RTCSEL; embassy's `LsConfig` sets it
   today, so a plan without it still needs that part of embassy's init.
 - 💡 **RCC-11 Solver**: targets in, dividers out, written back into clocks.toml.
@@ -1068,7 +1068,7 @@ bedrock_usb: a USB full-speed device stack for STM32 with the device fixed at co
 plus embassy-stm32's `usb` driver where a firmware wants it. Descriptors are `const fn` output in flash, endpoints
 and their buffering are types, classes dispatch statically; the boundary with embassy is stm32-metapac registers
 plus the `Peri<USB>`, interrupt binding and RCC enable it hands out. First IP: usb_v4 with 32-bit USB SRAM (G0B1),
-first firmware: Donguru (typec_dongle FW-66), baseline ~11.0 KiB of USB code at opt-level z there. Design and the
+first firmware: Portwright (typec_dongle FW-66), baseline ~11.0 KiB of USB code at opt-level z there. Design and the
 hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our internal project folder
 (`design/bedrock-usb.md`).
 
@@ -1084,7 +1084,7 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   against RM0444 Rev 6 (8 registers, 2048 B, a double-buffered endpoint alone in its register, one UTYPE per
   register, OUT buffer = max packet and encodable in BLSIZE / NUM_BLOCK). `descriptors!` names the arrays and the
   layout, `has(dir, ep, buffering)` works in `const { assert!() }`, a bad device fails the build (compile-fail
-  doctests). Host tests per descriptor kind against hand-checked bytes; golden test `tests/donguru.rs`: Donguru's
+  doctests). Host tests per descriptor kind against hand-checked bytes; golden test `tests/portwright.rs`: Portwright's
   set (IAD composite, WireWeaver with 0x40-0x42, CMSIS-DAP v2, MS OS 2.0 at device and function level) equals
   embassy-usb 0.6's `Builder` output, read back through a dummy driver's control pipe; the differences (runtime
   strings, no device qualifier, double buffering in the descriptor) listed there.
@@ -1100,7 +1100,7 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   simulated host runs whole transfers and checks each `last` against its own end-of-stage rule (wLength around
   multiples of 64 and of an 8-byte EP0, SET_ADDRESS after the status stage, SET_CONFIGURATION 0 / 1 / 2,
   SET_INTERFACE, GET_STATUS, halt and toggle reset, SETUP during a data stage, MS OS 2.0, strings, class requests,
-  bus reset, a Linux-like enumeration). Flash about 2.9 KiB at opt-level z, fat LTO, thumbv6m, for a Donguru-like
+  bus reset, a Linux-like enumeration). Flash about 2.9 KiB at opt-level z, fat LTO, thumbv6m, for a Portwright-like
   device; RAM 104 B with the default 64-byte class buffer.
 - 🧪 **USBD-3 usb_v4 register layer and endpoints**: `bedrock_usb::v4`. `regs.rs`: offsets and bits (RM0444 Rev 6
   §37.6-37.7) and the `Regs` trait, `Mmio` on the chip (no PAC dependency; `tests/v4_metapac.rs` holds every offset
@@ -1136,10 +1136,10 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   `just usb-size` measures it (`bedrock-lint code-size`, LINT-12). 8 Nov 2026, thumbv6m, fat LTO: `.text` 20.8 KiB
   at z / 26.3 KiB at 3 for the whole image; bedrock_usb's own code 7.6 KiB at z (control 1996 B, v4 driver 1564,
   ep0 1172, endpoint 806, device 798, desc 428, state 426, chep 318) and 8.0 KiB at 3. Against the 8 Nov baseline
-  (Donguru's stack 11.0 KiB at z, 12.5 at 3, with a second interface and the WireWeaver class) the comparable
+  (Portwright's stack 11.0 KiB at z, 12.5 at 3, with a second interface and the WireWeaver class) the comparable
   number comes from FW-66. Stack at z: the USB task's poll 184 B frame (504 B deepest), the interrupt handler 136 B
   (408 B). Not run on hardware yet (USBD-7).
-- ✅ **USBD-5 WireWeaver class** (feature `ww`, `bedrock_usb/src/ww.rs`): `ww_function!` writes the function fragment as wire_weaver_usb_embassy does, with the constants from `ww_link` (TR-23): vendor class, framing as protocol (`UsbFraming` or `UsbSeqFraming`), API id as interface string, bulk OUT and IN, descriptors 0x40-0x42, WinUSB and the GUID at device and function level (`MS_OS_20`, `MS_OS_FEATURES`). `ww::Sender` / `ww::Receiver` are `ww_device::PacketSink` / `PacketSource` on `BulkIn` / `BulkOut`, single or double buffered, the sender with a write timeout (`ww::Sleep`, `embassy-time` feature). Parity: `tests/donguru.rs` `ww_macro` against the embassy-usb golden; host tests in `ww/tests.rs` on the simulated peripheral. Descriptor 0x40 says `bdus` and this crate's version, not `wwue`. Blocked on landing: `Cargo.lock` takes ww_device / ww_link once TR-23 is on wire_weaver's main.
+- ✅ **USBD-5 WireWeaver class** (feature `ww`, `bedrock_usb/src/ww.rs`): `ww_function!` writes the function fragment as wire_weaver_usb_embassy does, with the constants from `ww_link` (TR-23): vendor class, framing as protocol (`UsbFraming` or `UsbSeqFraming`), API id as interface string, bulk OUT and IN, descriptors 0x40-0x42, WinUSB and the GUID at device and function level (`MS_OS_20`, `MS_OS_FEATURES`). `ww::Sender` / `ww::Receiver` are `ww_device::PacketSink` / `PacketSource` on `BulkIn` / `BulkOut`, single or double buffered, the sender with a write timeout (`ww::Sleep`, `embassy-time` feature). Parity: `tests/portwright.rs` `ww_macro` against the embassy-usb golden; host tests in `ww/tests.rs` on the simulated peripheral. Descriptor 0x40 says `bdus` and this crate's version, not `wwue`. Blocked on landing: `Cargo.lock` takes ww_device / ww_link once TR-23 is on wire_weaver's main.
 - 🧪 **USBD-6 `bedrock-usb-ch9` host tool** (`bedrock_usb_ch9/`): nusb-based chapter 9 checks against any USB
   device, independent of `bedrock_usb` (talks only standard requests). `list` / `info` enumerate and dump
   descriptors; `run` checks GET_DESCRIPTOR at a spread of wLength around the device and configuration
@@ -1149,14 +1149,14 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   itself (R12) aren't host-observable, so they're exercised only indirectly (noted in `checks.rs`). Host-tested
   (wLength candidate generation, device-selector matching, report counting) and run by hand against a USB2.0
   hub and a HID keyboard on this PC (`info`, `run --only wlength,halt`); not yet run against a bulk-endpoint
-  firmware (today's embassy Donguru or a `bedrock_usb` one) — no B153A, Nucleo-G0B1RE or J-Link on this session's
+  firmware (today's embassy Portwright or a `bedrock_usb` one) — no B153A, Nucleo-G0B1RE or J-Link on this session's
   PC (USBD-7 does that). Linux and macOS only: control transfers go through `nusb::Device` directly, which nusb
   doesn't support on Windows (would need `claim_interface(0)`, a possible follow-up, not done).
 - 📋 **USBD-7 G0 hardware test** (nothing waits on it): USBD-4's example on B153A or a Nucleo-G0B1RE: enumeration on Linux and Windows,
   `bedrock-usb-ch9`, loopback rates, the double-buffer STAT behaviour at a conflict read from CHEPnR (RM0444 §37.5.3
   against embassy's driver comment), the CTR-to-read delay measured. Also which descriptor word a double-buffered
   OUT endpoint receives into at DTOG 0: RM0444 Table 228 names `CHEP_RXTXBD` for the reception row, embassy-stm32
-  (on Donguru's silicon) and USBD-3 use `CHEP_TXRXBD`, as for transmission.
+  (on Portwright's silicon) and USBD-3 use `CHEP_TXRXBD`, as for transmission.
 - 🧪 **USBD-8 OTG backend**: `bedrock_usb::otg`, the Synopsys OTG core in device mode, slave mode without DMA,
   under the same `desc`, control machine and run loop: `Usb::run()` is generic over a `Backend` trait (`device.rs`,
   with `ADDRESS_BEFORE_STATUS`: the OTG core wants DCFG.DAD before SET_ADDRESS's status stage) and EP0 over
@@ -1215,7 +1215,7 @@ hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our i
   the disassembly (Cortex-M0+ timings, zero wait states): the time is read 94 cycles after the interrupt request
   (15 entry + 79), the SOF branch costs 79, a SOF-only interrupt 210 plus entry and exit; bedrock_usb code +152 B,
   the example +3.9 KiB with embassy-time, `SofTrack` (1.0 KiB) and the 64-bit division. On the way: the
-  registration read without two `memcpy` copies (226 cycles before the first flag on every interrupt). Donguru's
+  registration read without two `memcpy` copies (226 cycles before the first flag on every interrupt). Portwright's
   CRS (HSI48 trimmed from SOF) only locks the USB kernel clock's rate to the frames: it gives no timestamp and no
   frame number, so it doesn't replace this. Open: the wire_weaver side (a `FrameMap` in `ww_timebase::Clock`,
   `ww_clock_sync` fitting frames per host controller), the stamp latency and its spread measured on hardware

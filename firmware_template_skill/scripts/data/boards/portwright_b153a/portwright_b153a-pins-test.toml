@@ -1,5 +1,5 @@
-# Pin test of a bare Donguru B153A (rev A, Main variant, nothing on J101, no cable in the plug J501), for
-# `ww --api API pins test --plan docs/board/donguru_b153a-pins-test.toml` (README "Pins"). Every free pin floats:
+# Pin test of a bare Portwright B153A (rev A, Main variant, nothing on J101, no cable in the plug J501), for
+# `ww --api API pins test --plan docs/board/portwright_b153a-pins-test.toml` (README "Pins"). Every free pin floats:
 # the header lines go through 255 Ω to Zeners and TVS only, PA0 / PA1 have their 3K3 pull-ups off (PC15 low), and
 # the TXS0102 U203 holds its side high impedance with OE (PB2) low. Net ties put some pins on one line (NT201..NT204):
 # they show up shorted to each other, as they should. To be confirmed with `--save` on a board.

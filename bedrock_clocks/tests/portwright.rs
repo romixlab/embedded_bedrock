@@ -1,4 +1,4 @@
-//! Donguru (typec_dongle fw/donguru on B153A, STM32G0B1CET6): the tree its embassy config sets up today, planned
+//! Portwright (typec_dongle fw/portwright on B153A, STM32G0B1CET6): the tree its embassy config sets up today, planned
 //! exactly, and the checks around it.
 //!
 //! `BLESS=1 cargo test -p bedrock_clocks` rewrites the golden `clocks.rs`.
@@ -14,9 +14,9 @@ fn mhz(n: i128) -> Exact<Hertz> {
     Exact::new_in::<Mega>(n, 1)
 }
 
-/// fw/donguru/src/main.rs `boot`: HSI16 ÷ 1 × 8 = 128 MHz VCO, R ÷ 2 = 64 MHz SYSCLK, P ÷ 4 = 32 MHz for the ADC,
+/// fw/portwright/src/main.rs `boot`: HSI16 ÷ 1 × 8 = 128 MHz VCO, R ÷ 2 = 64 MHz SYSCLK, P ÷ 4 = 32 MHz for the ADC,
 /// AHB and APB undivided, USB on HSI48 trimmed by the CRS from the SOF, UCPD on HSI16, I2C2 on PCLK.
-pub fn donguru() -> Config {
+pub fn portwright() -> Config {
     Config {
         part: Part::parse("STM32G0B1CET6").unwrap(),
         vos: Vos::Range1,
@@ -59,8 +59,8 @@ pub fn donguru() -> Config {
 }
 
 #[test]
-fn donguru_tree_is_clean_and_exact() {
-    let c = donguru();
+fn portwright_tree_is_clean_and_exact() {
+    let c = portwright();
     let p = plan(&c).unwrap_or_else(|f| panic!("{f:#?}"));
     assert!(p.warnings.is_empty(), "{:#?}", p.warnings);
     let t = &p.tree;
@@ -91,21 +91,21 @@ fn donguru_tree_is_clean_and_exact() {
 
 #[test]
 fn golden_clocks_rs() {
-    let c = donguru();
+    let c = portwright();
     let p = plan(&c).unwrap_or_else(|f| panic!("{f:#?}"));
-    let toml = include_bytes!("golden/donguru_clocks.toml");
+    let toml = include_bytes!("golden/portwright_clocks.toml");
     let out = emit(
         &c,
         &p.tree,
         &p.regs,
         &Origin {
-            path: "fw/donguru/clocks.toml",
+            path: "fw/portwright/clocks.toml",
             hash: source_hash(toml),
         },
     );
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/tests/golden/donguru_clocks.rs"
+        "/tests/golden/portwright_clocks.rs"
     );
     if std::env::var_os("BLESS").is_some() {
         std::fs::write(path, &out).unwrap();
@@ -134,7 +134,7 @@ fn errors(c: &Config) -> Vec<String> {
 #[test]
 fn findings_name_key_value_and_source() {
     // N × 22: a 352 MHz VCO
-    let mut c = donguru();
+    let mut c = portwright();
     c.pll.as_mut().unwrap().n = plln(22).unwrap();
     let e = errors(&c);
     assert!(
@@ -146,7 +146,7 @@ fn findings_name_key_value_and_source() {
     );
 
     // SYSCLK above 64 MHz from R ÷ 2 of a 160 MHz VCO, and with it HCLK and the flash table
-    let mut c = donguru();
+    let mut c = portwright();
     c.pll.as_mut().unwrap().n = plln(10).unwrap();
     let e = errors(&c);
     assert!(
@@ -165,7 +165,7 @@ fn findings_name_key_value_and_source() {
     );
 
     // Range 2: 16 MHz SYSCLK, HSI48 refused
-    let mut c = donguru();
+    let mut c = portwright();
     c.vos = Vos::Range2;
     let e = errors(&c);
     assert!(
@@ -180,7 +180,7 @@ fn findings_name_key_value_and_source() {
     );
 
     // prefetch on a 512 KiB part: ES0548 2.2.10, unless allowed by name
-    let mut c = donguru();
+    let mut c = portwright();
     c.prefetch = true;
     assert!(
         errors(&c)
@@ -190,16 +190,16 @@ fn findings_name_key_value_and_source() {
     c.allow.prefetch_dual_bank = true;
     assert!(errors(&c).is_empty());
     // a 256 KiB part in single-bank mode may prefetch
-    let mut c = donguru();
+    let mut c = portwright();
     c.part = Part::parse("STM32G0B1CCT6").unwrap();
     c.prefetch = true;
     assert!(errors(&c).is_empty());
 
     // USB on HSI48 without the CRS, and UCPD without HSI16
-    let mut c = donguru();
+    let mut c = portwright();
     c.hsi48 = Some(Hsi48 { crs: None });
     assert!(errors(&c).iter().any(|f| f.starts_with("error: hsi48.crs")));
-    let mut c = donguru();
+    let mut c = portwright();
     c.hsi16 = None;
     let e = errors(&c);
     assert!(
@@ -213,7 +213,7 @@ fn findings_name_key_value_and_source() {
     );
 
     // a mux choice the register doesn't have
-    let mut c = donguru();
+    let mut c = portwright();
     c.kernel.usb = Ker::Sysclk;
     assert!(
         errors(&c)
@@ -222,7 +222,7 @@ fn findings_name_key_value_and_source() {
     );
 
     // the ADC target named with its exact error
-    let mut c = donguru();
+    let mut c = portwright();
     c.pll.as_mut().unwrap().p = Some(pllp(5).unwrap());
     let e = errors(&c);
     assert!(
@@ -234,7 +234,7 @@ fn findings_name_key_value_and_source() {
 #[test]
 fn warnings_errata_and_fadc() {
     // HSIDIV ÷2: ES0548 2.2.4
-    let mut c = donguru();
+    let mut c = portwright();
     c.hsi16 = Some(HsiDiv::from_ratio(2).unwrap());
     assert!(
         check(&c)
@@ -242,7 +242,7 @@ fn warnings_errata_and_fadc() {
             .any(|f| f.severity == Severity::Warning && f.key == "hsi16.div")
     );
     // the ADC kernel clock above fADC 35 MHz wants ADC_CCR PRESC
-    let mut c = donguru();
+    let mut c = portwright();
     c.pll.as_mut().unwrap().p = Some(pllp(2).unwrap());
     c.expect.pop();
     let f = check(&c);
@@ -278,7 +278,7 @@ fn knobs_refuse_what_the_register_cannot_hold() {
 /// HSE through the PLL, every mux at a non-zero choice once, and the encoding of each.
 #[test]
 fn hse_and_every_mux() {
-    let mut c = donguru();
+    let mut c = portwright();
     c.hse = Some(Hse {
         freq: mhz(8),
         mode: HseMode::Bypass,

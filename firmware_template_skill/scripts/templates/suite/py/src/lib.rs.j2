@@ -576,7 +576,8 @@ impl Device {
 
     /// The boot state: "Confirmed" (the firmware is the only image).
     fn boot_state(&self) -> PyResult<String> {
-        Ok(format!("{:?}", self.block(self.{{ B }}()?.boot_state())?))
+        let state = self.block(self.{{ B }}()?.boot_state())?;
+        Ok(format!("{state:?}"))
     }
 
 {% filter rewrap("    /// ") %}

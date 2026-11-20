@@ -76,7 +76,7 @@ per-package control is actually needed.
 isn't wrong so much as leaving an easy, already-known-safe win on the table, and picking `opt-level` by habit
 instead of measurement can go either way depending on the actual code (size vs speed is not monotonic).
 
-**Example.** typec_dongle FW-57 and the Donguru measurement wire_weaver's AGENTS.md cites: `opt-level = "z"`
+**Example.** typec_dongle FW-57 and the Portwright measurement wire_weaver's AGENTS.md cites: `opt-level = "z"`
 brought one firmware from 501.7 to 321.8 KiB, at a real cost of 10-25 % more USB latency — a trade worth making
 deliberately, not by default.
 

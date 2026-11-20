@@ -180,7 +180,7 @@ pub struct Config {
     pub acquire_slew_ppm: u32,
     /// The clock is `Locked` once the offset still to slew plus the source's error is within this, µs; `Acquiring`
     /// until then. 2 ms: a full-speed USB board's own error bound is about 1 ms (half its shortest round trip and
-    /// the scatter of the host's fit, Donguru), and LEDs look in phase far beyond that.
+    /// the scatter of the host's fit, Portwright), and LEDs look in phase far beyond that.
     pub lock_within_us: u32,
     /// A new point farther off than this is stepped to instead of slewed (1 s: something went wrong).
     pub step_above_us: u64,

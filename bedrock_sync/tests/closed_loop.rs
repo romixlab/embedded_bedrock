@@ -10,7 +10,7 @@ const UTC: u64 = 1_761_000_000_000_000;
 
 /// A board on the host's USB.
 struct Board {
-    /// Local clock rate error, ppm (Donguru's HSI is ~ -2000).
+    /// Local clock rate error, ppm (Portwright's HSI is ~ -2000).
     ppm: f64,
     /// Local time at host time 0, µs.
     start_us: f64,
@@ -143,7 +143,7 @@ fn run(board: &Board, secs: u64, ahead_us: Option<u64>) -> Run {
 }
 
 #[test]
-fn donguru_converges() {
+fn portwright_converges() {
     // HSI 2000 ppm slow, full-speed USB: ~1.4 ms round trips with up to 0.6 ms more each way
     let r = run(
         &Board {
@@ -156,7 +156,7 @@ fn donguru_converges() {
         None,
     );
     println!(
-        "Donguru: within {} µs after {:.1} s, worst {} µs, largest tick {} µs",
+        "Portwright: within {} µs after {:.1} s, worst {} µs, largest tick {} µs",
         Config::DEFAULT.lock_within_us,
         r.converged_after_us as f64 / 1e6,
         r.worst_after_us,
@@ -193,15 +193,15 @@ fn b135_converges() {
 
 #[test]
 fn a_board_250_ms_off_slews_in_within_seconds() {
-    let donguru = Board {
+    let portwright = Board {
         ppm: -2000.0,
         start_us: 5_000_000.0,
         min_us: 700,
         jitter_us: 600,
     };
-    let r = run(&donguru, 60, Some(250_000));
+    let r = run(&portwright, 60, Some(250_000));
     println!(
-        "Donguru 250 ms off: within {} µs after {:.1} s, worst {} µs, largest tick {} µs",
+        "Portwright 250 ms off: within {} µs after {:.1} s, worst {} µs, largest tick {} µs",
         Config::DEFAULT.lock_within_us,
         r.converged_after_us as f64 / 1e6,
         r.worst_after_us,

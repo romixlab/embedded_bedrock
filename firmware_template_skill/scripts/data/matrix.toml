@@ -225,7 +225,7 @@ name = "g0setm"
 args = ["--chip", "STM32G0B1CE", "--settings", "--bkp-counters", "auto", "--counters", "--led", "PF1", "--wire-weaver", "--embassy", "main"]
 builds = ["dev", "release"]
 tags = ["ww"]
-note = "Donguru-like"
+note = "Portwright-like"
 
 [[entry]]
 name = "h725m"
@@ -349,11 +349,11 @@ tags = ["ww", "host"]
 note = "the B129A CANnify Micro preset (TPL-58): USB, HSE 12 MHz clock tree, LQFP48, --pins board; firmware/src equals cannify_micro_template's"
 
 [[entry]]
-name = "g0donguru"
-args = ["--board", "donguru_b153a"]
+name = "g0portwright"
+args = ["--board", "portwright_b153a"]
 builds = ["dev", "release"]
 tags = ["ww", "host"]
-note = "the B153A Donguru preset (TPL-60): USB behind a USB2512B hub set up by [bring_up] (usb251xb, RTC_OUT1 hub reset), two PWM LEDs on TIM14 / TIM15, HSI16 clock tree, --pins board; firmware/src equals donguru_template's"
+note = "the B153A Portwright preset (TPL-60): USB behind a USB2512B hub set up by [bring_up] (usb251xb, RTC_OUT1 hub reset), two PWM LEDs on TIM14 / TIM15, HSI16 clock tree, --pins board; firmware/src equals portwright_template's"
 
 [[entry]]
 name = "h7b135b"
@@ -418,7 +418,7 @@ name = "g0set"
 args = ["--chip", "STM32G0B1CE", "--settings", "--bkp-counters", "auto", "--counters", "--led", "PF1", "--wire-weaver"]
 builds = ["dev", "release"]
 tags = ["ww"]
-note = "Donguru-like: EccSafeFlash, label over USB"
+note = "Portwright-like: EccSafeFlash, label over USB"
 
 [[entry]]
 name = "g0setrtt"
@@ -566,7 +566,7 @@ note = "USB client without counters: no --elf"
 
 # --led-mode (TPL-39): every embassy STM32 entry above breathes on its default LED pin where it has a timer channel
 # (PB14: G0 TIM15_CH1, H7 TIM12_CH1, L0 TIM21_CH2, F4 TIM1_CH2N); g0brd is G0's PA5 on TIM2_CH1 with the host crates,
-# g0set Donguru's PF1 on TIM15_CH1N.
+# g0set Portwright's PF1 on TIM15_CH1N.
 
 [[entry]]
 name = "g0ledn"

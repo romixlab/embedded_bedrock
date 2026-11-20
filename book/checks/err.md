@@ -51,7 +51,7 @@ sheet for G0C1-only parts is **ES0547 2.2.8**), status **N** (not fixed) on ever
 It applies to every 512 KiB part (always dual-bank) and to 256 KiB parts with `DUAL_BANK` set; ST's workaround is
 **"None"** — either turn flash prefetch off, or make sure code never branches across the bank boundary.
 
-**Example:** typec_dongle's Donguru firmware (`FW-38`) HardFaulted with garbage in `r0`-`r3` within seconds under
+**Example:** typec_dongle's Portwright firmware (`FW-38`) HardFaulted with garbage in `r0`-`r3` within seconds under
 USB load, from a call at `0x0804005c` into `BufReader::read_le32` at `0x08039d18` — a branch from bank 2 into
 bank 1 with prefetch on. The template's fix (`TPL-32`) takes ST's second option: prefetch stays off needlessly
 costs ~40% throughput (so the template turns it back on for embassy's G0 target, which otherwise leaves it off by
@@ -225,7 +225,7 @@ standard's own minimum setup times.
 Workaround: write the first byte to `I2C_TXDR` *before* the transmission starts, **or** keep the
 APB-clock-to-I2C-kernel-clock ratio outside 1.5-3.
 
-**Example:** donguru_template's I2C bring-up checks the kernel-to-APB clock ratio for exactly this reason before
+**Example:** portwright_template's I2C bring-up checks the kernel-to-APB clock ratio for exactly this reason before
 accepting a clock configuration, rather than discovering a stall empirically on one particular clock setting.
 
 **Fix:** when configuring G0 I2C, check the achieved I2C kernel clock against both errata at once: fast enough

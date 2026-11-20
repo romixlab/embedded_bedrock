@@ -90,7 +90,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="mem-5"></a>🛑 `MEM-5` Backup-register map overlaps: `bkp_cnt!` buffer, boot word, boot reason and board state on the same registers (`CNT_BKP_BUFFER_SIZE_WORDS` past the first fixed one) · check: cfg mid + elf mid · <!-- vb135 BOOT-5/7; template 0.4.1 -->
 - <a id="mem-6"></a>⚠️ `MEM-6` `.cnt_bkp_buffer` not at the backup-register address · check: elf easy · <!-- template 0.3.0 -->
 - <a id="mem-7"></a>⚠️ `MEM-7` Flash partition symbols for embassy-boot written as absolute addresses where offsets are expected (`- ORIGIN(FLASH)`) · check: cfg easy · <!-- template memory-layout.md -->
-- <a id="mem-8"></a>⚠️ `MEM-8` Settings store smaller than two erase pages, or on the code's bank of a dual-bank part (an erase stalls the code) · check: cfg mid, chip table · <!-- template memory-layout.md; donguru_template -->
+- <a id="mem-8"></a>⚠️ `MEM-8` Settings store smaller than two erase pages, or on the code's bank of a dual-bank part (an erase stalls the code) · check: cfg mid, chip table · <!-- template memory-layout.md; portwright_template -->
 - <a id="mem-9"></a>🛑 `MEM-9` Data that must survive the ROM bootloader kept in RAM the ROM uses (H7: AXI SRAM from 0x24000000, DTCM from 0x20004100): keep it in backup registers · check: elf mid, chip table · <!-- vb135 BOOT-4 -->
 - <a id="mem-10"></a>⚠️ `MEM-10` RWX LOAD segment or a writable symbol in `.rodata` (`static mut` in a read-only section) · check: elf easy · <!-- cnt _CNT_SIGNATURE -->
 - <a id="mem-11"></a>⚠️ `MEM-11` Linker warnings ignored (section alignment, `.text` not 8-aligned after `.start_block` on RP235x) · check: cfg easy · <!-- template 0.4.3 -->
@@ -100,7 +100,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="siz-1"></a>⚠️ `SIZ-1` Flash or RAM use over a threshold (default 90 % of the region) in a shipped profile · check: elf easy · <!-- internal firmware playbook; vb135 PLAT-7; typec_dongle (99.6 %) -->
 - <a id="siz-2"></a>⚠️ `SIZ-2` Dev profile not linked in CI: debug assertions and overflow checks add 18-30 KiB and overflow unnoticed · check: cfg easy · <!-- typec_dongle FW-53; vb135 PLAT-7 -->
 - <a id="siz-3"></a>💡 `SIZ-3` Per-package `opt-level` together with `lto = "fat"`: the override does nothing · check: cfg easy · <!-- typec_dongle FW-57 -->
-- <a id="siz-4"></a>💡 `SIZ-4` Release profile without `codegen-units = 1`, `lto`, `panic = "abort"`, and an `opt-level` chosen by measurement (z vs 3 is the largest lever: Donguru 501.7 → 321.8 KiB, 10-25 % slower USB) · check: cfg easy · <!-- typec_dongle FW-57; wire_weaver AGENTS.md -->
+- <a id="siz-4"></a>💡 `SIZ-4` Release profile without `codegen-units = 1`, `lto`, `panic = "abort"`, and an `opt-level` chosen by measurement (z vs 3 is the largest lever: Portwright 501.7 → 321.8 KiB, 10-25 % slower USB) · check: cfg easy · <!-- typec_dongle FW-57; wire_weaver AGENTS.md -->
 - <a id="siz-5"></a>💡 `SIZ-5` `core::fmt` pulled in: `Result::unwrap` / `expect` (through `&dyn Debug`), `Debug2Format`, a panic handler that formats `PanicInfo` (4-5 KiB) · check: src easy + elf easy · <!-- internal fw-size measurement 2026-10-19 -->
 - <a id="siz-6"></a>💡 `SIZ-6` Large `.data` initializer (a static with a non-zero const value): zero-init and set it up in place · check: elf easy · <!-- typec_dongle FW-42 (20 KiB encoder) -->
 - <a id="siz-7"></a>💡 `SIZ-7` A shared crate turns on wide types or features for every firmware (`ww_si` u64: 7.7 KB) · check: cfg mid · <!-- wire_weaver ww_client_server -->
@@ -142,7 +142,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 - <a id="pwr-1"></a>⚠️ `PWR-1` No brown-out reset level or programmable voltage detector (PVD) for the supply the board really has · check: src easy · <!-- notion -->
 - <a id="pwr-2"></a>🛑 `PWR-2` H7 SMPS / LDO supply config not the one of the schematic: the MCU may not start or may be damaged · check: cfg mid + review · chip: H7 · <!-- template stm32-notes -->
 - <a id="pwr-3"></a>⚠️ `PWR-3` Backup domain not reset at boot when the RTC and backup registers are unused (corrupted after a brown-out without POR) · check: src mid · <!-- template stm32-notes (efton g133/g62) -->
-- <a id="pwr-4"></a>⚠️ `PWR-4` RTC clock source changed in the clock config of a firmware that keeps state in the backup domain: embassy resets the domain · check: src mid · <!-- donguru_template main.rs -->
+- <a id="pwr-4"></a>⚠️ `PWR-4` RTC clock source changed in the clock config of a firmware that keeps state in the backup domain: embassy resets the domain · check: src mid · <!-- portwright_template main.rs -->
 - <a id="pwr-5"></a>⚠️ `PWR-5` How long the MCU runs after a supply cut not measured where it matters (writes, erases): B129 G0 keeps running 60-70 ms · check: bench · <!-- internal log Oct 2026 -->
 
 ### 🧷 FLS - Flash and ECC
@@ -157,7 +157,7 @@ condensed [review checklist](review-checklist.md) and [bring-up checklist](bring
 ## Hardware
 
 ### 📌 PIN - Pins and IO
-- <a id="pin-1"></a>🛑 `PIN-1` Pin driver dropped (`let _ = Output::new(..)`, a temporary, end of `main`'s scope): embassy disconnects the pin on drop · check: src easy · 📖 [detail](checks/pin.md#pin-1) · <!-- donguru_template main.rs; notion "destructors" -->
+- <a id="pin-1"></a>🛑 `PIN-1` Pin driver dropped (`let _ = Output::new(..)`, a temporary, end of `main`'s scope): embassy disconnects the pin on drop · check: src easy · 📖 [detail](checks/pin.md#pin-1) · <!-- portwright_template main.rs; notion "destructors" -->
 - <a id="pin-2"></a>🛑 `PIN-2` Board not put in its safe state first thing after the HAL init (output enables, shift-register chains, power switches), before USB or anything slow · check: src mid + review · 📖 [detail](checks/pin.md#pin-2) · <!-- usb_io_fw PLAT-9 (595 chain could short VBUS into 3V3) -->
 - <a id="pin-3"></a>🛑 `PIN-3` A level translator or bus switch enabled before the MCU side is ready (pins released, at the right level, peripheral off); on last, off first · check: test + review · 📖 [detail](checks/pin.md#pin-3) · <!-- usb_io_fw IF-2 -->
 - <a id="pin-4"></a>🛑 `PIN-4` Peripheral pins moved to GPIO and back under an enabled peripheral (RP2350: the peripheral reads the OR of all pins with its FUNCSEL; the I2C block saw a start without a stop): keep FUNCSEL, use OEOVER / OUTOVER · check: src mid · chip: RP · 📖 [detail](checks/pin.md#pin-4) · <!-- usb_io_fw IF-2, i2c_periph BE-1 -->
@@ -204,7 +204,7 @@ Checks of a firmware's `board.toml` ([board-description.md](board-description.md
 - <a id="err-6"></a>⚠️ `ERR-6` RP2350 A2 pad with pull-down and input buffer left on (RP2350-E9: the pin stays high): enable the input only for the read · check: src mid · chip: RP2350 A2 · 📖 [detail](checks/err.md#err-6) · <!-- report_template; embedded_bedrock TPL-48 -->
 - <a id="err-7"></a>⚠️ `ERR-7` RP2350 ROM reboot with delay 0 or FRCE_OFF bits beyond PROC1 (RP2350-E30, E19) · check: src easy · chip: RP2350 · 📖 [detail](checks/err.md#err-7) · <!-- template boot.rs -->
 - <a id="err-8"></a>⚠️ `ERR-8` G0 ADC calibration without the wait of 2 ADC kernel clocks after disable (freezes) · check: src mid · chip: G0 · 📖 [detail](checks/err.md#err-8) · <!-- typec_dongle 0.20.7 (G0 gotcha 221) -->
-- <a id="err-9"></a>⚠️ `ERR-9` I2C timing not checked against the kernel / APB clock ratio errata (ES0548 2.11.1, 2.11.4) · check: review · chip: G0 · 📖 [detail](checks/err.md#err-9) · <!-- donguru_template main.rs -->
+- <a id="err-9"></a>⚠️ `ERR-9` I2C timing not checked against the kernel / APB clock ratio errata (ES0548 2.11.1, 2.11.4) · check: review · chip: G0 · 📖 [detail](checks/err.md#err-9) · <!-- portwright_template main.rs -->
 - <a id="err-10"></a>⚠️ `ERR-10` Cache on without reading the cache errata of the part · check: review · 📖 [detail](checks/err.md#err-10) · <!-- notion -->
 - <a id="err-11"></a>💡 `ERR-11` Silicon revision read from a register that can't tell all revisions apart (RP2350 `CHIP_ID.REVISION`: A3 and A4 both 3; use the bootrom version) · check: src easy · chip: RP2350 · 📖 [detail](checks/err.md#err-11) · <!-- embedded_bedrock TPL-55 -->
 
@@ -220,7 +220,7 @@ Checks of a firmware's `board.toml` ([board-description.md](board-description.md
 - <a id="ext-9"></a>⚠️ `EXT-9` Shared peripheral memory (H7 FDCAN message RAM) zeroed whole by one instance's init · check: review · 📖 [detail](checks/ext.md#ext-9) · <!-- mcan R4 -->
 - <a id="ext-10"></a>⚠️ `EXT-10` Register map or masks of another IP variant (G0 FDCAN with the H7 map, reserved bits in masks) · check: review · 📖 [detail](checks/ext.md#ext-10) · <!-- mcan P2 -->
 - <a id="ext-11"></a>💡 `EXT-11` A HAL driver taken without checking it against what the product needs (timing accuracy, NAK index, recovery, panics in `new`) · check: review · 📖 [detail](checks/ext.md#ext-11) · <!-- i2c-master-driver design notes (embassy-rp I2C) -->
-- <a id="ext-12"></a>⚠️ `EXT-12` RCC enable not read back before the first access to the peripheral · check: src mid · chip: STM32 · 📖 [detail](checks/ext.md#ext-12) · <!-- donguru_template main.rs -->
+- <a id="ext-12"></a>⚠️ `EXT-12` RCC enable not read back before the first access to the peripheral · check: src mid · chip: STM32 · 📖 [detail](checks/ext.md#ext-12) · <!-- portwright_template main.rs -->
 
 ### 🔗 USB - USB device side
 - <a id="usb-1"></a>🛑 `USB-1` High-speed bulk endpoint max packet not 512, bInterval out of range for the speed · check: src mid · 📖 [detail](checks/usb.md#usb-1) · <!-- vb135 c0d19b8 (Windows) -->

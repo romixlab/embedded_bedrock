@@ -1,4 +1,4 @@
-// donguru_template main.rs: the clock enable is read back before the peripheral's first access
+// portwright_template main.rs: the clock enable is read back before the peripheral's first access
 fn variant() -> u32 {
     pac::RCC.apbenr1().modify(|w| w.set_dbgen(true));
     pac::DBGMCU.idcode().read().0

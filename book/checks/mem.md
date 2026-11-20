@@ -167,7 +167,7 @@ whole erase time — on the banks and page sizes `memory-layout.md` lists (STM32
 a real, user-visible stall right in the middle of normal operation.
 
 **Example.** `memory-layout.md` places `SETTINGS` at the very end of flash specifically so on a dual-bank part it
-lands in bank 2 while code typically runs from bank 1; donguru_template needed this worked out explicitly for its
+lands in bank 2 while code typically runs from bank 1; portwright_template needed this worked out explicitly for its
 layout.
 
 **How to check.** `cfg mid` plus the chip's bank/page-size table: settings region ≥ 2 erase pages and ≥ 8 KiB, and

@@ -30,7 +30,7 @@ const VERSION: &str = concat!(
         memory.x and bedrock_fw.json into a model and runs the automatic checks on it.",
     after_help = "Examples:
   bedrock-lint check                      check the firmware crate in the current directory
-  bedrock-lint check fw/donguru --format sarif -o lint.sarif
+  bedrock-lint check fw/portwright --format sarif -o lint.sarif
   bedrock-lint check --write-baseline bedrock-lint.baseline.json   accept today's findings
   bedrock-lint explain EXE-3              what EXE-3 is about and how to fix it
   bedrock-lint checks list --all          every catalogue check and which are automated
