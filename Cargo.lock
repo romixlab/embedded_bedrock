@@ -62,7 +62,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -73,7 +73,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -116,7 +116,7 @@ dependencies = [
  "futures-lite",
  "parking",
  "polling",
- "rustix 1.0.8",
+ "rustix 1.1.6",
  "slab",
  "windows-sys 0.60.2",
 ]
@@ -652,12 +652,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "const-oid"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
-
-[[package]]
 name = "constant_time_eq"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1025,7 +1019,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
 dependencies = [
  "block-buffer 0.12.1",
- "const-oid",
  "crypto-common 0.2.2",
 ]
 
@@ -1382,7 +1375,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "778e2ac28f6c47af28e4907f13ffd1e1ddbd400980a9abd7c8df189bf578a5ad"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1460,7 +1453,7 @@ dependencies = [
 [[package]]
 name = "exact_units"
 version = "0.1.0"
-source = "git+https://github.com/romixlab/exact_units#cd1fd9d41a28d3a4c3634c915e5712e75fe6455d"
+source = "git+https://github.com/romixlab/exact_units#7383e5273eb345567c0b8f9a89777a7011d30996"
 dependencies = [
  "defmt",
  "exact_units_macros",
@@ -1472,7 +1465,7 @@ dependencies = [
 [[package]]
 name = "exact_units_macros"
 version = "0.1.0"
-source = "git+https://github.com/romixlab/exact_units#cd1fd9d41a28d3a4c3634c915e5712e75fe6455d"
+source = "git+https://github.com/romixlab/exact_units#7383e5273eb345567c0b8f9a89777a7011d30996"
 
 [[package]]
 name = "fallible-iterator"
@@ -1940,7 +1933,7 @@ version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82cb6a9f675da968c63b6208c641b9dca58fc0133ae53375736b1767b0cab8bd"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1997,9 +1990,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.174"
+version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
+checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
 name = "libm"
@@ -2022,12 +2015,6 @@ name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
-
-[[package]]
-name = "linux-raw-sys"
-version = "0.9.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd945864f07fe9f5371a27ad7b52a172b4b499999f1d97574c9fa68373937e12"
 
 [[package]]
 name = "linux-raw-sys"
@@ -2241,13 +2228,13 @@ dependencies = [
  "linux-raw-sys 0.12.1",
  "log",
  "once_cell",
- "rustix 1.0.8",
+ "rustix 1.1.6",
  "slab",
  "tokio",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2325,6 +2312,12 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
+name = "pastey"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
 
 [[package]]
 name = "pathsearch"
@@ -2441,7 +2434,7 @@ dependencies = [
  "concurrent-queue",
  "hermit-abi 0.5.2",
  "pin-project-lite",
- "rustix 1.0.8",
+ "rustix 1.1.6",
  "windows-sys 0.60.2",
 ]
 
@@ -2697,6 +2690,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b74b56ffa8bb2830709a538c2cbcae9aa062db0d2a42563bfb09bdaae44020eb"
 
 [[package]]
+name = "rustc-stable-hash"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "781442f29170c5c93b7185ad559492601acdc71d5bb0706f5868094f45cfcd08"
+
+[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2720,15 +2719,15 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.0.8"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11181fbabf243db407ef8df94a6ce0b2f9a733bd8be4ad02b4eda9602296cac8"
+checksum = "e5e76742e5294153d4dde1207dbec5bdd81eef6fabdc0d2118babadabfd858aa"
 dependencies = [
  "bitflags 2.13.2",
  "errno",
  "libc",
- "linux-raw-sys 0.9.4",
- "windows-sys 0.60.2",
+ "linux-raw-sys 0.12.1",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2993,11 +2992,11 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 [[package]]
 name = "shrink_wrap"
 version = "0.2.0"
-source = "git+https://github.com/romixlab/shrink_wrap#c0f11d8e4855d1a97c19a76ae2fc360af1ea4eaf"
+source = "git+https://github.com/romixlab/shrink_wrap#58bb91a5eb7b692442109cd8eb9459675c5b04a2"
 dependencies = [
  "defmt",
  "either",
- "paste",
+ "pastey",
  "serde",
  "shrink_wrap_derive",
 ]
@@ -3005,7 +3004,7 @@ dependencies = [
 [[package]]
 name = "shrink_wrap_derive"
 version = "0.2.0"
-source = "git+https://github.com/romixlab/shrink_wrap#c0f11d8e4855d1a97c19a76ae2fc360af1ea4eaf"
+source = "git+https://github.com/romixlab/shrink_wrap#58bb91a5eb7b692442109cd8eb9459675c5b04a2"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -3088,7 +3087,7 @@ dependencies = [
 [[package]]
 name = "stm32_dfu_host"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "thiserror",
  "tokio",
@@ -3123,6 +3122,9 @@ name = "strum"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
+dependencies = [
+ "strum_macros 0.28.0",
+]
 
 [[package]]
 name = "strum_macros"
@@ -3243,8 +3245,8 @@ dependencies = [
  "fastrand",
  "getrandom 0.3.4",
  "once_cell",
- "rustix 1.0.8",
- "windows-sys 0.60.2",
+ "rustix 1.1.6",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3253,8 +3255,8 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
- "rustix 1.0.8",
- "windows-sys 0.60.2",
+ "rustix 1.1.6",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4105,7 +4107,7 @@ checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 [[package]]
 name = "wire_weaver"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "exact_units",
  "futures-core",
@@ -4117,7 +4119,7 @@ dependencies = [
 [[package]]
 name = "wire_weaver_client"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "anyhow",
  "either",
@@ -4132,7 +4134,6 @@ dependencies = [
  "sha2 0.11.0",
  "stm32_dfu_host",
  "strum 0.28.0",
- "strum_macros 0.28.0",
  "thiserror",
  "tokio",
  "tracing",
@@ -4155,6 +4156,7 @@ dependencies = [
  "ww_stream",
  "ww_tap",
  "ww_tape",
+ "ww_tape_fs",
  "ww_timebase",
  "ww_version",
 ]
@@ -4162,7 +4164,7 @@ dependencies = [
 [[package]]
 name = "wire_weaver_core"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "anyhow",
  "cargo_toml",
@@ -4176,10 +4178,8 @@ dependencies = [
  "regex",
  "ron",
  "semver 1.0.28",
- "serde",
  "shrink_wrap",
  "syn 3.0.6",
- "toml 1.1.6+spec-1.1.0",
  "ww_global",
  "ww_numeric",
  "ww_self",
@@ -4190,7 +4190,7 @@ dependencies = [
 [[package]]
 name = "wire_weaver_derive"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "anyhow",
  "convert_case",
@@ -4208,7 +4208,7 @@ dependencies = [
 [[package]]
 name = "wire_weaver_evolution"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "exact_units",
  "ron",
@@ -4235,7 +4235,7 @@ checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 [[package]]
 name = "ww_api"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "shrink_wrap",
  "wire_weaver_derive",
@@ -4246,7 +4246,7 @@ dependencies = [
 [[package]]
 name = "ww_can_bus"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_stdlib#53da436cd7868181532aa6f96457911bbf201edf"
+source = "git+https://github.com/vhrdtech/ww_stdlib#4e4bf631bae4eaa23204c6ad22d14f308c5efb5b"
 dependencies = [
  "defmt",
  "ww_api",
@@ -4256,7 +4256,7 @@ dependencies = [
 [[package]]
 name = "ww_client_server"
 version = "0.2.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "wire_weaver",
  "ww_error",
@@ -4267,7 +4267,7 @@ dependencies = [
 [[package]]
 name = "ww_clock_sync"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "wire_weaver_client",
 ]
@@ -4275,7 +4275,7 @@ dependencies = [
 [[package]]
 name = "ww_crc"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "crc",
 ]
@@ -4283,7 +4283,7 @@ dependencies = [
 [[package]]
 name = "ww_date_time"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "chrono",
  "defmt",
@@ -4294,7 +4294,7 @@ dependencies = [
 [[package]]
 name = "ww_device"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "embassy-futures",
  "wire_weaver",
@@ -4307,7 +4307,7 @@ dependencies = [
 [[package]]
 name = "ww_dfu"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_stdlib#53da436cd7868181532aa6f96457911bbf201edf"
+source = "git+https://github.com/vhrdtech/ww_stdlib#4e4bf631bae4eaa23204c6ad22d14f308c5efb5b"
 dependencies = [
  "defmt",
  "ww_api",
@@ -4317,7 +4317,7 @@ dependencies = [
 [[package]]
 name = "ww_error"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "defmt",
  "shrink_wrap",
@@ -4327,7 +4327,7 @@ dependencies = [
 [[package]]
 name = "ww_framer"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "shrink_wrap",
  "ww_crc",
@@ -4336,7 +4336,7 @@ dependencies = [
 [[package]]
 name = "ww_global"
 version = "0.2.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "convert_case",
  "serde_json",
@@ -4346,7 +4346,7 @@ dependencies = [
 [[package]]
 name = "ww_indication"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_stdlib#53da436cd7868181532aa6f96457911bbf201edf"
+source = "git+https://github.com/vhrdtech/ww_stdlib#4e4bf631bae4eaa23204c6ad22d14f308c5efb5b"
 dependencies = [
  "defmt",
  "ww_api",
@@ -4356,7 +4356,7 @@ dependencies = [
 [[package]]
 name = "ww_keyed"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "shrink_wrap",
 ]
@@ -4364,7 +4364,7 @@ dependencies = [
 [[package]]
 name = "ww_link"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "shrink_wrap",
  "wire_weaver",
@@ -4376,7 +4376,7 @@ dependencies = [
 [[package]]
 name = "ww_local_socket"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "libc",
 ]
@@ -4384,7 +4384,7 @@ dependencies = [
 [[package]]
 name = "ww_lz4"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "lz4_flex",
 ]
@@ -4392,7 +4392,7 @@ dependencies = [
 [[package]]
 name = "ww_numeric"
 version = "0.3.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "defmt",
  "serde",
@@ -4402,7 +4402,7 @@ dependencies = [
 [[package]]
 name = "ww_self"
 version = "0.3.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "anyhow",
  "exact_units",
@@ -4420,7 +4420,7 @@ dependencies = [
 [[package]]
 name = "ww_si"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "defmt",
  "exact_units",
@@ -4431,12 +4431,13 @@ dependencies = [
 [[package]]
 name = "ww_snapshots"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "anyhow",
  "elsa",
  "flate2",
  "ron",
+ "rustc-stable-hash",
  "semver 1.0.28",
  "serde",
  "tar",
@@ -4450,7 +4451,7 @@ dependencies = [
 [[package]]
 name = "ww_stream"
 version = "0.5.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "atomic-waker",
  "portable-atomic",
@@ -4463,7 +4464,7 @@ dependencies = [
 [[package]]
 name = "ww_tap"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
  "tracing",
  "wire_weaver",
@@ -4473,22 +4474,40 @@ dependencies = [
 [[package]]
 name = "ww_tape"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/ww_tape#7179426d05f6a32c2a182e00c2f1b7f84df1438d"
+source = "git+https://github.com/vhrdtech/ww_tape#2f94cafbfeb1ba288b4ee205f4cef76ed8b38e50"
 dependencies = [
  "blake3",
- "crc",
  "exact_units",
  "lz4_flex",
  "shrink_wrap",
+ "ww_tape_codecs",
  "ww_version",
+]
+
+[[package]]
+name = "ww_tape_codecs"
+version = "0.1.0"
+source = "git+https://github.com/vhrdtech/ww_tape#2f94cafbfeb1ba288b4ee205f4cef76ed8b38e50"
+dependencies = [
+ "crc",
+ "lz4_flex",
+]
+
+[[package]]
+name = "ww_tape_fs"
+version = "0.1.0"
+source = "git+https://github.com/vhrdtech/ww_tape#2f94cafbfeb1ba288b4ee205f4cef76ed8b38e50"
+dependencies = [
+ "blake3",
+ "rustix 1.1.6",
+ "ww_tape",
 ]
 
 [[package]]
 name = "ww_timebase"
 version = "0.1.0"
-source = "git+https://github.com/vhrdtech/wire_weaver#7b9931c89f2045980874792cd36380c1ed435a26"
+source = "git+https://github.com/vhrdtech/wire_weaver#03c85d047460a675acabad90e6c901a74095f3e0"
 dependencies = [
- "defmt",
  "ww_api",
  "ww_date_time",
  "ww_si",
@@ -4497,7 +4516,7 @@ dependencies = [
 [[package]]
 name = "ww_version"
 version = "0.2.0"
-source = "git+https://github.com/vhrdtech/ww_base#3772b03543b011ace65ae6a80b53333d12d7da2d"
+source = "git+https://github.com/vhrdtech/ww_base#77912998f325c4f73460569978433567568543e5"
 dependencies = [
  "defmt",
  "hex",
