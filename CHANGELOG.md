@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-20
+
 ### Changed
 
 - Tests follow the product rename Donguru to Portwright: `bedrock_usb` golden device (`tests/portwright.rs`, new USB strings), `bedrock_clocks` golden plan (USBD-1, RCC-14).
