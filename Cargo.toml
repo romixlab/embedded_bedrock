@@ -63,3 +63,6 @@ exact_units = { version = "0.1.0", git = "https://github.com/romixlab/exact_unit
 # Local development against the sibling checkout: uncomment (see also `just dev-local` and .cargo/sibling-patch.toml)
 # [patch."https://github.com/romixlab/exact_units"]
 # exact_units = { path = "../exact_units" }
+
+[profile.dev]
+debug = false
