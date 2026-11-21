@@ -1,4 +1,4 @@
-// typec_dongle 0.20.7 (efton.sk gotcha 221): calibration right after a disable froze the G0's ADC
+// portwright 0.20.7 (efton.sk gotcha 221): calibration right after a disable froze the G0's ADC
 fn recalibrate(r: Adc) {
     r.cr().modify(|w| w.set_addis(true));
     while r.cr().read().aden() {}

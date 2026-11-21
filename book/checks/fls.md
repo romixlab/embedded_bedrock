@@ -17,7 +17,7 @@ when power cut has a data/ECC mismatch, and reading it raw triggers a double-ECC
 BusFault on H7 — right at the read, not at the write that caused it. A reader that doesn't expect this treats a
 perfectly ordinary power-cut artifact as a fatal fault.
 
-**Example.** typec_dongle API-19, and the settings design in the template both exist because of this; upstream
+**Example.** portwright API-19, and the settings design in the template both exist because of this; upstream
 embassy issue #7235 covers the same hazard from the embassy-boot side.
 
 **How to check.** `src mid`, limited to ECC-flash parts (G0, H7, G4, L4 and others per the chip table): a read of

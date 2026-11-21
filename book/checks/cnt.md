@@ -19,7 +19,7 @@ can see, or the only way to learn it's happening at all is a user noticing the d
 — after which there's no history of how often it occurred.
 
 **Example.** The template's own conventions state this directly ("`cnt` counters for unexpected events"), and
-typec_dongle's `pd_rx_overrun` (FW-62) is the canonical case of a counter added only after the fact, once missing
+portwright's `pd_rx_overrun` (FW-62) is the canonical case of a counter added only after the fact, once missing
 data was already being reported.
 
 **How to check.** `src hard`: needs to tell an *unexpected*-event error branch (worth counting) from ordinary,

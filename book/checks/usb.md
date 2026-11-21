@@ -27,7 +27,7 @@ zero-length packet leaves the host's USB stack waiting for one more packet to kn
 knows a bulk transfer is done on a short packet or a ZLP); and framing a request's end on "the next short
 packet" breaks when the host happens to send an exact-multiple-sized request and no ZLP follows it.
 
-**Example:** typec_dongle's CMSIS-DAP framing (FW-19) hit the second shape directly: probe-rs 0.32 sends no
+**Example:** portwright's CMSIS-DAP framing (FW-19) hit the second shape directly: probe-rs 0.32 sends no
 zero-length packet after a request that is an exact multiple of 64 bytes (25 batched register writes come to
 exactly 128 bytes), so a request end detected by "waited for a short packet or a pause" cannot tell a slow host
 from a finished exact-multiple request. The fix parses each command's own length from its CMSIS-DAP layout
@@ -47,7 +47,7 @@ previous one, so there is dead time on the wire between packets; through a hub's
 that dead time is far more expensive than directly on the host's own root port, because the TT serializes
 Full-Speed traffic from multiple downstream devices.
 
-**Example:** typec_dongle's WireWeaver USB throughput (FW-24, on the G0's `usb_v4` peripheral) went from 373 to
+**Example:** portwright's WireWeaver USB throughput (FW-24, on the G0's `usb_v4` peripheral) went from 373 to
 664-676 kB/s host→device purely from switching to double-buffered bulk endpoints (`embassy-rs/embassy#7275`),
 alongside `opt-level = 3` and a protocol fast path — nearly double, from firmware-side buffering changes alone,
 with the same wire protocol and the same host.
@@ -68,7 +68,7 @@ the endpoint NAKs forever and nothing unwedges it from the firmware side alone.
 
 **Example:** vb135's fix (commit `bb820d9`, "fix: stuck at sending Ping when host driver closed") is exactly
 this: the firmware kept trying to send a Ping frame on an endpoint the host had abandoned without a proper USB
-disconnect, and had no path to notice and recover. typec_dongle's FW-26 is the same class of problem on its own
+disconnect, and had no path to notice and recover. portwright's FW-26 is the same class of problem on its own
 sending path.
 
 **Fix:** bound every send attempt with a timeout independent of USB-level disconnect events, and give the

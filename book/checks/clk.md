@@ -35,7 +35,7 @@ driver's choice depends on what else in the binary claims a timer first.
 time driver `time-driver-any` let embassy pick the LED's own timer for the tick, so the fix is to always name the
 time driver explicitly (`time-driver-timN`, never `-any`) and choose N to be a timer nothing else in the firmware
 touches — the LED's AF/channel lookup in `stm32-data` excludes the timer picked for the driver before handing it
-to `src/led.rs`. The same class of collision shows up wherever a firmware (typec_dongle, the B135 template) adds
+to `src/led.rs`. The same class of collision shows up wherever a firmware (portwright, the B135 template) adds
 a second timer consumer without first checking which timer the time driver already claimed.
 
 **Fix:** name the time driver's timer explicitly in `Cargo.toml` features and keep a single place (the chip

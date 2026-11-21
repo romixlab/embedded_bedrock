@@ -21,7 +21,7 @@ impl Check for Usb3 {
 
     /// On the G0 (STM32 usb_v4, the part it was measured on), an embassy-usb bulk endpoint made with
     /// `endpoint_bulk_in` / `endpoint_bulk_out` instead of the `_double_buffered` variants: behind a hub's
-    /// transaction translator the peripheral NAKs while one buffer is processed (typec_dongle FW-24: 500 vs
+    /// transaction translator the peripheral NAKs while one buffer is processed (portwright FW-24: 500 vs
     /// 947 kB/s). Endpoints off the hot path (a control-like side channel) take a waiver.
     fn run(&self, fw: &Firmware) -> Vec<Finding> {
         if !scan::family_in(fw, &["stm32g0"]) {

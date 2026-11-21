@@ -16,7 +16,7 @@ from the linked ELF.
 safety margin the project may need for things like `STK-6`'s stack budget; finding this out at 99.6 % full, mid
 release, leaves no room to fix it quickly.
 
-**Example.** vb135 PLAT-7, and typec_dongle at 99.6 % flash — both found after the fact rather than caught by a
+**Example.** vb135 PLAT-7, and portwright at 99.6 % flash — both found after the fact rather than caught by a
 budget check at build time.
 
 **How to check.** `elf easy`: sum section sizes per memory region from the linked ELF and compare against the
@@ -37,7 +37,7 @@ assertions, overflow checks on) for the actual target.
 real bugs (an overflow that release silently wraps); if CI never links dev for the target, an overflow introduced
 on a branch goes unnoticed until someone happens to flash a dev build locally, if ever.
 
-**Example.** typec_dongle FW-53 and vb135 PLAT-7 both found overflow-class bugs only after someone linked dev by
+**Example.** portwright FW-53 and vb135 PLAT-7 both found overflow-class bugs only after someone linked dev by
 hand, well after the code had shipped in release.
 
 **How to check.** `cfg easy`: CI configuration (the justfile recipes, GitHub Actions config) must include a dev
@@ -56,7 +56,7 @@ profile build for the firmware's target, not only `--release`.
 per-package `opt-level` the override asked for; the override costs nothing but also does nothing, which is the
 quiet failure mode here — not a bug, just wasted Cargo.toml and a false sense of control over size.
 
-**Example.** typec_dongle FW-57: a per-package override that looked deliberate turned out to have no effect once
+**Example.** portwright FW-57: a per-package override that looked deliberate turned out to have no effect once
 fat LTO was already on.
 
 **How to check.** `cfg easy`: a per-package `opt-level` override present alongside `lto = "fat"` in the same
@@ -76,7 +76,7 @@ per-package control is actually needed.
 isn't wrong so much as leaving an easy, already-known-safe win on the table, and picking `opt-level` by habit
 instead of measurement can go either way depending on the actual code (size vs speed is not monotonic).
 
-**Example.** typec_dongle FW-57 and the Portwright measurement wire_weaver's AGENTS.md cites: `opt-level = "z"`
+**Example.** portwright FW-57 and the Portwright measurement wire_weaver's AGENTS.md cites: `opt-level = "z"`
 brought one firmware from 501.7 to 321.8 KiB, at a real cost of 10-25 % more USB latency — a trade worth making
 deliberately, not by default.
 
@@ -119,7 +119,7 @@ instead of being zero-initialised and built up in place.
 large (a lookup table, an encoder's working buffer) that's flash spent on a value the code is about to overwrite
 or compute anyway.
 
-**Example.** typec_dongle FW-42: a 20 KiB encoder buffer with a non-zero initializer, found during a size pass.
+**Example.** portwright FW-42: a 20 KiB encoder buffer with a non-zero initializer, found during a size pass.
 
 **How to check.** `elf easy`: a `.data` symbol over a size threshold whose initial bytes aren't all zero (which
 would have gone in `.bss` instead).
@@ -201,7 +201,7 @@ measured at.
 that just says "saves 4 KB" with no date or profile can't be told apart from one that's still accurate and one
 that's years stale, and either way it misleads the next person who reads it as current.
 
-**Example.** A size comment in typec_dongle's `Cargo.toml` that needed its claim re-verified before it could be
+**Example.** A size comment in portwright's `Cargo.toml` that needed its claim re-verified before it could be
 trusted again.
 
 **How to check.** Not automated (`review`): a size claim in a comment without an adjacent date and profile.

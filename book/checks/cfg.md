@@ -29,7 +29,7 @@ writes it back verbatim as part of enabling the debug domain. If the firmware is
 on peripheral clocks (USB, SPI, ...) between that read and that write, the write silently clears them again:
 the core keeps running, but USB and whatever else was enabled in that window goes dark.
 
-**Example:** typec_dongle FW-41 hit this on a NUCLEO-style G0B1 board: after `probe-rs download` + `probe-rs
+**Example:** portwright FW-41 hit this on a NUCLEO-style G0B1 board: after `probe-rs download` + `probe-rs
 reset` over J-Link, a USB hub downstream reset itself every 0.6 s and the firmware never enumerated, while
 `cnt run` (which halts the core first) came up clean every time. RCC_APBENR1 came back `0x18410504` instead of
 the expected `0x18416504` — USB and SPI2's clock bits missing — with every USB register reading zero and no D+
@@ -51,7 +51,7 @@ ever built and clippy'd with its default feature set lets the other combinations
 can stop compiling, or a `cfg`-gated branch can silently diverge from the default path, with nothing catching
 it until someone actually reaches for that feature during a release crunch.
 
-**Example:** typec_dongle's FW-23 fix made `just lint` run `cargo fmt --check` and
+**Example:** portwright's FW-23 fix made `just lint` run `cargo fmt --check` and
 `cargo clippy --bins --examples -D warnings` three times over `fw/portwright` — default features,
 `--all-features`, and `--no-default-features` — specifically so a feature-gated path that stops building fails
 CI instead of being discovered later. The thirteen lints outstanding on 15 Oct 2026 were down to doc-list
@@ -71,7 +71,7 @@ workspace root patches it to the local checkout — Cargo ends up compiling and 
 look identical (`ww_indication::Indication`, `shrink_wrap`'s traits) become two distinct types to the compiler,
 and every call between the two copies is a type error.
 
-**Example:** typec_dongle FW-51: the workspace stopped building on 24 Oct 2026 because `bedrock_crash` came in
+**Example:** portwright FW-51: the workspace stopped building on 24 Oct 2026 because `bedrock_crash` came in
 through embedded_bedrock's own `git` dependency (which itself pulled a templated `bedrock_template/Cargo.toml`),
 while `bedrock_led` and `bedrock_sync` brought WireWeaver a *second* time from git on top of the workspace's
 `[patch]` to the sibling `../wire_weaver` checkout — thirteen `E0308` type mismatches in `ww/leds.rs` and

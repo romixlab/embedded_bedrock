@@ -21,7 +21,7 @@ executor waits until it yields or awaits. A long-running or bursty neighbour (a 
 delays the deadline task by however long the neighbour keeps the executor, and the delay is irregular and only
 shows up under load.
 
-**Example.** `pd_task` on typec_dongle shared the thread executor with the WireWeaver USB server; embassy's UCPD
+**Example.** `pd_task` on portwright shared the thread executor with the WireWeaver USB server; embassy's UCPD
 driver only re-arms its RX DMA inside `receive().await`, so a USB burst that kept the server running past the next
 GoodCRC window overran RXDR, seen as a 3.5 % retry rate.
 
@@ -29,7 +29,7 @@ GoodCRC window overran RXDR, seen as a 3.5 % retry rate.
 name suggests a hard answer deadline that shares an executor with a task doing bulk or unbounded work.
 
 **Fix.** Move the deadline task to its own `InterruptExecutor` on an unused, correctly prioritised vector
-([`EXE-3`](#exe-3), [`EXE-4`](#exe-4), [`EXE-5`](#exe-5)) — on typec_dongle, `TIM7_LPTIM2` at priority 1.
+([`EXE-3`](#exe-3), [`EXE-4`](#exe-4), [`EXE-5`](#exe-5)) — on portwright, `TIM7_LPTIM2` at priority 1.
 
 ## `EXE-2` Blocking call on an interrupt executor or inside an interrupt handler <a id="exe-2"></a>
 
@@ -87,7 +87,7 @@ own priority is at or below the interrupts that feed it data, those interrupts c
 data the executor's task expects to see hasn't arrived yet — same shape of bug as running on the thread executor,
 just one layer deeper.
 
-**Example.** typec_dongle's PD task executor sits at priority 1, below USB/UCPD/DMA at priority 0 (`EXE-1`); vb135's
+**Example.** portwright's PD task executor sits at priority 1, below USB/UCPD/DMA at priority 0 (`EXE-1`); vb135's
 CAN handling executor sits at priority 7, below FDCAN at priority 6 — "below" here meaning the lower number, higher
 NVIC priority.
 
@@ -131,7 +131,7 @@ an interrupt executor can preempt thread mode mid-access, so the "lock" does not
 races — a `static mut` races the same way with no lock at all. The result is a value that's occasionally torn or
 stale, reproducing only under the timing that lets the interrupt land mid-update.
 
-**Example.** typec_dongle's PD state, once a task moved to an interrupt executor, needed its mutex changed to
+**Example.** portwright's PD state, once a task moved to an interrupt executor, needed its mutex changed to
 `CriticalSectionRawMutex` to stay safe against the thread-mode USB server reading the same state (FW-62 note).
 
 **How to check.** From the firmware model: for each static/mutex shared by a task on an interrupt executor and any
@@ -152,7 +152,7 @@ between them.
 more work arrives, and since the thread executor is cooperative, every other task on it starves for as long as the
 loop runs — not a crash, just everything else on that executor going quiet.
 
-**Example.** typec_dongle's `uart_pump` task (FW-42) and `log_flood` (FW-27, 62 ms in one call) both drained their
+**Example.** portwright's `uart_pump` task (FW-42) and `log_flood` (FW-27, 62 ms in one call) both drained their
 queues this way; the fix bounds the number of items taken per poll and yields in between.
 
 **How to check.** From the firmware model (`mid`): a loop with no static bound on iteration count and no await
@@ -238,7 +238,7 @@ effect when the interrupt lands — the deepest point of the deepest thread-mode
 that fit comfortably on its own now stacks on top of that worst case, and the margin that `STK-6` budgets for can
 disappear without any code in the task itself changing.
 
-**Example.** typec_dongle's FW-62 note: moving `pd_task` to an interrupt executor meant re-checking what the
+**Example.** portwright's FW-62 note: moving `pd_task` to an interrupt executor meant re-checking what the
 deepest thread-mode call chain already used, not just the task's own frame.
 
 **How to check.** `elf hard`: needs the linked ELF's call graph for both the deepest thread-mode path and the
@@ -278,7 +278,7 @@ reads (as little as 1 byte) back-to-back with no wait in between.
 machinery; at high baud rates this turns into effectively 100 % CPU spent re-polling for single bytes instead of
 letting the ring fill.
 
-**Example.** typec_dongle's `RX_GATHER` fix (FW-42) at 921600 Bd: waiting about 1 ms after a short read before
+**Example.** portwright's `RX_GATHER` fix (FW-42) at 921600 Bd: waiting about 1 ms after a short read before
 calling again let the ring accumulate a useful chunk instead of being drained byte by byte.
 
 **How to check.** `src mid`: a loop calling `RingBufferedUartRx::read` with no delay/yield between a short read and

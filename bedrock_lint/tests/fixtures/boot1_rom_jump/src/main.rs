@@ -1,4 +1,4 @@
-// typec_dongle FW-12, vb135 BOOT-6: the firmware jumps into the ROM bootloader for DFU and comes back through the
+// portwright FW-12, vb135 BOOT-6: the firmware jumps into the ROM bootloader for DFU and comes back through the
 // ROM's DfuSe leave, a jump, with nothing that notices
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {

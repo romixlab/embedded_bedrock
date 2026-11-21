@@ -1,4 +1,4 @@
-// typec_dongle API-19, embassy#7235: settings read raw from flash on an ECC part; a write torn by a power cut is
+// portwright API-19, embassy#7235: settings read raw from flash on an ECC part; a write torn by a power cut is
 // an NMI on every boot
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {

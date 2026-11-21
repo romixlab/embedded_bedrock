@@ -18,7 +18,7 @@ inventory::submit!(Registered(&Irq4));
 const KNOWN_SHARED: &[(&str, &str, &str)] = &[(
     "stm32g0",
     "USB_UCPD1_2",
-    "typec_dongle API-30: a driver that disables \"its\" interrupt on drop left the other one on this vector deaf",
+    "portwright API-30: a driver that disables \"its\" interrupt on drop left the other one on this vector deaf",
 )];
 
 impl Check for Irq4 {

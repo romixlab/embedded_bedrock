@@ -2,7 +2,7 @@
 # hub), the board of portwright_template. [answers] are defaults for `new`'s options (explicit flags and --answers win),
 # the rest is what only the board knows. Facts: the B153A KiCad schematic and board
 # (hw/b153_typec_serial/source/b153a), hw/b153_typec_serial/doc/hw_b153a.md (the rework on the built boards, §0),
-# typec_dongle's fw/portwright (hub.rs, main.rs, boot.rs, led.rs) and portwright_board, DS13560 Rev 6, ES0548 Rev 4.
+# portwright's fw/portwright (hub.rs, main.rs, boot.rs, led.rs) and portwright_board, DS13560 Rev 6, ES0548 Rev 4.
 
 [answers]
 chip = "STM32G0B1CE"  # U202 STM32G0B1CET6, LQFP48
@@ -60,7 +60,7 @@ toml = "portwright_b153a.toml"
 geometry = "portwright_b153a.geometry.json"
 
 # LD101 red through R104 from PF0 (LED_RED), LD102 green through R105 from PF1 (LED_GREEN), both to GND: high lights
-# them. PF0 is TIM14_CH1, PF1 TIM15_CH1N; embassy's time driver goes to TIM4. Roles as in typec_dongle's firmware.
+# them. PF0 is TIM14_CH1, PF1 TIM15_CH1N; embassy's time driver goes to TIM4. Roles as in portwright's firmware.
 [[leds]]
 name = "LD101"
 pin = "PF0"
@@ -83,7 +83,7 @@ what = "HUB_I2C_EN: the hub's SDA pull-up R301 (rev A), high for I2C2 to work"
 
 # The hub U301 (USB2512B) carries the MCU's own USB on its port 1: it runs and is configured over I2C2 before USB
 # starts. Its RESET_N is PC13 on rev A (rework, R304 pulls it low), driven from RTC_OUT1 so it holds through a reset
-# (typec_dongle fw/portwright/src/hub.rs, portwright_board::boot::rtc_cr_hub and hub_config, tested on B153A 21 Oct 2026)
+# (portwright fw/portwright/src/hub.rs, portwright_board::boot::rtc_cr_hub and hub_config, tested on B153A 21 Oct 2026)
 [bring_up]
 use = """usb251xb::{
     Config, Milliamps, Port, Usb251xb,
@@ -127,7 +127,7 @@ code = """
         embassy_stm32::pac::RTC.cr().read().0 & (0b11 << 21 | 1 << 20) == 0b01 << 21 | 1 << 20;
     if hub_kept {
         // configured and attached before the reset, by this firmware or the one before it: left as it is
-        // (typec_dongle FW-46 reads the config back and redoes it when it differs)
+        // (portwright FW-46 reads the config back and redoes it when it differs)
         defmt::info!("hub: kept running through the reset");
     } else {
         hub_reset_pin(false);
@@ -155,7 +155,7 @@ code = """
             .hub_current_self(Milliamps(2))
             .port_swap(&[Port::Port2])
             .into_config();
-        config.config3 = ConfigByte3::from_bytes([0x02]); // as the hub's first bring-up wrote it (typec_dongle FW-5)
+        config.config3 = ConfigByte3::from_bytes([0x02]); // as the hub's first bring-up wrote it (portwright FW-5)
         let mut hub = Usb251xb::new(&mut i2c);
         match hub.configure_and_attach(&config) {
             Ok(()) => defmt::info!("hub: configured and attached"),

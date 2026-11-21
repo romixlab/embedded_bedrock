@@ -51,7 +51,7 @@ sheet for G0C1-only parts is **ES0547 2.2.8**), status **N** (not fixed) on ever
 It applies to every 512 KiB part (always dual-bank) and to 256 KiB parts with `DUAL_BANK` set; ST's workaround is
 **"None"** — either turn flash prefetch off, or make sure code never branches across the bank boundary.
 
-**Example:** typec_dongle's Portwright firmware (`FW-38`) HardFaulted with garbage in `r0`-`r3` within seconds under
+**Example:** Portwright's firmware (`FW-38`) HardFaulted with garbage in `r0`-`r3` within seconds under
 USB load, from a call at `0x0804005c` into `BufReader::read_le32` at `0x08039d18` — a branch from bank 2 into
 bank 1 with prefetch on. The template's fix (`TPL-32`) takes ST's second option: prefetch stays off needlessly
 costs ~40% throughput (so the template turns it back on for embassy's G0 target, which otherwise leaves it off by
@@ -188,7 +188,7 @@ across the clock-domain boundary, and the timing of that resync depends on the e
 clocks — which is why the symptom (an ADC that freezes) is hard to reproduce and depends on the specific clock
 configuration in use.
 
-**Example:** typec_dongle's ADC calibration path (`0.20.7`) added exactly this wait after disabling the ADC and
+**Example:** portwright's ADC calibration path (`0.20.7`) added exactly this wait after disabling the ADC and
 before the next kernel-related operation, closing a freeze that otherwise depended on the board's specific ADC
 clock divider to show up at all.
 

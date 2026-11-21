@@ -18,7 +18,7 @@ no interrupts already enabled. Entered by jump instead, the application's own in
 ROM state, which can misconfigure a clock tree that assumes "nothing is running yet" or take an interrupt the
 application hasn't set up a handler for.
 
-**Example.** vb135 BOOT-6 and typec_dongle FW-12 both hit this: the application booted fine from a cold reset and
+**Example.** vb135 BOOT-6 and portwright FW-12 both hit this: the application booted fine from a cold reset and
 misbehaved only right after a ROM DFU session handed control over by jump.
 
 **How to check.** `src mid`: `init()` must check for ROM-leftover state (VTOR not at its default, SWS bits in
@@ -61,7 +61,7 @@ ROM bootloader's own interfaces (per AN2606: USART, USB, CAN, I²C pins the ROM 
 a firmware signal driving the same pin for its own purposes can interfere with the ROM session exactly when
 someone needs the ROM bootloader most — during a recovery after the firmware itself is broken.
 
-**Example.** typec_dongle FW-50: `PA9` doubled as a DUT USB control line and cut power to the device's own USB
+**Example.** portwright FW-50: `PA9` doubled as a DUT USB control line and cut power to the device's own USB
 mid-DFU session.
 
 **How to check.** Not automated beyond flagging the pin (`review`, against the board map): cross-reference every
@@ -163,7 +163,7 @@ framing) that isn't reflected in a version bump the older firmware's handshake c
 from "this request failed" — without a version signal, a format change can make the old firmware either hang
 waiting for a response it'll never recognise, or worse, misinterpret the new format as valid and act on garbage.
 
-**Example.** typec_dongle FW-55: an update-path format change shipped without the version bump that would have let
+**Example.** portwright FW-55: an update-path format change shipped without the version bump that would have let
 the old firmware refuse gracefully instead of misbehaving.
 
 **How to check.** `cfg mid`: diff the update path's API snapshot against the previous release; any structural

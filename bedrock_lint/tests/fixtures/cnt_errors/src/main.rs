@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-// Error branches: typec_dongle FW-62 (a PD receive overrun that was only logged); the cnt crate's 0.4 soundness
+// Error branches: portwright FW-62 (a PD receive overrun that was only logged); the cnt crate's 0.4 soundness
 // fix (a `&mut` to the counter buffer, a u64 through an unaligned pointer)
 
 #[embassy_executor::main]

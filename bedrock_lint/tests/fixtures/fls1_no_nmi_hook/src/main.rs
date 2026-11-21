@@ -1,4 +1,4 @@
-// typec_dongle API-19: the flash is wrapped, but the G0's NMI never reaches ww_ecc_flash
+// portwright API-19: the flash is wrapped, but the G0's NMI never reaches ww_ecc_flash
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());

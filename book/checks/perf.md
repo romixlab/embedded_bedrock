@@ -34,7 +34,7 @@ checked in the disassembly on purpose: `bedrock_led`'s breath/blink easing is "u
 on the M0+)", and `bedrock_sync`'s hot path (`shared`, run every LED tick) has "no libcall on the Cortex-M0+ at
 opt-level `z` and `3`" for the common case — 64-bit adds and 32-bit products of chunks up to 32 ms — only
 falling onto a cold path with two `__aeabi_lmul` for a gap longer than that, and a 64-bit divide once a second
-at the steer point, not per tick. The negative case: typec_dongle's `ww_si` unit types cost "~4 / 3.4 KiB" (z/O3)
+at the steer point, not per tick. The negative case: portwright's `ww_si` unit types cost "~4 / 3.4 KiB" (z/O3)
 for `i128` math alone (`ops::scale_i128`, `i128::checked_pow`, `ops::compare`) — measured in our internal
 flash-size investigation notes, which call i128 on a Cortex-M0+ "also slow", not
 just big.
@@ -55,7 +55,7 @@ initialization) only avoids flash wait states if the function's code actually st
 LTO, a small function with only call sites in flash-resident code gets inlined straight back into its callers —
 the `.data` copy exists, nothing calls it, and the flash-resident inlined copy is what actually runs.
 
-**Example:** `wire_weaver`'s `ww_lz4` crate (used by typec_dongle's FW-42 UART RX compression, which runs the
+**Example:** `wire_weaver`'s `ww_lz4` crate (used by portwright's FW-42 UART RX compression, which runs the
 encoder "in RAM through ww_lz4's `ram`") marks every hot function with
 `#[cfg_attr(all(feature = "ram", target_os = "none"), unsafe(link_section = ".data.ww_lz4"), inline(never))]` —
 the `inline(never)` is load-bearing, not decoration: without it LTO would inline the function back into its
@@ -78,7 +78,7 @@ not a conclusion to reach from a slow transfer alone.
 
 **Example:** usb_io_fw's IF-12 found an SD transfer running at 0.6 MB/s over a bus physically capable of far
 more (a block takes 0.22 ms on the wire at 18.75 MHz); the first suspect was the card or the link, but the
-actual bound was WireWeaver's own bitwise `ww_block::crc32_update` on the data path. typec_dongle's FW-42 and
+actual bound was WireWeaver's own bitwise `ww_block::crc32_update` on the data path. portwright's FW-42 and
 FW-20 are the same lesson from the other direction: UART RX throughput and bit-banged SWD clock speed were both
 software-bound (the compression encoder's own cost, the bit-bang loop's own cycle count) long before the wire
 rate was the limit.
@@ -99,7 +99,7 @@ time any of them fires — re-registering wakers, checking each arm — even on 
 nothing to do. On a core without a divider or much headroom, that fixed cost can show up directly in
 throughput, not just in idle power.
 
-**Example:** typec_dongle's FW-40 traced a 17% small-message throughput regression (64 B host→device,
+**Example:** portwright's FW-40 traced a 17% small-message throughput regression (64 B host→device,
 361-366 kB/s before, 301-303 kB/s after a WireWeaver change) mostly to a generated `ObserveState::next_wake`
 that didn't return immediately while nothing was observed, and an `ObserveTable::is_active` that walked every
 slot instead of checking a flag; fixing those closed most of the gap (to 343 kB/s at 64 B), but left "~5% short"

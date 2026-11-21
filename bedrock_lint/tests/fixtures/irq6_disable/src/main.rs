@@ -10,7 +10,7 @@ impl Periph {
     fn disable(&self) {}
 }
 
-// bedrock-lint: allow(IRQ-6) idle-time measurement around wfe (as typec_dongle's cpu.rs run() does), not nested
+// bedrock-lint: allow(IRQ-6) idle-time measurement around wfe (as portwright's cpu.rs run() does), not nested
 fn measure_idle() {
     cortex_m::interrupt::disable();
     // (would read a clock and `wfe` here)

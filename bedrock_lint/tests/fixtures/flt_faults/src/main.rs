@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-// Fault handling done wrong: typec_dongle FW-48 (cnt! and error! panicked in DefaultHandler), usb_io_fw PLAT-7
+// Fault handling done wrong: portwright FW-48 (cnt! and error! panicked in DefaultHandler), usb_io_fw PLAT-7
 // (HardFault spins), embedded_bedrock TPL-64 (USB firmware that never marks the boot healthy)
 
 #[embassy_executor::main]

@@ -35,7 +35,7 @@ log, reached from inside `HardFault` or `DefaultHandler`.
 inside it that can fail recurses straight into the same handler (or a different fault) with no bottom to the
 recursion, which turns a diagnosable fault into a true hang with no record at all.
 
-**Example.** typec_dongle FW-48: a `DefaultHandler` that tried to log hit exactly this, which is also why `IRQ-8`'s
+**Example.** portwright FW-48: a `DefaultHandler` that tried to log hit exactly this, which is also why `IRQ-8`'s
 default handler must only record the raw IRQ number.
 
 **How to check.** `src easy`: reachability from the handler body to any call that formats, allocates, or can
@@ -154,7 +154,7 @@ healthy — and so no fallback into the ROM bootloader after a few unhealthy boo
 boot-loops forever with no rescue path other than a debug probe; a counted fallback into the ROM bootloader after
 a few failed boots turns "the board is bricked" into "the board is recoverable over USB".
 
-**Example.** typec_dongle FW-45, and embedded_bedrock DEV-16 which specifies the device-wide boot-loop rescue
+**Example.** portwright FW-45, and embedded_bedrock DEV-16 which specifies the device-wide boot-loop rescue
 contract every board should meet.
 
 **How to check.** `src easy`: a backup-register boot counter incremented at boot and cleared on a healthy mark,
@@ -214,7 +214,7 @@ value reads as 0 (M0+ doesn't expose it the way M3+ does).
 and keeps "working" — it just silently records nothing useful for that one field, which is easy to miss since
 nothing errors.
 
-**Example.** typec_dongle FW-13 hit this directly when crash-capture code shared across chip families assumed
+**Example.** portwright FW-13 hit this directly when crash-capture code shared across chip families assumed
 `exc_return` behaved the same everywhere.
 
 **How to check.** Not automated beyond flagging the chip (`review`): confirm the crash record's `exc_return`-based

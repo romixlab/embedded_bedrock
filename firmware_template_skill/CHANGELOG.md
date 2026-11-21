@@ -739,7 +739,7 @@ Upgrade notes: firmware generated with 0.5.0 that hasn't adapted yet: change eac
 `_msg_tx: &mut impl MessageSink` to `_cx: &mut Context<'_, impl EventOut>`, and `process_bytes` as in the new
 `ww.rs` (`type Medium = ();`, `out: &mut EventWriter<'_, impl MessageSink>, medium: ()`, passed on to
 `process_request_bytes(data, scratch, out, medium)`). Firmware that already adapted by hand (usb_io_fw,
-typec_dongle) has nothing to do.
+portwright) has nothing to do.
 
 ## [0.5.0] - 2026-09-30
 

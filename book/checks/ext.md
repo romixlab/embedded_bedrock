@@ -9,7 +9,7 @@ its upstream port): a single NAK is not evidence the chip is absent or dead. Cod
 state on the first NAK churns on perfectly healthy hardware and can mask the one case that really matters: the
 chip woke up with its configuration gone.
 
-**Example:** typec_dongle's hub watchdog (FW-18) originally probed the hub with a zero-length I2C write and
+**Example:** portwright's hub watchdog (FW-18) originally probed the hub with a zero-length I2C write and
 treated the NAK as "the hub reset" — the hub NAKs for 200-600 ms after every boot while it attaches and while
 the host enumerates it, so the probe reset the hub one or two times on every single boot even though nothing
 had gone wrong there (fixed by FW-41, which changed the probe to the signature below).
@@ -30,7 +30,7 @@ configuration — registers back at their reset values — while the MCU, on a s
 decoupling, keeps running. Without a watchdog that notices this, the firmware keeps talking to a chip it thinks
 is still configured, and every request after the brown-out behaves as if the chip were simply broken.
 
-**Example:** typec_dongle's hub (U301) shares `+3V3_DCDC` with the MCU; a hard turn-on load on the header's
+**Example:** portwright's hub (U301) shares `+3V3_DCDC` with the MCU; a hard turn-on load on the header's
 switched VBUS (inrush into a large downstream capacitor) can sag that rail enough to reset the hub without
 resetting the MCU, silently losing the hub's SMBus configuration and USB attach state (FW-18). The firmware's
 `watchdog_task` catches it from either side: the composite USB device (carried on the hub's port 1) dropping out
@@ -50,7 +50,7 @@ Some chips' ID registers only read a trustworthy value once the chip has been co
 hold whatever was last written (no power-on-reset default) or sit at zero. Code that identifies a chip or a board
 variant by reading those registers *before* configuring anything gets a coin flip instead of an answer.
 
-**Example:** typec_dongle tried to read the USB hub's own power-on-default VID/PID/DID to detect the board
+**Example:** portwright tried to read the USB hub's own power-on-default VID/PID/DID to detect the board
 variant before configuring it, and it read back all-zero regardless of the delay tried (0/5/100/1000 ms) — the
 hub's ID registers simply hold whatever was last written there on this part, confirming a caution already on
 record for the board (FW-22). The working signal was a hardware strap instead: PA10 pulled low only on the

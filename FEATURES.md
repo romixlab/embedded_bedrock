@@ -65,7 +65,7 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   3-way with a base. Generated `AGENTS.md` describes the report-first upgrade procedure.
 - ✅ **TPL-12 rustfmt-clean output**: generated `.rs` files pass `rustfmt --edition 2024 --check` (0.4.3).
 - ✅ **TPL-14 Template `ww.rs` on the current WireWeaver**: handlers take a request `Context`, `process_bytes` an
-  `EventWriter` and the `Medium` (fixed after 0.5.0; usb_io_fw and typec_dongle had adapted by hand).
+  `EventWriter` and the `Medium` (fixed after 0.5.0; usb_io_fw and portwright had adapted by hand).
 - 🐛 **TPL-13 USB clock TODO on parts without HSI48 / CRS**: F411, L476, F103 generate a WireWeaver USB project with a
   clock TODO instead of a working 48 MHz setup (tested matrix notes).
 - 🐛 **TPL-22 Small output regressions** (seen in the 15 Oct 2026 matrix run): `rustfmt --check` fails for
@@ -104,8 +104,8 @@ The generator in `firmware_template_skill/` (template 0.5.0).
   `CCMRAM_ICODE` is over 100 columns and rustfmt breaks it after `=`. Found 15 Oct 2026.
 - 🐛 **TPL-78 Fault handlers log and count (FLT-2)**: the generated `DefaultHandler` runs `cnt!`, `bkp_cnt!` and
   `error!`, and `HardFault` runs `bkp_cnt!` and `error!` with `Debug2Format` (`app/src/main.rs.j2`); the bootloader's
-  `DefaultHandler` panics with a formatted message. That is what panicked in typec_dongle FW-48. `bedrock-lint`
-  FLT-2 flags it on nucleo_g0b1re_template, pico2_template, typec_dongle, b135_fw and usb_io_fw. To do: record the
+  `DefaultHandler` panics with a formatted message. That is what panicked in portwright FW-48. `bedrock-lint`
+  FLT-2 flags it on nucleo_g0b1re_template, pico2_template, portwright, b135_fw and usb_io_fw. To do: record the
   IRQ number raw (a backup register or a static the next boot reads), keep HardFault to capture and reset. Found
   3 Nov 2026.
 - ✅ **TPL-27 `just flash-bootsel` for RP targets**: a generated `justfile` (`app/justfile.j2`, `t.family == "rp"`
@@ -390,7 +390,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   counters, backup counters, host crates, CLI `portwright`, `--pins board`, probe `1366:0101` for a J-Link on the
   receptacle's SBU), HSI16 through the PLL to 64 MHz (USB on HSI48 + CRS), the LEDs LD101 red PF0 (TIM14_CH1) and
   LD102 green PF1 (TIM15_CH1N) with the time driver on TIM4, PA4 high for the hub's SDA pull-up (`[[init]]`), the hub
-  bring-up in `[bring_up]` (RESET_N on PC13 driven from RTC_OUT1 so it holds through a reset, as typec_dongle FW-46;
+  bring-up in `[bring_up]` (RESET_N on PC13 driven from RTC_OUT1 so it holds through a reset, as portwright FW-46;
   usb251xb config over I2C2 PB10 / PB14 with port 2's D+ / D- swap; kept when RTC_CR shows it running), VID:PID
   c0de:cafe (wire_weaver's default), the analog PA7 button / slide switch documented (no digital button), ROM boot,
   the board map from the KiCad board (MAP-12) and README board sections. Matrix entry `g0portwright` (passes, with
@@ -470,7 +470,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   firmware from `bedrock_fw.json` and diffing the rendered `omit` list; `rustfmt --edition 2024 --check` passes on
   it. The tested matrix (`uv run bedrock_gen.py matrix`) wasn't run: it builds every preset, and hit an unrelated,
   pre-existing exact_units git-HEAD / wire_weaver_core incompatibility in every downstream repo this was checked
-  against (vb135_fdcan_iso_usb_fw, typec_dongle, portwright_template), unrelated to this change.
+  against (vb135_fdcan_iso_usb_fw, portwright, portwright_template), unrelated to this change.
 - 📋 **TPL-64 USB configured marks the boot healthy**: with `--ww-transport usb` and ROM boot, the generated
   firmware never calls `bedrock_rom_boot::usb_configured()`, so `healthy_task` always waits the full 10 s; call it
   when the USB device is configured (wire_weaver_usb_embassy's state).
@@ -494,7 +494,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   generate `src/ww.rs` on bedrock_usb (USBD) instead of embassy-usb and embassy-stm32's driver: a `const` device,
   the `ww` function, `bedrock_usb::InterruptHandler` in `bind_interrupts!` (shared with UCPD on the G0's
   `USB_UCPD1_2`). Default stays `embassy`; matrix entries for both (`g0usbm`, `g0usbb`). Generator: `bedrock_gen.py` (`--usb-stack`),
-  `templates/app/src/ww.rs.j2`; builds, not yet run on hardware (USBD-7, typec_dongle FW-66).
+  `templates/app/src/ww.rs.j2`; builds, not yet run on hardware (USBD-7, portwright FW-66).
 - 📋 **TPL-29 embassy main for RP, nRF and ESP**: `--embassy main` dies for them (`cmd_new`); main renamed RP API
   too (`pads::vals::Drive::_8mA`, `embassy_rp::mode::Blocking`, seen porting rePort, usb_io_fw).
 - ✅ **TPL-33 Errata note**: `new` prints where the chip's errata sheet is (`errata_note()`: STM32 from stm32-data's
@@ -513,7 +513,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   once); feature `embassy`: `Indication<N>` in a `static` (zero-initialised, `.bss`; one critical section per tick
   for all changes) and its `run` loop (10 ms ticker, sleeps while nothing animates); feature `ww-indication`:
   brightness peaks and the identify busy / cap of a `ww_indication::Indication` server. Used by Portwright (two mono
-  LEDs, typec_dongle FW-2 / API-9, +32 B flash) and rePort (one, usb_io_fw PLAT-3, +100 B), the same compare values
+  LEDs, portwright FW-2 / API-9, +32 B flash) and rePort (one, usb_io_fw PLAT-3, +100 B), the same compare values
   as before but for Portwright's old 32-bit ease (at most 6 of 64000 counts). rePort B200 flashed, `device.indication`
   mode, brightness and identify answered (21 Oct 2026, with the interim 64-bit ease, same curve); the RGB path not
   run on a board yet (B135 next). The template does not generate LED code with it yet.
@@ -571,7 +571,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   guard), 2 `RecordUnreadable`; new reasons take the next number. Host tests of the pattern; the table for people
   is `book/blink_codes.md`. First user: usb_io_fw PLAT-18.
 - 🧪 **DEV-16 STM32 ROM bootloader entry crate** (`bedrock_rom_boot`): firmware alone at the start of flash, updated
-  by the STM32 ROM bootloader's USB DFU (`ww dfu stm32 flash`); extracted from Portwright (typec_dongle FW-12, FW-45,
+  by the STM32 ROM bootloader's USB DFU (`ww dfu stm32 flash`); extracted from Portwright (FW-12, FW-45,
   G0B1) and B135 (BOOT-4, BOOT-5, BOOT-9, BOOT-10, H725). `BootWord` in the family's last backup register (G0
   TAMP_BKP4R, H7 RTC_BKP31R; Portwright's format): ROM request, fell-back flag, unhealthy-boot count. `early()` first in
   `main`, before the HAL: resets once when the ROM's leave jumped here (`Entered::from_reset` per family, a second
@@ -680,7 +680,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   `.cargo/config.toml` (`templates/app/cargo_config.toml.j2`, application and bootloader). The extra-RAM sections in
   `memory.x` lost their tail `. = ALIGN(n)` so an empty one is dropped: flip-link 0.1.12 counts an empty section at
   the end of RAM (RP2350 `.sram8`) as used RAM and left a zero-size stack (fix in knurling-rs/flip-link#142, not
-  released as of 19 Oct 2026). Applied to usb_io_fw and typec_dongle.
+  released as of 19 Oct 2026). Applied to usb_io_fw and portwright.
   The superseded `bedrock_template/` (TPL-20) still has the old line.
 - 📋 **ROB-3 HardFault reporting**: blink the address and flags in Morse code, then reboot (default) or keep blinking;
   keep the reason for the next boot.
@@ -845,7 +845,7 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   so only new findings fail; text, JSON and SARIF reports; `explain ID`, `checks list [--all]`, `model` (the model
   as JSON); shell completion of check ids with their titles. Proves itself with STK-1, STK-2, STK-4 and EXE-3,
   each with fixtures under `bedrock_lint/tests/fixtures/`. No `cargo metadata` and no chip tables yet: the
-  checks that need resolved features or per-chip data add them (LINT-3, LINT-4). Clean on usb_io_fw, typec_dongle,
+  checks that need resolved features or per-chip data add them (LINT-3, LINT-4). Clean on usb_io_fw, portwright,
   vb135_fdcan_iso_usb_fw and the nucleo_g0b1re and pico templates (3 Nov 2026).
 - ✅ **LINT-3 Executor, interrupt and DMA source checks**: EXE, IRQ and the `src` checks of DMA on the LINT-2 model.
   The model's `context` module (`bedrock_lint/src/model/context.rs`) resolves calls by name (a method call on
@@ -853,18 +853,18 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   parameters to its interrupt executor or to thread mode, and marks what runs in interrupt context and what in
   thread mode, with the chain from its task or handler; findings reached only through calls are estimates.
   - ✅ EXE-1, EXE-2, EXE-4, EXE-5, EXE-6, EXE-7, EXE-8, EXE-9, EXE-12, EXE-13 (`bedrock_lint/src/checks/exe_*.rs`),
-    a fixture each. On our firmware (3 Nov 2026): typec_dongle's ADC and UART ring readers beside the USB device
+    a fixture each. On our firmware (3 Nov 2026): portwright's ADC and UART ring readers beside the USB device
     (EXE-1 candidates), usb_io_fw's `safe_off` awaiting I2C in the server (EXE-8) and the `Waker::noop` of
     sd_proto's simulator (EXE-9), and EXE-12 on most WireWeaver handlers (134 in usb_io_fw); no false positive
     left in the rest. EXE-10 is a `cfg` check (LINT-4), EXE-11 an `elf` one (LINT-5).
   - ✅ IRQ-1, IRQ-2, IRQ-4, IRQ-5, IRQ-6, IRQ-8, DMA-2, DMA-4, DMA-6 (`bedrock_lint/src/checks/{irq,dma}_*.rs`),
-    a fixture each. On our firmware (3 Nov 2026): IRQ-4 candidates on usb_io_fw's `DMA_IRQ_0` and typec_dongle's
-    `DMA1_CHANNEL2_3` (two channels of one DMA driver sharing a vector, by design); IRQ-6 on typec_dongle's `cpu.rs`
-    idle-time measurement (disable / wfe / enable, not nested: benign, to waive in typec_dongle, LINT-9);
+    a fixture each. On our firmware (3 Nov 2026): IRQ-4 candidates on usb_io_fw's `DMA_IRQ_0` and portwright's
+    `DMA1_CHANNEL2_3` (two channels of one DMA driver sharing a vector, by design); IRQ-6 on portwright's `cpu.rs`
+    idle-time measurement (disable / wfe / enable, not nested: benign, to waive in portwright, LINT-9);
     IRQ-8 asks for the IRQ number recorded (raw, as FLT-2 asks; their logging is FLT-2's finding). IRQ-1, IRQ-2 and IRQ-5
     give nothing on the three today (no wholesale flag clear, no ISR `modify()`, every unmasked vector has a
-    handler or binding); DMA-2 needs an M7 part (none of the three), DMA-4's ring consumers (typec_dongle's UART
-    and ADC) already count their overruns, and DMA-6 needs software writes to UCPD_TXDR (typec_dongle's UCPD is
+    handler or binding); DMA-2 needs an M7 part (none of the three), DMA-4's ring consumers (portwright's UART
+    and ADC) already count their overruns, and DMA-6 needs software writes to UCPD_TXDR (portwright's UCPD is
     CC-PHY only) — only their fixtures exercise those three. No false positive left in the rest.
 - 🚧 **LINT-4 Configuration checks**: the `cfg` checks (CFG, SIZ profile checks, LOG-2, CLK-2, MEM memory.x checks,
   EXE-10, CNT-3) on the LINT-2 model, no new model fields. Done: CFG-1, CFG-2, CFG-4, CFG-5 (STM32 only), CFG-6,
@@ -902,9 +902,9 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   firmware that never calls `usb_configured()`), PIN-1 (a pin driver dropped), PIN-2 (something slow before the
   first output is set up, the source part), PIN-4 (RP FUNCSEL switched at run time), PIN-6 (a stolen pin with a
   second owner), PIN-8 (unused pins left floating on F0/F1/F2/F3/F4/F7/L1), PIN-9 (a pin map chosen by a cargo
-  feature), PIN-16 (G0 pin read under the UCPD dead-battery pull-down). Fixtures from typec_dongle FW-19, FW-22,
+  feature), PIN-16 (G0 pin read under the UCPD dead-battery pull-down). Fixtures from portwright FW-19, FW-22,
   FW-48, FW-62, usb_io_fw API-5, IF-2, IF-16, PLAT-7, PLAT-9. Name resolution without types keeps findings in
-  callees at estimate or candidate. On usb_io_fw, typec_dongle, b135_fw and the templates the real findings are
+  callees at estimate or candidate. On usb_io_fw, portwright, b135_fw and the templates the real findings are
   no watchdog anywhere (FLT-7), the template's fault handlers (FLT-2, TPL-78), usb_io_fw's spinning HardFault
   (FLT-1, its PLAT-7) and run-time FUNCSEL switches (PIN-4), one HOST-3 in b135_fw `led::set_mode`, and uncounted
   error branches (CNT-1): LINT-9 works through them (3 Nov 2026). The other `src` checks are LINT-11.
@@ -926,9 +926,9 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   half (`Debug2Format`, a formatting panic handler, `unwrap` on a sure `Result`). Errata quoted from ES0548 /
   ES0491 (`references/errata.md`), the RP2350 datasheet appendix D and efton.sk. Shared helpers in
   `model/scan/words.rs` (every identifier with its place, identifier words, method calls in order, constants).
-  The `clean` fixture carries the right code for each (`src/lint11_*.rs`). Run on usb_io_fw, typec_dongle,
+  The `clean` fixture carries the right code for each (`src/lint11_*.rs`). Run on usb_io_fw, portwright,
   vb135_fdcan_iso_usb_fw, portwright_template and generated g0 / h7app / rp2350 firmware (3 Nov 2026); the findings
-  read by hand are real (TPL-69, TPL-79, TPL-80 in the template; typec_dongle's `ww_ecc_flash` without `on_nmi()`
+  read by hand are real (TPL-69, TPL-79, TPL-80 in the template; portwright's `ww_ecc_flash` without `on_nmi()`
   and its UCPD clock not read back; vb135's HSE without CSS), the one false positive (PWR-3 in an embassy-boot
   bootloader) is fixed with a fixture. Filing them in those repos is LINT-9.
 - ✅ **LINT-7 Detail pages, first half**: `book/checks/` pages for EXE, IRQ, DMA, STK, MEM, SIZ, FLT, BOOT, PWR,
@@ -939,7 +939,7 @@ checks by category ID (`EXE-1`, `DMA-3`) with severity and where each is checked
   check (what goes wrong, why, our example, the fix, how it's detected, references quoted from the document where
   one applies — ES0548, ES0491, the RP2350 datasheet errata, efton.sk gotcha 221), linked from `book/checks.md`'s
   79 lines in these categories with 📖.
-- 📋 **LINT-9 Clean on our firmware**: the lint runs on usb_io_fw, typec_dongle, vb135_fdcan_iso_usb_fw and the
+- 📋 **LINT-9 Clean on our firmware**: the lint runs on usb_io_fw, portwright, vb135_fdcan_iso_usb_fw and the
   board templates; real bugs filed in those repos' FEATURES.md, false positives fixed in the checks, the rest in a
   baseline.
 - ✅ **LINT-12 Code size per source file**: `bedrock-lint code-size <ELF>` (`model/code_size.rs`): code bytes
@@ -1038,7 +1038,7 @@ document section it comes from, and a FRACN steering range is checked at both en
   wait states up before the switch and down after it, muxes, the CRS with CRS_CFGR before CEN, HSI16 off when unused),
   bounded waits named in `Error::Timeout(Step)`, `verify` naming the first register. Host tests on a simulated chip
   with Portwright's golden plan (`bedrock_clocks_rt/tests/g0_apply.rs`). Not on hardware yet.
-- ✅ **RCC-16 G0 flash measured on Portwright**: no saving on the G0. Portwright (typec_dongle 65408a6, embassy fork
+- ✅ **RCC-16 G0 flash measured on Portwright**: no saving on the G0. Portwright (portwright 65408a6, embassy fork
   9cdf640, nightly-2026-11-02, fat LTO) built with embassy's RCC init against `g0::apply` on the golden plan, with
   embassy-stm32 patched for the measurement (a `rcc-external` feature: no RCC writes, only the LSI / RTC setup and the
   frequency table filled from the plan's consts, the shape RCC-8 needs). `.text` in bytes (`.data` 844 / 848 and
@@ -1068,7 +1068,7 @@ bedrock_usb: a USB full-speed device stack for STM32 with the device fixed at co
 plus embassy-stm32's `usb` driver where a firmware wants it. Descriptors are `const fn` output in flash, endpoints
 and their buffering are types, classes dispatch statically; the boundary with embassy is stm32-metapac registers
 plus the `Peri<USB>`, interrupt binding and RCC enable it hands out. First IP: usb_v4 with 32-bit USB SRAM (G0B1),
-first firmware: Portwright (typec_dongle FW-66), baseline ~11.0 KiB of USB code at opt-level z there. Design and the
+first firmware: Portwright (FW-66), baseline ~11.0 KiB of USB code at opt-level z there. Design and the
 hardware rules it relies on (RM0444, ES0548, USB 2.0, each quoted) live in our internal project folder
 (`design/bedrock-usb.md`).
 

@@ -1,4 +1,4 @@
-// typec_dongle FW-27, wire_weaver STD-26: with probe-rs attached the channel turns blocking, and the firmware
+// portwright FW-27, wire_weaver STD-26: with probe-rs attached the channel turns blocking, and the firmware
 // stopped whenever the host stopped reading
 use defmt_rtt as _;
 

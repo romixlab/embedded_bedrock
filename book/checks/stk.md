@@ -16,7 +16,7 @@ links with the plain linker instead.
 instead of silently corrupting the first bytes of RAM. Without it, an overflow corrupts whatever static data
 happens to sit above the stack and the symptom is wherever that data is read next — rarely at the overflow site.
 
-**Example.** Found independently in embedded_bedrock (ROB-12), typec_dongle (FW-1) and usb_io_fw (PLAT-1): three
+**Example.** Found independently in embedded_bedrock (ROB-12), portwright (FW-1) and usb_io_fw (PLAT-1): three
 projects hit the same missing-linker mistake before it became a generator default and a lint.
 
 **How to check.** `cfg easy`: read `.cargo/config.toml` for the target triple in use and check `linker` is set to

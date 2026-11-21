@@ -9,7 +9,7 @@ overflow, and that traces back to host input (a pin number, a length, a rate, a 
 denial-of-service the host side doesn't even need to be malicious to hit — a buggy or older host sending a
 malformed or truncated request is enough.
 
-**Example:** typec_dongle's CMSIS-DAP path (FW-19) had exactly this: `dap_rs` indexes past the end of a
+**Example:** portwright's CMSIS-DAP path (FW-19) had exactly this: `dap_rs` indexes past the end of a
 truncated request, so a request cut short by the host panicked the firmware. usb_io_fw's `AGENTS.md` states the
 rule plainly: "No panics on host input: every value from the API is validated (pin numbers, voltage levels,
 baud rates) and rejected with an error the host can show."
@@ -62,7 +62,7 @@ A release, disconnect or cleanup path that waits on the host to read something i
 indirectly, by waiting on a buffer the host's read would free — can hang forever if the host has simply stopped
 reading (closed its handle, crashed, got stuck). Every such wait needs its own way out.
 
-**Example:** typec_dongle's CMSIS-DAP responder (FW-19) gives the host 1 second to read a response
+**Example:** portwright's CMSIS-DAP responder (FW-19) gives the host 1 second to read a response
 (counted as `dap_response_timeouts`) and then goes back to listening regardless, specifically so that
 `sbu.release` — the cleanup path that must run on disconnect — "is never stuck behind a host that stopped
 reading."
@@ -80,7 +80,7 @@ A request shorter than its own command needs, or a response the firmware is aske
 than the protocol's packet limit, has to be refused — but if it's refused silently, a host sending malformed
 traffic (an older host against a newer firmware, or a genuinely buggy one) leaves no trace to diagnose with.
 
-**Example:** typec_dongle's CMSIS-DAP path (FW-19) counts every one of these distinctly: `dap_requests_truncated`
+**Example:** portwright's CMSIS-DAP path (FW-19) counts every one of these distinctly: `dap_requests_truncated`
 for a request cut short, `dap_requests_too_long` for one longer than the 512-byte packet limit, and
 `dap_responses_too_long` for a response that would exceed it — each dropped without a panic, but each counted
 so the pattern is visible without a debugger attached.
@@ -98,7 +98,7 @@ A parameter the host is allowed to set (a sample window, a buffer size, a rate) 
 the API that is wider than what the firmware can actually deliver, because the real limit comes from DMA buffer
 geometry or similar firmware-internal constants that the API's declared bounds don't automatically track.
 
-**Example:** typec_dongle's power meter (API-12) has exactly this kind of derived bound: its `window` parameter
+**Example:** portwright's power meter (API-12) has exactly this kind of derived bound: its `window` parameter
 is valid from 0.9 to 14.9 ms, a range set by "one sequence up to one half DMA buffer of sequences" — a value
 outside that isn't a protocol violation, it's a value the DMA buffer physically can't produce, and sampling
 longer windows needs averaging across updates instead of one bigger window.
@@ -140,7 +140,7 @@ that loss report has to arrive in the same order relative to the data it's about
 shows up before or after the data stream has already moved past the point it describes is worse than useless,
 since the host can't tell what it actually lost.
 
-**Example:** typec_dongle's `uart[1].rx` capture path (0.20.14, building on the LZ4-compressed UART history of
+**Example:** portwright's `uart[1].rx` capture path (0.20.14, building on the LZ4-compressed UART history of
 FW-42) is exactly the kind of lossy streaming path where this matters: data arrives in compressed chunks with
 its own history window, and a loss has to be attributable to a specific point in that stream for a host
 decoding it to stay synchronized.

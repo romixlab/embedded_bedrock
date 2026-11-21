@@ -1,4 +1,4 @@
-// Handlers of a WireWeaver server: typec_dongle FW-19 (a DAP request indexed past its end), usb_io_fw API-5 (an
+// Handlers of a WireWeaver server: portwright FW-19 (a DAP request indexed past its end), usb_io_fw API-5 (an
 // unknown mode served as the default)
 
 pub struct ServerState {

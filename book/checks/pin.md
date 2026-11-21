@@ -200,7 +200,7 @@ own protection diodes; the firmware needs to release every such line to a high-i
 session using it ends, including the unclean endings (a USB disconnect or reset the host didn't negotiate, a
 suspend, a cancelled transfer), not only the clean "the host asked to disconnect" path.
 
-**Example:** typec_dongle's plug CC drive (`FW-17`) releases PD0/PD2 to Hi-Z together with SWCLK/SWDIO on
+**Example:** portwright's plug CC drive (`FW-17`) releases PD0/PD2 to Hi-Z together with SWCLK/SWDIO on
 `DAP_Disconnect`, on CMSIS-DAP v2 endpoint disable, *and* on `sbu.release` — three different ways a session can
 end, all wired to the same release path, specifically because a downstream board gating its own SBU-to-SWD mux
 on the plug's CC level needs that line to go away cleanly whichever way the session stopped. The planned PD
@@ -241,7 +241,7 @@ A pin whose direction (input vs. output) is normally set by a protocol command c
 direction on any code path that reaches the pin without going through that command first — including a path
 added later that assumed the command had already run.
 
-**Example:** typec_dongle 0.3.0 had exactly this gap on SWCLK: the pin was only ever driven as an output by
+**Example:** portwright 0.3.0 had exactly this gap on SWCLK: the pin was only ever driven as an output by
 `DAP_SWJ_Pins`, which probe-rs's CMSIS-DAP v2 driver never sends, so SWCLK stayed an input on every real session
 and no target ever acknowledged a clock edge (tracked under FW-15/FW-20, the SWD speed work) — the direction was
 correct in the one code path that was tested by hand, and wrong on the one real hosts actually use.
@@ -260,7 +260,7 @@ reset, including a reset the firmware itself triggers (a watchdog, a software re
 that genuinely needs to hold its level *across* a reset — because downstream hardware latches on it, or because
 losing it mid-transaction is unsafe — can't be a plain GPIO pin; it needs something the reset doesn't touch.
 
-**Example:** typec_dongle hit this twice on the same board: `FW-46` found that pulsing a reset line as a plain
+**Example:** portwright hit this twice on the same board: `FW-46` found that pulsing a reset line as a plain
 GPIO dropped a downstream hub that needed to *stay* enumerated through the MCU's own reset, so the fix was to
 stop pulsing it and instead keep the hub's enable held through reset; `FW-49` found the plug's VBUS enable
 (`PWR_EN` on PA6) has an external pull-down (R601), so plain GPIO drive means plug VBUS — and whatever DUT is
@@ -315,7 +315,7 @@ it again re-arms the dead-battery pull-down, so a pin that's being read for some
 still be held low (or see a glitch on each configure) by a pull-down the firmware thought it had already turned
 off for good.
 
-**Example:** typec_dongle's board-variant detection (`FW-22`) reads PA10 against the MCU's own ~40k pull-up to
+**Example:** portwright's board-variant detection (`FW-22`) reads PA10 against the MCU's own ~40k pull-up to
 tell Main from Plus hub variants — but PA10 is also a UCPD1 dead-battery pin, so the read only works after
 releasing UCPD1's dead-battery pull-down via `SYSCFG.cfgr1().ucpd1_strobe()`, and the firmware never clears that
 strobe again afterwards (clearing it would silently re-enable the pull-down and break the read, and every other

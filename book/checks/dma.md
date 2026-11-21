@@ -56,7 +56,7 @@ missed rather than buffered.
 **Why it matters.** This is the hardware-level version of `EXE-1`'s problem: if the task that owns the receive call
 isn't back inside the await promptly, the gap is real dead time where nothing is listening on the line at all.
 
-**Example.** typec_dongle FW-62: embassy UCPD's `receive()` re-arms RX DMA only while awaited; sharing the task
+**Example.** portwright FW-62: embassy UCPD's `receive()` re-arms RX DMA only while awaited; sharing the task
 with other work widened the gap enough to overrun RXDR on GoodCRC frames.
 
 **How to check.** Not automated beyond flagging the driver call itself (`review`): whether the gap matters depends
@@ -76,7 +76,7 @@ the overrun path — the case where the producer wraps past data the consumer ha
 block to show it ever happened, so the first sign of trouble is a user noticing missing data days later with no way
 to tell how often it occurs.
 
-**Example.** typec_dongle FW-26 added `pd_rx_overrun` after the fact, once the missing-data reports made clear the
+**Example.** portwright FW-26 added `pd_rx_overrun` after the fact, once the missing-data reports made clear the
 ring had been overrunning unnoticed.
 
 **How to check.** `src mid`: from the firmware model, every DMA ring consumer's overrun branch (the wrap-detected

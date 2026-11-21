@@ -93,7 +93,7 @@ the core, land mid-instruction, or race a DMA transfer that was never meant to s
 The firmware did nothing wrong; it was just sharing hardware access with something that doesn't know the
 firmware is running.
 
-**Example:** typec_dongle's FW-44 bring-up ran 227 s clean with no panic on a B153A over J-Link — but only once
+**Example:** portwright's FW-44 bring-up ran 227 s clean with no panic on a B153A over J-Link — but only once
 "another session's concurrent probe-rs/gdb use of the same board" (RTC_CR pokes from a different Claude session's
 bootloader test) stopped; while it was running, the interference even left the hub's USB enumeration wedged on
 the host side. FW-48 is the sharper version: once in five RTC_CR pokes over J-Link stalled the core long enough
@@ -117,7 +117,7 @@ those same variables (a prefetch failure triggered by *where* a branch happens t
 bank boundary, for instance), bisecting burns real time rediscovering what the errata sheet already states for
 free.
 
-**Example:** typec_dongle's FW-38 HardFault (ES0548 2.2.10, flash prefetch across G0B1's dual banks) is the case
+**Example:** portwright's FW-38 HardFault (ES0548 2.2.10, flash prefetch across G0B1's dual banks) is the case
 in point: the fault only appeared once prefetch was turned on (FW-24) and only under specific code-size/layout
 conditions, which is exactly the signature a naive bisect would chase as "some unrelated commit changed the
 binary's layout" — instead of recognizing the erratum's own description ("the code prefetch may fail upon
@@ -140,7 +140,7 @@ datasheet is thinner than ours, or one that's already had other problems — but
 own side first means the real cause (our own timing, our own task priority) can sit unfixed while a chip that
 was innocent the whole time gets worked around or replaced.
 
-**Example:** typec_dongle's FW-62 is this check's source and a worked example of taking the blame back. USB-PD
+**Example:** portwright's FW-62 is this check's source and a worked example of taking the blame back. USB-PD
 GoodCRC retries against a sink were initially suspicious of the sink's FUSB302B, but the actual investigation
 (our internal PD-controller design notes) ruled it out methodically: (1) the sink's own log
 showed every retried message's `MessageID` received twice, meaning the sink had the first attempt whole — it

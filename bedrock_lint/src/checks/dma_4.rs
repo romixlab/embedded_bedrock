@@ -50,7 +50,7 @@ impl Check for Dma4 {
     }
 
     /// A function that uses a DMA ring consumer with no `cnt!` / `bkp_cnt!` call anywhere in it: an overrun on the
-    /// ring (typec_dongle FW-26: `adc_overruns`, `uart_rx_errors`, both counted) goes unnoticed. Same-function is
+    /// ring (portwright FW-26: `adc_overruns`, `uart_rx_errors`, both counted) goes unnoticed. Same-function is
     /// the main case this looks at, like IRQ-6's disable/enable pair.
     fn run(&self, fw: &Firmware) -> Vec<Finding> {
         let mut out = Vec::new();

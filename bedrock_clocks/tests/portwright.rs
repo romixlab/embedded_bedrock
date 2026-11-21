@@ -1,4 +1,4 @@
-//! Portwright (typec_dongle fw/portwright on B153A, STM32G0B1CET6): the tree its embassy config sets up today, planned
+//! Portwright (fw/portwright on B153A, STM32G0B1CET6): the tree its embassy config sets up today, planned
 //! exactly, and the checks around it.
 //!
 //! `BLESS=1 cargo test -p bedrock_clocks` rewrites the golden `clocks.rs`.
@@ -21,7 +21,7 @@ pub fn portwright() -> Config {
         part: Part::parse("STM32G0B1CET6").unwrap(),
         vos: Vos::Range1,
         dual_bank_option: false,
-        // off: the image spans both banks (ES0548 2.2.10, typec_dongle FW-38)
+        // off: the image spans both banks (ES0548 2.2.10, portwright FW-38)
         prefetch: false,
         icache: true,
         hse: None,

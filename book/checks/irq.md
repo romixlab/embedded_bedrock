@@ -73,7 +73,7 @@ one of them disables "its" interrupt in its `Drop` impl.
 masks every other driver sharing that vector too, which then goes silently deaf with no error anywhere near the
 code that caused it.
 
-**Example.** The STM32G0B1's combined `USB_UCPD1_2` vector (typec_dongle API-30): a driver that disabled the
+**Example.** The STM32G0B1's combined `USB_UCPD1_2` vector (portwright API-30): a driver that disabled the
 vector when done with UCPD also silenced the USB interrupt sharing it.
 
 **How to check.** `src mid` plus a chip table of which peripherals share a vector on which part: flag a `Drop` impl
@@ -147,7 +147,7 @@ left on, hardware the board doesn't have asserting a line) is exactly the kind o
 the fact; a `DefaultHandler` that doesn't capture the IRQ number throws that information away, and one that logs
 risks nesting into whatever caused the stray interrupt in the first place (`FLT-2`).
 
-**Example.** typec_dongle FW-48: a `DefaultHandler` that tried to log ran into the same nested-panic risk `FLT-2`
+**Example.** portwright FW-48: a `DefaultHandler` that tried to log ran into the same nested-panic risk `FLT-2`
 exists for.
 
 **How to check.** `src easy`: the `DefaultHandler` body must record the active IRQ number (e.g. into a counter or a

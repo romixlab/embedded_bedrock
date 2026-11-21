@@ -1,4 +1,4 @@
-//! Golden test: Portwright's USB device (typec_dongle `fw/portwright`, `src/ww/mod.rs` and `src/cmsis_dap.rs`) as a
+//! Golden test: Portwright's USB device (`fw/portwright`, `src/ww/mod.rs` and `src/cmsis_dap.rs`) as a
 //! bedrock_usb `const` gives the same descriptors as embassy-usb 0.6's `Builder` built the way Portwright builds it.
 //!
 //! The embassy side runs on a dummy driver: its control pipe is fed GET_DESCRIPTOR and the MS OS 2.0 vendor
@@ -39,7 +39,7 @@ use embassy_usb::msos::{self, windows_version};
 use embassy_usb::types::StringIndex;
 use embassy_usb::{Builder, Config, Handler};
 
-// Portwright's values (typec_dongle fw/portwright src/ww/mod.rs, src/cmsis_dap.rs; wire_weaver_usb_embassy 0.2.0)
+// Portwright's values (fw/portwright src/ww/mod.rs, src/cmsis_dap.rs; wire_weaver_usb_embassy 0.2.0)
 const EP_WW_OUT: u8 = 1;
 const EP_WW_IN: u8 = 2;
 const EP_CMSIS_DAP: u8 = 3;

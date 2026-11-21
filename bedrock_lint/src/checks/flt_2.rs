@@ -24,7 +24,7 @@ impl Check for Flt2 {
 
     /// In `HardFault` and `DefaultHandler`: defmt logging (`info!` .. `error!`, `Debug2Format`), `cnt!` counters,
     /// `unwrap` / `expect`, `panic!` and `assert!`. Each can nest into a log that was interrupted or panic inside
-    /// the handler (typec_dongle FW-48). In HardFault, after the crash record is saved (`capture_fault`) it is an
+    /// the handler (portwright FW-48). In HardFault, after the crash record is saved (`capture_fault`) it is an
     /// estimate: the record is already safe, only the reset is at stake.
     fn run(&self, fw: &Firmware) -> Vec<Finding> {
         let fns = scan::functions(fw);
@@ -66,7 +66,7 @@ impl Check for Flt2 {
                     "FLT-2",
                     format!("{}:{what}", h.path()),
                     format!(
-                        "`{what}` in {name}: it can nest into an interrupted log or panic inside the handler (typec_dongle FW-48)"
+                        "`{what}` in {name}: it can nest into an interrupted log or panic inside the handler (portwright FW-48)"
                     ),
                 )
                 .span(scan::loc(h.file, span).span().label(format!("{what} in {name}")))

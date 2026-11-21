@@ -1,4 +1,4 @@
-# typec_dongle FW-48, usb_io_fw PLAT-7, embedded_bedrock TPL-64
+# portwright FW-48, usb_io_fw PLAT-7, embedded_bedrock TPL-64
 checks = ["FLT"]
 
 # HardFault spins

@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), versions fol
 
 ## [Unreleased]
 
+### Changed
+
+- Checks book, lint messages and the B153A preset name the repo `portwright` where a finding was seen (was `typec_dongle`, renamed).
+
 ## [0.6.1] - 2026-11-20
 
 ### Changed

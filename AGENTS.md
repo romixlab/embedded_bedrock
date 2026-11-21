@@ -9,7 +9,7 @@ from. It has two parts:
   templates, chip data) packaged as the `firmware-template` agent skill. It generates new firmware for STM32, RP,
   nRF and ESP chips (embassy, HAL crates or bare), with memory layout, bootloader, counters, build info and a
   WireWeaver device API, and upgrades existing firmware that records its template version in `bedrock_fw.json`.
-  This is the part in daily use (usb_io_fw, typec_dongle).
+  This is the part in daily use (usb_io_fw, portwright).
 - **Rust crates** for build info and host tooling: `bedrock_build` (build-script helper that embeds build info),
   `bedrock_build_info` (the build-info format), `bedrock` (host-side probe tool, prototype), and stubs for a CLI and
   a firmware registry.

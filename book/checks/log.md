@@ -17,7 +17,7 @@ host stalls.
 "nobody attached a probe" or "the host debugger hung" into the firmware itself hanging at its next log call,
 which is a surprising way to lose a device that has nothing wrong with it otherwise.
 
-**Example.** typec_dongle FW-27, wire_weaver's STD-26, and embedded_bedrock ROB-8 all converge on the same fix:
+**Example.** portwright FW-27, wire_weaver's STD-26, and embedded_bedrock ROB-8 all converge on the same fix:
 force the channel's mode explicitly rather than trust the default.
 
 **How to check.** `src mid`: the RTT channel's mode must be explicitly set to `NoBlockSkip` (or an equivalent
