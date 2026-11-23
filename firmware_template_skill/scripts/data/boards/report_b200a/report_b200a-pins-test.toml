@@ -1,6 +1,6 @@
 # Pin test of a bare B200A rePort (rev A, nothing on J102 / J103, no SD card), for
 # `ww --api API pins test --plan docs/board/report_b200a-pins-test.toml` (README "Pins"), with the 595 chain in its
-# safe word (every translator off, VREF off). From the schematic (hw/b200_re_port/doc/hw_b200a.md), not yet
+# safe word (every translator off, VREF off). From the schematic (hw/b200_pinsmith/doc/hw_b200a.md), not yet
 # recorded on a board: confirm with `--save`. GP25 (1K to ADPT_KIND, 100K pull-up) sits near the threshold against
 # the internal pull-down and has no expectation; GP0's 1M pull-down loses to the internal pull-up, so it follows.
 target = "pins"

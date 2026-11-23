@@ -11,7 +11,7 @@ VBUS and a photo-MOS relay. [docs/board/](docs/board/) has the bottom view, the 
 [the pin table](docs/board/portwright_b153a-pins.md) with a note per pin; `just board` re-draws them from
 `docs/board/portwright_b153a.toml` with [boardmap](https://github.com/romixlab/embedded_bedrock) (bedrock_board).
 
-**Rev A as built differs from its schematic** (hw/b153_typec_serial/doc/hw_b153a.md §0): the CC / SBU
+**Rev A as built differs from its schematic** (hw/b153_portwright/doc/hw_b153a.md §0): the CC / SBU
 over-voltage protection (U402, U501) is removed and bridged, so nothing protects those pins above 5 V; a 5K1 Rd on
 the receptacle's CC lets a USB-C PC power it with an empty MCU; the hub's RESET_N is a wire to PC13, cut from NRST;
 the debug-accessory Rp (PA15) is cut. Never drive PF2 (NRST), PC6 (tied to GND) or PC7 (tied to 3.3 V).

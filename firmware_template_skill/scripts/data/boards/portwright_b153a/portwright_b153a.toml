@@ -1,5 +1,5 @@
 # Board description for boardmap (bedrock_board): what to draw of the Portwright B153A and what every pin does. Facts:
-# the B153A KiCad schematic and board (hw/b153_typec_serial/source/b153a), hw/b153_typec_serial/doc/hw_b153a.md
+# the B153A KiCad schematic and board (hw/b153_portwright/source/b153a), hw/b153_portwright/doc/hw_b153a.md
 # (the rework on the built boards, §0; pin map §11), the STM32G0B1xx datasheet DS13560 Rev 6.
 
 [board]

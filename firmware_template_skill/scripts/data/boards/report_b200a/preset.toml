@@ -1,7 +1,7 @@
 # Board preset for `bedrock_gen.py new --board report_b200a`: B200A rePort (rev A), the board of report_template.
 # [answers] are defaults for `new`'s options (explicit flags and --answers win), the rest is what only the board
-# knows. Facts: hw/b200_re_port/doc/hw_b200a.md (from the KiCad schematic, rev A, 1 May 2026; § numbers below are
-# its sections), the board file hw/b200_re_port/source/b200a/b200_re_port.kicad_pcb, the BOM, usb_io_fw (the
+# knows. Facts: hw/b200_pinsmith/doc/hw_b200a.md (from the KiCad schematic, rev A, 1 May 2026; § numbers below are
+# its sections), the board file hw/b200_pinsmith/source/b200a/b200_pinsmith.kicad_pcb, the BOM, usb_io_fw (the
 # board's application firmware: b200_board/src/chain.rs, flash.rs, state.rs), the RP2350 datasheet (build
 # 01/10/2026). B200B (mid-Nov 2026) gets a later revision of this preset: the ~OE pull-up and the button's external
 # pull-down make parts of [bring_up] and the E9 read unnecessary there.

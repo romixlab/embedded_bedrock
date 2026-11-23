@@ -1,8 +1,8 @@
 # Board description for boardmap (bedrock_board): what to draw of the B200A rePort and what every pin does. Facts:
-# hw/b200_re_port/doc/hw_b200a.md (from the KiCad schematic, rev A, 1 May 2026; § numbers are its sections), the
+# hw/b200_pinsmith/doc/hw_b200a.md (from the KiCad schematic, rev A, 1 May 2026; § numbers are its sections), the
 # board file, usb_io_fw. The geometry came from
-#   boardmap extract hw/b200_re_port/source/b200a/b200_re_port.kicad_pcb -o report_b200a.geometry.json \
-#     --source "b200_re_port.kicad_pcb (rePort B200A, KiCad 10)" --prefixes J,SW,D10,U160,U18,Y18 \
+#   boardmap extract hw/b200_pinsmith/source/b200a/b200_pinsmith.kicad_pcb -o report_b200a.geometry.json \
+#     --source "b200_pinsmith.kicad_pcb (rePort B200A, KiCad 10)" --prefixes J,SW,D10,U160,U18,Y18 \
 #     --pin-names '^GPIO(\d+)(_\d+)?$=GP$1'
 # (the RP2350B symbol names its pins GPIO38_47: name and pad). The user connector J102 sits behind level translators
 # and protection, so no MCU pin reaches a header directly: "free" here means the firmware may drive or pull the pin
@@ -16,7 +16,7 @@ mcu = "RP2350B (U1801, QFN-80)"
 mcu_ref = "U1801"
 geometry = "report_b200a.geometry.json"
 pin_nets = '^GP\d+$'
-sources = ["B200A schematic rev A (1 May 2026)", "hw/b200_re_port/doc/hw_b200a.md", "RP2350 datasheet"]
+sources = ["B200A schematic rev A (1 May 2026)", "hw/b200_pinsmith/doc/hw_b200a.md", "RP2350 datasheet"]
 scale = 12.0
 
 [[view.connector]]

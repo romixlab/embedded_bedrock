@@ -435,7 +435,7 @@ same. WireWeaver's `ww_stdlib` already has `ww_firmware_info`, `ww_board_info`, 
   steps (USB HS enumeration, `info`, LEDs, SW201), ROM boot and DFU over J301, both CAN channels on a bus, the pin
   test of a bare board (`--save`), the silicon revision fitted (DBGMCU REV_ID) against ES0491.
 - 🧪 **TPL-61 Board preset `report_b200a`**: B200A rePort (RP2350B QFN-80, 512 KiB BY25Q40, 12 MHz crystal, rev A)
-  in `scripts/data/boards/report_b200a/`, facts from `hw/b200_re_port/doc/hw_b200a.md`: WireWeaver over its own
+  in `scripts/data/boards/report_b200a/`, facts from `hw/b200_pinsmith/doc/hw_b200a.md`: WireWeaver over its own
   USB-C (product `rePort`), D102 on GP38 active low breathing on PWM slice 11A (TPL-57), SW101 on GP22 as
   `buttons.sw101` (pressed high, internal pull-down, RP2350-E9 read), `[bring_up]` latching the 595 chain's safe
   word before its outputs are enabled (EXP.~OE has no pull-up on rev A; usb_io_fw's chain.rs is the model), settings

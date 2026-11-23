@@ -1,7 +1,7 @@
 # Board preset for `bedrock_gen.py new --board portwright_b153a`: Portwright B153A (rev A, the Main variant: USB2512B
 # hub), the board of portwright_template. [answers] are defaults for `new`'s options (explicit flags and --answers win),
 # the rest is what only the board knows. Facts: the B153A KiCad schematic and board
-# (hw/b153_typec_serial/source/b153a), hw/b153_typec_serial/doc/hw_b153a.md (the rework on the built boards, §0),
+# (hw/b153_portwright/source/b153a), hw/b153_portwright/doc/hw_b153a.md (the rework on the built boards, §0),
 # portwright's fw/portwright (hub.rs, main.rs, boot.rs, led.rs) and portwright_board, DS13560 Rev 6, ES0548 Rev 4.
 
 [answers]
